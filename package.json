@@ -1,0 +1,41 @@
+{
+  "name": "endorser-ch",
+  "version": "1.0.0",
+  "description": "Server for recording assertions and reporting on signatures",
+  "author": "Trent Larson <trent@trentlarson.com>",
+  "license": "Unlicense",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "compile": "babel server --out-dir dist --delete-dir-on-start --source-maps inline --copy-files",
+    "dev": "nodemon server --exec babel-node --config .nodemonrc.json | pino-pretty",
+    "dev:debug": "nodemon server --exec babel-node --config .nodemonrc.json --inspect | pino-pretty",
+    "test": "mocha --compilers js:@babel/register --exit",
+    "test:debug": "mocha --compilers js:@babel/register --inspect-brk --exit",
+    "lint": "eslint -c .eslintrc.json {server,test}/**",
+    "lint:fix": "eslint --fix -c .eslintrc.json {server,test}/**"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.3",
+    "dotenv": "^6.0.0",
+    "express": "^4.16.4",
+    "pino": "^5.10.2",
+    "swagger-express-middleware": "^2.0.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.2.2",
+    "@babel/node": "^7.2.2",
+    "@babel/preset-env": "^7.2.3",
+    "babel-eslint": "^8.2.2",
+    "chai": "^4.1.2",
+    "eslint": "^4.19.1",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-config-airbnb-base": "^11.3.2",
+    "mocha": "^5.0.5",
+    "nodemon": "^1.18.4",
+    "pino-pretty": "^2.2.2",
+    "supertest": "^3.0.0"
+  }
+}
