@@ -4,10 +4,39 @@ import * as bodyParser from 'body-parser';
 import * as http from 'http';
 import * as os from 'os';
 import cookieParser from 'cookie-parser';
-import swaggerify from './swagger';
 import l from './logger';
 
 const app = new Express();
+const expressSwagger = require('express-swagger-generator')(app);
+
+let options = {
+  swaggerDefinition: {
+    info: {
+      description: 'Endorser recording & search',
+      title: 'Swagger',
+      version: '1.0.0',
+    },
+    host: 'localhost:3001',
+    basePath: '',
+    produces: [
+      "application/json",
+      "application/xml"
+    ],
+    schemes: ['http', 'https'],
+    /**
+    securityDefinitions: {
+      JWT: {
+        type: 'apiKey',
+          in: 'header',
+        name: 'Authorization',
+        description: "",
+      }
+    }
+    **/
+  },
+  basedir: __dirname, //app absolute path
+  files: ['../routes.js', '../**/router.js'] //Path to the API handle folder
+};
 
 export default class ExpressServer {
   constructor() {
@@ -20,7 +49,19 @@ export default class ExpressServer {
   }
 
   router(routes) {
-    swaggerify(app, routes);
+
+    // Error handler to display the validation error as HTML
+    // eslint-disable-next-line no-unused-vars, no-shadow
+    app.use((err, req, res, next) => {
+      res.status(err.status || 500);
+      res.send(
+        `<h1>${err.status || 500} Error</h1>` +
+          `<pre>${err.message}</pre>`);
+    });
+    routes(app);
+
+    expressSwagger(options)
+
     return this;
   }
 
