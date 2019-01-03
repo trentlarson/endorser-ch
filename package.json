@@ -10,17 +10,20 @@
     "compile": "babel server --out-dir dist --delete-dir-on-start --source-maps inline --copy-files",
     "dev": "nodemon server --exec babel-node --config .nodemonrc.json | pino-pretty",
     "dev:debug": "nodemon server --exec babel-node --config .nodemonrc.json --inspect | pino-pretty",
-    "test": "mocha --compilers js:@babel/register --exit",
-    "test:debug": "mocha --compilers js:@babel/register --inspect-brk --exit",
     "lint": "eslint -c .eslintrc.json {server,test}/**",
-    "lint:fix": "eslint --fix -c .eslintrc.json {server,test}/**"
+    "lint:fix": "eslint --fix -c .eslintrc.json {server,test}/**",
+    "migrate": "flyway -c conf/flyway.js migrate",
+    "test": "mocha --compilers js:@babel/register --exit",
+    "test:debug": "mocha --compilers js:@babel/register --inspect-brk --exit"
   },
   "dependencies": {
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
     "dotenv": "^6.0.0",
     "express": "^4.16.4",
-    "pino": "^5.10.2"
+    "node-flywaydb": "^0.1.6",
+    "pino": "^5.10.2",
+    "sqlite3": "^4.0.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
