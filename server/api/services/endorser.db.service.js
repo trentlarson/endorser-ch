@@ -14,13 +14,84 @@ class EndorserDatabase {
     **/
   }
 
+  attendanceById(id) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid, did, eventRowId FROM attendance WHERE rowid = ?", [id], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({id:row.rowid, did:row.did, eventRowId:row.eventRowId})
+        } else {
+          resolve(null)
+        }
+      });
+    })
+  }
+
+  attendanceInsert(did, eventRowId) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO attendance VALUES (?, ?)");
+      db.run(stmt, [did, eventRowId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  endorsementInsert(did, attendanceRowId) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO event VALUES (?, ?)");
+      db.run(stmt, [did, attendanceRowId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  eventById(id) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid, title, startTime FROM event WHERE rowid = ?", [id], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({id:row.rowid, title:row.title, startTime:row.startTime})
+        } else {
+          resolve(null)
+        }
+      });
+    })
+  }
+
+  eventInsert(title, startTime) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO event VALUES (?, ?)");
+      db.run(stmt, [title, startTime], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
   jwtAll() {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, encoded FROM jwt", function(err, row) {
         data.push({id:row.rowid, encoded:row.encoded})
       }, function(err, num) {
-        resolve(data);
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data);
+        }
       });
     })
   }
@@ -28,15 +99,19 @@ class EndorserDatabase {
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, encoded FROM jwt where rowid = " + id, function(err, row) {
+      db.each("SELECT rowid, encoded FROM jwt WHERE rowid = " + id, function(err, row) {
         data = {id:row.rowid, encoded:row.encoded}
       }, function(err, num) {
-        resolve(data);
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data);
+        }
       });
     })
   }
 
-  jwtInsert(encoded) {
+  async jwtInsert(encoded) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt VALUES (?)");
       db.run(stmt, [encoded], function(err) {
@@ -48,6 +123,7 @@ class EndorserDatabase {
       })
     })
   }
+
 }
 
 export default new EndorserDatabase();

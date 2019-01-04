@@ -10,7 +10,10 @@ Get started developing...
 
 ```shell
 # install deps
-npm install
+npm ci
+
+# setup DB
+DBUSER=sa DBPASS=sasa npm run migrate
 
 # run in development mode
 npm run dev
@@ -24,7 +27,7 @@ npm run test
 Install all package dependencies (one time operation)
 
 ```shell
-npm install
+npm ci
 ```
 
 ## Run It
@@ -63,6 +66,17 @@ or debug them
 ```shell
 npm run test:debug
 ```
+
+```shell
+curl http://localhost:3000/api/jwt -H "Content-Type: application/json" -d '{"encoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDYzOTc2NTksImV4cCI6MTU0NjQ4NDA1OSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiQXR0ZW5kZWRBY3Rpb24iLCJhZ2VudCI6eyJAdHlwZSI6IlBlcnNvbiIsImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJvYmplY3QiOnsiQHR5cGUiOiJFdmVudCIsIm5hbWUiOiJCb3VudGlmdWwgVm9sdW50YXJ5aXN0IENvbW11bml0eSBTYXR1cmRheSBtb3JuaW5nIG1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLTA3In19LCJpc3MiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifQ.XCIOxJFWpW1K8X_Ryld6aWPSkShG9NzHietkdWImEO0Jt_dFzbJgyyDkFLq5AQYfCpibG3mlA0-_CGACXYS2mwA"}'
+curl http://localhost:3000/api/jwt/1
+curl http://localhost:3000/api/jwt/attendance -H "Content-Type: application/json" -d '{"encoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDYzOTc2NTksImV4cCI6MTU0NjQ4NDA1OSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiQXR0ZW5kZWRBY3Rpb24iLCJhZ2VudCI6eyJAdHlwZSI6IlBlcnNvbiIsImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJvYmplY3QiOnsiQHR5cGUiOiJFdmVudCIsIm5hbWUiOiJCb3VudGlmdWwgVm9sdW50YXJ5aXN0IENvbW11bml0eSBTYXR1cmRheSBtb3JuaW5nIG1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLTA3In19LCJpc3MiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifQ.XCIOxJFWpW1K8X_Ryld6aWPSkShG9NzHietkdWImEO0Jt_dFzbJgyyDkFLq5AQYfCpibG3mlA0-_CGACXYS2mwA"}'
+
+# clean out and recreate DB
+rm ../endorser-ch.sqlite3
+DBUSER=sa DBPASS=sasa npm run migrate
+```
+
 
 ## Try It
 * Open you're browser to [http://localhost:3000](http://localhost:3000)
