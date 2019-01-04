@@ -1,2 +1,20 @@
+
+CREATE TABLE attendance (
+       did CHARACTER(60), -- did:ethr are 52 chars
+       eventRowId BIGINT
+);
+
+CREATE TABLE endorsement (
+       did CHARACTER(60), -- did:ethr are 52 chars
+       attendanceRowId BIGINT
+);
+
+CREATE TABLE event (
+       title VARCHAR(255),
+       startTime DATETIME
+);
+
+INSERT INTO event VALUES ("Bountiful Voluntaryist Community Saturday morning meeting", "2019-01-05T08:00:00-07");
+
 CREATE TABLE jwt (encoded TEXT);
 

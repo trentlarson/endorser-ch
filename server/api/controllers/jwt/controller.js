@@ -1,12 +1,13 @@
 import JwtService from '../../services/jwt.service';
 
 export class Controller {
-  all(req, res) {
+
+  getAll(req, res) {
     JwtService.all()
       .then(r => res.json(r));
   }
 
-  byId(req, res) {
+  getById(req, res) {
     JwtService
       .byId(req.params.id)
       .then(r => {
@@ -20,8 +21,19 @@ export class Controller {
       .create(req.body.encoded)
       .then(r => res
         .status(201)
-        .location(`<%= apiRoot %>/examples/${r.id}`)
+        .location(`<%= apiRoot %>/jwt/${r.id}`)
         .json(r));
   }
+
+  importAttendanceJwt(req, res) {
+    JwtService
+      .createWithAttendance(req.body.encoded)
+      .then(r => res
+            .status(201)
+            .location(`<%= apiRoot %>/jwt/attendance/${r.id}`)
+            .json(r));
+  }
+
 }
+
 export default new Controller();
