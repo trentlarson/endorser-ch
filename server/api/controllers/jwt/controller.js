@@ -25,12 +25,12 @@ export class Controller {
         .json(r));
   }
 
-  importAttendanceJwt(req, res) {
+  importClaims(req, res) {
     JwtService
-      .createWithAttendance(req.body.encoded)
+      .createWithClaimRecords(req.body.encoded)
       .then(r => res
             .status(201)
-            .location(`<%= apiRoot %>/jwt/attendance/${r.id}`)
+            .location(`<%= apiRoot %>/jwt/${r.id}`)
             .json(r));
   }
 

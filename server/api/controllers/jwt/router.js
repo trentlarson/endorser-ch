@@ -30,11 +30,11 @@ export default express
  */
   .get('/:id', controller.getById)
 /**
- * Add a JWT that encodes an attendance claim
+ * Add a JWT and insert claims into their own tables
  * @route POST /api/jwt/attendance
  * @group jwt - JWT storage
  * @param {string} jwt.body.required
  * @returns {object} 200 - internal ID of JWT
  * @returns {Error}  default - Unexpected error
  */
-  .post('/attendance', controller.importAttendanceJwt)
+  .post('/claims', controller.importClaims)

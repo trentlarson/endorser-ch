@@ -56,11 +56,11 @@ class EndorserDatabase {
 
   eventById(id) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid, title, startTime FROM event WHERE rowid = ?", [id], function(err, row) {
+      db.get("SELECT rowid, name, startTime FROM event WHERE rowid = ?", [id], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, title:row.title, startTime:row.startTime})
+          resolve({id:row.rowid, name:row.name, startTime:row.startTime})
         } else {
           resolve(null)
         }
@@ -68,10 +68,24 @@ class EndorserDatabase {
     })
   }
 
-  eventInsert(title, startTime) {
+  eventByNameTime(name, startTime) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid, name, startTime FROM event WHERE name = ? AND startTime = ?", [name, startTime], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({id:row.rowid, name:row.name, startTime:row.startTime})
+        } else {
+          resolve(null)
+        }
+      });
+    })
+  }
+
+  eventInsert(name, startTime) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO event VALUES (?, ?)");
-      db.run(stmt, [title, startTime], function(err) {
+      db.run(stmt, [name, startTime], function(err) {
         if (err) {
           reject(err)
         } else {
