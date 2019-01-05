@@ -28,6 +28,20 @@ class EndorserDatabase {
     })
   }
 
+  attendanceIdByDidEvent(did, eventId) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid FROM attendance WHERE did = ? AND eventRowId = ?", [did, eventId], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve(row.rowid)
+        } else {
+          resolve(null)
+        }
+      });
+    })
+  }
+
   attendanceInsert(did, eventRowId) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO attendance VALUES (?, ?)");
@@ -43,7 +57,7 @@ class EndorserDatabase {
 
   endorsementInsert(did, attendanceRowId) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO event VALUES (?, ?)");
+      var stmt = ("INSERT INTO endorsement VALUES (?, ?)");
       db.run(stmt, [did, attendanceRowId], function(err) {
         if (err) {
           reject(err)
@@ -68,13 +82,13 @@ class EndorserDatabase {
     })
   }
 
-  eventByNameTime(name, startTime) {
+  eventIdByNameTime(name, startTime) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid, name, startTime FROM event WHERE name = ? AND startTime = ?", [name, startTime], function(err, row) {
+      db.get("SELECT rowid FROM event WHERE name = ? AND startTime = ?", [name, startTime], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, name:row.name, startTime:row.startTime})
+          resolve(row.rowid)
         } else {
           resolve(null)
         }
