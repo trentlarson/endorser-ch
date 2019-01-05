@@ -22,19 +22,42 @@ class JwtService {
 
   create(encoded) {
     l.info(`${this.constructor.name}.create(${encoded})`);
-    return db.jwtInsert(encoded);
+    let jwtId = db.jwtInsert(encoded);
   }
 
-  async createWithAttendance(encoded) {
-    l.info(`${this.constructor.name}.createWithAttendance(${encoded})`);
+  async createWithClaimRecords(encoded) {
+    l.info(`${this.constructor.name}.createWithClaimRecords(${encoded})`);
     let jwtId = await db.jwtInsert(encoded);
-    // these lines are lifted from didJwt.verifyJWT, but I don't want all of it
+
+    // these lines are lifted from didJwt.verifyJWT
     const {payload, header, signature, data} = didJwt.decodeJWT(encoded)
+    l.debug(payload, "payload")
+    l.debug(header, "header")
+    l.debug(signature, "signature")
+    l.debug(data, "data")
     const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
-    const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
-    console.log("signer", signer)
-    console.log("doc", doc)
-    console.log("claim", payload.claim)
+    l.debug(doc, "doc")
+    l.debug(authenticators, "authenticators")
+    l.debug(issuer, "issuer")
+
+    // this is the same as the doc.publicKey in my example
+    //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
+
+    if (payload.claim && payload.claim['@type'] === 'AttendedAction') {
+      var event = await db.eventByNameTime(payload.claim.object.name, payload.claim.object.startTime)
+
+      var eventId
+      if (event !== null) {
+        eventId = event.id
+      } else {
+        eventId = await db.eventInsert(payload.claim.object.name, payload.claim.object.startTime)
+        l.debug(`New event ${eventId}`)
+      }
+
+      // doc.id is the DID
+      let attId = await db.attendanceInsert(doc.id, eventId)
+      l.debug(`New attendance ${attId}`)
+    }
 
     return jwtId
   }

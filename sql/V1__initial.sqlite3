@@ -10,7 +10,7 @@ CREATE TABLE endorsement (
 );
 
 CREATE TABLE event (
-       title VARCHAR(255),
+       name VARCHAR(255),
        startTime DATETIME
 );
 
