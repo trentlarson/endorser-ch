@@ -8,17 +8,6 @@ const SUPPORTED_PUBLIC_KEY_TYPES = {
   'ES256K-R': ['Secp256k1VerificationKey2018', 'Secp256k1SignatureVerificationKey2018', 'EcdsaPublicKeySecp256k1']
 }
 
-const JOSE_HEADER = {typ: 'JWT'}
-const defaultAlg = 'ES256K'
-
-function encodeSection (data) {
-  return base64url.encode(JSON.stringify(data))
-}
-
-export const IAT_SKEW = 300
-
-/**  @module did-jwt/JWT */
-
 function isDIDOrMNID (mnidOrDid) {
   return mnidOrDid && (mnidOrDid.match(/^did:/) || isMNID(mnidOrDid))
 }
@@ -60,5 +49,5 @@ export async function resolveAuthenticator (alg, mnidOrDid, auth) {
 }
 
 module.exports = { resolveAuthenticator }
-// ... because I couldn't figure out how to import it this way.
+// ... because I couldn't figure out how to import it from this way:
 //export default { resolveAuthenticator }
