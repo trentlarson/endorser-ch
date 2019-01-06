@@ -16,7 +16,7 @@ npm ci
 DBUSER=sa DBPASS=sasa npm run migrate
 
 # run in development mode
-npm run dev
+PORT=3001 npm run dev
 
 # run tests
 npm run test
@@ -125,5 +125,7 @@ Deploy to CloudFoundry
 cf push endorser-ch
 ```
 
+## ToDo
 
-   
+- tests: see above; duplicate JWT data
+- limit JWT retrieval to a date
