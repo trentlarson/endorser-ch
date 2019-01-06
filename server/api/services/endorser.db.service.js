@@ -112,8 +112,8 @@ class EndorserDatabase {
   jwtAll() {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, encoded FROM jwt", function(err, row) {
-        data.push({id:row.rowid, encoded:row.encoded})
+      db.each("SELECT rowid, issuedAt, claimType FROM jwt", function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, claimType:row.claimType})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -139,10 +139,10 @@ class EndorserDatabase {
     })
   }
 
-  async jwtInsert(encoded) {
+  async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt VALUES (?)");
-      db.run(stmt, [encoded], function(err) {
+      var stmt = ("INSERT INTO jwt VALUES (?, ?, ?, ?)");
+      db.run(stmt, [entity.issuedAt, entity.claimType, entity.encoded, entity.payloadEncoded], function(err) {
         if (err) {
           reject(err)
         } else {

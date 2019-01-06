@@ -21,25 +21,54 @@ class JwtService {
     return db.jwtById(id);
   }
 
-  create(encoded) {
-    l.info(`${this.constructor.name}.create(${encoded})`);
-    let jwtId = db.jwtInsert(encoded);
-  }
+  jwtDecoded(encoded) {
 
-  async createWithClaimRecords(encoded) {
-    l.info(`${this.constructor.name}.createWithClaimRecords(${encoded})`);
-    let jwtId = await db.jwtInsert(encoded);
-
-    // these lines are lifted from didJwt.verifyJWT
+    // this line is lifted from didJwt.verifyJWT
     const {payload, header, signature, data} = didJwt.decodeJWT(encoded)
     l.debug(payload, "payload")
     l.trace(header, "header")
     l.trace(signature, "signature")
     l.trace(data, "data")
+
+    return {payload, header, signature, data}
+  }
+
+  jwtEntity(encoded, payload) {
+    let payloadEncoded = encoded.split('.')[1]
+    let claim = payload.claim
+    let claimType = claim['@type']
+    let issuedAt = new Date(payload.iat * 1000).toISOString()
+    return {
+      issuedAt: issuedAt,
+      claimType: claimType,
+      encoded: encoded,
+      payloadEncoded: payloadEncoded
+    }
+  }
+
+  create(encoded) {
+    l.info(`${this.constructor.name}.create(ENCODED)`);
+    l.trace(encoded, "ENCODED")
+
+    const {payload, header, signature, data} = this.jwtDecoded(encoded)
+    let entity = this.jwtEndity(encoded, payload)
+    return db.jwtInsert(entity)
+  }
+
+  async createWithClaimRecords(encoded) {
+    l.info(`${this.constructor.name}.createWithClaimRecords(ENCODED)`);
+    l.trace(encoded, "ENCODED")
+
+    const {payload, header, signature, data} = this.jwtDecoded(encoded)
+
+    // this line is lifted from didJwt.verifyJWT
     const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
     l.debug(doc, "doc")
     l.trace(authenticators, "authenticators")
     l.trace(issuer, "issuer")
+
+    let entity = this.jwtEntity(encoded, payload)
+    let jwtId = await db.jwtInsert(entity)
 
     let DID = doc.id
 
@@ -50,7 +79,7 @@ class JwtService {
       if (payload.claim['@context'] === 'http://schema.org'
           && payload.claim['@type'] === 'AttendedAction') {
         var eventId = await db.eventIdByNameTime(payload.claim.object.name, payload.claim.object.startTime)
-        if (event === null) {
+        if (eventId === null) {
           eventId = await db.eventInsert(payload.claim.object.name, payload.claim.object.startTime)
           l.trace(`New event # ${eventId}`)
         }

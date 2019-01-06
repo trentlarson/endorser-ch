@@ -128,4 +128,6 @@ cf push endorser-ch
 ## ToDo
 
 - tests: see above; duplicate JWT data
+- remove duplicate decode in JWT service
 - limit JWT retrieval to a date
+- verify JWT before storing
