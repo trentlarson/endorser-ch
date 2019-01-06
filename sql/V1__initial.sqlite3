@@ -16,5 +16,10 @@ CREATE TABLE event (
 
 INSERT INTO event VALUES ("Bountiful Voluntaryist Community Saturday morning meeting", "2019-01-05T08:00:00-07");
 
-CREATE TABLE jwt (encoded TEXT);
 
+CREATE TABLE jwt (
+       issuedAt DATETIME,
+       claimType CHARACTER(30),
+       encoded TEXT,
+       payload TEXT
+);
