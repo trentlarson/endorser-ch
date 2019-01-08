@@ -19,7 +19,8 @@ INSERT INTO event VALUES ("Bountiful Voluntaryist Community Saturday morning mee
 
 CREATE TABLE jwt (
        issuedAt DATETIME,
-       claimType CHARACTER(30),
+       subject VARCHAR(100),
+       claimType VARCHAR(30),
        encoded TEXT,
-       payload TEXT
+       payloadEncoded TEXT
 );
