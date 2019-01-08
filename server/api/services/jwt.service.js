@@ -11,9 +11,13 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 class JwtService {
 
-  all() {
+  async all() {
     l.info(`${this.constructor.name}.all()`);
-    return db.jwtAll();
+    let all = await db.jwtAll()
+    console.log(all)
+    let result = all.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimType:j.claimType}))
+    console.log(result)
+    return result;
   }
 
   byId(id) {
@@ -33,25 +37,12 @@ class JwtService {
     return {payload, header, signature, data}
   }
 
-  jwtEntity(encoded, payload) {
-    let payloadEncoded = encoded.split('.')[1]
-    let claim = payload.claim
-    let claimType = claim['@type']
-    let issuedAt = new Date(payload.iat * 1000).toISOString()
-    return {
-      issuedAt: issuedAt,
-      claimType: claimType,
-      encoded: encoded,
-      payloadEncoded: payloadEncoded
-    }
-  }
-
   create(encoded) {
     l.info(`${this.constructor.name}.create(ENCODED)`);
     l.trace(encoded, "ENCODED")
 
     const {payload, header, signature, data} = this.jwtDecoded(encoded)
-    let entity = this.jwtEndity(encoded, payload)
+    let entity = db.jwtEntity(encoded, payload)
     return db.jwtInsert(entity)
   }
 
@@ -67,7 +58,7 @@ class JwtService {
     l.trace(authenticators, "authenticators")
     l.trace(issuer, "issuer")
 
-    let entity = this.jwtEntity(encoded, payload)
+    let entity = db.jwtEntity(encoded, payload)
     let jwtId = await db.jwtInsert(entity)
 
     let DID = doc.id

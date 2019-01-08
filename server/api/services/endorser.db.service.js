@@ -109,16 +109,31 @@ class EndorserDatabase {
     })
   }
 
+  jwtEntity(encoded, payload) {
+    let payloadEncoded = encoded.split('.')[1]
+    let claim = payload.claim
+    let claimType = claim['@type']
+    let issuedAt = new Date(payload.iat * 1000).toISOString()
+    let subject = payload.sub
+    return {
+      issuedAt: issuedAt,
+      subject: subject,
+      claimType: claimType,
+      encoded: encoded,
+      payloadEncoded: payloadEncoded
+    }
+  }
+
   jwtAll() {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, claimType FROM jwt", function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, claimType:row.claimType})
+      db.each("SELECT rowid, issuedAt, subject, claimType, encoded, payloadEncoded FROM jwt", function(err, row) {
+        data.push({id:row.id, issuedAt:row.issuedAt, subject:row.subject, claimType:row.claimType, encoded:row.encoded, payloadEncoded:row.payloadEncoded})
       }, function(err, num) {
         if (err) {
           reject(err)
         } else {
-          resolve(data);
+          resolve(data)
         }
       });
     })
@@ -127,13 +142,13 @@ class EndorserDatabase {
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, encoded FROM jwt WHERE rowid = " + id, function(err, row) {
-        data = {id:row.rowid, encoded:row.encoded}
+      db.each("SELECT rowid, issuedAt, subject, claimType, encoded, payloadEncoded FROM jwt WHERE rowid = " + id, function(err, row) {
+        data = {id:row.id, issuedAt:row.issuedAt, subject:row.subject, claimType:row.claimType, encoded:row.encoded, payloadEncoded:row.payloadEncoded}
       }, function(err, num) {
         if (err) {
           reject(err)
         } else {
-          resolve(data);
+          resolve(data)
         }
       });
     })
@@ -141,8 +156,8 @@ class EndorserDatabase {
 
   async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt VALUES (?, ?, ?, ?)");
-      db.run(stmt, [entity.issuedAt, entity.claimType, entity.encoded, entity.payloadEncoded], function(err) {
+      var stmt = ("INSERT INTO jwt VALUES (?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.issuedAt, entity.subject, entity.claimType, entity.encoded, entity.payloadEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
