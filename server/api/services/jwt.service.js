@@ -14,9 +14,7 @@ class JwtService {
   async all() {
     l.info(`${this.constructor.name}.all()`);
     let all = await db.jwtAll()
-    console.log(all)
     let result = all.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimType:j.claimType}))
-    console.log(result)
     return result;
   }
 
