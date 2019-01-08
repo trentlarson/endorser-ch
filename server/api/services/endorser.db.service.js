@@ -128,7 +128,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, issuedAt, subject, claimType, encoded, payloadEncoded FROM jwt", function(err, row) {
-        data.push({id:row.id, issuedAt:row.issuedAt, subject:row.subject, claimType:row.claimType, encoded:row.encoded, payloadEncoded:row.payloadEncoded})
+        data.push({id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimType:row.claimType, encoded:row.encoded, payloadEncoded:row.payloadEncoded})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -143,7 +143,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = null
       db.each("SELECT rowid, issuedAt, subject, claimType, encoded, payloadEncoded FROM jwt WHERE rowid = " + id, function(err, row) {
-        data = {id:row.id, issuedAt:row.issuedAt, subject:row.subject, claimType:row.claimType, encoded:row.encoded, payloadEncoded:row.payloadEncoded}
+        data = {id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimType:row.claimType, encoded:row.encoded, payloadEncoded:row.payloadEncoded}
       }, function(err, num) {
         if (err) {
           reject(err)
