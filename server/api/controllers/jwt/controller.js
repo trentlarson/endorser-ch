@@ -16,6 +16,7 @@ export class Controller {
       });
   }
 
+  /**
   create(req, res) {
     JwtService
       .create(req.body.encoded)
@@ -24,10 +25,11 @@ export class Controller {
         .location(`<%= apiRoot %>/jwt/${r.id}`)
         .json(r));
   }
+  **/
 
   importClaims(req, res) {
     JwtService
-      .createWithClaimRecords(req.body.encoded)
+      .createWithClaimRecord(req.body.encoded)
       .then(r => res
             .status(201)
             .location(`<%= apiRoot %>/jwt/${r.id}`)

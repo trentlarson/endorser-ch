@@ -1,26 +1,29 @@
 
-CREATE TABLE attendance (
-       did CHARACTER(60), -- did:ethr are 52 chars
-       eventRowId BIGINT
-);
-
-CREATE TABLE endorsement (
-       did CHARACTER(60), -- did:ethr are 52 chars
-       attendanceRowId BIGINT
-);
-
 CREATE TABLE event (
-       name VARCHAR(255),
+       orgName VARCHAR(120),
+       name VARCHAR(250),
        startTime DATETIME
 );
 
-INSERT INTO event VALUES ("Bountiful Voluntaryist Community Saturday morning meeting", "2019-01-05T08:00:00-07");
+INSERT INTO event VALUES ("Bountiful Voluntaryist Community", "Saturday Morning Meeting", "2018-12-29T08:00:00.000-07:00");
 
+CREATE TABLE attendance (
+       did CHARACTER(60), -- DID of the attending entity (in subject & claim); did:ethr are 52 chars
+       eventRowId BIGINT,
+       claimEncoded TEXT
+);
+
+CREATE TABLE confirmation (
+       did CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
+       attendanceRowId BIGINT,
+       claimEncoded TEXT
+);
 
 CREATE TABLE jwt (
        issuedAt DATETIME,
        subject VARCHAR(100),
+       claimContext VARCHAR(30),
        claimType VARCHAR(30),
-       encoded TEXT,
-       payloadEncoded TEXT
+       claimEncoded TEXT,
+       jwtEncoded TEXT
 );

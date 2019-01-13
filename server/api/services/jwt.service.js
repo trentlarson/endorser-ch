@@ -35,29 +35,30 @@ class JwtService {
     return {payload, header, signature, data}
   }
 
-  create(encoded) {
+  create(jwtEncoded) {
     l.info(`${this.constructor.name}.create(ENCODED)`);
-    l.trace(encoded, "ENCODED")
+    l.trace(jwtEncoded, "ENCODED")
 
-    const {payload, header, signature, data} = this.jwtDecoded(encoded)
-    let entity = db.jwtEntity(encoded, payload)
+    const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
+    let claimEncoded = base64url.encode(payload.claim)
+    let entity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
     return db.jwtInsert(entity)
   }
 
-  async createWithClaimRecords(encoded) {
+  async createWithClaimRecord(jwtEncoded) {
     l.info(`${this.constructor.name}.createWithClaimRecords(ENCODED)`);
-    l.trace(encoded, "ENCODED")
+    l.trace(jwtEncoded, "ENCODED")
 
-    const {payload, header, signature, data} = this.jwtDecoded(encoded)
+    const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
+    let claimEncoded = base64url.encode(JSON.stringify(payload.claim))
+    let entity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+    let jwtId = await db.jwtInsert(entity)
 
     // this line is lifted from didJwt.verifyJWT
     const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
     l.debug(doc, "doc")
     l.trace(authenticators, "authenticators")
     l.trace(issuer, "issuer")
-
-    let entity = db.jwtEntity(encoded, payload)
-    let jwtId = await db.jwtInsert(entity)
 
     let DID = doc.id
 
@@ -66,26 +67,34 @@ class JwtService {
 
     if (payload.claim) {
       if (payload.claim['@context'] === 'http://schema.org'
-          && payload.claim['@type'] === 'AttendedAction') {
-        var eventId = await db.eventIdByNameTime(payload.claim.object.name, payload.claim.object.startTime)
+          && payload.claim['@type'] === 'JoinAction') {
+
+        // check that the subject is the same as the agent
+        if (payload.sub !== payload.claim.agent.did) {
+          throw new Error("Subject of JWT doesn't match JoinAction. sub:" + payload.sub + " agent.did:" + payload.claim.agent.did)
+        }
+
+        var eventId = await db.eventIdByOrgNameNameTime(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
         if (eventId === null) {
-          eventId = await db.eventInsert(payload.claim.object.name, payload.claim.object.startTime)
+          eventId = await db.eventInsert(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
           l.trace(`New event # ${eventId}`)
         }
 
-        let attId = await db.attendanceInsert(DID, eventId)
+        let attId = await db.attendanceInsert(payload.sub, eventId, claimEncoded)
         l.trace(`New attendance # ${attId}`)
 
       } else if (payload.claim['@context'] === 'http://endorser.ch'
-                 && payload.claim['@type'] === 'ConfirmJwt') {
-        let origPayload = JSON.parse(base64url.decode(payload.claim['payload']))
-        l.debug(origPayload, "Original payload being confirmed")
-        // someday: check whether this really is an AttendedAction
-        var eventId = await db.eventIdByNameTime(origPayload.claim.object.name, origPayload.claim.object.startTime)
+                 && payload.claim['@type'] === 'Confirmation') {
+
+        let origClaim = JSON.parse(base64url.decode(payload.claim['claimEncoded']))
+        l.debug(origClaim, "Original payload being confirmed")
+
+        // someday: check whether this really is a JoinAction
+        var eventId = await db.eventIdByOrgNameNameTime(origClaim.event.organizer.name, origClaim.event.name, origClaim.event.startTime)
         if (eventId === null) throw Error("Attempted to confirm attendance at an unrecorded event.")
-        let attendId = await db.attendanceIdByDidEvent(origPayload.claim.agent.did, eventId)
+        let attendId = await db.attendanceIdByDidEventId(origClaim.agent.did, eventId)
         if (attendId === null) throw Error("Attempted to confirm an unrecorded attendance.")
-        db.endorsementInsert(DID, attendId)
+        await db.confirmationInsert(DID, attendId, payload.claim['claimEncoded'])
       }
     }
 
