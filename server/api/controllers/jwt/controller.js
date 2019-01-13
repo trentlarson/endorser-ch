@@ -22,17 +22,17 @@ export class Controller {
       .create(req.body.encoded)
       .then(r => res
         .status(201)
-        .location(`<%= apiRoot %>/jwt/${r.id}`)
+        .location(`<%= apiRoot %>/claim/${r.id}`)
         .json(r));
   }
   **/
 
   importClaims(req, res) {
     JwtService
-      .createWithClaimRecord(req.body.encoded)
+      .createWithClaimRecord(req.body.jwtEncoded)
       .then(r => res
             .status(201)
-            .location(`<%= apiRoot %>/jwt/${r.id}`)
+            .location(`<%= apiRoot %>/claim/${r.id}`)
             .json(r));
   }
 

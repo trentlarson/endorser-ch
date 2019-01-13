@@ -11,42 +11,46 @@ export default express
   })
 
 /**
+ * See /server/common/server.js for other Swagger settings & pieces of generated docs.
+ **/
+
+/**
  * @typedef EncodedJwt
- * @property {string} encoded.required
+ * @property {string} jwtEncoded.required
  */
 
 /**
- * Add a JWT and insert claims into their own tables
- * @group jwt - JWT storage
- * @route POST /api/jwt
+ * Add a Claim JWT and insert claims into their own tables
+ * @group jwt - Claim JWT storage
+ * @route POST /api/claim
  * @param {EncodedJwt.model} jwt.body.required
- * @returns {object} 200 - internal ID of JWT
+ * @returns {object} 200 - internal ID of Claim JWT
  * @returns {Error}  default - Unexpected error
  */
   .post('/', controller.importClaims)
 /**
- * Get all JWTs
- * @group jwt - JWT storage
- * @route GET /api/jwt
- * @returns {Array.object} 200 - all JWTs
+ * Get all Claim JWTs
+ * @group jwt - Claim JWT storage
+ * @route GET /api/claim
+ * @returns {Array.object} 200 - all Claim JWTs
  * @returns {Error}  default - Unexpected error
  */
   .get('/', controller.getAll)
 /**
- * Get a JWT
- * @group jwt - JWT storage
- * @route GET /api/jwt/{id}
- * @param {number} id.path.required - the ID of the JWT record to retrieve
- * @returns {object} 200 - JWT if it exists, otherwise 404
+ * Get a Claim JWT
+ * @group jwt - Claim JWT storage
+ * @route GET /api/claim/{id}
+ * @param {number} id.path.required - the ID of the Claim JWT record to retrieve
+ * @returns {object} 200 - Claim JWT if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
   .get('/:id', controller.getById)
 /**
- * Add a JWT raw, without any processing (not recommended)
- * @group jwt - JWT storage
- * @route POST /api/jwt/raw
+ * Add a Claim JWT raw, without any processing (not recommended)
+ * @group jwt - Claim JWT storage
+ * @route POST /api/claim/raw
  * @param {string} jwt.body.required
- * @returns {object} 200 - internal ID of JWT
+ * @returns {object} 200 - internal ID of Claim JWT
  * @returns {Error}  default - Unexpected error
  *
   .post('/raw', controller.create)

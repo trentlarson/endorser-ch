@@ -33,6 +33,9 @@ let options = {
       }
     }
     **/
+    /**
+       Other places to tweak API docs: ../api/controllers/* /*.js (router & controller)
+     **/
   },
   basedir: __dirname, //app absolute path
   files: ['../routes.js', '../**/router.js'] //Path to the API handle folder
