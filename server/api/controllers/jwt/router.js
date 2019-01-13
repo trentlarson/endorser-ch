@@ -9,11 +9,17 @@ export default express
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
   })
+
+/**
+ * @typedef EncodedJwt
+ * @property {string} encoded.required
+ */
+
 /**
  * Add a JWT and insert claims into their own tables
  * @group jwt - JWT storage
  * @route POST /api/jwt
- * @param {string} jwt.body.required
+ * @param {EncodedJwt.model} jwt.body.required
  * @returns {object} 200 - internal ID of JWT
  * @returns {Error}  default - Unexpected error
  */
