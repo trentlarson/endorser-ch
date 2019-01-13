@@ -1,6 +1,7 @@
-import l from '../../common/logger';
+import l from '../../common/logger'
 import base64url from 'base64url'
-import db from './endorser.db.service';
+import util from 'util'
+import db from './endorser.db.service'
 import didJwt from 'did-jwt'
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
@@ -11,10 +12,15 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 class JwtService {
 
-  async all() {
-    l.info(`${this.constructor.name}.all()`);
-    let all = await db.jwtAll()
-    let result = all.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimType:j.claimType}))
+  async byQuery(params) {
+    l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
+    var resultData = []
+    if (params.claimType) {
+      resultData = await db.jwtByClaimType(params.claimType)
+    } else if (Object.keys(params).length == 0) {
+      resultData = await db.jwtLatest()
+    }
+    let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimType:j.claimType}))
     return result;
   }
 

@@ -5,7 +5,7 @@ export default express
   .Router()
   .all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
   })
@@ -35,7 +35,7 @@ export default express
  * @returns {Array.object} 200 - all Claim JWTs
  * @returns {Error}  default - Unexpected error
  */
-  .get('/', controller.getAll)
+  .get('/', controller.getByQuery)
 /**
  * Get a Claim JWT
  * @group jwt - Claim JWT storage
@@ -55,3 +55,4 @@ export default express
  *
   .post('/raw', controller.create)
  */
+
