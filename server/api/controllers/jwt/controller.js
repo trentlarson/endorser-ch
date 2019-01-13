@@ -2,8 +2,8 @@ import JwtService from '../../services/jwt.service';
 
 export class Controller {
 
-  getAll(req, res) {
-    JwtService.all()
+  getByQuery(req, res) {
+    JwtService.byQuery(req.query)
       .then(r => res.json(r));
   }
 
