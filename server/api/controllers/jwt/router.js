@@ -10,37 +10,38 @@ export default express
     next();
   })
 /**
- * Add a JWT
- * @route POST /api/jwt
+ * Add a JWT and insert claims into their own tables
  * @group jwt - JWT storage
+ * @route POST /api/jwt
  * @param {string} jwt.body.required
  * @returns {object} 200 - internal ID of JWT
  * @returns {Error}  default - Unexpected error
  */
-  .post('/', controller.create)
+  .post('/', controller.importClaims)
 /**
  * Get all JWTs
- * @route GET /api/jwt
  * @group jwt - JWT storage
+ * @route GET /api/jwt
  * @returns {Array.object} 200 - all JWTs
  * @returns {Error}  default - Unexpected error
  */
   .get('/', controller.getAll)
 /**
  * Get a JWT
- * @route GET /api/jwt/{id}
  * @group jwt - JWT storage
- * @param {string} id.path.required - the ID of the JWT record to retrieve
+ * @route GET /api/jwt/{id}
+ * @param {number} id.path.required - the ID of the JWT record to retrieve
  * @returns {object} 200 - JWT if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
   .get('/:id', controller.getById)
 /**
- * Add a JWT and insert claims into their own tables
- * @route POST /api/jwt/attendance
+ * Add a JWT raw, without any processing (not recommended)
  * @group jwt - JWT storage
+ * @route POST /api/jwt/raw
  * @param {string} jwt.body.required
  * @returns {object} 200 - internal ID of JWT
  * @returns {Error}  default - Unexpected error
+ *
+  .post('/raw', controller.create)
  */
-  .post('/claims', controller.importClaims)
