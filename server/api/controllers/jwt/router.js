@@ -31,6 +31,7 @@ export default express
 /**
  * Get all Claim JWTs
  * @group jwt - Claim JWT storage
+ * @param {String} claimType.query.optional
  * @route GET /api/claim
  * @returns {Array.object} 200 - all Claim JWTs
  * @returns {Error}  default - Unexpected error

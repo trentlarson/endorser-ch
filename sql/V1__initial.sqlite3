@@ -16,7 +16,7 @@ CREATE TABLE attendance (
 CREATE TABLE confirmation (
        did CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        attendanceRowId BIGINT,
-       claimEncoded TEXT
+       origClaimEncoded TEXT
 );
 
 CREATE TABLE jwt (

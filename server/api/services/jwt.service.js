@@ -92,7 +92,8 @@ class JwtService {
       } else if (payload.claim['@context'] === 'http://endorser.ch'
                  && payload.claim['@type'] === 'Confirmation') {
 
-        let origClaim = JSON.parse(base64url.decode(payload.claim['claimEncoded']))
+        let origClaimEncoded = payload.claim['claimEncoded']
+        let origClaim = JSON.parse(base64url.decode(origClaimEncoded))
         l.debug(origClaim, "Original payload being confirmed")
 
         // someday: check whether this really is a JoinAction
@@ -100,7 +101,7 @@ class JwtService {
         if (eventId === null) throw Error("Attempted to confirm attendance at an unrecorded event.")
         let attendId = await db.attendanceIdByDidEventId(origClaim.agent.did, eventId)
         if (attendId === null) throw Error("Attempted to confirm an unrecorded attendance.")
-        await db.confirmationInsert(DID, attendId, payload.claim['claimEncoded'])
+        await db.confirmationInsert(DID, attendId, origClaimEncoded)
       }
     }
 
