@@ -170,4 +170,5 @@ cf push endorser-ch
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
 - reject duplicate JWT submissions
+- make record IDs into hashes not sequentially increasing numbers
 - allow for event time to check against true time (store as seconds? ug)
