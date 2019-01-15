@@ -14,20 +14,11 @@ class JwtService {
 
   async byQuery(params) {
     l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
-    var resultData = []
-    if (params.subject) {
-      if (params.claimType) {
-        resultData = await db.jwtBySubjectClaimType(params.subject, params.claimType)
-      } else {
-        throw new Error("That query is not implemented.")
-      }
-    } else if (params.claimType) {
-      resultData = await db.jwtByClaimType(params.claimType)
-    } else if (Object.keys(params).length == 0) {
-      resultData = await db.jwtLatest()
-    } else {
-      throw new Error("That query is not implemented.")
+    if (params.id) {
+      params.rowid = params.id
+      delete params.id
     }
+    let resultData = await db.jwtByParams(params)
     let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claimEncoded:j.claimEncoded}))
     return result;
   }
