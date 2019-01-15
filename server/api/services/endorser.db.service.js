@@ -139,25 +139,10 @@ class EndorserDatabase {
     }
   }
 
-  jwtLatest() {
-    return new Promise((resolve, reject) => {
-      var data = []
-      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt ORDER BY issuedAt DESC LIMIT 50", function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded})
-      }, function(err, num) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(data)
-        }
-      });
-    })
-  }
-
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE rowid = ?", [id], function(err, row) {
+      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
         data = {id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded}
       }, function(err, num) {
         if (err) {
@@ -169,25 +154,29 @@ class EndorserDatabase {
     })
   }
 
-  jwtByClaimType(claimType) {
+  /**
+     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
+   **/
+  jwtByParams(params) {
+    var whereClause = ""
+    if (params.excludeConfirmations) {
+      whereClause += " claimType != 'Confirmation'"
+      delete params.excludeConfirmations
+    }
+    var paramArray = []
+    for (var col in params) {
+      if (whereClause.length > 0) {
+        whereClause += " AND"
+      }
+      whereClause += " " + col + " = ?"
+      paramArray.push(params[col])
+    }
+    if (whereClause.length > 0) {
+      whereClause = " WHERE" + whereClause
+    }
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE claimType = ?", [claimType], function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded})
-      }, function(err, num) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(data)
-        }
-      });
-    })
-  }
-
-  jwtBySubjectClaimType(subject, claimType) {
-    return new Promise((resolve, reject) => {
-      var data = []
-      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE subject = ? AND claimType = ?", [subject, claimType], function(err, row) {
+      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt" + whereClause + " ORDER BY issuedAt DESC LIMIT 50", paramArray, function(err, row) {
         data.push({id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded})
       }, function(err, num) {
         if (err) {
