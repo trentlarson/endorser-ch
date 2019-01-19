@@ -164,11 +164,17 @@ cf push endorser-ch
 
 ## ToDo
 
+- explore page: add # of confirmations (after they click on the claim)
+- report page: who has confirmations for an activity; who has the most activity for a time range
 - gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found)
+- change the storage in JWT table to have original claim (eg for Confirmations)
 - confirm Attended Action, but just show confirmation numbers
 - tests: see above; duplicate JWT data
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
+- rework date for consistent preimage: either timestamp or UTC
 - reject duplicate JWT submissions
 - make record IDs into hashes not sequentially increasing numbers
 - allow for event time to check against true time (store as seconds? ug)
+
+- How do I find the app address or ID?
