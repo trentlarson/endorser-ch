@@ -166,7 +166,6 @@ cf push endorser-ch
 
 ## ToDo
 
-- save docs: schema.org, node, javascript
 
 - report page: who has confirmations for an activity
 - report page: who has the most activity for a time range
@@ -184,5 +183,8 @@ cf push endorser-ch
 - rework date for consistent preimage: either timestamp or UTC
 - reject duplicate JWT submissions
 - allow for event time to check against true time (store as seconds? ug)
+- fix mobile display
+  - in browser, to get the RHS to all show, turned off these in the second-to-last "inherited from" style: flex-direction & webkit-flex-direction and justify-content & webkit-justify-content
 
-- How do I find the app address or ID?
+- How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
+

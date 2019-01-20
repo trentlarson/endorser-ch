@@ -16,6 +16,12 @@ class EventService {
     return resultData;
   }
 
+  async getActionClaimsAndConfirmationsByEventId(id) {
+    l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`);
+    let resultData = await db.getActionClaimsAndConfirmationsByEventId(id)
+    return resultData;
+  }
+
 }
 
 export default new EventService();

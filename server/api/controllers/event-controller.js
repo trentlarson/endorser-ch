@@ -16,6 +16,11 @@ export class Controller {
       .then(r => res.json(r));
   }
 
+  getActionClaimsAndConfirmationsByEventId(req, res) {
+    EventService.getActionClaimsAndConfirmationsByEventId(req.params.id)
+      .then(r => res.json(r));
+  }
+
 }
 
 export default new Controller();
