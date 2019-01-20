@@ -106,6 +106,7 @@ curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"j
 curl http://localhost:3000/api/claim?claimType=JoinAction
 curl http://localhost:3000/api/action/1
 curl http://localhost:3000/api/event/1
+curl http://localhost:3000/api/event/1/actionClaimsAndConfirmations
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -115,7 +116,7 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 
 ## Try It
 
-See API docs: http://localhost:3001/api-docs
+See API docs: http://localhost:3000/api-docs
 
 * Open you're browser to [http://localhost:3000](http://localhost:3000)
 * Invoke the `/examples` endpoint 
@@ -167,7 +168,7 @@ cf push endorser-ch
 ## ToDo
 
 
-- report page: who has confirmations for an activity
+- report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - report page: who has the most activity for a time range
 - explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
 - given a user who has a claim, find if anyone in my network endorses them for that

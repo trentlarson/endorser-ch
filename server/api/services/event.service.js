@@ -1,4 +1,5 @@
 import util from 'util'
+import R from 'ramda'
 
 import l from '../../common/logger';
 import db from './endorser.db.service';
@@ -16,10 +17,23 @@ class EventService {
     return resultData;
   }
 
+  // create confirmation list from a list of actionClaimsAndConfirmations for the same action
+  // internal helper function
+  buildConfirmationList(acacList) {
+    return {
+      action: acacList[0].action,
+      confirmations: (acacList.length == 1 && !acacList[0].confirmation)
+        ? []
+        : R.map(acac=>acac.confirmation)(acacList)
+    }
+  }
+
   async getActionClaimsAndConfirmationsByEventId(id) {
-    l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`);
+    l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`)
     let resultData = await db.getActionClaimsAndConfirmationsByEventId(id)
-    return resultData;
+    let acacListById = R.groupBy(acac => ""+acac.action.id)(resultData)
+    let acacListByAction = R.map(acacList => this.buildConfirmationList(acacList))(acacListById)
+    return R.values(acacListByAction)
   }
 
 }

@@ -25,6 +25,7 @@
     "express": "^4.16.4",
     "node-flywaydb": "^0.1.6",
     "pino": "^5.10.2",
+    "ramda": "^0.26.1",
     "sqlite3": "^4.0.4"
   },
   "devDependencies": {
