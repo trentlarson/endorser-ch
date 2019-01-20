@@ -25,7 +25,7 @@ export default express
   .get('/:id', controller.getById)
 /**
  * Get many events
- * @group jwt - Event storage
+ * @group event - Event storage
  * @route GET /api/event
  * @param {String} orgName.query.optional
  * @param {String} name.query.optional
@@ -34,3 +34,22 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
   .get('/', controller.getByQuery)
+
+/**
+ * @typedef ActionClaimsConfirmations
+ * @property {string} actionId.required
+ * @property {string} actionDid.required
+ * @property {string} claimEncoded.required
+ * @property {string} confirmationId.optional
+ * @property {string} confirmationDid.optional
+ */
+
+/**
+ * Get claims and confirmations for an event
+ * @group event - Event storage
+ * @route GET /api/event/{id}/actionClaimsAndConfirmations
+ * @param {number} id.path.required - the ID of the event record to retrieve
+ * @returns {Array.ActionClaimsConfirmations} 200 - events
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/:id/actionClaimsAndConfirmations', controller.getActionClaimsAndConfirmationsByEventId)

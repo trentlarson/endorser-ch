@@ -48,8 +48,8 @@ export default express
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
-  .get('/:id', controller.getById)
-/**
+ .get('/:id', controller.getById)
+ /**
  * Add a Claim JWT raw, without any processing (not recommended)
  * @group jwt - Claim JWT storage
  * @route POST /api/claim/raw
