@@ -34,8 +34,8 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-         .equal(1)
-     })).timeout(5000)
+         .that.equals(1)
+     })).timeout(3000)
 
   it('should get a claim #1', () =>
      request(Server)
@@ -44,11 +44,11 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('object')
-         .that.has.property('claimContext')
-         .equal('http://schema.org')
+         .that.has.a.property('claimContext')
+         .that.equals('http://schema.org')
        expect(r.body)
-         .that.has.property('claimType')
-         .equal('JoinAction')
+         .that.has.a.property('claimType')
+         .that.equals('JoinAction')
      }))
 
   it('should add a new confirmation', () =>
@@ -59,7 +59,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-         .equal(2)
+         .that.equals(2)
      }))
 
   it('should get 2 claims', () =>
@@ -90,6 +90,21 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+     }))
+
+})
+
+describe('Action', () => {
+
+  it('should get 1 action', () =>
+     request(Server)
+     .get('/api/action/1')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.property('did')
+         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
      }))
 
 })

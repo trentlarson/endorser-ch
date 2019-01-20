@@ -12,6 +12,11 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 class JwtService {
 
+  byId(id) {
+    l.info(`${this.constructor.name}.byId(${id})`);
+    return db.jwtById(id);
+  }
+
   async byQuery(params) {
     l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     if (params.id) {
@@ -21,11 +26,6 @@ class JwtService {
     let resultData = await db.jwtByParams(params)
     let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claimEncoded:j.claimEncoded}))
     return result;
-  }
-
-  byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
-    return db.jwtById(id);
   }
 
   jwtDecoded(encoded) {
@@ -85,8 +85,8 @@ class JwtService {
           l.trace(`New event # ${eventId}`)
         }
 
-        let attId = await db.attendanceInsert(payload.sub, eventId, claimEncoded)
-        l.trace(`New attendance # ${attId}`)
+        let attId = await db.actionInsert(payload.sub, eventId, claimEncoded)
+        l.trace(`New action # ${attId}`)
 
       } else if (payload.claim['@context'] === 'http://endorser.ch'
                  && payload.claim['@type'] === 'Confirmation') {
@@ -97,9 +97,9 @@ class JwtService {
 
         // someday: check whether this really is a JoinAction
         var eventId = await db.eventIdByOrgNameNameTime(origClaim.event.organizer.name, origClaim.event.name, origClaim.event.startTime)
-        if (eventId === null) throw Error("Attempted to confirm attendance at an unrecorded event.")
-        let attendId = await db.attendanceIdByDidEventId(origClaim.agent.did, eventId)
-        if (attendId === null) throw Error("Attempted to confirm an unrecorded attendance.")
+        if (eventId === null) throw Error("Attempted to confirm action at an unrecorded event.")
+        let attendId = await db.actionIdByDidEventId(origClaim.agent.did, eventId)
+        if (attendId === null) throw Error("Attempted to confirm an unrecorded action.")
         await db.confirmationInsert(DID, attendId, origClaimEncoded)
       }
     }

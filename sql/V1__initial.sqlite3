@@ -7,15 +7,15 @@ CREATE TABLE event (
 
 INSERT INTO event VALUES ("Bountiful Voluntaryist Community", "Saturday Morning Meeting", "2018-12-29T08:00:00.000-07:00");
 
-CREATE TABLE attendance (
-       did CHARACTER(60), -- DID of the attending entity (in subject & claim); did:ethr are 52 chars
+CREATE TABLE action (
+       did CHARACTER(60), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
        eventRowId BIGINT,
        claimEncoded TEXT
 );
 
 CREATE TABLE confirmation (
        did CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
-       attendanceRowId BIGINT,
+       actionRowId BIGINT,
        origClaimEncoded TEXT
 );
 
