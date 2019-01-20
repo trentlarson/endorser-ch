@@ -20,7 +20,7 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 NODE_ENV=dev npm run dev
 
 # run tests
-script/test.sh
+test/test.sh
 ```
 
 ## Install Dependencies

@@ -15,7 +15,7 @@ describe('Claim', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
-         .to.be.an.an('array')
+         .to.be.an('array')
          .of.length(0)
      }))
 
@@ -33,7 +33,7 @@ describe('Claim', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
-         .to.be.an.an('number')
+         .to.be.a('number')
          .equal(1)
      })).timeout(5000)
 
@@ -43,8 +43,33 @@ describe('Claim', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
-         .to.be.an.an('object')
+         .to.be.an('object')
          .that.has.property('claimContext')
          .equal('http://schema.org')
+       expect(r.body)
+         .that.has.property('claimType')
+         .equal('JoinAction')
      }))
+
+  it('should add a new confirmation', () =>
+     request(Server)
+     .post('/api/claim')
+     .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDczNjMzMzIsImV4cCI6MTU0NzQ0OTczMiwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsImNsYWltRW5jb2RlZCI6ImV5SkFZMjl1ZEdWNGRDSTZJbWgwZEhBNkx5OXpZMmhsYldFdWIzSm5JaXdpUUhSNWNHVWlPaUpLYjJsdVFXTjBhVzl1SWl3aVlXZGxiblFpT25zaVpHbGtJam9pWkdsa09tVjBhSEk2TUhoa1pqQmtPR1UxWm1ReU16UXdPRFptTmpZME9XWTNOMkppTURBMU9XUmxNV0ZsWW1ReE5ETmxJbjBzSW1WMlpXNTBJanA3SW05eVoyRnVhWHBsY2lJNmV5SnVZVzFsSWpvaVFtOTFiblJwWm5Wc0lGWnZiSFZ1ZEdGeWVXbHpkQ0JEYjIxdGRXNXBkSGtpZlN3aWJtRnRaU0k2SWxOaGRIVnlaR0Y1SUUxdmNtNXBibWNnVFdWbGRHbHVaeUlzSW5OMFlYSjBWR2x0WlNJNklqSXdNVGd0TVRJdE1qbFVNRGc2TURBNk1EQXVNREF3TFRBM09qQXdJbjE5In0sImlzcyI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9.JzDwaMO1omEdWvUD3yeG4atZypQAondyPnzYpZUbLf5QW6-B_P5xHu5th7s9uhdiYPhxoRLMBDjeQH2UzOgydQA"})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+         .equal(2)
+     }))
+
+  it('should get 2 claims', () =>
+     request(Server)
+     .get('/api/claim')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+     }))
+
 })
