@@ -45,13 +45,13 @@ class EndorserDatabase {
   }
 
   /**
-     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
+     @param eventId
+     @returns an all actions on the event outer joined with confirmations of those actions
    **/
   getActionClaimsAndConfirmationsByEventId(eventId) {
     return new Promise((resolve, reject) => {
       var data = []
-      console.log("event ID buddy", eventId)
-      db.each("select a.rowId as aid, a.did as actionDid, a.claimEncoded, c.rowid as cid, c.did as confirmDid, c.actionRowId from action a left join confirmation c on c.actionRowId = a.rowId where a.eventRowId = ?", [eventId], function(err, row) {
+      db.each("SELECT a.rowId AS aid, a.did AS actionDid, a.claimEncoded, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action a LEFT JOIN confirmation c ON c.actionRowId = a.rowId WHERE a.eventRowId = ?", [eventId], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionRowId:row.actionRowId} : null
         let both = {action:{id:row.aid, did:row.actionDid}, confirmation:confirmation}
         data.push(both)
@@ -120,7 +120,7 @@ class EndorserDatabase {
   }
 
   /**
-     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
+     @param object with a key-value for each column-value to filter
    **/
   eventsByParams(params) {
     if (params.id) {

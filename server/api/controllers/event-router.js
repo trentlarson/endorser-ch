@@ -15,15 +15,6 @@ export default express
  **/
 
 /**
- * Get an event
- * @group event - Event storage
- * @route GET /api/event/{id}
- * @param {number} id.path.required - the ID of the event record to retrieve
- * @returns {object} 200 - event if it exists, otherwise 404
- * @returns {Error}  default - Unexpected error
- */
-  .get('/:id', controller.getById)
-/**
  * Get many events
  * @group event - Event storage
  * @route GET /api/event
@@ -36,12 +27,32 @@ export default express
   .get('/', controller.getByQuery)
 
 /**
- * @typedef ActionClaimsConfirmations
- * @property {string} actionId.required
+ * Get an event
+ * @group event - Event storage
+ * @route GET /api/event/{id}
+ * @param {number} id.path.required - the ID of the event record to retrieve
+ * @returns {object} 200 - event if it exists, otherwise 404
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/:id', controller.getById)
+
+/**
+ * @typedef ActionClaim
+ * @property {number} actionId.required
  * @property {string} actionDid.required
- * @property {string} claimEncoded.required
- * @property {string} confirmationId.optional
- * @property {string} confirmationDid.optional
+ */
+
+/**
+ * @typedef Confirmation
+ * @property {number} id.required
+ * @property {string} did.required
+ * @property {number} actionRowId.required
+ */
+
+/**
+ * @typedef ActionClaimsConfirmations
+ * @property {ActionClaim} action.required
+ * @property {Array.Confirmation} confirmation.required
  */
 
 /**
@@ -49,7 +60,7 @@ export default express
  * @group event - Event storage
  * @route GET /api/event/{id}/actionClaimsAndConfirmations
  * @param {number} id.path.required - the ID of the event record to retrieve
- * @returns {Array.ActionClaimsConfirmations} 200 - events
+ * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error}  default - Unexpected error
  */
   .get('/:id/actionClaimsAndConfirmations', controller.getActionClaimsAndConfirmationsByEventId)
