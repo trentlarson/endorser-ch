@@ -96,7 +96,7 @@ describe('Claim', () => {
 
 describe('Action', () => {
 
-  it('should get 1 action', () =>
+  it('should get action with the right properties', () =>
      request(Server)
      .get('/api/action/1')
      .expect('Content-Type', /json/)
@@ -105,6 +105,33 @@ describe('Action', () => {
          .to.be.an('object')
          .that.has.property('did')
          .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+       expect(r.body)
+         .that.has.property('eventRowId')
+         .that.equals(1)
+       expect(r.body)
+         .that.has.property('claimEncoded')
+         .that.equals('eyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjlUMDg6MDA6MDAuMDAwLTA3OjAwIn19')
+     }))
+
+})
+
+describe('Event', () => {
+
+  it('should get event with the right properties', () =>
+     request(Server)
+     .get('/api/event/1')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.property('orgName')
+         .that.equals('Bountiful Voluntaryist Community')
+       expect(r.body)
+         .that.has.property('name')
+         .that.equals('Saturday Morning Meeting')
+       expect(r.body)
+         .that.has.property('startTime')
+         .that.equals('2018-12-29T08:00:00.000-07:00')
      }))
 
 })
