@@ -13,14 +13,14 @@ Get started developing...
 npm ci
 
 # setup DB
-DBUSER=sa DBPASS=sasa npm run migrate
+NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
 # run in development mode
-PORT=3001 npm run dev
+NODE_ENV=dev npm run dev
 
 # run tests
-npm run test
+script/test.sh
 ```
 
 ## Install Dependencies
@@ -106,8 +106,8 @@ curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"j
 curl http://localhost:3000/api/claim?claimType=JoinAction
 
 # clean out and recreate DB
-rm ../endorser-ch.sqlite3
-DBUSER=sa DBPASS=sasa npm run migrate
+rm ../endorser-ch-dev.sqlite3
+NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 ```
 
 
@@ -164,17 +164,23 @@ cf push endorser-ch
 
 ## ToDo
 
-- explore page: add # of confirmations (after they click on the claim)
-- report page: who has confirmations for an activity; who has the most activity for a time range
+- save docs: schema.org, node, javascript
+
+- report page: who has confirmations for an activity
+- report page: who has the most activity for a time range
+- explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
+- given a user who has a claim, find if anyone in my network endorses them for that
 - gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found)
+- change "attendance" table to "action"
+- add created date to each record
 - change the storage in JWT table to have original claim (eg for Confirmations)
+- make record IDs into hashes not sequentially increasing numbers
 - confirm Attended Action, but just show confirmation numbers
 - tests: see above; duplicate JWT data
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
 - rework date for consistent preimage: either timestamp or UTC
 - reject duplicate JWT submissions
-- make record IDs into hashes not sequentially increasing numbers
 - allow for event time to check against true time (store as seconds? ug)
 
 - How do I find the app address or ID?

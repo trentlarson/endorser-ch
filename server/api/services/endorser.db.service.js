@@ -1,5 +1,6 @@
-var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.Database('../endorser-ch.sqlite3');
+var sqlite3 = require('sqlite3').verbose()
+var dbInfo = require('../../../conf/flyway.js')
+var db = new sqlite3.Database(dbInfo.fileLoc)
 
 class EndorserDatabase {
 
