@@ -16,9 +16,9 @@ class EndorserDatabase {
     **/
   }
 
-  attendanceById(id) {
+  actionById(id) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid, did, eventRowId, claimEncoded FROM attendance WHERE rowid = ?", [id], function(err, row) {
+      db.get("SELECT rowid, did, eventRowId, claimEncoded FROM action WHERE rowid = ?", [id], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
@@ -30,9 +30,9 @@ class EndorserDatabase {
     })
   }
 
-  attendanceIdByDidEventId(did, eventId) {
+  actionIdByDidEventId(did, eventId) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid FROM attendance WHERE did = ? AND eventRowId = ?", [did, eventId], function(err, row) {
+      db.get("SELECT rowid FROM action WHERE did = ? AND eventRowId = ?", [did, eventId], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
@@ -44,9 +44,9 @@ class EndorserDatabase {
     })
   }
 
-  attendanceInsert(did, eventRowId, claimEncoded) {
+  actionInsert(did, eventRowId, claimEncoded) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO attendance VALUES (?, ?, ?)");
+      var stmt = ("INSERT INTO action VALUES (?, ?, ?)");
       db.run(stmt, [did, eventRowId, claimEncoded], function(err) {
         if (err) {
           reject(err)
@@ -71,10 +71,10 @@ class EndorserDatabase {
     })
   }
 
-  confirmationInsert(did, attendanceRowId, claimEncoded) {
+  confirmationInsert(did, actionRowId, claimEncoded) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO confirmation VALUES (?, ?, ?)");
-      db.run(stmt, [did, attendanceRowId, claimEncoded], function(err) {
+      db.run(stmt, [did, actionRowId, claimEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -93,6 +93,36 @@ class EndorserDatabase {
           resolve({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
         } else {
           resolve(null)
+        }
+      });
+    })
+  }
+
+  /**
+     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
+   **/
+  eventsByParams(params) {
+    var whereClause = ""
+    var paramArray = []
+    for (var col in params) {
+      if (whereClause.length > 0) {
+        whereClause += " AND"
+      }
+      whereClause += " " + col + " = ?"
+      paramArray.push(params[col])
+    }
+    if (whereClause.length > 0) {
+      whereClause = " WHERE" + whereClause
+    }
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT rowid, orgName, name, startTime FROM event" + whereClause + " ORDER BY startTime DESC LIMIT 50", paramArray, function(err, row) {
+        data.push({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
         }
       });
     })

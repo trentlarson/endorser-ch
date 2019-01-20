@@ -8,11 +8,6 @@ class EventService {
     return db.eventById(id);
   }
 
-  create(title, startTime) {
-    l.info(`${this.constructor.name}.create(${title}, ${startTime})`);
-    return db.eventInsert(did, eventId);
-  }
-
 }
 
 export default new EventService();

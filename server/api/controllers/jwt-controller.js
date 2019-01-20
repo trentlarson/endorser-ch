@@ -1,4 +1,4 @@
-import JwtService from '../../services/jwt.service';
+import JwtService from '../services/jwt.service';
 
 export class Controller {
 
