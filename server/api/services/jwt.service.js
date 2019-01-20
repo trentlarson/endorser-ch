@@ -19,10 +19,6 @@ class JwtService {
 
   async byQuery(params) {
     l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
-    if (params.id) {
-      params.rowid = params.id
-      delete params.id
-    }
     let resultData = await db.jwtByParams(params)
     let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claimEncoded:j.claimEncoded}))
     return result;
@@ -79,10 +75,16 @@ class JwtService {
           throw new Error("Subject of JWT doesn't match JoinAction. sub:" + payload.sub + " agent.did:" + payload.claim.agent.did)
         }
 
-        var eventId = await db.eventIdByOrgNameNameTime(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
-        if (eventId === null) {
+        var eventId
+        var events = await db.eventsByParams({orgName:payload.claim.event.organizer.name, name:payload.claim.event.name, startTime:payload.claim.event.startTime})
+        if (events.length === 0) {
           eventId = await db.eventInsert(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
           l.trace(`New event # ${eventId}`)
+        } else {
+          eventId = events[0].id
+          if (events.length > 1) {
+            l.warning(`Multiple events exist with orgName ${payload.claim.event.organizer.name} name ${payload.claim.event.name} startTime ${payload.claim.event.startTime}`)
+          }
         }
 
         let attId = await db.actionInsert(payload.sub, eventId, claimEncoded)
@@ -96,9 +98,9 @@ class JwtService {
         l.debug(origClaim, "Original payload being confirmed")
 
         // someday: check whether this really is a JoinAction
-        var eventId = await db.eventIdByOrgNameNameTime(origClaim.event.organizer.name, origClaim.event.name, origClaim.event.startTime)
-        if (eventId === null) throw Error("Attempted to confirm action at an unrecorded event.")
-        let attendId = await db.actionIdByDidEventId(origClaim.agent.did, eventId)
+        var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
+        if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
+        let attendId = await db.actionIdByDidEventId(origClaim.agent.did, events[0].id)
         if (attendId === null) throw Error("Attempted to confirm an unrecorded action.")
         await db.confirmationInsert(DID, attendId, origClaimEncoded)
       }

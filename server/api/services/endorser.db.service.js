@@ -102,6 +102,11 @@ class EndorserDatabase {
      @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
    **/
   eventsByParams(params) {
+    if (params.id) {
+      params.rowid = params.id
+      delete params.id
+    }
+
     var whereClause = ""
     var paramArray = []
     for (var col in params) {
@@ -123,20 +128,6 @@ class EndorserDatabase {
           reject(err)
         } else {
           resolve(data)
-        }
-      });
-    })
-  }
-
-  eventIdByOrgNameNameTime(orgName, name, startTime) {
-    return new Promise((resolve, reject) => {
-      db.get("SELECT rowid FROM event WHERE orgName = ? AND name = ? AND startTime = ?", [orgName, name, startTime], function(err, row) {
-        if (err) {
-          reject(err)
-        } else if (row) {
-          resolve(row.rowid)
-        } else {
-          resolve(null)
         }
       });
     })
@@ -189,6 +180,11 @@ class EndorserDatabase {
      @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
    **/
   jwtByParams(params) {
+    if (params.id) {
+      params.rowid = params.id
+      delete params.id
+    }
+
     var whereClause = ""
     if (params.excludeConfirmations) {
       whereClause += " claimType != 'Confirmation'"

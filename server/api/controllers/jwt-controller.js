@@ -2,11 +2,6 @@ import JwtService from '../services/jwt.service';
 
 export class Controller {
 
-  getByQuery(req, res) {
-    JwtService.byQuery(req.query)
-      .then(r => res.json(r));
-  }
-
   getById(req, res) {
     JwtService
       .byId(req.params.id)
@@ -14,6 +9,11 @@ export class Controller {
         if (r) res.json(r);
         else res.status(404).end();
       });
+  }
+
+  getByQuery(req, res) {
+    JwtService.byQuery(req.query)
+      .then(r => res.json(r));
   }
 
   /**
