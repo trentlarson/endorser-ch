@@ -134,4 +134,14 @@ describe('Event', () => {
          .that.equals('2018-12-29T08:00:00.000-07:00')
      }))
 
+  it('should get 1 event', () =>
+     request(Server)
+     .get('/api/event?orgName=Bountiful%20Voluntaryist%20Community')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+     }))
+
 })

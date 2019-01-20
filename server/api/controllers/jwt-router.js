@@ -29,11 +29,14 @@ export default express
  */
   .post('/', controller.importClaims)
 /**
- * Get all Claim JWTs
+ * Get many Claim JWTs
  * @group jwt - Claim JWT storage
  * @route GET /api/claim
+ * @param {String} claimContext.query.optional
  * @param {String} claimType.query.optional
- * @returns {Array.object} 200 - all Claim JWTs
+ * @param {String} issuedAt.query.optional
+ * @param {String} subject.query.optional
+ * @returns {Array.object} 200 - many Claim JWTs (up to 50)
  * @returns {Error}  default - Unexpected error
  */
   .get('/', controller.getByQuery)
