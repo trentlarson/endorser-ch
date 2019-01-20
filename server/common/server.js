@@ -38,7 +38,7 @@ let options = {
      **/
   },
   basedir: __dirname, //app absolute path
-  files: ['../routes.js', '../**/router.js'] //Path to the API handle folder
+  files: ['../routes.js', '../**/*-router.js'] //Path to the API handle folder
 };
 
 export default class ExpressServer {
