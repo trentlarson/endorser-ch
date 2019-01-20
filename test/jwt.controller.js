@@ -72,4 +72,24 @@ describe('Claim', () => {
          .of.length(2)
      }))
 
+  it('should get 1 claim', () =>
+     request(Server)
+     .get('/api/claim?claimType=JoinAction')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+     }))
+
+  it('should get 1 comfirmation', () =>
+     request(Server)
+     .get('/api/claim?claimType=Confirmation')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+     }))
+
 })
