@@ -18,11 +18,11 @@ class EndorserDatabase {
 
   actionById(id) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid, did, eventRowId, claimEncoded FROM action WHERE rowid = ?", [id], function(err, row) {
+      db.get("SELECT * FROM action WHERE rowid = ?", [id], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, did:row.did, eventRowId:row.eventRowId, claimEncoded:row.claimEncoded})
+          resolve({id:row.rowid, did:row.did, eventRowId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime, claimEncoded:row.claimEncoded})
         } else {
           resolve(null)
         }
@@ -65,10 +65,10 @@ class EndorserDatabase {
     })
   }
 
-  actionInsert(did, eventRowId, claimEncoded) {
+  actionInsert(did, event, claimEncoded) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action VALUES (?, ?, ?)");
-      db.run(stmt, [did, eventRowId, claimEncoded], function(err) {
+      var stmt = ("INSERT INTO action VALUES (?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [did, event.id, event.orgName, event.name, event.startTime, claimEncoded], function(err) {
         if (err) {
           reject(err)
         } else {

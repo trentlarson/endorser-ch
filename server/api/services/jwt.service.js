@@ -75,19 +75,20 @@ class JwtService {
           throw new Error("Subject of JWT doesn't match JoinAction. sub:" + payload.sub + " agent.did:" + payload.claim.agent.did)
         }
 
-        var eventId
+        var event
         var events = await db.eventsByParams({orgName:payload.claim.event.organizer.name, name:payload.claim.event.name, startTime:payload.claim.event.startTime})
         if (events.length === 0) {
-          eventId = await db.eventInsert(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
-          l.trace(`New event # ${eventId}`)
+          let eventId = await db.eventInsert(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
+          event = {id:eventId, orgName:payload.claim.event.organizer.name, name:payload.claim.event.name, startTime:payload.claim.event.startTime}
+          l.trace(`New event # ${util.inspect(event)}`)
         } else {
-          eventId = events[0].id
+          event = events[0]
           if (events.length > 1) {
             l.warning(`Multiple events exist with orgName ${payload.claim.event.organizer.name} name ${payload.claim.event.name} startTime ${payload.claim.event.startTime}`)
           }
         }
 
-        let attId = await db.actionInsert(payload.sub, eventId, claimEncoded)
+        let attId = await db.actionInsert(payload.sub, event, claimEncoded)
         l.trace(`New action # ${attId}`)
 
       } else if (payload.claim['@context'] === 'http://endorser.ch'
