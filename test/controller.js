@@ -2,10 +2,13 @@ import * as childProcess from 'child_process';
 import chai from 'chai';
 import request from 'supertest';
 import Server from '../server';
+console.log('PORT', process.env.PORT)
 
 let dbInfo = require('../conf/flyway.js')
 
 const expect = chai.expect;
+
+var firstId = 1
 
 describe('Claim', () => {
 
@@ -34,12 +37,12 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-         .that.equals(1)
+         .that.equals(firstId)
      })).timeout(3000)
 
-  it('should get a claim #1', () =>
+  it('should get a claim #' + firstId, () =>
      request(Server)
-     .get('/api/claim/1')
+     .get('/api/claim/' + firstId)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -98,7 +101,7 @@ describe('Action', () => {
 
   it('should get action with the right properties', () =>
      request(Server)
-     .get('/api/action/1')
+     .get('/api/action/' + firstId)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -107,7 +110,16 @@ describe('Action', () => {
          .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
        expect(r.body)
          .that.has.property('eventRowId')
-         .that.equals(1)
+         .that.equals(firstId)
+       expect(r.body)
+         .that.has.property('eventOrgName')
+         .that.equals('Bountiful Voluntaryist Community')
+       expect(r.body)
+         .that.has.property('eventName')
+         .that.equals('Saturday Morning Meeting')
+       expect(r.body)
+         .that.has.property('eventStartTime')
+         .that.equals('2018-12-29T08:00:00.000-07:00')
        expect(r.body)
          .that.has.property('claimEncoded')
          .that.equals('eyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjlUMDg6MDA6MDAuMDAwLTA3OjAwIn19')
@@ -119,7 +131,7 @@ describe('Event', () => {
 
   it('should get event with the right properties', () =>
      request(Server)
-     .get('/api/event/1')
+     .get('/api/event/' + firstId)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)

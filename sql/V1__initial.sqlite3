@@ -5,11 +5,12 @@ CREATE TABLE event (
        startTime DATETIME
 );
 
-INSERT INTO event VALUES ("Bountiful Voluntaryist Community", "Saturday Morning Meeting", "2018-12-29T08:00:00.000-07:00");
-
 CREATE TABLE action (
        did CHARACTER(60), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
        eventRowId BIGINT,
+       eventOrgName VARCHAR(120),
+       eventName VARCHAR(250),
+       eventStartTime DATETIME,
        claimEncoded TEXT
 );
 
