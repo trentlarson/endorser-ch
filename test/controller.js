@@ -2,7 +2,6 @@ import * as childProcess from 'child_process';
 import chai from 'chai';
 import request from 'supertest';
 import Server from '../server';
-console.log('PORT', process.env.PORT)
 
 let dbInfo = require('../conf/flyway.js')
 
@@ -154,6 +153,22 @@ describe('Event', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+     }))
+
+  it('should get a set of action claims & confirmations', () =>
+     request(Server)
+     .get('/api/event/1/actionClaimsAndConfirmations')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       console.log(r.body)
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+       expect(r.body[0])
+         .to.be.an('object')
+         .that.has.property('action')
+         .that.has.property('did')
+         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
      }))
 
 })

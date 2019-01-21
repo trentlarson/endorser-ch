@@ -46,14 +46,35 @@ class EndorserDatabase {
 
   /**
      @param eventId
-     @returns an all actions on the event outer joined with confirmations of those actions
+     @returns all actions on the event outer-joined with confirmations of those actions
    **/
   getActionClaimsAndConfirmationsByEventId(eventId) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT a.rowId AS aid, a.did AS actionDid, a.claimEncoded, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action a LEFT JOIN confirmation c ON c.actionRowId = a.rowId WHERE a.eventRowId = ?", [eventId], function(err, row) {
+      db.each("SELECT a.rowId AS aid, a.did AS actionDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action a LEFT JOIN confirmation c ON c.actionRowId = a.rowId WHERE a.eventRowId = ?", [eventId], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionRowId:row.actionRowId} : null
-        let both = {action:{id:row.aid, did:row.actionDid}, confirmation:confirmation}
+        let both = {action:{id:row.aid, did:row.actionDid, eventRowId:row.eventRowId}, confirmation:confirmation}
+        data.push(both)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
+  /**
+     @param dateTime
+     @Returns all actions on the event outer-joined with confirmations of those actions
+  **/
+  getActionClaimsAndConfirmationsForEventsSince(dateTime) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT a.rowId AS aid, a.did AS actionDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action a LEFT JOIN confirmation c ON c.actionRowId = a.rowId WHERE a.eventStartTime > ?", [dateTime], function(err, row) {
+        let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionRowId:row.actionRowId} : null
+        let both = {action:{id:row.aid, did:row.actionDid, eventRowId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime}, confirmation:confirmation}
         data.push(both)
       }, function(err, num) {
         if (err) {
