@@ -107,6 +107,7 @@ curl http://localhost:3000/api/claim?claimType=JoinAction
 curl http://localhost:3000/api/action/1
 curl http://localhost:3000/api/event/1
 curl http://localhost:3000/api/event/1/actionClaimsAndConfirmations
+curl http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -178,7 +179,7 @@ cf push endorser-ch
 - change the storage in JWT table to have original claim (eg for Confirmations)
 - make record IDs into hashes not sequentially increasing numbers
 - confirm Attended Action, but just show confirmation numbers
-- tests: see above; duplicate JWT data
+- tests: see above; duplicate JWT data; ACACs by different times
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
 - rework date for consistent preimage: either timestamp or UTC

@@ -1,5 +1,8 @@
+import R from 'ramda'
+
 import l from '../../common/logger';
 import db from './endorser.db.service';
+import { buildConfirmationList } from './util'
 
 class ActionService {
 
@@ -15,8 +18,18 @@ class ActionService {
       delete params.id
     }
     let resultData = await db.actionByParams(params)
-    let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claimEncoded:j.claimEncoded}))
-    return result;
+    return resultData;
+  }
+
+  async getActionClaimsAndConfirmationsForEventsSince(dateTime) {
+    let resultData = await db.getActionClaimsAndConfirmationsForEventsSince(dateTime)
+    // group all actions by DID
+    let acacListsByDid = R.groupBy(acac => acac.action.did)(resultData)
+    // now make an action group for each DID
+    let acacListsByDidThenAction = R.map(acacList => R.groupBy(acac => acac.id))(acacListsByDid)
+    // now aggregate all confirmations for each DID-action
+    let acacListByDid = R.map(R.map(buildConfirmationList))(acacListsByDidThenAction)
+    return R.values(acacListByDid)
   }
 
 }

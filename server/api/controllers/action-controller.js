@@ -11,6 +11,11 @@ export class Controller {
       });
   }
 
+  getActionClaimsAndConfirmationsSince(req, res) {
+    ActionService.getActionClaimsAndConfirmationsForEventsSince(req.params.dateTime)
+      .then(r => res.json(r));
+  }
+
 }
 
 export default new Controller();
