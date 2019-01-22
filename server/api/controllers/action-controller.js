@@ -12,7 +12,7 @@ export class Controller {
   }
 
   getActionClaimsAndConfirmationsSince(req, res) {
-    ActionService.getActionClaimsAndConfirmationsForEventsSince(req.params.dateTime)
+    ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
       .then(r => res.json(r));
   }
 
