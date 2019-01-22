@@ -26,10 +26,11 @@ class ActionService {
     // group all actions by DID
     let acacListsByDid = R.groupBy(acac => acac.action.did)(resultData)
     // now make an action group for each DID
-    let acacListsByDidThenAction = R.map(acacList => R.groupBy(acac => acac.id))(acacListsByDid)
+    let acacListsByDidThenAction = R.map(acacList => R.groupBy(acac => acac.action.id)(acacList))(acacListsByDid)
     // now aggregate all confirmations for each DID-action
-    let acacListByDid = R.map(R.map(buildConfirmationList))(acacListsByDidThenAction)
-    return R.values(acacListByDid)
+    let acacObjectByDid = R.map(R.map(buildConfirmationList))(acacListsByDidThenAction)
+    let acacListByDid = R.map(R.values)(acacObjectByDid)
+    return acacListByDid
   }
 
 }

@@ -66,13 +66,14 @@ class EndorserDatabase {
   }
 
   /**
-     @param dateTime
+     @param dateTimeStr in ISO format
      @Returns all actions on the event outer-joined with confirmations of those actions
   **/
-  getActionClaimsAndConfirmationsForEventsSince(dateTime) {
+  getActionClaimsAndConfirmationsForEventsSince(dateTimeStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT a.rowId AS aid, a.did AS actionDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action a LEFT JOIN confirmation c ON c.actionRowId = a.rowId WHERE a.eventStartTime > ?", [dateTime], function(err, row) {
+      let sql = "SELECT a.rowId AS aid, a.did AS actionDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action a LEFT JOIN confirmation c ON c.actionRowId = a.rowId WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
+      db.each(sql, [], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionRowId:row.actionRowId} : null
         let both = {action:{id:row.aid, did:row.actionDid, eventRowId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime}, confirmation:confirmation}
         data.push(both)
@@ -88,8 +89,8 @@ class EndorserDatabase {
 
   actionInsert(did, event, claimEncoded) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action VALUES (?, ?, ?, ?, ?, ?)");
-      db.run(stmt, [did, event.id, event.orgName, event.name, event.startTime, claimEncoded], function(err) {
+      var stmt = ("INSERT INTO action VALUES (?, ?, ?, ?, datetime('" + event.startTime + "'), ?)");
+      db.run(stmt, [did, event.id, event.orgName, event.name, claimEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -155,15 +156,21 @@ class EndorserDatabase {
       if (whereClause.length > 0) {
         whereClause += " AND"
       }
-      whereClause += " " + col + " = ?"
-      paramArray.push(params[col])
+      if (params[col].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
+        // treat dates differently for SQLite
+        whereClause += " " + col + " = datetime('" + params[col] + "')"
+      } else {
+        whereClause += " " + col + " = ?"
+        paramArray.push(params[col])
+      }
     }
     if (whereClause.length > 0) {
       whereClause = " WHERE" + whereClause
     }
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, orgName, name, startTime FROM event" + whereClause + " ORDER BY startTime DESC LIMIT 50", paramArray, function(err, row) {
+      let sql = "SELECT rowid, orgName, name, startTime FROM event" + whereClause + " ORDER BY startTime DESC LIMIT 50"
+      db.each(sql, paramArray, function(err, row) {
         data.push({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
       }, function(err, num) {
         if (err) {
@@ -177,7 +184,7 @@ class EndorserDatabase {
 
   eventInsert(orgName, name, startTime) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO event VALUES (?, ?, ?)");
+      var stmt = ("INSERT INTO event VALUES (?, ?, datetime(?))");
       db.run(stmt, [orgName, name, startTime], function(err) {
         if (err) {
           reject(err)
@@ -237,8 +244,13 @@ class EndorserDatabase {
       if (whereClause.length > 0) {
         whereClause += " AND"
       }
-      whereClause += " " + col + " = ?"
-      paramArray.push(params[col])
+      if (params[col].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
+        // treat dates differently for SQLite
+        whereClause += " " + col + " = datetime('" + params[col] + "')"
+      } else {
+        whereClause += " " + col + " = ?"
+        paramArray.push(params[col])
+      }
     }
     if (whereClause.length > 0) {
       whereClause = " WHERE" + whereClause
@@ -259,8 +271,8 @@ class EndorserDatabase {
 
   async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt VALUES (?, ?, ?, ?, ?, ?)");
-      db.run(stmt, [entity.issuedAt, entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
+      var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
