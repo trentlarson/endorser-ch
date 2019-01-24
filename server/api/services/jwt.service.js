@@ -28,10 +28,10 @@ class JwtService {
 
     // this line is lifted from didJwt.verifyJWT
     const {payload, header, signature, data} = didJwt.decodeJWT(encoded)
-    l.debug(payload, "payload")
-    l.trace(header, "header")
-    l.trace(signature, "signature")
-    l.trace(data, "data")
+    l.debug(payload, "decoded payload")
+    l.trace(header, "decoded header")
+    l.trace(signature, "decoded signature")
+    l.trace(data, "decoded data")
 
     return {payload, header, signature, data}
   }
@@ -57,9 +57,9 @@ class JwtService {
 
     // this line is lifted from didJwt.verifyJWT
     const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
-    l.debug(doc, "doc")
-    l.trace(authenticators, "authenticators")
-    l.trace(issuer, "issuer")
+    l.debug(doc, "resolved doc")
+    l.trace(authenticators, "resolved authenticators")
+    l.trace(issuer, "resolved issuer")
 
     let DID = doc.id
 

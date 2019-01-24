@@ -108,6 +108,7 @@ curl http://localhost:3000/api/action/1
 curl http://localhost:3000/api/event/1
 curl http://localhost:3000/api/event/1/actionClaimsAndConfirmations
 curl http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00
+curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}'
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -169,24 +170,35 @@ cf push endorser-ch
 ## ToDo
 
 
+- fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
+-- rename action -> action_claim
+-- add action_claim.jwtRowId
+-- add confirmation.jwtRowId
+-- action.did -> action.agentDid
+-- confirmation.did -> confirmation.agentDid
+-- add confirmation.issuer
+-- add jwt.issuer
+-- add created date to each record
+-- rework date for consistent preimage: either timestamp or UTC
+   - allow for event time to check against true time (store as seconds? ug)
+- fix mobile display
+  - in browser, to get the RHS to all show, turned off these in the second-to-last "inherited from" style: flex-direction & webkit-flex-direction and justify-content & webkit-justify-content
+- deploy at endorser.ch
+--- above is necessary for release to Voluntaryists
+- try-catch around jwt.service resolveAuthenticator when not connected to internet
+- neo4j
 - report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - report page: who has the most activity for a time range
 - explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
 - given a user who has a claim, find if anyone in my network endorses them for that
 - gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found)
-- change "attendance" table to "action"
-- add created date to each record
 - change the storage in JWT table to have original claim (eg for Confirmations)
 - make record IDs into hashes not sequentially increasing numbers
-- confirm Attended Action, but just show confirmation numbers
+- confirm Attended Action, but just show confirmation numbers (?)
 - tests: see above; duplicate JWT data; ACACs by different times
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
-- rework date for consistent preimage: either timestamp or UTC
-- reject duplicate JWT submissions
-- allow for event time to check against true time (store as seconds? ug)
-- fix mobile display
-  - in browser, to get the RHS to all show, turned off these in the second-to-last "inherited from" style: flex-direction & webkit-flex-direction and justify-content & webkit-justify-content
+- reject duplicate claim submissions
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 
