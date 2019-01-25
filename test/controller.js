@@ -138,7 +138,7 @@ describe('Action', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('object')
-         .that.has.property('did')
+         .that.has.property('agentDid')
          .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
        expect(r.body)
          .that.has.property('jwtId')
@@ -205,6 +205,13 @@ describe('Event', () => {
          .that.has.property('action')
          .that.has.property('agentDid')
          .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+       expect(r.body[0])
+         .to.be.an('object')
+         .that.has.property('confirmations')
+         .that.has.property(0)
+         .that.has.property('issuer')
+         .that.equals('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
+
      }))
 
 })

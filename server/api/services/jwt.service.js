@@ -42,8 +42,8 @@ class JwtService {
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
     let claimEncoded = base64url.encode(payload.claim)
-    let entity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
-    return db.jwtInsert(entity)
+    let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+    return db.jwtInsert(jwtEntity)
   }
 
   async createWithClaimRecord(jwtEncoded) {
@@ -52,8 +52,8 @@ class JwtService {
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
     let claimEncoded = base64url.encode(JSON.stringify(payload.claim))
-    let entity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
-    let jwtId = await db.jwtInsert(entity)
+    let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+    let jwtId = await db.jwtInsert(jwtEntity)
 
     // this line is lifted from didJwt.verifyJWT
     const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
@@ -61,7 +61,7 @@ class JwtService {
     l.trace(authenticators, "resolved authenticators")
     l.trace(issuer, "resolved issuer")
 
-    let DID = doc.id
+    let issuerDid = payload.iss
 
     // this is the same as the doc.publicKey in my example
     //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
@@ -104,7 +104,7 @@ class JwtService {
         if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
         let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
         if (actionClaimId === null) throw Error("Attempted to confirm an unrecorded action.")
-        await db.confirmationInsert(DID, jwtId, actionClaimId, origClaimEncoded)
+        await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimEncoded)
       }
     }
 
