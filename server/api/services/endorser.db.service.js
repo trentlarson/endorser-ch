@@ -22,7 +22,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, did:row.did, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime, claimEncoded:row.claimEncoded})
+          resolve({id:row.rowid, did:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime, claimEncoded:row.claimEncoded})
         } else {
           resolve(null)
         }
@@ -30,9 +30,9 @@ class EndorserDatabase {
     })
   }
 
-  actionIdByDidEventId(did, eventId) {
+  actionClaimIdByDidEventId(agentDid, eventId) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid FROM action_claim WHERE did = ? AND eventRowId = ?", [did, eventId], function(err, row) {
+      db.get("SELECT rowid FROM action_claim WHERE agentDid = ? AND eventRowId = ?", [agentDid, eventId], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
@@ -51,9 +51,9 @@ class EndorserDatabase {
   getActionClaimsAndConfirmationsByEventId(eventId) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT a.rowid AS aid, a.did AS actionDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
+      db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionRowId:row.actionRowId} : null
-        let both = {action:{id:row.aid, did:row.actionDid, eventRowId:row.eventRowId}, confirmation:confirmation}
+        let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
         data.push(both)
       }, function(err, num) {
         if (err) {
@@ -72,10 +72,10 @@ class EndorserDatabase {
   getActionClaimsAndConfirmationsForEventsSince(dateTimeStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      let sql = "SELECT a.rowid AS aid, a.did AS actionDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
+      let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
       db.each(sql, [], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionId:row.actionRowId} : null
-        let both = {action:{id:row.aid, did:row.actionDid, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime}, confirmation:confirmation}
+        let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime}, confirmation:confirmation}
         data.push(both)
       }, function(err, num) {
         if (err) {
@@ -87,10 +87,10 @@ class EndorserDatabase {
     })
   }
 
-  actionClaimInsert(did, jwtId, event, claimEncoded) {
+  actionClaimInsert(agentDid, jwtId, event, claimEncoded) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)");
-      db.run(stmt, [did, jwtId, event.id, event.orgName, event.name, claimEncoded], function(err) {
+      db.run(stmt, [agentDid, jwtId, event.id, event.orgName, event.name, claimEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
