@@ -171,10 +171,7 @@ cf push endorser-ch
 
 
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
--- add action_claim.jwtRowId
-   - and fill it
--- add confirmation.jwtRowId
-   - and fill it
+-- demo: actionRowId -> actionId
 -- action_claim.did -> action_claim.agentDid
    - and fill it
 -- add action_claim.startDateCanonical
