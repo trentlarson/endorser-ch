@@ -171,16 +171,23 @@ cf push endorser-ch
 
 
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
--- rename action -> action_claim
 -- add action_claim.jwtRowId
+   - and fill it
 -- add confirmation.jwtRowId
--- action.did -> action.agentDid
+   - and fill it
+-- action_claim.did -> action_claim.agentDid
+   - and fill it
+-- add action_claim.startDateCanonical
+   - and fill it
 -- confirmation.did -> confirmation.agentDid
+   - and fill it
 -- add confirmation.issuer
+   - and fill it
 -- add jwt.issuer
+   - and fill it
 -- add created date to each record
--- rework date for consistent preimage: either timestamp or UTC
-   - allow for event time to check against true time (store as seconds? ug)
+   - and fill it
+-- remove action.claimEncoded, confirmation.origClaimEncoded, jwt.claimEncoded
 - fix mobile display
   - in browser, to get the RHS to all show, turned off these in the second-to-last "inherited from" style: flex-direction & webkit-flex-direction and justify-content & webkit-justify-content
 - deploy at endorser.ch
