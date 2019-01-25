@@ -233,21 +233,11 @@ describe('Util', () => {
 
   it('should get a sorted object', () =>
      request(Server)
-     .get('/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}')
+     .get('/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body)
-         .to.be.an('object')
-         .that.has.property('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
-       let df0Claims = r.body['did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e']
-       expect(df0Claims)
-         .to.be.an('array')
-       expect(df0Claims[0].confirmations)
-         .to.be.an('array')
-         .of.length(2)
-       expect(r.body)
-         .to.be.an('object')
-         .that.has.property('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
+       expect(JSON.stringify(r.body))
+         .to.deep.equal('{"a":4,"b":[5,1,2,3,{"ba":1,"bb":2,"bc":3}],"c":{"ca":1,"cb":2}}')
      }))
 
 })
