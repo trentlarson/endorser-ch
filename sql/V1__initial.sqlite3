@@ -6,8 +6,8 @@ CREATE TABLE event (
 );
 
 CREATE TABLE action_claim (
-       agentDid CHARACTER(60), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
        jwtRowId BIGINT,
+       agentDid CHARACTER(60), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
        eventRowId BIGINT,
        eventOrgName VARCHAR(120),
        eventName VARCHAR(250),
@@ -16,14 +16,15 @@ CREATE TABLE action_claim (
 );
 
 CREATE TABLE confirmation (
-       issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        jwtRowId BIGINT,
+       issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        actionRowId BIGINT,
        origClaimEncoded TEXT
 );
 
 CREATE TABLE jwt (
        issuedAt DATETIME,
+       issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        subject VARCHAR(100),
        claimContext VARCHAR(30),
        claimType VARCHAR(30),

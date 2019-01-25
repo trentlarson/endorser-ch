@@ -90,7 +90,7 @@ class EndorserDatabase {
   actionClaimInsert(agentDid, jwtId, event, claimEncoded) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)");
-      db.run(stmt, [agentDid, jwtId, event.id, event.orgName, event.name, claimEncoded], function(err) {
+      db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name, claimEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -114,10 +114,10 @@ class EndorserDatabase {
     })
   }
 
-  confirmationInsert(did, jwtRowId, actionRowId, claimEncoded) {
+  confirmationInsert(issuer, jwtRowId, actionRowId, claimEncoded) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO confirmation VALUES (?, ?, ?, ?)");
-      db.run(stmt, [did, jwtRowId, actionRowId, claimEncoded], function(err) {
+      db.run(stmt, [jwtRowId, issuer, actionRowId, claimEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -197,11 +197,13 @@ class EndorserDatabase {
 
   buildJwtEntity(payload, claimEncoded, jwtEncoded) {
     let issuedAt = new Date(payload.iat * 1000).toISOString()
+    let issuer = payload.iss
     let subject = payload.sub
     let claimContext = payload.claim['@context']
     let claimType = payload.claim['@type']
     return {
       issuedAt: issuedAt,
+      issuer: issuer,
       subject: subject,
       claimContext: claimContext,
       claimType: claimType,
@@ -213,8 +215,8 @@ class EndorserDatabase {
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
-        data = {id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded}
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
+        data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded}
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -257,8 +259,8 @@ class EndorserDatabase {
     }
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt" + whereClause + " ORDER BY issuedAt DESC LIMIT 50", paramArray, function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded})
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt" + whereClause + " ORDER BY issuedAt DESC LIMIT 50", paramArray, function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -271,8 +273,8 @@ class EndorserDatabase {
 
   async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?)");
-      db.run(stmt, [entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
+      var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
