@@ -88,7 +88,7 @@ class JwtService {
           }
         }
 
-        let attId = await db.actionClaimInsert(payload.sub, event, claimEncoded)
+        let attId = await db.actionClaimInsert(payload.sub, jwtId, event, claimEncoded)
         l.trace(`New action # ${attId}`)
 
       } else if (payload.claim['@context'] === 'http://endorser.ch'
@@ -103,7 +103,7 @@ class JwtService {
         if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
         let attendId = await db.actionIdByDidEventId(origClaim.agent.did, events[0].id)
         if (attendId === null) throw Error("Attempted to confirm an unrecorded action.")
-        await db.confirmationInsert(DID, attendId, origClaimEncoded)
+        await db.confirmationInsert(DID, jwtId, attendId, origClaimEncoded)
       }
     }
 
