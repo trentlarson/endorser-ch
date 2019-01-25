@@ -37,7 +37,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId)
-     })).timeout(5000)
+     })).timeout(6000)
 
   it('should get a claim #' + firstId, () =>
      request(Server)
@@ -196,7 +196,6 @@ describe('Event', () => {
      .get('/api/event/1/actionClaimsAndConfirmations')
      .expect('Content-Type', /json/)
      .then(r => {
-       console.log(r.body)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)

@@ -36,6 +36,7 @@ class JwtService {
     return {payload, header, signature, data}
   }
 
+  /**
   create(jwtEncoded) {
     l.info(`${this.constructor.name}.create(ENCODED)`);
     l.trace(jwtEncoded, "ENCODED")
@@ -45,6 +46,7 @@ class JwtService {
     let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
     return db.jwtInsert(jwtEntity)
   }
+  **/
 
   async createWithClaimRecord(jwtEncoded) {
     l.info(`${this.constructor.name}.createWithClaimRecords(ENCODED)`);
