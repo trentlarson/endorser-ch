@@ -203,7 +203,7 @@ describe('Event', () => {
        expect(r.body[0])
          .to.be.an('object')
          .that.has.property('action')
-         .that.has.property('did')
+         .that.has.property('agentDid')
          .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
      }))
 
