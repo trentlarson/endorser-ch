@@ -22,7 +22,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, did:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime, claimEncoded:row.claimEncoded})
+          resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime, claimEncoded:row.claimEncoded})
         } else {
           resolve(null)
         }
@@ -51,8 +51,8 @@ class EndorserDatabase {
   getActionClaimsAndConfirmationsByEventId(eventId) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
-        let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionRowId:row.actionRowId} : null
+      db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
         let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
         data.push(both)
       }, function(err, num) {
@@ -72,9 +72,9 @@ class EndorserDatabase {
   getActionClaimsAndConfirmationsForEventsSince(dateTimeStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.did AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
+      let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
       db.each(sql, [], function(err, row) {
-        let confirmation = row.confirmDid ? {id:row.cid, did:row.confirmDid, actionId:row.actionRowId} : null
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionId:row.actionRowId} : null
         let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime}, confirmation:confirmation}
         data.push(both)
       }, function(err, num) {
@@ -106,7 +106,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, did:row.did, jwtId:row.jwtRowId, actionId:row.actionRowId})
+          resolve({id:row.rowid, issuer:row.issuer, jwtId:row.jwtRowId, actionId:row.actionRowId})
         } else {
           resolve(null)
         }
