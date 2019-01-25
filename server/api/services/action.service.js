@@ -8,7 +8,7 @@ class ActionService {
 
   byId(id) {
     l.info(`${this.constructor.name}.byId(${id})`);
-    return db.actionById(id);
+    return db.actionClaimById(id);
   }
 
   async byQuery(params) {
@@ -17,7 +17,7 @@ class ActionService {
       params.rowid = params.id
       delete params.id
     }
-    let resultData = await db.actionByParams(params)
+    let resultData = await db.actionClaimsByParams(params)
     return resultData;
   }
 

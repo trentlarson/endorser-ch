@@ -5,7 +5,7 @@ CREATE TABLE event (
        startTime DATETIME
 );
 
-CREATE TABLE action (
+CREATE TABLE action_claim (
        did CHARACTER(60), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
        eventRowId BIGINT,
        eventOrgName VARCHAR(120),

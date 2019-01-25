@@ -88,7 +88,7 @@ class JwtService {
           }
         }
 
-        let attId = await db.actionInsert(payload.sub, event, claimEncoded)
+        let attId = await db.actionClaimInsert(payload.sub, event, claimEncoded)
         l.trace(`New action # ${attId}`)
 
       } else if (payload.claim['@context'] === 'http://endorser.ch'
