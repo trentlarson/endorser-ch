@@ -22,7 +22,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime, claimEncoded:row.claimEncoded})
+          resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime})
         } else {
           resolve(null)
         }
@@ -87,10 +87,10 @@ class EndorserDatabase {
     })
   }
 
-  actionClaimInsert(agentDid, jwtId, event, claimEncoded) {
+  actionClaimInsert(agentDid, jwtId, event) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)");
-      db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name, claimEncoded], function(err) {
+      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'))");
+      db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -114,10 +114,10 @@ class EndorserDatabase {
     })
   }
 
-  confirmationInsert(issuer, jwtRowId, actionRowId, claimEncoded) {
+  confirmationInsert(issuer, jwtRowId, actionRowId, origClaim) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO confirmation VALUES (?, ?, ?, ?)");
-      db.run(stmt, [jwtRowId, issuer, actionRowId, claimEncoded], function(err) {
+      db.run(stmt, [jwtRowId, issuer, actionRowId, origClaim], function(err) {
         if (err) {
           reject(err)
         } else {
