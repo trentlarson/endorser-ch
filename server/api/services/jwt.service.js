@@ -74,7 +74,7 @@ class JwtService {
 
         // check that the subject is the same as the agent
         if (payload.sub !== payload.claim.agent.did) {
-          throw new Error("Subject of JWT doesn't match JoinAction. sub:" + payload.sub + " agent DID:" + payload.claim.agent.did)
+          l.info("Subject of JWT doesn't match JoinAction. sub:" + payload.sub + " agent DID:" + payload.claim.agent.did)
         }
         let agentDid = payload.claim.agent.did
 
@@ -91,22 +91,23 @@ class JwtService {
           }
         }
 
-        let attId = await db.actionClaimInsert(agentDid, jwtId, event, claimEncoded)
+        let attId = await db.actionClaimInsert(agentDid, jwtId, event)
         l.trace(`New action # ${attId}`)
 
       } else if (payload.claim['@context'] === 'http://endorser.ch'
                  && payload.claim['@type'] === 'Confirmation') {
 
-        let origClaimEncoded = payload.claim['claimEncoded']
-        let origClaim = JSON.parse(base64url.decode(origClaimEncoded))
+        let origClaim = payload.claim['originalClaim']
         l.debug(origClaim, "Original payload being confirmed")
 
-        // someday: check whether this really is a JoinAction
         var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
         if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
+
         let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
         if (actionClaimId === null) throw Error("Attempted to confirm an unrecorded action.")
-        await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimEncoded)
+
+        let origClaimStr = JSON.stringify(origClaim)
+        await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
       }
     }
 

@@ -11,15 +11,14 @@ CREATE TABLE action_claim (
        eventRowId BIGINT,
        eventOrgName VARCHAR(120),
        eventName VARCHAR(250),
-       eventStartTime DATETIME,
-       claimEncoded TEXT
+       eventStartTime DATETIME
 );
 
 CREATE TABLE confirmation (
        jwtRowId BIGINT,
        issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        actionRowId BIGINT,
-       origClaimEncoded TEXT
+       origClaim TEXT
 );
 
 CREATE TABLE jwt (
