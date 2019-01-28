@@ -170,6 +170,7 @@ cf push endorser-ch
 ## ToDo
 
 
+- add helmet
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 -- add action_claim.startDateCanonical
    - and fill it
