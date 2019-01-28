@@ -50,6 +50,8 @@ npm run dev:debug
 Compiles the application and starts it in production production mode.
 
 ```shell
+scripts/deploy.sh
+# Then SSH to the box and:
 npm run compile
 npm start
 ```
