@@ -48,70 +48,83 @@ class JwtService {
   }
   **/
 
+  async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
+
+    if (claim['@context'] === 'http://schema.org'
+        && claim['@type'] === 'JoinAction') {
+
+      let agentDid = claim.agent.did
+
+      var event
+      var events = await db.eventsByParams({orgName:claim.event.organizer.name, name:claim.event.name, startTime:claim.event.startTime})
+      if (events.length === 0) {
+        let eventId = await db.eventInsert(claim.event.organizer.name, claim.event.name, claim.event.startTime)
+        event = {id:eventId, orgName:claim.event.organizer.name, name:claim.event.name, startTime:claim.event.startTime}
+        l.trace(`New event # ${util.inspect(event)}`)
+      } else {
+        event = events[0]
+        if (events.length > 1) {
+          l.warning(`Multiple events exist with orgName ${claim.event.organizer.name} name ${claim.event.name} startTime ${claim.event.startTime}`)
+        }
+      }
+
+      let attId = await db.actionClaimInsert(agentDid, jwtId, event)
+      l.trace(`New action # ${attId}`)
+
+    } else if (claim['@context'] === 'http://endorser.ch'
+               && claim['@type'] === 'Confirmation') {
+
+      let origClaim = claim['originalClaim']
+      l.debug(origClaim, "Original claim being confirmed")
+
+      var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
+      if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
+
+      let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
+      if (actionClaimId === null) throw Error("Attempted to confirm an unrecorded action.")
+
+      let origClaimStr = JSON.stringify(origClaim)
+      await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
+    }
+  }
+
   async createWithClaimRecord(jwtEncoded) {
-    l.info(`${this.constructor.name}.createWithClaimRecords(ENCODED)`);
+    l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, "ENCODED")
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
-    let claimEncoded = base64url.encode(JSON.stringify(payload.claim))
-    let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
-    let jwtId = await db.jwtInsert(jwtEntity)
-
-    // this line is lifted from didJwt.verifyJWT
-    const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
-    l.debug(doc, "resolved doc")
-    l.trace(authenticators, "resolved authenticators")
-    l.trace(issuer, "resolved issuer")
-
-    let issuerDid = payload.iss
-
-    // this is the same as the doc.publicKey in my example
-    //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
-
     if (payload.claim) {
-      if (payload.claim['@context'] === 'http://schema.org'
-          && payload.claim['@type'] === 'JoinAction') {
+      let claimEncoded = base64url.encode(JSON.stringify(payload.claim))
+      let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+      let jwtId = await db.jwtInsert(jwtEntity)
 
-        // check that the subject is the same as the agent
-        if (payload.sub !== payload.claim.agent.did) {
-          l.info("Subject of JWT doesn't match JoinAction. sub:" + payload.sub + " agent DID:" + payload.claim.agent.did)
-        }
-        let agentDid = payload.claim.agent.did
+      // this line is lifted from didJwt.verifyJWT
+      const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
+      l.debug(doc, "resolved doc")
+      l.trace(authenticators, "resolved authenticators")
+      l.trace(issuer, "resolved issuer")
 
-        var event
-        var events = await db.eventsByParams({orgName:payload.claim.event.organizer.name, name:payload.claim.event.name, startTime:payload.claim.event.startTime})
-        if (events.length === 0) {
-          let eventId = await db.eventInsert(payload.claim.event.organizer.name, payload.claim.event.name, payload.claim.event.startTime)
-          event = {id:eventId, orgName:payload.claim.event.organizer.name, name:payload.claim.event.name, startTime:payload.claim.event.startTime}
-          l.trace(`New event # ${util.inspect(event)}`)
-        } else {
-          event = events[0]
-          if (events.length > 1) {
-            l.warning(`Multiple events exist with orgName ${payload.claim.event.organizer.name} name ${payload.claim.event.name} startTime ${payload.claim.event.startTime}`)
-          }
-        }
+      let issuerDid = payload.iss
 
-        let attId = await db.actionClaimInsert(agentDid, jwtId, event)
-        l.trace(`New action # ${attId}`)
+      // this is the same as the doc.publicKey in my example
+      //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      } else if (payload.claim['@context'] === 'http://endorser.ch'
-                 && payload.claim['@type'] === 'Confirmation') {
+      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.claim)
 
-        let origClaim = payload.claim['originalClaim']
-        l.debug(origClaim, "Original payload being confirmed")
+      return jwtId
 
-        var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
-        if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
-
-        let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
-        if (actionClaimId === null) throw Error("Attempted to confirm an unrecorded action.")
-
-        let origClaimStr = JSON.stringify(origClaim)
-        await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
-      }
+    } else {
+      l.info("JWT received without a claim.")
+      return -1 // not undefined because the jwt-controller looks at r.id... how does that even work?
     }
+  }
 
-    return jwtId
+  async createMultipleWithClaimRecords(jwtEncoded) {
+    l.info(`${this.constructor.name}.createMultipleWithClaimRecords(ENCODED)`);
+    l.trace(jwtEncoded, "ENCODED")
+
+    l.warn("UNIMPLEMENTED")
+    return -1
   }
 
 }

@@ -27,7 +27,7 @@ export default express
  * @returns {object} 200 - internal ID of Claim JWT
  * @returns {Error}  default - Unexpected error
  */
-  .post('/', controller.importClaims)
+  .post('/', controller.importClaim)
 /**
  * Get many Claim JWTs
  * @group jwt - Claim JWT storage

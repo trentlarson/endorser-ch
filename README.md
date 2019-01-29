@@ -53,7 +53,8 @@ Compiles the application and starts it in production production mode.
 scripts/deploy.sh
 # Then SSH to the box and:
 npm run compile
-npm start
+#npm start
+NODE_ENV=dev nohup npm run dev >> ../endorser.out 2>&1 &
 ```
 
 ## Test It
@@ -172,14 +173,16 @@ cf push endorser-ch
 ## ToDo
 
 
-- add helmet
+- add ability to send multiple claims
+- some error in console when I signed
+- bug when a claim is duplicated
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
+- add helmet
 -- add action_claim.startDateCanonical
    - and fill it
 -- add created date to each record
    - and fill it
 -- remove jwt.claimEncoded
---- above is necessary for release to Voluntaryists
 - deploy .env for endorser.ch
 - deploy hostname for demo-uport
 - in confirmation, check whether it really is a JoinAction
@@ -193,7 +196,7 @@ cf push endorser-ch
 - change the storage in JWT table to have original claim (eg for Confirmations)
 - make record IDs into hashes not sequentially increasing numbers
 - confirm Attended Action, but just show confirmation numbers (?)
-- tests: see above; duplicate JWT data; ACACs by different times
+- tests: see above; duplicate JWT data; ACACs by different times; no claim in JWT
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
 - reject duplicate claim submissions
