@@ -27,12 +27,21 @@ export class Controller {
   }
   **/
 
-  importClaims(req, res) {
+  importClaim(req, res) {
     JwtService
       .createWithClaimRecord(req.body.jwtEncoded)
       .then(r => res
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)
+            .json(r));
+  }
+
+  importClaimList(req, res) {
+    JwtService
+      .createMultipleWithClaimRecord(req.body.jwtEncoded)
+      .then(r => res
+            .status(201)
+            .location(`<%= apiRoot %>/claims/${r.id}`)
             .json(r));
   }
 

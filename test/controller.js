@@ -114,7 +114,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 3)
-     })).timeout(5000)
+     })).timeout(7500)
 
   it('should add another new confirmation', () =>
      request(Server)
