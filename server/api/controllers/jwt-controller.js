@@ -36,15 +36,6 @@ export class Controller {
             .json(r));
   }
 
-  importClaimList(req, res) {
-    JwtService
-      .createMultipleWithClaimRecord(req.body.jwtEncoded)
-      .then(r => res
-            .status(201)
-            .location(`<%= apiRoot %>/claims/${r.id}`)
-            .json(r));
-  }
-
 }
 
 export default new Controller();
