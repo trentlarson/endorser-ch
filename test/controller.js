@@ -62,7 +62,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 1)
-     })).timeout(10000)
+     })).timeout(5000)
 
   it('should get 2 claims', () =>
      request(Server)
@@ -125,7 +125,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 4)
-     })).timeout(10000)
+     })).timeout(5000)
 
 })
 
