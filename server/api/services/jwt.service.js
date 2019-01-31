@@ -106,7 +106,7 @@ class JwtService {
       }
 
       { // work with multiple claims
-        for (var origClaim in claim['originalClaims']) {
+        for (var origClaim of claim['originalClaims']) {
           result.push(await this.oneConfirmation(jwtId, issuerDid, origClaim))
         }
       }

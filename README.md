@@ -173,8 +173,9 @@ cf push endorser-ch
 ## ToDo
 
 
+- error on multiple: "Attempted to confirm action at an unrecorded event."
 - add ability to send multiple claims
-- some error in console when I signed
+- reject sigs on my own claims?
 - bug when a claim is duplicated
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - add helmet
@@ -200,6 +201,7 @@ cf push endorser-ch
 - remove duplicate decode in JWT service
 - limit JWT retrieval to a date
 - reject duplicate claim submissions
+- handle "access_denied" when person rejects claim on phone
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 
