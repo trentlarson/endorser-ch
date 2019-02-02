@@ -45,6 +45,55 @@ class EndorserDatabase {
   }
 
   /**
+     @param object with a key-value for each column-value to filter
+   **/
+  actionClaimsByParams(params) {
+    if (params.id) {
+      params.rowid = params.id
+      delete params.id
+    }
+
+    var whereClause = ""
+    var paramArray = []
+    for (var col in params) {
+      if (whereClause.length > 0) {
+        whereClause += " AND"
+      }
+      if (params[col].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
+        // treat dates differently for SQLite
+        whereClause += " " + col + " = datetime('" + params[col] + "')"
+      } else {
+        whereClause += " " + col + " = ?"
+        paramArray.push(params[col])
+      }
+    }
+    if (whereClause.length > 0) {
+      whereClause = " WHERE" + whereClause
+    }
+    return new Promise((resolve, reject) => {
+      var data = []
+      let sql = "SELECT rowid, * FROM action_claim" + whereClause + " ORDER BY rowid DESC LIMIT 50"
+      db.each(sql, paramArray, function(err, row) {
+
+        row.id = row.rowid
+        delete row.rowid
+        row.eventId = row.eventRowId
+        delete row.eventRowId
+        row.jwtId = row.jwtRowId
+        delete row.jwtRowId
+
+        data.push(row)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
+  /**
      @param eventId
      @returns all actions on the event outer-joined with confirmations of those actions
    **/

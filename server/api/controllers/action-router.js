@@ -15,6 +15,20 @@ export default express
  **/
 
 /**
+ * Get many actions
+ * @group action - Action storage
+ * @route GET /api/action/
+ * @param {String} agentDid.query.optional
+ * @param {number} eventRowId.query.optional
+ * @param {String} eventOrgName.query.optional
+ * @param {String} eventName.query.optional
+ * @param {String} eventStartTime.query.optional
+ * @returns {Array.object} 200 - many events (up to 50)
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/', controller.getByQuery)
+
+/**
  * Get an Action
  * @group action - Action storage
  * @route GET /api/action/{id}
