@@ -1,3 +1,4 @@
+import util from 'util'
 import R from 'ramda'
 
 import l from '../../common/logger';
@@ -18,6 +19,7 @@ class ActionService {
       delete params.id
     }
     let resultData = await db.actionClaimsByParams(params)
+    console.log(resultData)
     return resultData;
   }
 

@@ -110,8 +110,9 @@ curl http://localhost:3000/api/claim?claimType=JoinAction
 curl http://localhost:3000/api/action/1
 curl http://localhost:3000/api/event/1
 curl http://localhost:3000/api/event/1/actionClaimsAndConfirmations
-curl http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00
+curl 'http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00'
 curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}'
+curl 'http://localhost:3000/api/action?eventStartTime=2018-12-29T08:00:00.000-07:00'
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -173,9 +174,13 @@ cf push endorser-ch
 ## ToDo
 
 
-- error on multiple: "Attempted to confirm action at an unrecorded event."
-- add ability to send multiple claims
-- reject sigs on my own claims?
+next deploy:
+- check DB changes
+
+
+- if there's already a response JWT & message then a new one might not show
+- ensure JWT subject is not used by endorser.ch back-end
+- reject confirmations on my own claims?
 - bug when a claim is duplicated
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - add helmet

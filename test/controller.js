@@ -127,6 +127,29 @@ describe('Claim', () => {
          .that.equals(firstId + 4)
      })).timeout(5000)
 
+  it('should a new join claim for a "debug" event', () =>
+     request(Server)
+     .post('/api/claim')
+     .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg5OTY2ODUsImV4cCI6MTU0OTA4MzA4NSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IlRyZW50IEAgaG9tZSJ9LCJuYW1lIjoiVGh1cnMgbmlnaHQgZGVidWciLCJzdGFydFRpbWUiOiIyMDE5LTAyLTAxVDAyOjAwOjAwWiJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.BzIZK1rZ-8pGjkl2A8pA4tulBA9ugK8isbT4EExlrN0IZh5LG5IA7Bs4Qvxd200ST9DwIgK4aBplAEZ1D1jfuAE"})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+         .that.equals(firstId + 5)
+     })).timeout(5000)
+
+
+  it('should add another new confirmation of two claims', () =>
+     request(Server)
+     .post('/api/claim')
+     .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg5OTY0NDAsImV4cCI6MTU0OTA4Mjg0MCwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiQ29uZmlybWF0aW9uIiwib3JpZ2luYWxDbGFpbXMiOlt7IkBjb250ZXh0IjoiaHR0cDovL3NjaGVtYS5vcmciLCJAdHlwZSI6IkpvaW5BY3Rpb24iLCJhZ2VudCI6eyJkaWQiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifSwiZXZlbnQiOnsib3JnYW5pemVyIjp7Im5hbWUiOiJUcmVudCBAIGhvbWUifSwibmFtZSI6IlRodXJzIG5pZ2h0IGRlYnVnIiwic3RhcnRUaW1lIjoiMjAxOS0wMi0wMSAwMjowMDowMCJ9fSx7IkBjb250ZXh0IjoiaHR0cDovL3NjaGVtYS5vcmciLCJAdHlwZSI6IkpvaW5BY3Rpb24iLCJhZ2VudCI6eyJkaWQiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifSwiZXZlbnQiOnsib3JnYW5pemVyIjp7Im5hbWUiOiJCb3VudGlmdWwgVm9sdW50YXJ5aXN0IENvbW11bml0eSJ9LCJuYW1lIjoiU2F0dXJkYXkgTW9ybmluZyBNZWV0aW5nIiwic3RhcnRUaW1lIjoiMjAxOC0xMi0yOSAxNTowMDowMCJ9fV19LCJpc3MiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifQ.pY6DJooAv0PGrTGmXQ2K_V_VgjwXSfgCnQruYlHsglHEXc7Atc-2GuzI-YBXUqY3iCjCtnj0UmZw-LdXHF1T9gA"})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+         .that.equals(firstId + 6)
+     })).timeout(5000)
+
 })
 
 describe('Action', () => {
@@ -157,6 +180,41 @@ describe('Action', () => {
          .that.equals('2018-12-29 15:00:00')
      }))
 
+  it('should no actions that match query', () =>
+     request(Server)
+     .get('/api/action?eventStartTime=2018-12-29T14:59:59Z')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(0)
+     }))
+
+  it('should get one action that matched query', () =>
+     request(Server)
+     .get('/api/action?eventStartTime=2018-12-29T15:00:00Z')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+       let action1 = r.body[0]
+       expect(action1)
+         .that.has.property('agentDid')
+         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+       expect(action1)
+         .that.has.property('eventId')
+         .that.equals(firstId)
+       expect(action1)
+         .that.has.property('eventOrgName')
+         .that.equals('Bountiful Voluntaryist Community')
+       expect(action1)
+         .that.has.property('eventName')
+         .that.equals('Saturday Morning Meeting')
+       expect(action1)
+         .that.has.property('eventStartTime')
+         .that.equals('2018-12-29 15:00:00')
+     }))
 })
 
 describe('Event', () => {

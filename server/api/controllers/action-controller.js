@@ -11,6 +11,11 @@ export class Controller {
       });
   }
 
+  getByQuery(req, res) {
+    ActionService.byQuery(req.query)
+      .then(r => res.json(r));
+  }
+
   getActionClaimsAndConfirmationsSince(req, res) {
     ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
       .then(r => res.json(r));
