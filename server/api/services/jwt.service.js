@@ -72,6 +72,10 @@ class JwtService {
         && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
+      if (!agentDid) {
+        l.error("JoinAction for ${jwtId} has no agent DID.")
+        throw Error("Attempted to record a JoinAction claim with no agent DID.")
+      }
 
       var event
       var events = await db.eventsByParams({orgName:claim.event.organizer.name, name:claim.event.name, startTime:claim.event.startTime})

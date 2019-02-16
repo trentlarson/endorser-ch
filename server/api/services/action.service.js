@@ -19,7 +19,6 @@ class ActionService {
       delete params.id
     }
     let resultData = await db.actionClaimsByParams(params)
-    console.log(resultData)
     return resultData;
   }
 
