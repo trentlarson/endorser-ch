@@ -61,13 +61,17 @@ class JwtService {
       let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
       if (actionClaimId === null) throw new Error("Attempted to confirm an unrecorded action.")
 
+      let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
+      if (confirmation !== null) throw new Error(`Attemtpted to confirm an action already confirmed in # ${confirmation.id}`)
+
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
       l.debug(`${this.constructor.name}.oneConfirmation # ${result} added for ${actionClaimId}`);
       return result
     } else {
-      throw new Error("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
+      l.warning("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
+      return -1
     }
   }
 
@@ -113,18 +117,28 @@ class JwtService {
 
       { // work with a single claim
         if (claim['originalClaim']) {
-          result.push(await this.oneConfirmation(jwtId, issuerDid, claim['originalClaim']))
+          this.oneConfirmation(jwtId, issuerDid, claim['originalClaim'])
+            .then(confirmId => result.push(confirmId))
+            .catch(err => {
+              l.error(err)
+              result.push(-1)
+            })
         }
       }
 
       { // work with multiple claims
         if (claim['originalClaims']) {
           for (var origClaim of claim['originalClaims']) {
-            result.push(await this.oneConfirmation(jwtId, issuerDid, origClaim))
+            this.oneConfirmation(jwtId, issuerDid, origClaim)
+              .then(confirmId => result.push(confirmId))
+              .catch(err => {
+                l.error(err)
+                result.push(-1)
+              })
           }
         }
       }
-      l.debug(`${this.constructor.name} Created ${result.length} confirmations`)
+      l.debug(`${this.constructor.name} Created ${result.length} confirmations: ${util.inspect(result)}`)
 
       return result
     } else {

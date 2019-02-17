@@ -189,8 +189,8 @@ next deploy:
 -- add created date to each record
    - and fill it
 -- remove jwt.claimEncoded
-- deploy .env for endorser.ch
-- deploy hostname for demo-uport
+- store .env somewhere for the build (both endorser.ch & uport-demo)
+- on uport-demo: change store/play pics in Welcome.js to local files
 - in confirmation, check whether it really is a JoinAction
 - try-catch around jwt.service resolveAuthenticator when not connected to internet
 - after signing a claim, signing another claim doesn't even hit the server until page refresh

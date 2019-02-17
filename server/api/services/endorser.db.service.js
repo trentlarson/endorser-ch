@@ -149,13 +149,13 @@ class EndorserDatabase {
     })
   }
 
-  confirmationByDid(did) {
+  confirmationByIssuerAndAction(issuerDid, actionRowId) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT * FROM confirmation WHERE did = ?", [did], function(err, row) {
+      db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND actionRowId = ?", [issuerDid, actionRowId], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, issuer:row.issuer, jwtId:row.jwtRowId, actionId:row.actionRowId})
+          resolve({id:row.rowid, jwtId:row.jwtRowId, issuer:row.issuer, actionId:row.actionRowId})
         } else {
           resolve(null)
         }
