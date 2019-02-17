@@ -28,10 +28,10 @@ class JwtService {
 
     // this line is lifted from didJwt.verifyJWT
     const {payload, header, signature, data} = didJwt.decodeJWT(encoded)
-    l.debug(payload, "decoded payload")
-    l.trace(header, "decoded header")
-    l.trace(signature, "decoded signature")
-    l.trace(data, "decoded data")
+    l.debug(payload, `${this.constructor.name} decoded payload`)
+    l.trace(header, `${this.constructor.name} decoded header`)
+    l.trace(signature, `${this.constructor.name} decoded signature`)
+    l.trace(data, `${this.constructor.name} decoded data`)
 
     return {payload, header, signature, data}
   }
@@ -50,17 +50,22 @@ class JwtService {
 
   async oneConfirmation(jwtId, issuerDid, origClaim) {
 
+    l.debug(`${this.constructor.name}.oneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
+
     if (origClaim['@context'] === 'http://schema.org'
         && origClaim['@type'] === 'JoinAction') {
 
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
-      if (events.length === 0) throw Error("Attempted to confirm action at an unrecorded event.")
+      if (events.length === 0) throw new Error("Attempted to confirm action at an unrecorded event.")
 
       let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
-      if (actionClaimId === null) throw Error("Attempted to confirm an unrecorded action.")
+      if (actionClaimId === null) throw new Error("Attempted to confirm an unrecorded action.")
 
       let origClaimStr = JSON.stringify(origClaim)
-      return await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
+
+      let result = await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
+      l.debug(`${this.constructor.name}.oneConfirmation # ${result} added for ${actionClaimId}`);
+      return result
     } else {
       throw new Error("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
     }
@@ -68,13 +73,16 @@ class JwtService {
 
   async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
 
+    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
+    l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
+
     if (claim['@context'] === 'http://schema.org'
         && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
       if (!agentDid) {
-        l.error("JoinAction for ${jwtId} has no agent DID.")
-        throw Error("Attempted to record a JoinAction claim with no agent DID.")
+        l.error(`${this.constructor.name} JoinAction for ${jwtId} has no agent DID.`)
+        throw new Error("Attempted to record a JoinAction claim with no agent DID.")
       }
 
       var event
@@ -82,21 +90,21 @@ class JwtService {
       if (events.length === 0) {
         let eventId = await db.eventInsert(claim.event.organizer.name, claim.event.name, claim.event.startTime)
         event = {id:eventId, orgName:claim.event.organizer.name, name:claim.event.name, startTime:claim.event.startTime}
-        l.trace(`New event # ${util.inspect(event)}`)
+        l.trace(`${this.constructor.name} New event # ${util.inspect(event)}`)
 
       } else {
         event = events[0]
         if (events.length > 1) {
-          l.warning(`Multiple events exist with orgName ${claim.event.organizer.name} name ${claim.event.name} startTime ${claim.event.startTime}`)
+          l.warning(`${this.constructor.name} Multiple events exist with orgName ${claim.event.organizer.name} name ${claim.event.name} startTime ${claim.event.startTime}`)
         }
 
         let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
-        if (actionClaimId) throw Error("Attempted to record an action claim that already exists with ID " + actionClaimId)
+        if (actionClaimId) throw new Error("Attempted to record an action claim that already exists with ID " + actionClaimId)
 
       }
 
       let attId = await db.actionClaimInsert(agentDid, jwtId, event)
-      l.trace(`New action # ${attId}`)
+      l.trace(`${this.constructor.name} New action # ${attId}`)
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
@@ -116,14 +124,17 @@ class JwtService {
           }
         }
       }
+      l.debug(`${this.constructor.name} Created ${result.length} confirmations`)
 
       return result
+    } else {
+      throw new Error("Attempted to submit unknown claim with @context " + claim['@context'] + " and @type " + claim['@type'])
     }
   }
 
   async createWithClaimRecord(jwtEncoded) {
     l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
-    l.trace(jwtEncoded, "ENCODED")
+    l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
     if (payload.claim) {
@@ -133,9 +144,9 @@ class JwtService {
 
       // this line is lifted from didJwt.verifyJWT
       const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
-      l.debug(doc, "resolved doc")
-      l.trace(authenticators, "resolved authenticators")
-      l.trace(issuer, "resolved issuer")
+      l.debug(doc, `${this.constructor.name} resolved doc`)
+      l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
+      l.trace(issuer, `${this.constructor.name} resolved issuer`)
 
       let issuerDid = payload.iss
 
@@ -147,7 +158,7 @@ class JwtService {
       return jwtId
 
     } else {
-      l.info("JWT received without a claim.")
+      l.warning(`${this.constructor.name} JWT received without a claim.`)
       return -1 // not undefined because the jwt-controller looks at r.id... how does that even work?
     }
   }

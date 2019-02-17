@@ -193,6 +193,7 @@ next deploy:
 - deploy hostname for demo-uport
 - in confirmation, check whether it really is a JoinAction
 - try-catch around jwt.service resolveAuthenticator when not connected to internet
+- after signing a claim, signing another claim doesn't even hit the server until page refresh
 - neo4j
 - report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - report page: who has the most activity for a time range
