@@ -1,8 +1,12 @@
 # endorser-ch
 
-Server for recording assertions and reporting on signatures
+A server for recording assertions and then reporting on them
 
-`Created from https://github.com/cdimascio/generator-express-no-stress`
+This is simply an API for creating and querying claims.  For a full system, combine with https://github.com/trentlarson/uport-demo
+
+
+
+
 
 ## Get Started
 
@@ -171,6 +175,11 @@ Deploy to CloudFoundry
 cf push endorser-ch
 ```
 
+## Kudos
+
+Project initialized with https://github.com/cdimascio/generator-express-no-stress
+
+
 ## ToDo
 
 
@@ -179,7 +188,7 @@ next deploy:
 
 
 - if there's already a response JWT & message then a new one might not show
-- ensure JWT subject is not used by endorser.ch back-end
+- ensure JWT subject is not used by back-end
 - reject confirmations on my own claims?
 - bug when a claim is duplicated
 - fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
@@ -189,7 +198,7 @@ next deploy:
 -- add created date to each record
    - and fill it
 -- remove jwt.claimEncoded
-- store .env somewhere for the build (both endorser.ch & uport-demo)
+- store .env somewhere for the build (both endorser-ch & uport-demo)
 - on uport-demo: change store/play pics in Welcome.js to local files
 - in confirmation, check whether it really is a JoinAction
 - try-catch around jwt.service resolveAuthenticator when not connected to internet
