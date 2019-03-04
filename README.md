@@ -13,12 +13,15 @@ This is simply an API for creating and querying claims.  For a full system, comb
 Get started developing...
 
 ```shell
-# install deps
+# install dependencies
 npm ci
 
 # setup DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
+
+# set up the environment
+cp .env.local .env
 
 # run in development mode
 NODE_ENV=dev npm run dev
