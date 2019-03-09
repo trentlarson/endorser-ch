@@ -191,6 +191,7 @@ next deploy:
 
 
 - if there's already a response JWT & message then a new one might not show
+- load more than just today's confirmations
 - ensure JWT subject is not used by back-end
 - reject confirmations on my own claims?
 - bug when a claim is duplicated

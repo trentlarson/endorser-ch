@@ -2,6 +2,8 @@ var sqlite3 = require('sqlite3').verbose()
 var dbInfo = require('../../../conf/flyway.js')
 var db = new sqlite3.Database(dbInfo.fileLoc)
 
+const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
+
 class EndorserDatabase {
 
   constructor() {
@@ -55,16 +57,24 @@ class EndorserDatabase {
 
     var whereClause = ""
     var paramArray = []
-    for (var col in params) {
+    for (var param in params) {
       if (whereClause.length > 0) {
         whereClause += " AND"
       }
-      if (params[col].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
+
+      var col = param
+      var operator = "="
+      if (col.endsWith(GREATER_THAN_OR_EQUAL_TO)) {
+        col = col.substring(0, col.length - GREATER_THAN_OR_EQUAL_TO.length)
+        operator = ">="
+      }
+
+      if (params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
         // treat dates differently for SQLite
-        whereClause += " " + col + " = datetime('" + params[col] + "')"
+        whereClause += " " + col + " " + operator + " datetime('" + params[param] + "')"
       } else {
-        whereClause += " " + col + " = ?"
-        paramArray.push(params[col])
+        whereClause += " " + col + " " + operator + " ?"
+        paramArray.push(params[param])
       }
     }
     if (whereClause.length > 0) {
