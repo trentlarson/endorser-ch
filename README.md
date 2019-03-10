@@ -192,6 +192,7 @@ next deploy:
 
 - if there's already a response JWT & message then a new one might not show
 - load more than just today's confirmations
+- retrieve dates as full ISO dates (eg for confirmations), not dates without timestamp
 - ensure JWT subject is not used by back-end
 - reject confirmations on my own claims?
 - bug when a claim is duplicated
@@ -212,7 +213,7 @@ next deploy:
 - report page: who has the most activity for a time range
 - explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
 - given a user who has a claim, find if anyone in my network endorses them for that
-- gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found)
+- gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, context URL that's not recognized)
 - change the storage in JWT table to have original claim (eg for Confirmations)
 - make record IDs into hashes not sequentially increasing numbers
 - confirm Attended Action, but just show confirmation numbers (?)

@@ -13,8 +13,8 @@
     "lint": "eslint -c .eslintrc.json {server,test}/**",
     "lint:fix": "eslint --fix -c .eslintrc.json {server,test}/**",
     "migrate": "flyway -c conf/flyway.js migrate",
-    "test": "mocha --compilers js:@babel/register --exit",
-    "test:debug": "mocha --compilers js:@babel/register --inspect-brk --exit"
+    "test": "mocha --require @babel/register --exit",
+    "test:debug": "mocha --require @babel/register --inspect-brk --exit"
   },
   "dependencies": {
     "body-parser": "^1.18.2",
