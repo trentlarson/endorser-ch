@@ -2,7 +2,10 @@ var sqlite3 = require('sqlite3').verbose()
 var dbInfo = require('../../../conf/flyway.js')
 var db = new sqlite3.Database(dbInfo.fileLoc)
 
+const GREATER_THAN = "_greaterThan"
 const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
+const LESS_THAN = "_lessThan"
+const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
 function constructWhere(params, excludeConfirmations) {
 
@@ -21,9 +24,18 @@ function constructWhere(params, excludeConfirmations) {
 
     var col = param
     var operator = "="
-    if (col.endsWith(GREATER_THAN_OR_EQUAL_TO)) {
-      col = col.substring(0, col.length - GREATER_THAN_OR_EQUAL_TO.length)
-      operator = ">="
+    if (col.endsWith(GREATER_THAN)) {
+      col = col.substring(0, col.length - GREATER_THAN.length)
+      operator = ">"
+    } else if (col.endsWith(GREATER_THAN_OR_EQUAL_TO)) {
+        col = col.substring(0, col.length - GREATER_THAN_OR_EQUAL_TO.length)
+        operator = ">="
+    } else if (col.endsWith(LESS_THAN)) {
+      col = col.substring(0, col.length - LESS_THAN.length)
+      operator = "<"
+    } else if (col.endsWith(LESS_THAN_OR_EQUAL_TO)) {
+      col = col.substring(0, col.length - LESS_THAN_OR_EQUAL_TO.length)
+      operator = "<="
     }
 
     if (params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
