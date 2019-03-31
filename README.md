@@ -191,8 +191,8 @@ next deploy:
 
 
 - 90 3 neo4j
-- 90 0 add greater-than / less-than tests
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
+- 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
 - 60 6 all functionality in uport
 - 70 0 if there's already a response JWT & message then a new one might not show
 - 70 0 retrieve dates as full ISO dates (eg for confirmations), not dates without timestamp

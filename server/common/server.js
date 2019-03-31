@@ -12,9 +12,9 @@ const expressSwagger = require('express-swagger-generator')(app);
 let options = {
   swaggerDefinition: {
     info: {
+      title: 'endorser-ch',
       description: 'Endorser recording & search',
-      title: 'Swagger',
-      version: '1.0.0',
+      version: '1.0.2',
     },
     host: 'localhost:' + process.env.port,
     basePath: '',

@@ -9,7 +9,8 @@ var session = driver.session();
 // Run a Cypher statement, reading the result in a streaming manner as records arrive:
 
 let mergeClaim =
-    'MERGE \
+    '\
+  MERGE \
   (e:Event {name:{name}, orgName:{orgName}, startTime:datetime({startTime})}) \
   MERGE \
   (a:ActionClaim {eventName:{name}, eventOrgName:{orgName}, eventStartTime:datetime({startTime})}) \
@@ -18,7 +19,8 @@ let mergeClaim =
   RETURN *'
 
 let mergeConfirm =
-    'MERGE \
+    '\
+  MERGE \
   (e:Event {name:{name}, orgName:{orgName}, startTime:datetime({startTime})}) \
   MERGE \
   (a:ActionClaim {eventName:{name}, eventOrgName:{orgName}, eventStartTime:datetime({startTime})}) \
