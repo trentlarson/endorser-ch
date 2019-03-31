@@ -190,15 +190,15 @@ next deploy:
 - check DB changes
 
 
-- 90 1 run tests while disconnected from the internet
-- 90 0 add greater-than / less-than tests
 - 90 3 neo4j
+- 90 0 add greater-than / less-than tests
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 60 6 all functionality in uport
 - 70 0 if there's already a response JWT & message then a new one might not show
 - 70 0 retrieve dates as full ISO dates (eg for confirmations), not dates without timestamp
 - 70 0 ensure JWT subject is counted as a confirmation
 - 70 0 bug when a claim is duplicated
+- 70 1 run tests while disconnected from the internet
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - 90 0 add helmet
 - 90 1 run prod in prod mode (ie. not: npm run dev)

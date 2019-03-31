@@ -2,10 +2,15 @@ import * as childProcess from 'child_process';
 import chai from 'chai';
 import request from 'supertest';
 import Server from '../server';
+import { DateTime } from 'luxon'
 
 let dbInfo = require('../conf/flyway.js')
 
 const expect = chai.expect;
+
+const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
+const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
+const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
 var firstId = 1
 
@@ -127,7 +132,7 @@ describe('Claim', () => {
          .that.equals(firstId + 4)
      })).timeout(5000)
 
-  it('should a new join claim for a "debug" event', () =>
+  it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
      .post('/api/claim')
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg5OTY2ODUsImV4cCI6MTU0OTA4MzA4NSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IlRyZW50IEAgaG9tZSJ9LCJuYW1lIjoiVGh1cnMgbmlnaHQgZGVidWciLCJzdGFydFRpbWUiOiIyMDE5LTAyLTAxVDAyOjAwOjAwWiJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.BzIZK1rZ-8pGjkl2A8pA4tulBA9ugK8isbT4EExlrN0IZh5LG5IA7Bs4Qvxd200ST9DwIgK4aBplAEZ1D1jfuAE"})
@@ -215,6 +220,43 @@ describe('Action', () => {
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
      }))
+
+  it('should get enough past claims', () =>
+     request(Server)
+     .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + DAY_START_TIME_STRING)
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(4)
+       let action1 = r.body[0]
+       expect(action1)
+         .that.has.property('agentDid')
+         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+       expect(action1)
+         .that.has.property('eventId')
+         .that.equals(firstId + 3)
+       expect(action1)
+         .that.has.property('eventOrgName')
+         .that.equals('Trent @ home')
+       expect(action1)
+         .that.has.property('eventName')
+         .that.equals('Thurs night debug')
+       expect(action1)
+         .that.has.property('eventStartTime')
+         .that.equals('2019-02-01 02:00:00')
+     }))
+
+  it('should get no claims today', () =>
+     request(Server)
+     .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + TODAY_START_TIME_STRING)
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(0)
+     }))
+
 })
 
 describe('Event', () => {
@@ -274,7 +316,7 @@ describe('Report', () => {
 
   it('should get right aggregated info', () =>
      request(Server)
-     .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00')
+     .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=' + START_TIME_STRING)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
