@@ -2,6 +2,12 @@ var sqlite3 = require('sqlite3').verbose()
 var dbInfo = require('../../../conf/flyway.js')
 var db = new sqlite3.Database(dbInfo.fileLoc)
 
+//var neo4j = require('neo4j-driver').v1;
+//var driver = new neo4j.driver('bolt://localhost', neo4j.auth.basic("neo4j","neo4j"));
+//var session = driver.session();
+
+
+
 const GREATER_THAN = "_greaterThan"
 const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
