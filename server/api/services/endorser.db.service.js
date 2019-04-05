@@ -2,6 +2,9 @@ var sqlite3 = require('sqlite3').verbose()
 var dbInfo = require('../../../conf/flyway.js')
 var db = new sqlite3.Database(dbInfo.fileLoc)
 
+
+
+
 const GREATER_THAN = "_greaterThan"
 const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"

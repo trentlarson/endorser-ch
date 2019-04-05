@@ -69,7 +69,7 @@ NODE_ENV=dev nohup npm run dev >> ../endorser.out 2>&1 &
 Run the Mocha unit tests
 
 ```shell
-npm test
+./test/test.sh
 ```
 
 or debug them
@@ -182,6 +182,12 @@ cf push endorser-ch
 
 Project initialized with https://github.com/cdimascio/generator-express-no-stress
 
+## Related Work
+
+- [Sovrin](https://sovrin.org)
+- [Accredible](https://www.accredible.com/) (... and their verification system)[https://verify.accredible.com] (uses Tierion)[https://help.accredible.com/hc/en-us/articles/115005058985-Manually-Verifying-Blockchain-Records]
+- [Blockcerts for blockchain credentials](https://www.blockcerts.org)
+- [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
 
 ## ToDo
 
@@ -190,25 +196,34 @@ next deploy:
 - check DB changes
 
 
-- if there's already a response JWT & message then a new one might not show
-- load more than just today's confirmations
-- retrieve dates as full ISO dates (eg for confirmations), not dates without timestamp
-- ensure JWT subject is not used by back-end
-- reject confirmations on my own claims?
-- bug when a claim is duplicated
-- fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
-- add helmet
--- add action_claim.startDateCanonical
-   - and fill it
--- add created date to each record
-   - and fill it
--- remove jwt.claimEncoded
-- store .env somewhere for the build (both endorser-ch & uport-demo)
+- 90 2 add search for claim #claim
+- 90 2 add search for claim on parcel of land #cplot ^claim
+- 90 2 add search for endorser (in network?)
+- 80 5 switch/add format to verifiable credentials?
+- 80 5 uport: inside JSON payload, show a name if DID matches a contact
+- 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
+- 60 6 put all functionality in uport mobile app
+- 70 0 bug: if there's already a response JWT & message then a new one might not show
+- 70 0 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
+- 70 0 ensure JWT subject is counted as a confirmation
+- 70 0 bug when a claim is duplicated
+- 70 1 run tests while disconnected from the internet
+- 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
+- 90 0 add helmet
+- 80 1 add SSL
+- 90 1 run prod in prod mode (ie. not: npm run dev)
+- 80 1 db #DB
+-- add action_claim.startDateCanonical #DBsdc ^DB
+   - and fill it #DBsdcF ^DBsdc
+-- add created date to each record #DBcre ^DB
+   - and fill it #DBcreF ^DBcre
+-- remove jwt.claimEncoded #DBrce ^DB
+- 60 3 neo4j?
+- 70 0 usability: fade out the confirmation button when pushed
 - on uport-demo: change store/play pics in Welcome.js to local files
 - in confirmation, check whether it really is a JoinAction
 - try-catch around jwt.service resolveAuthenticator when not connected to internet
 - after signing a claim, signing another claim doesn't even hit the server until page refresh
-- neo4j
 - report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - report page: who has the most activity for a time range
 - explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
