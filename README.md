@@ -199,6 +199,7 @@ next deploy:
 - 90 2 add search for claim #claim
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
+- 90 1 check & verify the user credentials for every API request
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)

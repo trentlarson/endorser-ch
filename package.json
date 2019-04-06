@@ -19,6 +19,7 @@
   "dependencies": {
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
+    "cors": "^2.8.5",
     "did-jwt": "0.0.9",
     "dotenv": "^6.0.0",
     "ethr-did-resolver": "^0.1.3",
