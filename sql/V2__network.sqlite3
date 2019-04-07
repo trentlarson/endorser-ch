@@ -1,0 +1,34 @@
+
+-- add the issuerDid for convenience
+ALTER TABLE action_claim
+ADD COLUMN issuerDid;
+
+UPDATE action_claim
+SET issuerDid = (SELECT jwt.issuer FROM jwt WHERE jwt.rowid = action_claim.jwtRowId);
+
+
+
+CREATE TABLE network (
+       subject CHARACTER(60), -- DID of the entity who can see/reach the object
+       object CHARACTER(60), -- DID of the entity who can be seen/reached by the subject
+       CONSTRAINT both_unique UNIQUE (subject, object)
+);
+
+-- allow anyone to see/reach those who include them in a claim
+INSERT INTO network 
+SELECT DISTINCT ac.agentDid AS subject, jwt.issuer AS object FROM action_claim ac
+JOIN jwt ON jwt.rowid = ac.jwtRowId;
+
+-- The following are for reference, but we won't run them because they'll complain about duplicates.
+
+-- allow anyone to see/reach those who confirm a claim with them in it
+--INSERT INTO network
+--SELECT DISTINCT ac.agentDid AS subject, c.issuer AS object FROM confirmation c
+--JOIN action_claim ac ON ac.rowid = c.actionRowId;
+
+-- allow anyone to see/reach those who confirm a claim that they issued
+--INSERT INTO network
+--SELECT DISTINCT jwt.issuer AS subject, c.issuer AS object FROM confirmation c
+--JOIN action_claim ac ON ac.rowid = c.actionRowId
+--JOIN jwt ON jwt.rowid = ac.jwtRowId;
+

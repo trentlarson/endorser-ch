@@ -23,7 +23,7 @@ class ActionService {
   }
 
   async getActionClaimsAndConfirmationsForEventsSince(dateTime) {
-    let resultData = await db.getActionClaimsAndConfirmationsForEventsSince(dateTime)
+    let resultData = await db.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
     // group all actions by DID
     let acacListsByDid = R.groupBy(acac => acac.action.agentDid)(resultData)
     // now make an action group for each DID

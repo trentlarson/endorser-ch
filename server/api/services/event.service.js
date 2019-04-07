@@ -20,7 +20,7 @@ class EventService {
 
   async getActionClaimsAndConfirmationsByEventId(id) {
     l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`)
-    let resultData = await db.getActionClaimsAndConfirmationsByEventId(id)
+    let resultData = await db.retrieveActionClaimsAndConfirmationsByEventId(id)
     let acacListById = R.groupBy(acac => ""+acac.action.id)(resultData)
     let acacListByAction = R.map(buildConfirmationList)(acacListById)
     return R.values(acacListByAction)

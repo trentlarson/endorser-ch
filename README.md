@@ -196,10 +196,19 @@ next deploy:
 - check DB changes
 
 
-- 90 2 add search for claim #claim
-- 90 2 add search for claim on parcel of land #cplot ^claim
+- 90 2 add search for claim
+  - 90 2 add search for claim on parcel of land
+  - ?
 - 90 2 add search for endorser (in network?)
+  - ?
 - 90 1 check & verify the user credentials for every API request
+  - 90 1 add the user info to requests
+    - x 90 1 send & check the user DID
+    - 90 2 send & check the JWT
+  - 90 1 add in-network data for each insert
+  - 90 2 change each of the SQL searches to check in-network
+- 90 5 write & support use-cases
+- 70 2 add Typescript
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
@@ -213,12 +222,12 @@ next deploy:
 - 90 0 add helmet
 - 80 1 add SSL
 - 90 1 run prod in prod mode (ie. not: npm run dev)
-- 80 1 db #DB
--- add action_claim.startDateCanonical #DBsdc ^DB
-   - and fill it #DBsdcF ^DBsdc
--- add created date to each record #DBcre ^DB
-   - and fill it #DBcreF ^DBcre
--- remove jwt.claimEncoded #DBrce ^DB
+- 80 1 db
+  - add action_claim.startDateCanonical
+    - and fill it
+  - add created date to each record
+    - and fill it
+  - remove jwt.claimEncoded
 - 60 3 neo4j?
 - 70 0 usability: fade out the confirmation button when pushed
 - on uport-demo: change store/play pics in Welcome.js to local files
@@ -238,6 +247,7 @@ next deploy:
 - limit JWT retrieval to a date
 - reject duplicate claim submissions
 - handle "access_denied" when person rejects claim on phone
+- generalize for more than just meetings (JoinActions)
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 

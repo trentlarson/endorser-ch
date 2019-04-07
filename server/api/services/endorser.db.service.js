@@ -136,7 +136,7 @@ class EndorserDatabase {
      @param eventId
      @returns all actions on the event outer-joined with confirmations of those actions
    **/
-  getActionClaimsAndConfirmationsByEventId(eventId) {
+  retrieveActionClaimsAndConfirmationsByEventId(eventId) {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
@@ -157,7 +157,7 @@ class EndorserDatabase {
      @param dateTimeStr in ISO format
      @Returns all actions on the event outer-joined with confirmations of those actions
   **/
-  getActionClaimsAndConfirmationsForEventsSince(dateTimeStr) {
+  retrieveActionClaimsAndConfirmationsForEventsSince(dateTimeStr) {
     return new Promise((resolve, reject) => {
       var data = []
       let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
@@ -175,10 +175,10 @@ class EndorserDatabase {
     })
   }
 
-  actionClaimInsert(agentDid, jwtId, event) {
+  actionClaimInsert(agentDid, jwtId, event, issuerDid) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'))");
-      db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name], function(err) {
+      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)");
+      db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name, issuerDid], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -197,6 +197,22 @@ class EndorserDatabase {
           resolve({id:row.rowid, jwtId:row.jwtRowId, issuer:row.issuer, actionId:row.actionRowId})
         } else {
           resolve(null)
+        }
+      });
+    })
+  }
+
+  manyConfirmationsByActionClaim(actionRowId) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      const sql = "SELECT rowid, * FROM confirmation WHERE actionRowId = ?"
+      db.each(sql, [actionRowId], function(err, row) {
+        data.push({id:row.rowid, jwtId:row.jwtRowId, issuer:row.issuer, actionId:row.actionRowId})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
         }
       });
     })
@@ -321,6 +337,19 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?)");
       db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  async networkInsert(subject, object) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO network VALUES (?, ?)");
+      db.run(stmt, [subject, object], function(err) {
         if (err) {
           reject(err)
         } else {
