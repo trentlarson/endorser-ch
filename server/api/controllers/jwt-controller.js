@@ -4,7 +4,7 @@ export class Controller {
 
   getById(req, res) {
     JwtService
-      .byId(req.params.id)
+      .byId(req.params.id, req.headers["some-did"])
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();

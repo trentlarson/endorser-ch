@@ -205,7 +205,7 @@ next deploy:
   - 90 1 add the user info to requests
     - x 90 1 send & check the user DID
     - 90 2 send & check the JWT
-  - 90 1 add in-network data for each insert
+  - x 90 1 add in-network data for each insert
   - 90 2 change each of the SQL searches to check in-network
 - 90 5 write & support use-cases
 - 70 2 add Typescript

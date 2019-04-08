@@ -86,7 +86,7 @@ class EndorserDatabase {
         } else {
           resolve(null)
         }
-      });
+      })
     })
   }
 
@@ -100,7 +100,7 @@ class EndorserDatabase {
         } else {
           resolve(null)
         }
-      });
+      })
     })
   }
 
@@ -128,7 +128,7 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
@@ -149,7 +149,7 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
@@ -171,13 +171,13 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
   actionClaimInsert(agentDid, jwtId, event, issuerDid) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)");
+      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)")
       db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name, issuerDid], function(err) {
         if (err) {
           reject(err)
@@ -198,7 +198,7 @@ class EndorserDatabase {
         } else {
           resolve(null)
         }
-      });
+      })
     })
   }
 
@@ -214,13 +214,13 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
   confirmationInsert(issuer, jwtRowId, actionRowId, origClaim) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO confirmation VALUES (?, ?, ?, ?)");
+      var stmt = ("INSERT INTO confirmation VALUES (?, ?, ?, ?)")
       db.run(stmt, [jwtRowId, issuer, actionRowId, origClaim], function(err) {
         if (err) {
           reject(err)
@@ -241,7 +241,7 @@ class EndorserDatabase {
         } else {
           resolve(null)
         }
-      });
+      })
     })
   }
 
@@ -261,13 +261,13 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
   eventInsert(orgName, name, startTime) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO event VALUES (?, ?, datetime(?))");
+      var stmt = ("INSERT INTO event VALUES (?, ?, datetime(?))")
       db.run(stmt, [orgName, name, startTime], function(err) {
         if (err) {
           reject(err)
@@ -306,7 +306,7 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
@@ -329,13 +329,13 @@ class EndorserDatabase {
         } else {
           resolve(data)
         }
-      });
+      })
     })
   }
 
   async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?)")
       db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
         if (err) {
           reject(err)
@@ -346,14 +346,42 @@ class EndorserDatabase {
     })
   }
 
+  /**
+    If the pair already exists, will resolve ()instead of rejecting).
+   **/
   async networkInsert(subject, object) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO network VALUES (?, ?)");
+      var stmt = ("INSERT INTO network VALUES (?, ?)")
       db.run(stmt, [subject, object], function(err) {
+        if (err) {
+          if (err.errno === 19) {
+            // If you print out this error, it looks like this:
+            // { [Error: SQLITE_CONSTRAINT: UNIQUE constraint failed: network.subject, network.object] errno: 19, code: 'SQLITE_CONSTRAINT' }
+            // ... where two fields are 'errno' and 'code'.  What is the rest of the stuff in there?
+            // Well, hopefully this check is correct.
+            resolve()
+          } else {
+            reject(err)
+          }
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
+
+  async inNetwork(subject, objects) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      let marks = "?,".repeat(objects.length).substring(0, objects.length*2-1)
+      let inputs = [subject].concat(objects)
+      db.each("SELECT * FROM network WHERE subject = ? AND object in (" + marks + ")", inputs, function(err, row) {
+        data.push({subject:row.subject, object:row.object})
+      }, function(err, num) {
         if (err) {
           reject(err)
         } else {
-          resolve(this.lastID)
+          resolve(data)
         }
       })
     })
@@ -361,4 +389,4 @@ class EndorserDatabase {
 
 }
 
-export default new EndorserDatabase();
+export default new EndorserDatabase()

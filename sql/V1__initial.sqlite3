@@ -16,15 +16,15 @@ CREATE TABLE action_claim (
 
 CREATE TABLE confirmation (
        jwtRowId BIGINT,
-       issuer CHARACTER(60), -- DID of the claiming/confirming entity; did:ethr are 52 chars
+       issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        actionRowId BIGINT,
        origClaim TEXT
 );
 
 CREATE TABLE jwt (
        issuedAt DATETIME,
-       issuer CHARACTER(60), -- DID of the claiming/confirming entity; did:ethr are 52 chars
-       subject VARCHAR(100), -- DID of subject, duplicating info in the claim as far as I can tell
+       issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
+       subject VARCHAR(100),
        claimContext VARCHAR(30),
        claimType VARCHAR(30),
        claimEncoded TEXT,

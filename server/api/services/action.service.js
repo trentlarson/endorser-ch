@@ -3,13 +3,26 @@ import R from 'ramda'
 
 import l from '../../common/logger';
 import db from './endorser.db.service';
-import { buildConfirmationList } from './util'
+import { buildConfirmationList, HIDDEN_TEXT } from './util'
 
 class ActionService {
 
-  byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
-    return db.actionClaimById(id);
+  byId(id, requesterDid) {
+    l.info(`${this.constructor.name}.byId(${id},${requesterDid})`);
+    return db.actionClaimById(id)
+      .then(actionClaim => {
+        if (!actionClaim) {
+          return null
+        } else {
+          return db.inNetwork(requesterDid, [actionClaim.agentDid])
+            .then(rows => {
+              if (rows.length == 0) {
+                actionClaim["agentDid"] = HIDDEN_TEXT
+              }
+              return actionClaim
+            })
+        }
+      })
   }
 
   async byQuery(params) {
@@ -19,7 +32,7 @@ class ActionService {
       delete params.id
     }
     let resultData = await db.actionClaimsByParams(params)
-    return resultData;
+    return resultData
   }
 
   async getActionClaimsAndConfirmationsForEventsSince(dateTime) {

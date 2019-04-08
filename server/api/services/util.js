@@ -1,6 +1,8 @@
 import R from 'ramda'
 import util from 'util'
 
+const HIDDEN_TEXT = '(HIDDEN)'
+
 // create confirmation list from a list of actionClaimsAndConfirmations for the same action
 // internal helper function
 function buildConfirmationList(acacList) {
@@ -33,4 +35,4 @@ function withKeysSorted(myObject) {
   }
 }
 
-module.exports = { buildConfirmationList, withKeysSorted }
+module.exports = { buildConfirmationList, withKeysSorted, HIDDEN_TEXT }

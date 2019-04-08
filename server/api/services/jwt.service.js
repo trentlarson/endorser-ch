@@ -5,6 +5,7 @@ import db from './endorser.db.service'
 import didJwt from 'did-jwt'
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
+import { HIDDEN_TEXT } from './util'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
@@ -12,9 +13,25 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 class JwtService {
 
-  byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
-    return db.jwtById(id);
+  async byId(id, requesterDid) {
+    l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
+    return db.jwtById(id)
+      .then(jwt => {
+        if (!jwt) {
+          return null
+        } else {
+          return db.inNetwork(requesterDid, [jwt.issuer, jwt.subject])
+            .then(rows => {
+              if (rows.length == 0) {
+                jwt["issuer"] = HIDDEN_TEXT
+                jwt["subject"] = HIDDEN_TEXT
+                delete jwt.claimEncoded
+                delete jwt.jwtEncoded
+              }
+              return jwt
+            })
+        }
+      })
   }
 
   async byQuery(params) {
@@ -94,20 +111,20 @@ class JwtService {
     // put the issuer in the confirmed claim-agent's network
     results.push(db.networkInsert(actionClaimAgentDid, issuerDid)
                 .catch(err => {
-                  l.debug(`Got error saving network entry from ${actionClaimAgentDid} to ${issuerDid}`)
+                  throw new Error(`Got error saving network entry from ${actionClaimAgentDid} to ${issuerDid}: ${util.inspect(err)}`)
                 }))
 
     // put the issuer in the confirmed claim's confirmed-issuer network
     results.push(db.manyConfirmationsByActionClaim(actionClaimId)
                  .then(confirmations => {
-                   let results = []
+                   let subResults = []
                    for (var confirm of confirmations) {
-                     result.push(db.networkInsert(confirm.issuer, issuerDid)
+                     subResults.push(db.networkInsert(confirm.issuer, issuerDid)
                                  .catch(err => {
-                                   l.debug(`Got error saving network entry from ${actionClaimAgentDid} to ${issuerId}`)
+                                   throw new Error(`Error saving network entry from ${confirm.issuer} to ${issuerDid}: ${util.inspect(err)}`)
                                  }))
                    }
-                   return Promise.all(results)
+                   return Promise.all(subResults)
                  }))
 
     return Promise.all(results)
@@ -194,7 +211,7 @@ class JwtService {
           }
         }
       }
-      l.debug(`${this.constructor.name} Created ${recordings.length} confirmations: ${util.inspect(recordings)}`)
+      l.debug(`${this.constructor.name} Created ${recordings.length} confirmations.`)
 
       await Promise.all(recordings)
 
