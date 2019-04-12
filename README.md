@@ -199,6 +199,7 @@ next deploy:
 - 90 2 add search for claim #claim
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
+- 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
@@ -209,6 +210,7 @@ next deploy:
 - 70 0 bug when a claim is duplicated
 - 70 1 run tests while disconnected from the internet
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
+- 85 0 remove "subject" from terminology in code; prefer "agent"
 - 90 0 add helmet
 - 80 1 add SSL
 - 90 1 run prod in prod mode (ie. not: npm run dev)

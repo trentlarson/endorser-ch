@@ -110,6 +110,20 @@ class JwtService {
       let attId = await db.actionClaimInsert(agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
+    } else if (claim['@context'] === 'http://schema.org'
+               && claim['@type'] === 'Residence') {
+
+      let allPairs = R.map(R.split(','), R.split(' ', payload.geo.polygon))
+      let allLats = R.map(R.nth(0), allPairs)
+      let minLat = R.reduce(R.min, allLats[0], R.tail(allLats))
+      let maxLat = R.reduce(R.max, allLats[0], R.tail(allLats))
+      let allLons = R.map(R.nth(1), allPairs)
+      let minLon = R.reduce(R.min, allLons[0], R.tail(allLons))
+      let maxLon = R.reduce(R.max, allLons[0], R.tail(allLons))
+      let bbox = {westlon: minLon, minlat:minLat, eastlon:maxlon, maxlat:maxLat}
+      let entity = db.buildResidenceEntity(jwtId, payload, bbox)
+      await db.residenceInsert(entity, issuerDid, bbox)
+
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 

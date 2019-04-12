@@ -330,6 +330,38 @@ class EndorserDatabase {
     })
   }
 
+  buildResidenceEntity(jwtRowId, issuerDid, payload, bbox) {
+    let issuedAt = new Date(payload.iat * 1000).toISOString()
+    let claimContext = payload.claim['@context']
+    let claimType = payload.claim['@type']
+    return {
+      jwtRowId: jwtRowId,
+      issuerDid: issuerDid,
+      ownedByDid: payload.ownedByDid,
+      claimContext: claimContext,
+      claimType: claimType,
+      polygon: payload.geo.polygon,
+      westlon: bbox.westlon,
+      minlat: bbox.minlat,
+      eastlon: bbox.eastlon,
+      maxlat: bbox.maxlat,
+      createdAt: new Date(payload.iat * 1000).toISOString()
+    }
+  }
+
+  async residenceInsert(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO residency_claim VALUES ?, ?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.jwtRowId, entity.issuer, entity.ownedByDid, entity.polygon, entity.westlon, entity.minlat, entity.eastlon, entity.maxlat], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
 }
 
 export default new EndorserDatabase();
