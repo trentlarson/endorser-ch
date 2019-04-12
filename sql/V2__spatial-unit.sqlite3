@@ -1,8 +1,6 @@
 
 CREATE TABLE residence_claim (
        jwtRowId INTEGER,
-       claimContext: claimContext,
-       claimType: claimType,
        issuerDid TEXT, -- DID of the issuer; did:ethr are 52 chars
        ownedByDid TEXT, -- DID of the owning agent; did:ethr are 52 chars
        -- see https://schema.org/GeoShape basically contents of a WKT Polygon
@@ -11,6 +9,5 @@ CREATE TABLE residence_claim (
        westlon REAL,
        minlat REAL,
        eastlon REAL,
-       maxlat REAL,
-       createdAt DATETIME
+       maxlat REAL
 );

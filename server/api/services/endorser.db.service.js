@@ -330,28 +330,37 @@ class EndorserDatabase {
     })
   }
 
-  buildResidenceEntity(jwtRowId, issuerDid, payload, bbox) {
-    let issuedAt = new Date(payload.iat * 1000).toISOString()
-    let claimContext = payload.claim['@context']
-    let claimType = payload.claim['@type']
+  buildResidenceEntity(jwtRowId, issuerDid, claim, bbox) {
     return {
       jwtRowId: jwtRowId,
       issuerDid: issuerDid,
-      ownedByDid: payload.ownedByDid,
-      claimContext: claimContext,
-      claimType: claimType,
-      polygon: payload.geo.polygon,
+      ownedByDid: claim.ownedByDid,
+      polygon: claim.geo.polygon,
       westlon: bbox.westlon,
       minlat: bbox.minlat,
       eastlon: bbox.eastlon,
-      maxlat: bbox.maxlat,
-      createdAt: new Date(payload.iat * 1000).toISOString()
+      maxlat: bbox.maxlat
     }
+  }
+
+  async residenceByPoint(bbox) {
+    return new Promise((resolve, reject) => {
+      let data = []
+      db.each("SELECT rowid, * FROM residence_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [bbox.westlon, bbox.eastlon, bbox.minlat, bbox.maxlat], function(err, row) {
+        data.push({id:row.rowid, jwtRowId:row.jwtRowId, claimContext:row.claimContext, claimType:row.claimType, issuerDid:row.issuerDid, ownedByDid:row.ownedByDid, polygon:row.polygon, westlon:row.westlon, minlat:row.minlat, eastlon:row.eastlon, maxlat:row.maxlat})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
   }
 
   async residenceInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO residency_claim VALUES ?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO residence_claim VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(stmt, [entity.jwtRowId, entity.issuer, entity.ownedByDid, entity.polygon, entity.westlon, entity.minlat, entity.eastlon, entity.maxlat], function(err) {
         if (err) {
           reject(err)

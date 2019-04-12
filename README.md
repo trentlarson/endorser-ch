@@ -16,12 +16,12 @@ Get started developing...
 # install dependencies
 npm ci
 
-# setup DB
-NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
-# note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
-
 # set up the environment
 cp .env.local .env
+
+# setup/migrate DB
+NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
+# note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
 # run in development mode
 NODE_ENV=dev npm run dev
