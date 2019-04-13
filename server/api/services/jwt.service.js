@@ -1,9 +1,10 @@
 import l from '../../common/logger'
 import base64url from 'base64url'
 import util from 'util'
-import db from './endorser.db.service'
 import didJwt from 'did-jwt'
 import R from 'ramda'
+import db from './endorser.db.service'
+import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
@@ -114,14 +115,7 @@ class JwtService {
     } else if (claim['@context'] === 'http://schema.org'
                && claim['@type'] === 'Residence') {
 
-      let allPairs = R.map(R.split(','), R.split(' ', claim.geo.polygon))
-      let allLats = R.map(R.nth(0), allPairs)
-      let minlat = R.reduce(R.min, allLats[0], R.tail(allLats))
-      let maxlat = R.reduce(R.max, allLats[0], R.tail(allLats))
-      let allLons = R.map(R.nth(1), allPairs)
-      let minlon = R.reduce(R.min, allLons[0], R.tail(allLons))
-      let maxlon = R.reduce(R.max, allLons[0], R.tail(allLons))
-      let bbox = {westlon: minlon, minlat:minlat, eastlon:maxlon, maxlat:maxlat}
+      let bbox = calcBbox(claim.geo.polygon)
       let entity = db.buildResidenceEntity(jwtId, issuerDid, claim, bbox)
       await db.residenceInsert(entity)
 

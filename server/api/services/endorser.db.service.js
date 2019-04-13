@@ -343,10 +343,10 @@ class EndorserDatabase {
     }
   }
 
-  async residenceByPoint(bbox) {
+  async residenceByPoint(lat, lon) {
     return new Promise((resolve, reject) => {
       let data = []
-      db.each("SELECT rowid, * FROM residence_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [bbox.westlon, bbox.eastlon, bbox.minlat, bbox.maxlat], function(err, row) {
+      db.each("SELECT rowid, * FROM residence_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [lon, lon, lat, lat], function(err, row) {
         data.push({id:row.rowid, jwtRowId:row.jwtRowId, claimContext:row.claimContext, claimType:row.claimType, issuerDid:row.issuerDid, ownedByDid:row.ownedByDid, polygon:row.polygon, westlon:row.westlon, minlat:row.minlat, eastlon:row.eastlon, maxlat:row.maxlat})
       }, function(err, num) {
         if (err) {
