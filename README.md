@@ -120,6 +120,7 @@ curl http://localhost:3000/api/event/1/actionClaimsAndConfirmations
 curl 'http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00'
 curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}'
 curl 'http://localhost:3000/api/action?eventStartTime=2018-12-29T08:00:00.000-07:00'
+curl 'http://localhost:3000/api/report/residenceClaimsAtPoint?lat=40.883944&lon=-111.884787'
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
