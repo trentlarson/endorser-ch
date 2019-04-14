@@ -48,7 +48,7 @@ function calcBbox(polygonStr) {
   let minlon = R.reduce(R.min, allLons[0], R.tail(allLons))
   let maxlon = R.reduce(R.max, allLons[0], R.tail(allLons))
 
-  let bbox = { westlon:minlon, minlat:minlat, eastlon:maxlon, maxlat:maxlat }
+  let bbox = { westLon:minlon, minLat:minlat, eastLon:maxlon, maxLat:maxlat }
   return bbox
 }
 

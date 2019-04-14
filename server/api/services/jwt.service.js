@@ -112,12 +112,22 @@ class JwtService {
       let attId = await db.actionClaimInsert(agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
-    } else if (claim['@context'] === 'http://schema.org'
-               && claim['@type'] === 'Residence') {
+    } else if (claim['@context'] === 'http://endorser.ch'
+               && claim['@type'] === 'Tenure') {
 
-      let bbox = calcBbox(claim.geo.polygon)
-      let entity = db.buildResidenceEntity(jwtId, issuerDid, claim, bbox)
-      await db.residenceInsert(entity)
+      let bbox = calcBbox(claim.spatialUnit.geo.polygon)
+      let entity =
+          {
+            jwtRowId: jwtId,
+            issuerDid: issuerDid,
+            partyDid: claim.party && claim.party.did,
+            polygon: claim.spatialUnit.geo.polygon,
+            westLon: bbox.westLon,
+            minLat: bbox.minLat,
+            eastLon: bbox.eastLon,
+            maxLat: bbox.maxLat
+          }
+      await db.tenureInsert(entity)
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
@@ -151,7 +161,7 @@ class JwtService {
 
       return result
     } else {
-      throw new Error("Attempted to submit unknown claim with @context " + claim['@context'] + " and @type " + claim['@type'])
+      throw new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'])
     }
   }
 
@@ -177,6 +187,9 @@ class JwtService {
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
       await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.claim)
+        .catch(err => {
+          l.warn(err, `Failed to create embedded claim records.`)
+        })
 
       return jwtId
 

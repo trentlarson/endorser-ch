@@ -1,14 +1,14 @@
 import * as express from 'express'
 import actionController from './action-controller'
-import ResidenceService from '../services/residence.service';
+import TenureService from '../services/tenure.service';
 
-export class ResidenceController {
+export class TenureController {
   getByPoint(req, res) {
-    ResidenceService.byPoint(req.query.lat, req.query.lon)
+    TenureService.byPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
 }
-let residenceController = new ResidenceController();
+let tenureController = new TenureController();
 
 
 export default express
@@ -35,12 +35,12 @@ export default express
   .get('/actionClaimsAndConfirmationsSince', actionController.getActionClaimsAndConfirmationsSince)
 
 /**
- * Get residence claims for a point
+ * Get tenure claims for a point
  * @group action - Reports
- * @route GET /api/reports/residenceClaimsAtPoint
+ * @route GET /api/reports/tenureClaimsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
- * @returns {Array.object} 200 - claimed residences (up to 50)
+ * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error}  default - Unexpected error
  */
-  .get('/residenceClaimsAtPoint', residenceController.getByPoint)
+  .get('/tenureClaimsAtPoint', tenureController.getByPoint)

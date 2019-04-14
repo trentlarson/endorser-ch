@@ -21,12 +21,12 @@ describe('Util', () => {
 
   it('should return the right bbox', () =>
      expect(calcBbox("40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"))
-     .to.be.deep.equal({ westlon:-111.884787 , minlat:40.883944, eastlon:-111.884515, maxlat:40.884088 })
+     .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
     )
 
   it('should return the same bbox even in different order', () =>
      expect(calcBbox("40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515"))
-     .to.be.deep.equal({ westlon:-111.884787 , minlat:40.883944, eastlon:-111.884515, maxlat:40.884088 })
+     .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
     )
 
   it('should get a sorted object', () =>
@@ -338,12 +338,12 @@ describe('Event', () => {
 
 })
 
-describe('Residence', () => {
+describe('Tenure', () => {
 
-  it ('should create a residence', () =>
+  it ('should create a tenure', () =>
       request(Server)
       .post('/api/claim')
-      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUxMTEzODUsImV4cCI6MTU1NTE5Nzc4NSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiUmVzaWRlbmNlIiwib3duZWRCeSI6eyJkaWQiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifSwiZ2VvIjp7InBvbHlnb24iOiI0MC44NzY2NDUsLTExMS44NTY0ODggNDAuODc2MjgyLC0xMTEuODU2NDg4IDQwLjg3NjI4MiwtMTExLjg1Njk0NSA0MC44NzY1NTIsLTExMS44NTcwNjggNDAuODc2NjQ1LC0xMTEuODU2ODk2IDQwLjg3NjY0NSwtMTExLjg1NjQ4MiIsImJib3giOiI0MC44NzYyODIsLTExMS44NTcwNjggNDAuODc2NjQ1LC0xMTEuODU2NDg4In19LCJpc3MiOiJkaWQ6ZXRocjoweGRmMGQ4ZTVmZDIzNDA4NmY2NjQ5Zjc3YmIwMDU5ZGUxYWViZDE0M2UifQ.FUBxJcWs490ONIt1VFqB6phc11JLUDL94vAFVJ0bpn0y82Jxnb8eOLKGuuXK5p0lOWAvecxa54qa8uIjIVzpvwE"})
+      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body)
@@ -353,7 +353,7 @@ describe('Residence', () => {
 
   it('should get 1 claim', () =>
      request(Server)
-     .get('/api/claim?claimType=Residence')
+     .get('/api/claim?claimType=Tenure')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -384,9 +384,9 @@ describe('Report', () => {
          .that.has.property('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
      }))
 
-  it('should get 1 residence', () =>
+  it('should get 1 tenure', () =>
      request(Server)
-     .get('/api/report/residenceClaimsAtPoint?lat=40.876645&lon=-111.856488')
+     .get('/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -394,9 +394,9 @@ describe('Report', () => {
          .of.length(1)
      }))
 
-  it('should get no residences', () =>
+  it('should get no tenures', () =>
      request(Server)
-     .get('/api/report/residenceClaimsAtPoint?lat=40.876646&lon=-111.856487')
+     .get('/api/report/tenureClaimsAtPoint?lat=40.883943&lon=-111.884787')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
