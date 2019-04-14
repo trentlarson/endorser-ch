@@ -1,8 +1,8 @@
 import * as express from 'express'
 import actionController from './action-controller'
-import TenureService from '../services/tenure.service';
 
-export class TenureController {
+import TenureService from '../services/tenure.service';
+class TenureController {
   getByPoint(req, res) {
     TenureService.byPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));

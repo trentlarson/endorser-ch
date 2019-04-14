@@ -198,6 +198,7 @@ next deploy:
 - check DB changes
 
 
+- 100 0 errors in local data on report screens
 - 90 2 add search for claim #claim
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
