@@ -16,12 +16,12 @@ Get started developing...
 # install dependencies
 npm ci
 
-# setup DB
-NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
-# note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
-
 # set up the environment
 cp .env.local .env
+
+# setup/migrate DB
+NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
+# note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
 # run in development mode
 NODE_ENV=dev npm run dev
@@ -120,6 +120,8 @@ curl http://localhost:3000/api/event/1/actionClaimsAndConfirmations
 curl 'http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTime=2018-12-29T08:00:00.000-07:00'
 curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}'
 curl 'http://localhost:3000/api/action?eventStartTime=2018-12-29T08:00:00.000-07:00'
+curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"}'
+curl 'http://localhost:3000/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787'
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -199,6 +201,7 @@ next deploy:
 - 90 2 add search for claim #claim
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
+- 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
@@ -209,6 +212,7 @@ next deploy:
 - 70 0 bug when a claim is duplicated
 - 70 1 run tests while disconnected from the internet
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
+- 85 0 remove "subject" from terminology in code; prefer "agent"
 - 90 0 add helmet
 - 80 1 add SSL
 - 90 1 run prod in prod mode (ie. not: npm run dev)
@@ -228,7 +232,8 @@ next deploy:
 - report page: who has the most activity for a time range
 - explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
 - given a user who has a claim, find if anyone in my network endorses them for that
-- gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, context URL that's not recognized)
+- 80 0 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
+- 80 0 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
 - change the storage in JWT table to have original claim (eg for Confirmations)
 - make record IDs into hashes not sequentially increasing numbers
 - confirm Attended Action, but just show confirmation numbers (?)

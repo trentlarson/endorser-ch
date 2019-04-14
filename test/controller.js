@@ -1,11 +1,14 @@
 import * as childProcess from 'child_process';
 import chai from 'chai';
 import request from 'supertest';
-import Server from '../server';
 import { DateTime } from 'luxon'
+
+import Server from '../server';
+import { calcBbox } from '../server/api/services/util';
 
 let dbInfo = require('../conf/flyway.js')
 
+const assert = chai.assert;
 const expect = chai.expect;
 
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
@@ -13,6 +16,29 @@ const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
 var firstId = 1
+
+describe('Util', () => {
+
+  it('should return the right bbox', () =>
+     expect(calcBbox("40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"))
+     .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
+    )
+
+  it('should return the same bbox even in different order', () =>
+     expect(calcBbox("40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515"))
+     .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
+    )
+
+  it('should get a sorted object', () =>
+     request(Server)
+     .get('/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(JSON.stringify(r.body))
+         .to.deep.equal('{"a":4,"b":[5,1,2,3,{"ba":1,"bb":2,"bc":3}],"c":{"ca":1,"cb":2}}')
+     }))
+
+})
 
 describe('Claim', () => {
 
@@ -185,7 +211,7 @@ describe('Action', () => {
          .that.equals('2018-12-29 15:00:00')
      }))
 
-  it('should no actions that match query', () =>
+  it('should get no actions that match query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T14:59:59Z')
      .expect('Content-Type', /json/)
@@ -312,6 +338,31 @@ describe('Event', () => {
 
 })
 
+describe('Tenure', () => {
+
+  it ('should create a tenure', () =>
+      request(Server)
+      .post('/api/claim')
+      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body)
+          .to.be.a('number')
+          .that.equals(firstId + 7)
+      })).timeout(6000)
+
+  it('should get 1 claim', () =>
+     request(Server)
+     .get('/api/claim?claimType=Tenure')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+     }))
+
+})
+
 describe('Report', () => {
 
   it('should get right aggregated info', () =>
@@ -333,17 +384,24 @@ describe('Report', () => {
          .that.has.property('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
      }))
 
-})
-
-describe('Util', () => {
-
-  it('should get a sorted object', () =>
+  it('should get 1 tenure', () =>
      request(Server)
-     .get('/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
+     .get('/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787')
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(JSON.stringify(r.body))
-         .to.deep.equal('{"a":4,"b":[5,1,2,3,{"ba":1,"bb":2,"bc":3}],"c":{"ca":1,"cb":2}}')
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+     }))
+
+  it('should get no tenures', () =>
+     request(Server)
+     .get('/api/report/tenureClaimsAtPoint?lat=40.883943&lon=-111.884787')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(0)
      }))
 
 })

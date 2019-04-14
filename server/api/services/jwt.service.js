@@ -1,8 +1,10 @@
 import l from '../../common/logger'
 import base64url from 'base64url'
 import util from 'util'
-import db from './endorser.db.service'
 import didJwt from 'did-jwt'
+import R from 'ramda'
+import db from './endorser.db.service'
+import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
@@ -111,6 +113,23 @@ class JwtService {
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
     } else if (claim['@context'] === 'http://endorser.ch'
+               && claim['@type'] === 'Tenure') {
+
+      let bbox = calcBbox(claim.spatialUnit.geo.polygon)
+      let entity =
+          {
+            jwtRowId: jwtId,
+            issuerDid: issuerDid,
+            partyDid: claim.party && claim.party.did,
+            polygon: claim.spatialUnit.geo.polygon,
+            westLon: bbox.westLon,
+            minLat: bbox.minLat,
+            eastLon: bbox.eastLon,
+            maxLat: bbox.maxLat
+          }
+      await db.tenureInsert(entity)
+
+    } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 
       var result = []
@@ -142,7 +161,7 @@ class JwtService {
 
       return result
     } else {
-      throw new Error("Attempted to submit unknown claim with @context " + claim['@context'] + " and @type " + claim['@type'])
+      throw new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'])
     }
   }
 
@@ -168,11 +187,14 @@ class JwtService {
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
       await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.claim)
+        .catch(err => {
+          l.warn(err, `Failed to create embedded claim records.`)
+        })
 
       return jwtId
 
     } else {
-      l.warning(`${this.constructor.name} JWT received without a claim.`)
+      l.warn(`${this.constructor.name} JWT received without a claim.`)
       return -1 // not undefined because the jwt-controller looks at r.id... how does that even work?
     }
   }

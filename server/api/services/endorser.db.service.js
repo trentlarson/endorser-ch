@@ -330,6 +330,34 @@ class EndorserDatabase {
     })
   }
 
+  async tenureByPoint(lat, lon) {
+    return new Promise((resolve, reject) => {
+      let data = []
+      db.each("SELECT rowid, * FROM tenure_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [lon, lon, lat, lat], function(err, row) {
+        data.push({id:row.rowid, jwtRowId:row.jwtRowId, claimContext:row.claimContext, claimType:row.claimType, issuerDid:row.issuerDid, partyDid:row.partyDid, polygon:row.polygon, westlon:row.westlon, minlat:row.minlat, eastlon:row.eastlon, maxlat:row.maxlat})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
+  async tenureInsert(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO tenure_claim VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.partyDid, entity.polygon, entity.westLon, entity.minLat, entity.eastLon, entity.maxLat], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
 }
 
 export default new EndorserDatabase();
