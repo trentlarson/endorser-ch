@@ -428,7 +428,8 @@ class EndorserDatabase {
           reject(err)
         } else {
           resolve(data)
-      });
+        }
+      })
     })
   }
 
