@@ -370,6 +370,23 @@ class EndorserDatabase {
     })
   }
 
+  // return list of objects that are linked by that subject
+  async getNetwork(subject) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT object FROM network WHERE subject = ? ORDER BY object", subject, function(err, row) {
+        data.push(row.object)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
+  // deprecated (use getNetwork with NetworkCache)
   async inNetwork(subject, objects) {
     return new Promise((resolve, reject) => {
       var data = []

@@ -1,26 +1,33 @@
 import util from 'util'
 import R from 'ramda'
 
-import l from '../../common/logger';
-import db from './endorser.db.service';
+import l from '../../common/logger'
+import db from './endorser.db.service'
+import netCache from './network-cache.service.js'
 import { buildConfirmationList, HIDDEN_TEXT } from './util'
+
+async function getNetwork(requesterDid) {
+  return db.getNetwork(requesterDid)
+}
 
 class ActionService {
 
   byId(id, requesterDid) {
     l.info(`${this.constructor.name}.byId(${id},${requesterDid})`);
     return db.actionClaimById(id)
-      .then(actionClaim => {
+      .then(async actionClaim => {
         if (!actionClaim) {
           return null
         } else {
-          return db.inNetwork(requesterDid, [actionClaim.agentDid])
-            .then(rows => {
-              if (rows.length == 0) {
-                actionClaim["agentDid"] = HIDDEN_TEXT
-              }
-              return actionClaim
-            })
+          var objects = netCache.get(requesterDid)
+          if (!objects) {
+            objects = await db.getNetwork(requesterDid)
+            netCache.set(requesterDid, objects)
+          }
+          if (objects.indexOf(actionClaim.agentDid) === -1) {
+            actionClaim["agentDid"] = HIDDEN_TEXT
+          }
+          return actionClaim
         }
       })
   }

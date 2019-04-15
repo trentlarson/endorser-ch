@@ -6,7 +6,7 @@ import { DateTime } from 'luxon'
 
 let dbInfo = require('../conf/flyway.js')
 
-const HIDDEN = '(HIDDEN)'
+const HIDDEN_TEXT = '(HIDDEN)'
 const expect = chai.expect;
 
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
@@ -78,7 +78,7 @@ describe('Claim', () => {
          .that.equals('JoinAction')
        expect(r.body)
          .that.has.a.property('issuer')
-         .that.equals(HIDDEN)
+         .that.equals(HIDDEN_TEXT)
      }))
 
   it('should add a new confirmation', () =>
@@ -204,6 +204,21 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventName')
          .that.equals('Saturday Morning Meeting')
+       expect(r.body)
+         .that.has.property('eventStartTime')
+         .that.equals('2018-12-29 15:00:00')
+     }))
+
+  it('should get action with hidden DID', () =>
+     request(Server)
+     .get('/api/action/' + firstId)
+     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143f')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.property('agentDid')
+         .that.equals(HIDDEN_TEXT)
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
