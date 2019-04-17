@@ -122,6 +122,7 @@ curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3
 curl 'http://localhost:3000/api/action?eventStartTime=2018-12-29T08:00:00.000-07:00'
 curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"}'
 curl 'http://localhost:3000/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787'
+curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787'
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -200,6 +201,10 @@ next deploy:
 
 - 100 0 errors in local data on report screens
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
+- 90 0 remove DB-based network lookup: inNetwork call in jwt.service
+- 90 0 rename issuer to issuerDid in confirmation table
+- 90 0 retrieveTenureClaimsAndConfirmations & retrieveActionClaimsAndConfirmations should be OUTER JOIN?
+- 90 0 remove issuerDid from *_claim tables and build into logic (since >1 issuer could claim each)
 - 90 2 add search for claim
   - 90 2 add search for claim on parcel of land
   - ?
@@ -233,6 +238,7 @@ next deploy:
   - add created date to each record
     - and fill it
   - remove jwt.claimEncoded
+- 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 60 3 neo4j?
 - 70 0 usability: fade out the confirmation button when pushed
 - on uport-demo: change store/play pics in Welcome.js to local files

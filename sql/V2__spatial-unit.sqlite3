@@ -11,3 +11,5 @@ CREATE TABLE tenure_claim (
        eastLon REAL,
        maxLat REAL
 );
+
+ALTER TABLE confirmation ADD COLUMN tenureRowId INTEGER;

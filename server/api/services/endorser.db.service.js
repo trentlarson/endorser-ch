@@ -202,12 +202,26 @@ class EndorserDatabase {
     })
   }
 
+  confirmationByIssuerAndTenure(issuerDid, tenureRowId) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND tenureRowId = ?", [issuerDid, tenureRowId], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, tenureId:row.actionRowId})
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  }
+
   manyConfirmationsByActionClaim(actionRowId) {
     return new Promise((resolve, reject) => {
       var data = []
       const sql = "SELECT rowid, * FROM confirmation WHERE actionRowId = ?"
       db.each(sql, [actionRowId], function(err, row) {
-        data.push({id:row.rowid, jwtId:row.jwtRowId, issuer:row.issuer, actionId:row.actionRowId})
+        data.push({issuer:row.issuer})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -218,10 +232,26 @@ class EndorserDatabase {
     })
   }
 
-  confirmationInsert(issuer, jwtRowId, actionRowId, origClaim) {
+  manyConfirmationsByTenureClaim(tenureRowId) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO confirmation VALUES (?, ?, ?, ?)")
-      db.run(stmt, [jwtRowId, issuer, actionRowId, origClaim], function(err) {
+      var data = []
+      const sql = "SELECT rowid, * FROM confirmation WHERE tenureRowId = ?"
+      db.each(sql, [tenureRowId], function(err, row) {
+        data.push({issuer:row.issuer})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+        })
+  }
+
+  confirmationInsert(issuer, jwtRowId, actionRowId, tenureRowId, origClaim) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO confirmation (jwtRowId, issuer, actionRowId, tenureRowId, origClaim) VALUES (?, ?, ?, ?, ?)")
+      db.run(stmt, [jwtRowId, issuer, actionRowId, tenureRowId, origClaim], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -346,6 +376,44 @@ class EndorserDatabase {
     })
   }
 
+  async tenureClaimById(id) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT * FROM tenure_claim WHERE rowid = ?", [id], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({id:row.rowid, jwtId:row.jwtRowId, partyDid:row.partyDid, polygon:row.polygon})
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  }
+
+  /**
+     @return all recent tenure claims
+  **/
+  tenureClaims() {
+    return new Promise((resolve, reject) => {
+      var data = []
+      let sql = "SELECT rowid, * FROM tenure_claim ORDER BY rowid DESC LIMIT 50"
+      db.each(sql, [], function(err, row) {
+
+        row.id = row.rowid
+        delete row.rowid
+        row.jwtId = row.jwtRowId
+        delete row.jwtRowId
+
+        data.push(row)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
 
   async tenureByPoint(lat, lon) {
     return new Promise((resolve, reject) => {
@@ -362,6 +430,20 @@ class EndorserDatabase {
     })
   }
 
+  async tenureClaimIdByPartyAndGeoShape(partyDid, polygon) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid FROM tenure_claim WHERE partyDid = ? AND polygon = ?", [partyDid, polygon], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve(row.rowid)
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  }
+
   async tenureInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO tenure_claim VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
@@ -370,6 +452,27 @@ class EndorserDatabase {
           reject(err)
         } else {
           resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  /**
+     @returns all tenures claimed at that point
+  **/
+  retrieveTenureClaimsAndConfirmationsByPoint(lat, lon) {
+    return new Promise((resolve, reject) => {
+      var data = []
+        db.each("SELECT t.rowid as tid, t.partyDid as tenurePartyDid, t.polygon, c.rowid AS cid, c.issuer as confirmDid, c.tenureRowId from tenure_claim t LEFT JOIN confirmation c on c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat", [lon, lon, lat, lat], function(err, row) {
+
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, tenureRowId:row.tenureRowId} : null
+        let both = {tenure:{id:row.tid, partyDid:row.tenurePartyDid, polygon:row.polygon}, confirmation:confirmation}
+        data.push(both)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
         }
       })
     })
