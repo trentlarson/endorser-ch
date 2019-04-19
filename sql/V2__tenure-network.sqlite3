@@ -1,0 +1,83 @@
+
+
+--------------------------------------------------------------------------------
+-- Tenures
+
+CREATE TABLE tenure_claim (
+       jwtRowId INTEGER,
+       issuerDid TEXT, -- DID of the initial issuer; did:ethr are 52 chars
+       partyDid TEXT, -- DID of the owning agent; did:ethr are 52 chars
+       -- see https://schema.org/GeoShape basically contents of a WKT Polygon
+       polygon TEXT,
+       -- all WGS 84 (lat/long)
+       westLon REAL,
+       minLat REAL,
+       eastLon REAL,
+       maxLat REAL
+);
+
+ALTER TABLE confirmation ADD COLUMN tenureRowId INTEGER;
+
+
+
+
+--------------------------------------------------------------------------------
+-- Network of people
+
+CREATE TABLE network (
+       subject CHARACTER(60), -- DID of the entity who can see/reach the object
+       object CHARACTER(60), -- DID of the entity who can be seen/reached by the subject
+       CONSTRAINT both_unique UNIQUE (subject, object)
+);
+
+-- allow anyone to see/reach those who include them in a claim
+INSERT INTO network 
+SELECT DISTINCT ac.agentDid AS subject, jwt.issuer AS object FROM action_claim ac
+JOIN jwt ON jwt.rowid = ac.jwtRowId;
+
+-- The following are for reference, but we won't run them because they'll complain about duplicates.
+
+-- allow anyone to see/reach those who confirm a claim with them in it
+INSERT OR IGNORE INTO network
+SELECT DISTINCT ac.agentDid AS subject, c.issuer AS object FROM confirmation c
+JOIN action_claim ac ON ac.rowid = c.actionRowId;
+
+-- allow anyone to see/reach those who confirm a claim that they issued
+INSERT OR IGNORE INTO network
+SELECT DISTINCT jwt.issuer AS subject, c.issuer AS object FROM confirmation c
+JOIN action_claim ac ON ac.rowid = c.actionRowId
+JOIN jwt ON jwt.rowid = ac.jwtRowId;
+
+
+
+
+--------------------------------------------------------------------------------
+-- Enable Searching (requires some manual fix to modify the data)
+
+ALTER TABLE jwt ADD COLUMN claim;
+UPDATE jwt SET claim = claimEncoded;
+
+-- not possible in sqlite
+--ALTER TABLE jwt DROP COLUMN claimEncoded;
+
+-- some docs say this is possible but the syntax fails for me; other docs say it's not possible
+--ALTER TABLE jwt RENAME COLUMN claimEncoded TO claim;
+
+
+
+
+--------------------------------------------------------------------------------
+-- add the action_claim.issuerDid for convenience
+
+ALTER TABLE action_claim ADD COLUMN issuerDid;
+
+UPDATE action_claim SET issuerDid = (SELECT jwt.issuer FROM jwt WHERE jwt.rowid = action_claim.jwtRowId);
+
+
+
+--------------------------------------------------------------------------------
+-- delete the nulls (how'd they get there?)
+
+DELETE FROM jwt WHERE subject IS null;
+DELETE FROM action_claim WHERE agentDid IS NULL;
+

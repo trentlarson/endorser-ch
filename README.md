@@ -196,7 +196,28 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 
 next deploy:
-- check DB changes
+- run migrate
+- run to populate jwt.claim, inside endorser-ch:
+
+> NODE_ENV=dev node
+
+var base64url = require('base64url')
+var sqlite3 = require('sqlite3').verbose()
+var dbInfo = require('./conf/flyway.js')
+var db = new sqlite3.Database(dbInfo.fileLoc)
+let selectSql = "SELECT rowid, claim FROM jwt"
+let updateSql = "UPDATE jwt SET claim=? WHERE rowid=?"
+db.each(selectSql, [], function(err, row) {
+  db.run(updateSql, [base64url.decode(row.claim), row.rowid], function(err){ if (err) {console.log(err)}})
+}, function(err, num) {
+  if (err) {
+    console.log(err)
+  } else {
+    console.log("Success")
+  }
+})
+
+
 
 
 - 100 0 errors in local data on report screens
@@ -241,6 +262,7 @@ next deploy:
 - 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 60 3 neo4j?
 - 70 0 usability: fade out the confirmation button when pushed
+- 60 0 write migration to remove claimEncoded column
 - on uport-demo: change store/play pics in Welcome.js to local files
 - in confirmation, check whether it really is a JoinAction
 - try-catch around jwt.service resolveAuthenticator when not connected to internet
