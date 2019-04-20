@@ -3,11 +3,11 @@ import actionController from './action-controller'
 
 import TenureService from '../services/tenure.service';
 class TenureController {
-  getByPoint(req, res) {
+  getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
-  getClaimsAndConfirmationsByPoint(req, res) {
+  getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
