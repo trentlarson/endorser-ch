@@ -197,19 +197,20 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 
 next deploy:
-- run migrate
-- run to populate jwt.claim, inside endorser-ch:
+- ci, migrate, and populate jwt.claim (inside endorser-ch)
 
-> NODE_ENV=dev node
+$ npm ci
+$ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
+$ NODE_ENV=dev node
 
 var base64url = require('base64url')
 var sqlite3 = require('sqlite3').verbose()
 var dbInfo = require('./conf/flyway.js')
 var db = new sqlite3.Database(dbInfo.fileLoc)
-let selectSql = "SELECT rowid, claim FROM jwt"
+let selectSql = "SELECT rowid, claimEncoded FROM jwt"
 let updateSql = "UPDATE jwt SET claim=? WHERE rowid=?"
 db.each(selectSql, [], function(err, row) {
-  db.run(updateSql, [base64url.decode(row.claim), row.rowid], function(err){ if (err) {console.log(err)}})
+  db.run(updateSql, [base64url.decode(row.claimEncoded), row.rowid], function(err){ if (err) {console.log(err)}})
 }, function(err, num) {
   if (err) {
     console.log(err)
