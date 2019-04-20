@@ -200,6 +200,7 @@ next deploy:
 
 - 100 0 errors in local data on report screens
 - 90 2 add search for claim #claim
+- 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
@@ -217,12 +218,13 @@ next deploy:
 - 90 0 add helmet
 - 80 1 add SSL
 - 90 1 run prod in prod mode (ie. not: npm run dev)
-- 80 1 db #DB
--- add action_claim.startDateCanonical #DBsdc ^DB
-   - and fill it #DBsdcF ^DBsdc
--- add created date to each record #DBcre ^DB
-   - and fill it #DBcreF ^DBcre
--- remove jwt.claimEncoded #DBrce ^DB
+- 80 1 db
+-- add action_claim.startDateCanonical
+   - and fill it
+-- add created date to each record
+   - and fill it
+-- remove jwt.claimEncoded
+-- change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
 - 60 3 neo4j?
 - 70 0 usability: fade out the confirmation button when pushed
 - on uport-demo: change store/play pics in Welcome.js to local files

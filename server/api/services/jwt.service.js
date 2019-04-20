@@ -109,7 +109,7 @@ class JwtService {
 
       }
 
-      let attId = await db.actionClaimInsert(agentDid, jwtId, event)
+      let attId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
     } else if (claim['@context'] === 'http://endorser.ch'
@@ -171,8 +171,10 @@ class JwtService {
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
     if (payload.claim) {
-      let claimEncoded = base64url.encode(JSON.stringify(payload.claim))
-      let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+      let claimStr = JSON.stringify(payload.claim)
+      let claimEncoded = base64url.encode(claimStr)
+      let jwtEntity = db.buildJwtEntity(payload, claimStr, claimEncoded, jwtEncoded)
+console.log(jwtEntity.claim)
       let jwtId = await db.jwtInsert(jwtEntity)
 
       // this line is lifted from didJwt.verifyJWT
