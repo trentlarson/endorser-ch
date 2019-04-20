@@ -5,7 +5,7 @@
 
 CREATE TABLE tenure_claim (
        jwtRowId INTEGER,
-       issuerDid TEXT, -- DID of the initial issuer; did:ethr are 52 chars
+       issuerDid TEXT, -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
        partyDid TEXT, -- DID of the owning agent; did:ethr are 52 chars
        -- see https://schema.org/GeoShape basically contents of a WKT Polygon
        polygon TEXT,
@@ -54,8 +54,7 @@ JOIN jwt ON jwt.rowid = ac.jwtRowId;
 --------------------------------------------------------------------------------
 -- Enable Searching (requires some manual fix to modify the data)
 
-ALTER TABLE jwt ADD COLUMN claim;
-UPDATE jwt SET claim = claimEncoded;
+ALTER TABLE jwt ADD COLUMN claim TEXT;
 
 -- not possible in sqlite
 --ALTER TABLE jwt DROP COLUMN claimEncoded;
@@ -69,7 +68,7 @@ UPDATE jwt SET claim = claimEncoded;
 --------------------------------------------------------------------------------
 -- add the action_claim.issuerDid for convenience
 
-ALTER TABLE action_claim ADD COLUMN issuerDid;
+ALTER TABLE action_claim ADD COLUMN issuerDid VARCHAR(100);
 
 UPDATE action_claim SET issuerDid = (SELECT jwt.issuer FROM jwt WHERE jwt.rowid = action_claim.jwtRowId);
 

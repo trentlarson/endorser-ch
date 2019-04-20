@@ -1,5 +1,30 @@
 import * as express from 'express';
-import controller from './jwt-controller';
+
+import JwtService from '../services/jwt.service';
+class Controller {
+  getById(req, res) {
+    JwtService
+      .byId(req.params.id)
+      .then(r => {
+        if (r) res.json(r);
+        else res.status(404).end();
+      });
+  }
+  getByQuery(req, res) {
+    JwtService.byQuery(req.query)
+      .then(r => res.json(r));
+  }
+  importClaim(req, res) {
+    JwtService
+      .createWithClaimRecord(req.body.jwtEncoded)
+      .then(r => res
+            .status(201)
+            .location(`<%= apiRoot %>/claim/${r.id}`)
+            .json(r));
+  }
+}
+let controller = new Controller();
+
 
 export default express
   .Router()
@@ -32,6 +57,7 @@ export default express
  * Get many Claim JWTs
  * @group jwt - Claim JWT storage
  * @route GET /api/claim
+ * @param {String} claimContents.query.optional This is exclusive and cannot be combined with other parameters.
  * @param {String} claimContext.query.optional
  * @param {String} claimType.query.optional
  * @param {String} issuedAt.query.optional

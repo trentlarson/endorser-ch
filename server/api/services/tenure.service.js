@@ -24,8 +24,8 @@ class TenureService {
     return resultData;
   }
 
-  async claimsAndConfirmationsByPoint(lat, lon) {
-    l.info(`${this.constructor.name}.claimsAndConfirmationsByPoint(${lat}, ${lon})`);
+  async getClaimsAndConfirmationsByPoint(lat, lon) {
+    l.info(`${this.constructor.name}.getClaimsAndConfirmationsByPoint(${lat}, ${lon})`);
     let resultData = await db.retrieveTenureClaimsAndConfirmationsByPoint(lat, lon)
     return resultData;
   }

@@ -38,7 +38,12 @@ class JwtService {
 
   async byQuery(params) {
     l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
-    let resultData = await db.jwtByParams(params)
+    var resultData
+    if (params.claimContents) {
+      resultData = await db.jwtByContent(params.claimContents)
+    } else {
+      resultData = await db.jwtByParams(params)
+    }
     let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claimEncoded:j.claimEncoded}))
     return result;
   }
@@ -196,7 +201,7 @@ class JwtService {
 
       }
 
-      let attId = await db.actionClaimInsert(agentDid, jwtId, event, issuerDid)
+      let attId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
       await this.createNetworkRecords(agentDid, issuerDid, attId, null)
@@ -283,8 +288,10 @@ class JwtService {
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
     if (payload.claim) {
-      let claimEncoded = base64url.encode(JSON.stringify(payload.claim))
-      let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+      let claimStr = JSON.stringify(payload.claim)
+      let claimEncoded = base64url.encode(claimStr)
+      let jwtEntity = db.buildJwtEntity(payload, claimStr, claimEncoded, jwtEncoded)
+console.log(jwtEntity.claim)
       let jwtId = await db.jwtInsert(jwtEntity)
 
       // this line is lifted from didJwt.verifyJWT

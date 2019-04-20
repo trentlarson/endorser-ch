@@ -7,8 +7,8 @@ class TenureController {
     TenureService.byPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
-  getTenureClaimsAndConfirmationsByPoint(req, res) {
-    TenureService.claimsAndConfirmationsByPoint(req.query.lat, req.query.lon)
+  getClaimsAndConfirmationsByPoint(req, res) {
+    TenureService.getClaimsAndConfirmationsByPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
 }
@@ -40,7 +40,7 @@ export default express
 
 /**
  * Get tenure claims for a point
- * @group action - Reports
+ * @group report - Reports
  * @route GET /api/reports/tenureClaimsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
@@ -51,11 +51,11 @@ export default express
 
 /**
  * Get tenure claims and confirmations for a point
- * @group action - Reports
+ * @group report - Reports
  * @route GET /api/reports/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error}  default - Unexpected error
  */
-  .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getTenureClaimsAndConfirmationsByPoint)
+  .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsByPoint)

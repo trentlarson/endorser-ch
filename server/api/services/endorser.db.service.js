@@ -175,10 +175,10 @@ class EndorserDatabase {
     })
   }
 
-  actionClaimInsert(agentDid, jwtId, event, issuerDid) {
+  actionClaimInsert(issuerDid, agentDid, jwtId, event) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action_claim VALUES (?, ?, ?, ?, ?, datetime('" + event.startTime + "'), ?)")
-      db.run(stmt, [jwtId, agentDid, event.id, event.orgName, event.name, issuerDid], function(err) {
+      var stmt = ("INSERT INTO action_claim (jwtRowId, issuerDid, agentDid, eventRowId, eventOrgName, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, ?, datetime('" + event.startTime + "'))");
+      db.run(stmt, [jwtId, issuerDid, agentDid, event.id, event.orgName, event.name], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -297,7 +297,7 @@ class EndorserDatabase {
 
   eventInsert(orgName, name, startTime) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO event VALUES (?, ?, datetime(?))")
+      var stmt = ("INSERT INTO event (orgName, name, startTime) VALUES (?, ?, datetime(?))");
       db.run(stmt, [orgName, name, startTime], function(err) {
         if (err) {
           reject(err)
@@ -308,7 +308,7 @@ class EndorserDatabase {
     })
   }
 
-  buildJwtEntity(payload, claimEncoded, jwtEncoded) {
+  buildJwtEntity(payload, claim, claimEncoded, jwtEncoded) {
     let issuedAt = new Date(payload.iat * 1000).toISOString()
     let issuer = payload.iss
     let subject = payload.sub
@@ -320,6 +320,7 @@ class EndorserDatabase {
       subject: subject,
       claimContext: claimContext,
       claimType: claimType,
+      claim: claim,
       claimEncoded: claimEncoded,
       jwtEncoded: jwtEncoded
     }
@@ -363,10 +364,29 @@ class EndorserDatabase {
     })
   }
 
+  /**
+     @param string to search for in the claims
+   **/
+  jwtByContent(text) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim FROM jwt WHERE INSTR(claim, ?) > 0 ORDER BY issuedAt DESC LIMIT 50", [text], function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
   async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?)")
-      db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claimEncoded, entity.jwtEncoded], function(err) {
+      var stmt = ("INSERT INTO jwt (issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded) VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?)");
+      console.log("entity.claim",entity.claim)
+      db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claim, entity.claimEncoded, entity.jwtEncoded], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -444,9 +464,31 @@ class EndorserDatabase {
     })
   }
 
+  /**
+     @param dateTimeStr in ISO format
+     @Returns all actions on the event outer-joined with confirmations of those actions
+  **/
+  getTenureClaimsAndConfirmationsByPoint(lat, lon) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      let sql = "SELECT t.rowid AS tid, t.partyDid, t.polygon, c.rowid AS cid, c.issuer AS confirmDid, c.tenureRowId FROM tenure_claim t LEFT OUTER JOIN confirmation c ON c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat"
+      db.each(sql, [lon, lon, lat, lat], function(err, row) {
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, tenureId:row.tenureRowId} : null
+        let both = {tenure:{id:row.tid, partyDid:row.partyDid, polygon:row.polygon}, confirmation:confirmation}
+        data.push(both)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
   async tenureInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO tenure_claim VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO tenure_claim (jwtRowId, issuerDid, partyDid, polygon, westlon, minlat, eastlon, maxlat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.partyDid, entity.polygon, entity.westLon, entity.minLat, entity.eastLon, entity.maxLat], function(err) {
         if (err) {
           reject(err)

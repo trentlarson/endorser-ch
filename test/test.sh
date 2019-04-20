@@ -1,5 +1,5 @@
 
-echo "Looks like you gotta be connected to the internet to run these (probably due to sig/JWT verification)."
+echo "We believe you gotta be connected to the internet to run these (probably due to sig/JWT verification)."
 
 rm -f ../endorser-ch-test.sqlite3
 
