@@ -18,13 +18,13 @@ class TenureService {
       return resultData;
     }
 
-  async byPoint(lat, lon) {
+  async atPoint(lat, lon) {
     l.info(`${this.constructor.name}.byPoint(${lat}, ${lon})`);
     let resultData = await db.tenureByPoint(lat, lon)
     return resultData;
   }
 
-  async getClaimsAndConfirmationsByPoint(lat, lon) {
+  async getClaimsAndConfirmationsAtPoint(lat, lon) {
     l.info(`${this.constructor.name}.getClaimsAndConfirmationsByPoint(${lat}, ${lon})`);
     let resultData = await db.retrieveTenureClaimsAndConfirmationsByPoint(lat, lon)
     return resultData;

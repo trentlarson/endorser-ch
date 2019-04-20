@@ -3,7 +3,7 @@ import * as express from 'express';
 import TenureService from '../services/tenure.service';
 class TenureController {
   getById(req, res) {
-    TenureService.byId(req.param.id)
+    TenureService.byId(req.params.id)
       .then(r => res.json(r));
   }
   getByQuery(req, res) {
