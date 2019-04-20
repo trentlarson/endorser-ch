@@ -122,6 +122,7 @@ curl 'http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTim
 curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}'
 curl 'http://localhost:3000/api/action?eventStartTime=2018-12-29T08:00:00.000-07:00'
 curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"}'
+curl 'http://localhost:3000/api/tenure/1'
 curl 'http://localhost:3000/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787'
 curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787'
 
@@ -197,7 +198,29 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 
 next deploy:
-- check DB changes
+- ci, migrate, and populate jwt.claim (inside endorser-ch)
+
+$ npm ci
+$ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
+$ NODE_ENV=dev node
+
+var base64url = require('base64url')
+var sqlite3 = require('sqlite3').verbose()
+var dbInfo = require('./conf/flyway.js')
+var db = new sqlite3.Database(dbInfo.fileLoc)
+let selectSql = "SELECT rowid, claimEncoded FROM jwt"
+let updateSql = "UPDATE jwt SET claim=? WHERE rowid=?"
+db.each(selectSql, [], function(err, row) {
+  db.run(updateSql, [base64url.decode(row.claimEncoded), row.rowid], function(err){ if (err) {console.log(err)}})
+}, function(err, num) {
+  if (err) {
+    console.log(err)
+  } else {
+    console.log("Success")
+  }
+})
+
+
 
 
 - 100 0 errors in local data on report screens
@@ -206,6 +229,23 @@ next deploy:
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
+- 90 0 remove DB-based network lookup: inNetwork call in jwt.service
+- 90 0 rename issuer to issuerDid in confirmation table
+- 90 0 retrieveTenureClaimsAndConfirmations & retrieveActionClaimsAndConfirmations should be OUTER JOIN?
+- 90 0 remove issuerDid from *_claim tables and build into logic (since >1 issuer could claim each)
+- 90 2 add search for claim
+  - 90 2 add search for claim on parcel of land
+  - ?
+- 90 2 add search for endorser (in network?)
+  - ?
+- 90 1 check & verify the user credentials for every API request
+  - 90 1 add the user info to requests
+    - x 90 1 send & check the user DID
+    - 90 2 send & check the JWT
+  - x 90 1 add in-network data for each insert
+  - 90 2 change each of the SQL searches to check in-network
+- 90 5 write & support use-cases
+- 70 2 add Typescript
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
@@ -221,14 +261,16 @@ next deploy:
 - 80 1 add SSL
 - 90 1 run prod in prod mode (ie. not: npm run dev)
 - 80 1 db
--- add action_claim.startDateCanonical
-   - and fill it
--- add created date to each record
-   - and fill it
--- remove jwt.claimEncoded
--- change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
+  - add action_claim.startDateCanonical
+    - and fill it
+  - add created date to each record
+    - and fill it
+  - remove jwt.claimEncoded
+  - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
+- 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 60 3 neo4j?
 - 70 0 usability: fade out the confirmation button when pushed
+- 60 0 write migration to remove claimEncoded column
 - on uport-demo: change store/play pics in Welcome.js to local files
 - in confirmation, check whether it really is a JoinAction
 - try-catch around jwt.service resolveAuthenticator when not connected to internet
@@ -247,6 +289,7 @@ next deploy:
 - limit JWT retrieval to a date
 - reject duplicate claim submissions
 - handle "access_denied" when person rejects claim on phone
+- generalize for more than just meetings (JoinActions)
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 

@@ -1,6 +1,8 @@
 import R from 'ramda'
 import util from 'util'
 
+const HIDDEN_TEXT = '(HIDDEN)'
+
 // create confirmation list from a list of actionClaimsAndConfirmations for the same action
 // internal helper function
 function buildConfirmationList(acacList) {
@@ -52,4 +54,4 @@ function calcBbox(polygonStr) {
   return bbox
 }
 
-module.exports = { buildConfirmationList, withKeysSorted, calcBbox }
+module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, withKeysSorted }

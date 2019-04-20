@@ -8,12 +8,13 @@ import { calcBbox } from '../server/api/services/util';
 
 let dbInfo = require('../conf/flyway.js')
 
-const assert = chai.assert;
-const expect = chai.expect;
 
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
+const HIDDEN_TEXT = '(HIDDEN)'
+
+const expect = chai.expect;
 
 var firstId = 1
 
@@ -54,7 +55,7 @@ describe('Claim', () => {
 
   it('should get a 404, missing claim #0', () =>
      request(Server)
-     .get('/api/claim/0')
+     .get('/api/claim/' + firstId)
      .then(r => {
        expect(400)
      }))
@@ -73,6 +74,7 @@ describe('Claim', () => {
   it('should get a claim #' + firstId, () =>
      request(Server)
      .get('/api/claim/' + firstId)
+     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -82,6 +84,27 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('claimType')
          .that.equals('JoinAction')
+       expect(r.body)
+         .that.has.a.property('issuer')
+         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+     }))
+
+  it('should get a claim with the DID hidden', () =>
+     request(Server)
+     .get('/api/claim/' + firstId)
+     .set('Some-DID', 'did:ethr:0x8643271e0b2cf8a903f9e2c7610ff54503af158e')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.a.property('claimContext')
+         .that.equals('http://schema.org')
+       expect(r.body)
+         .that.has.a.property('claimType')
+         .that.equals('JoinAction')
+       expect(r.body)
+         .that.has.a.property('issuer')
+         .that.equals(HIDDEN_TEXT)
      }))
 
   it('should add a new confirmation for that action', () =>
@@ -188,6 +211,7 @@ describe('Action', () => {
   it('should get action with the right properties', () =>
      request(Server)
      .get('/api/action/' + firstId)
+     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -206,6 +230,21 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventName')
          .that.equals('Saturday Morning Meeting')
+       expect(r.body)
+         .that.has.property('eventStartTime')
+         .that.equals('2018-12-29 15:00:00')
+     }))
+
+  it('should get action with hidden DID', () =>
+     request(Server)
+     .get('/api/action/' + firstId)
+     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143f')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.property('agentDid')
+         .that.equals(HIDDEN_TEXT)
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')

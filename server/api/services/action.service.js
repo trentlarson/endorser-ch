@@ -1,15 +1,35 @@
 import util from 'util'
 import R from 'ramda'
 
-import l from '../../common/logger';
-import db from './endorser.db.service';
-import { buildConfirmationList } from './util'
+import l from '../../common/logger'
+import db from './endorser.db.service'
+import netCache from './network-cache.service.js'
+import { buildConfirmationList, HIDDEN_TEXT } from './util'
+
+async function getNetwork(requesterDid) {
+  return db.getNetwork(requesterDid)
+}
 
 class ActionService {
 
-  byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
-    return db.actionClaimById(id);
+  byId(id, requesterDid) {
+    l.info(`${this.constructor.name}.byId(${id},${requesterDid})`);
+    return db.actionClaimById(id)
+      .then(async actionClaim => {
+        if (!actionClaim) {
+          return null
+        } else {
+          var objects = netCache.get(requesterDid)
+          if (!objects) {
+            objects = await db.getNetwork(requesterDid)
+            netCache.set(requesterDid, objects)
+          }
+          if (objects.indexOf(actionClaim.agentDid) === -1) {
+            actionClaim["agentDid"] = HIDDEN_TEXT
+          }
+          return actionClaim
+        }
+      })
   }
 
   async byQuery(params) {
@@ -19,11 +39,11 @@ class ActionService {
       delete params.id
     }
     let resultData = await db.actionClaimsByParams(params)
-    return resultData;
+    return resultData
   }
 
   async getActionClaimsAndConfirmationsForEventsSince(dateTime) {
-    let resultData = await db.getActionClaimsAndConfirmationsForEventsSince(dateTime)
+    let resultData = await db.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
     // group all actions by DID
     let acacListsByDid = R.groupBy(acac => acac.action.agentDid)(resultData)
     // now make an action group for each DID

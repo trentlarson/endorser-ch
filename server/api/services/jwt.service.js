@@ -7,6 +7,7 @@ import db from './endorser.db.service'
 import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
+import { HIDDEN_TEXT } from './util'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
@@ -14,9 +15,25 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 class JwtService {
 
-  byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
-    return db.jwtById(id);
+  async byId(id, requesterDid) {
+    l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
+    return db.jwtById(id)
+      .then(jwt => {
+        if (!jwt) {
+          return null
+        } else {
+          return db.inNetwork(requesterDid, [jwt.issuer, jwt.subject])
+            .then(rows => {
+              if (rows.length == 0) {
+                jwt["issuer"] = HIDDEN_TEXT
+                jwt["subject"] = HIDDEN_TEXT
+                delete jwt.claimEncoded
+                delete jwt.jwtEncoded
+              }
+              return jwt
+            })
+        }
+      })
   }
 
   async byQuery(params) {
@@ -55,9 +72,13 @@ class JwtService {
   }
   **/
 
-  async oneConfirmation(jwtId, issuerDid, origClaim) {
+  /**
+     @return object with: {newId:NUMBER, actionClaimRowId:NUMBER}
+       ... where newId is -1 if something went wrong
+   **/
+  async createOneConfirmation(jwtId, issuerDid, origClaim) {
 
-    l.debug(`${this.constructor.name}.oneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
+    l.debug(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
 
     if (origClaim['@context'] === 'http://schema.org'
         && origClaim['@type'] === 'JoinAction') {
@@ -73,13 +94,79 @@ class JwtService {
 
       let origClaimStr = JSON.stringify(origClaim)
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, actionClaimId, origClaimStr)
-      l.debug(`${this.constructor.name}.oneConfirmation # ${result} added for ${actionClaimId}`);
-      return result
+      let result = await db.confirmationInsert(issuerDid, jwtId, actionClaimId, null, origClaimStr)
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${actionClaimId}`);
+      return {newId:result, actionClaimId}
+
+    } else if (origClaim['@context'] === 'http://endorser.ch'
+               && origClaim['@type'] === 'Tenure') {
+
+      let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
+      if (tenureClaimId === null) throw new Error("Attempted to confirm an unrecorded tenure.")
+
+      let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
+      if (confirmation !== null) throw new Error(`Attemtpted to confirm a tenure already confirmed in # ${confirmation.id}`)
+
+      let origClaimStr = JSON.stringify(origClaim)
+
+      let result = await db.confirmationInsert(issuerDid, jwtId, null, tenureClaimId, origClaimStr)
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${tenureClaimId}`);
+      return {newId:result, tenureClaimId}
+
     } else {
       l.warning("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
-      return -1
+      return {}
     }
+  }
+
+  /**
+     Take a claim being confirmed by an issuer, and create network records from all targeted people to that issuer
+
+     @param actionClaimId is the claim being confirmed
+     @param actionClaimAgentDid is the agent of that claim
+     @param issuerDid is the issuer confirming it
+     @return array of promises for all the insertions into the network table
+   **/
+  async createNetworkRecords(agentOrPartyDid, issuerDid, actionClaimId, tenureClaimId) {
+
+    let results = []
+
+    // put the issuer in the confirmed claim-agent's network
+    results.push(db.networkInsert(agentOrPartyDid, issuerDid)
+                .catch(err => {
+                  throw new Error(`Got error saving network entry from ${agentOrPartyDid} to ${issuerDid}: ${util.inspect(err)}`)
+                }))
+
+    if (actionClaimId) {
+      // put the issuer in the confirmed claim's confirmed-issuer network
+      results.push(db.manyConfirmationsByActionClaim(actionClaimId)
+                   .then(confirmations => {
+                     let subResults = []
+                     for (var confirm of confirmations) {
+                       subResults.push(db.networkInsert(confirm.issuer, issuerDid)
+                                       .catch(err => {
+                                         throw new Error(`Error saving network entry from ${confirm.issuer} to ${issuerDid}: ${util.inspect(err)}`)
+                                       }))
+                     }
+                     return Promise.all(subResults)
+                   }))
+    }
+    if (tenureClaimId) {
+      // put the issuer in the confirmed claim's confirmed-issuer network
+      results.push(db.manyConfirmationsByTenureClaim(tenureClaimId)
+                   .then(confirmations => {
+                     let subResults = []
+                     for (var confirm of confirmations) {
+                       subResults.push(db.networkInsert(confirm.issuer, issuerDid)
+                                       .catch(err => {
+                                         throw new Error(`Error saving network entry from ${confirm.issuer} to ${issuerDid}: ${util.inspect(err)}`)
+                                       }))
+                     }
+                     return Promise.all(subResults)
+                   }))
+    }
+
+    return Promise.all(results)
   }
 
   async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
@@ -117,6 +204,8 @@ class JwtService {
       let attId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
+      await this.createNetworkRecords(agentDid, issuerDid, attId, null)
+
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Tenure') {
 
@@ -132,39 +221,62 @@ class JwtService {
             eastLon: bbox.eastLon,
             maxLat: bbox.maxLat
           }
-      await db.tenureInsert(entity)
+      let tenureId = await db.tenureInsert(entity)
+
+      await this.createNetworkRecords(claim.party && claim.party.did, issuerDid, null, tenureId)
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 
-      var result = []
+      var recordings = []
 
-      { // work with a single claim
-        if (claim['originalClaim']) {
-          this.oneConfirmation(jwtId, issuerDid, claim['originalClaim'])
-            .then(confirmId => result.push(confirmId))
-            .catch(err => {
-              l.error(err)
-              result.push(-1)
-            })
+      { // handle a single claim
+        let origClaim = claim['originalClaim']
+        if (origClaim) {
+          recordings.push(
+            this.createOneConfirmation(jwtId, issuerDid, origClaim)
+              .then(confirmData => {
+                if (confirmData.actionClaimId) {
+                  return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
+                } else if (confirmData.tenureClaimId) {
+                  return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
+                } else {
+                  throw new Error("Failed to create confirmation for JWT " + jwtId)
+                }
+              })
+              .catch(err => {
+                l.error(err)
+              })
+          )
+
         }
       }
 
-      { // work with multiple claims
+      { // handle multiple claims
         if (claim['originalClaims']) {
           for (var origClaim of claim['originalClaims']) {
-            this.oneConfirmation(jwtId, issuerDid, origClaim)
-              .then(confirmId => result.push(confirmId))
-              .catch(err => {
-                l.error(err)
-                result.push(-1)
-              })
+            recordings.push(
+              this.createOneConfirmation(jwtId, issuerDid, origClaim)
+                .then(confirmData => {
+                  if (confirmData.actionClaimId) {
+                    return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
+                  } else if (confirmData.tenureClaimId) {
+                    return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
+                  } else {
+                    throw new Error("Failed to create confirmation for JWT " + jwtId)
+                  }
+                })
+                .catch(err => {
+                  l.error(err)
+                })
+            )
           }
         }
       }
-      l.debug(`${this.constructor.name} Created ${result.length} confirmations: ${util.inspect(result)}`)
+      l.debug(`${this.constructor.name} Created ${recordings.length} confirmations.`)
 
-      return result
+      await Promise.all(recordings)
+
     } else {
       throw new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'])
     }

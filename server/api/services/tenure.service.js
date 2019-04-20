@@ -6,15 +6,27 @@ import db from './endorser.db.service';
 
 class TenureService {
 
-  async byPoint(lat, lon) {
+  async byId(tenureId) {
+    l.info(`${this.constructor.name}.byId(${tenureId})`);
+    let resultData = await db.tenureClaimById(tenureId)
+    return resultData;
+  }
+
+  async byQuery() {
+    l.info(`${this.constructor.name}.byQuery()`);
+      let resultData = await db.tenureClaims()
+      return resultData;
+    }
+
+  async atPoint(lat, lon) {
     l.info(`${this.constructor.name}.byPoint(${lat}, ${lon})`);
     let resultData = await db.tenureByPoint(lat, lon)
     return resultData;
   }
 
-  async getClaimsAndConfirmationsByPoint(lat, lon) {
+  async getClaimsAndConfirmationsAtPoint(lat, lon) {
     l.info(`${this.constructor.name}.getClaimsAndConfirmationsByPoint(${lat}, ${lon})`);
-    let resultData = await db.getTenureClaimsAndConfirmationsByPoint(lat, lon)
+    let resultData = await db.retrieveTenureClaimsAndConfirmationsByPoint(lat, lon)
     return resultData;
   }
 

@@ -4,6 +4,7 @@ import * as bodyParser from 'body-parser';
 import * as http from 'http';
 import * as os from 'os';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import l from './logger';
 
 const app = new Express();
@@ -49,6 +50,7 @@ export default class ExpressServer {
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser(process.env.SESSION_SECRET));
     app.use(Express.static(`${root}/public`));
+    app.use(cors({"allowedHeaders":["Content-Type","Some-DID"]}))
   }
 
   router(routes) {

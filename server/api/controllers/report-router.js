@@ -4,11 +4,11 @@ import actionController from './action-controller'
 import TenureService from '../services/tenure.service';
 class TenureController {
   getByPoint(req, res) {
-    TenureService.byPoint(req.query.lat, req.query.lon)
+    TenureService.atPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
   getClaimsAndConfirmationsByPoint(req, res) {
-    TenureService.getClaimsAndConfirmationsByPoint(req.query.lat, req.query.lon)
+    TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
       .then(r => res.json(r));
   }
 }
@@ -47,7 +47,7 @@ export default express
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error}  default - Unexpected error
  */
-  .get('/tenureClaimsAtPoint', tenureController.getByPoint)
+  .get('/tenureClaimsAtPoint', tenureController.getAtPoint)
 
 /**
  * Get tenure claims and confirmations for a point
@@ -58,4 +58,4 @@ export default express
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error}  default - Unexpected error
  */
-  .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsByPoint)
+  .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsAtPoint)
