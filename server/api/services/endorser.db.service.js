@@ -347,6 +347,28 @@ class EndorserDatabase {
     })
   }
 
+  /**
+     @param dateTimeStr in ISO format
+     @Returns all actions on the event outer-joined with confirmations of those actions
+  **/
+  getTenureClaimsAndConfirmationsByPoint(lat, lon) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      let sql = "SELECT t.rowid AS tid, t.partyDid, t.polygon, c.rowid AS cid, c.issuer AS confirmDid, c.tenureRowId FROM tenure_claim t LEFT OUTER JOIN confirmation c ON c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat"
+      db.each(sql, [lon, lon, lat, lat], function(err, row) {
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, tenureId:row.tenureRowId} : null
+        let both = {tenure:{id:row.tid, partyDid:row.partyDid, polygon:row.polygon}, confirmation:confirmation}
+        data.push(both)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
   async tenureInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO tenure_claim (jwtRowId, issuerDid, partyDid, polygon, westlon, minlat, eastlon, maxlat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");

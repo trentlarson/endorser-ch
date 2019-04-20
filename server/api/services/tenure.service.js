@@ -12,6 +12,12 @@ class TenureService {
     return resultData;
   }
 
+  async getClaimsAndConfirmationsByPoint(lat, lon) {
+    l.info(`${this.constructor.name}.getClaimsAndConfirmationsByPoint(${lat}, ${lon})`);
+    let resultData = await db.getTenureClaimsAndConfirmationsByPoint(lat, lon)
+    return resultData;
+  }
+
 }
 
 export default new TenureService();
