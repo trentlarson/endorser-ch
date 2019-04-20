@@ -56,8 +56,6 @@ JOIN jwt ON jwt.rowid = ac.jwtRowId;
 
 ALTER TABLE jwt ADD COLUMN claim TEXT;
 
-UPDATE jwt SET claim = claimEncoded;
-
 -- not possible in sqlite
 --ALTER TABLE jwt DROP COLUMN claimEncoded;
 
