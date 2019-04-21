@@ -225,7 +225,7 @@ db.each(selectSql, [], function(err, row) {
 
 
 
-- 95 1 add push token to all uport-demo requests
+- 95 1 in text search: show claim contents instead of DB records
 - 95 1 network check & global remove DID
 - 90 0 add helmet
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
@@ -248,6 +248,7 @@ db.each(selectSql, [], function(err, row) {
   - x 90 1 add in-network data for each insert
   - 90 2 change each of the SQL searches to check in-network
 - 90 5 write & support use-cases
+- 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 70 2 add Typescript
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
@@ -269,30 +270,24 @@ db.each(selectSql, [], function(err, row) {
     - and fill it
   - remove jwt.claimEncoded
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
-- 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
-- 60 3 neo4j?
-- 70 0 usability: fade out the confirmation button when pushed
-- 60 0 write migration to remove claimEncoded column
-- on uport-demo: change store/play pics in Welcome.js to local files
-- in confirmation, check whether it really is a JoinAction
-- try-catch around jwt.service resolveAuthenticator when not connected to internet
-- after signing a claim, signing another claim doesn't even hit the server until page refresh
-- report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
-- report page: who has the most activity for a time range
-- explore page: add # of confirmations, & DIDs (after they click on the previous claim?)
-- given a user who has a claim, find if anyone in my network endorses them for that
 - 80 0 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
 - 80 0 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
+- 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
+- 80 0 usability: add a "waiting" spinner when remote method is called
+- 60 3 neo4j?
+- 70 0 usability: fade out the confirmation button when pushed
 - 70 3 have someone audit use of uport.pushToken
-- change the storage in JWT table to have original claim (eg for Confirmations)
-- make record IDs into hashes not sequentially increasing numbers
-- confirm Attended Action, but just show confirmation numbers (?)
-- tests: see above; duplicate JWT data; ACACs by different times; no claim in JWT
-- remove duplicate decode in JWT service
-- limit JWT retrieval to a date
-- reject duplicate claim submissions
-- handle "access_denied" when person rejects claim on phone
-- generalize for more than just meetings (JoinActions)
+- 60 0 write migration to remove claimEncoded column
+- 30 0 on uport-demo: change store/play pics in Welcome.js to local files
+- 30 0 in confirmation, check whether it really is a JoinAction
+- 30 0 try-catch around jwt.service resolveAuthenticator when not connected to internet
+- 40 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
+- 30 0 report page: who has the most activity for a time range
+- 60 0 make record IDs into hashes not sequentially increasing numbers
+- 70 1 tests: see above; duplicate JWT data; ACACs by different times; no claim in JWT
+- 70 0 remove duplicate decode in JWT service
+- 70 0 add test for rejection of duplicate claim submissions
+- 70 0 handle "access_denied" when person rejects claim on phone
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 
