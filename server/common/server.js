@@ -6,6 +6,7 @@ import * as os from 'os';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import l from './logger';
+import { UPORT_PUSH_TOKEN } from '../api/services/util';
 
 const app = new Express();
 const expressSwagger = require('express-swagger-generator')(app);
@@ -50,7 +51,7 @@ export default class ExpressServer {
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser(process.env.SESSION_SECRET));
     app.use(Express.static(`${root}/public`));
-    app.use(cors({"allowedHeaders":["Content-Type","Some-DID"]}))
+    app.use(cors({"allowedHeaders":["Content-Type", UPORT_PUSH_TOKEN]}))
   }
 
   router(routes) {

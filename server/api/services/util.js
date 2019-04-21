@@ -1,7 +1,8 @@
 import R from 'ramda'
 import util from 'util'
 
-const HIDDEN_TEXT = '(HIDDEN)'
+const HIDDEN_TEXT = 'did::U CANNOT C'
+const PUSH_TOKEN_HEADER = 'Uport-Push-Token'
 
 // create confirmation list from a list of actionClaimsAndConfirmations for the same action
 // internal helper function
@@ -54,4 +55,4 @@ function calcBbox(polygonStr) {
   return bbox
 }
 
-module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, withKeysSorted }
+module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, PUSH_TOKEN_HEADER, withKeysSorted }

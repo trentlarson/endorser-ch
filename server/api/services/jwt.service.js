@@ -282,20 +282,24 @@ class JwtService {
     }
   }
 
+  async decodeAndVerifyJwt(jwt) {
+    const {payload, header, signature, data} = this.jwtDecoded(jwt)
+    // this line is lifted from didJwt.verifyJWT
+    const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
+    return {payload, header, signature, data, doc, authenticators, issuer}
+  }
+
   async createWithClaimRecord(jwtEncoded) {
     l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
-    const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
+    let {payload, header, signature, data, doc, authenticators, issuer} = this.decodeAndVerify(jwtEncoded)
     if (payload.claim) {
       let claimStr = JSON.stringify(payload.claim)
       let claimEncoded = base64url.encode(claimStr)
       let jwtEntity = db.buildJwtEntity(payload, claimStr, claimEncoded, jwtEncoded)
-console.log(jwtEntity.claim)
       let jwtId = await db.jwtInsert(jwtEntity)
 
-      // this line is lifted from didJwt.verifyJWT
-      const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
       l.debug(doc, `${this.constructor.name} resolved doc`)
       l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
       l.trace(issuer, `${this.constructor.name} resolved issuer`)
