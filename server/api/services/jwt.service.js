@@ -293,7 +293,7 @@ class JwtService {
     l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
-    let {payload, header, signature, data, doc, authenticators, issuer} = this.decodeAndVerify(jwtEncoded)
+    let {payload, header, signature, data, doc, authenticators, issuer} = await this.decodeAndVerifyJwt(jwtEncoded)
     if (payload.claim) {
       let claimStr = JSON.stringify(payload.claim)
       let claimEncoded = base64url.encode(claimStr)
