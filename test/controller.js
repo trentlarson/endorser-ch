@@ -1,24 +1,52 @@
 import * as childProcess from 'child_process';
 import chai from 'chai';
+import didJWT from 'did-jwt'
 import request from 'supertest';
 import { DateTime } from 'luxon'
 
 import Server from '../server';
-import { calcBbox } from '../server/api/services/util';
+import { calcBbox, HIDDEN_TEXT, PUSH_TOKEN_HEADER } from '../server/api/services/util';
 
 let dbInfo = require('../conf/flyway.js')
 
+const expect = chai.expect;
 
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
-const HIDDEN_TEXT = '(HIDDEN)'
+const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
 
-const expect = chai.expect;
+
+// Set up some JWTs for calls.
+let tomorrow = Math.floor(new Date().getTime() / 1000) + (24 * 60 * 60 * 1000)
+var globalJwt1 = null
+// from https://github.com/uport-project/did-jwt#1-create-a-did-jwt
+didJWT.createJWT(
+  //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
+  {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: tomorrow, name: 'uPort Developer'},
+  {issuer: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', signer})
+  .then( response => { globalJwt1 = response; console.log("Created JWT", globalJwt1) });
+var globalJwt2 = null
+didJWT.createJWT(
+  //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
+  {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: tomorrow, name: 'uPort Developer'},
+  {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer})
+  .then( response => { globalJwt2 = response; console.log("Created JWT", globalJwt2) });
+
+
 
 var firstId = 1
 
 describe('Util', () => {
+
+  // I couldn't find a way to wait for that JWT creation (without putting all these tests in a function).
+  it('should already have a JWT', () => {
+    if (!globalJwt1) {
+      console.log("Never got the initial JWT created in time, so will stop.")
+      console.log("If we can't get past this, we'll have to try a real approach, eg. https://mochajs.org/#delayed-root-suite")
+      process.exit(1)
+    }
+  })
 
   it('should return the right bbox', () =>
      expect(calcBbox("40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"))
@@ -74,7 +102,7 @@ describe('Claim', () => {
   it('should get a claim #' + firstId, () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+     .set(PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -92,7 +120,7 @@ describe('Claim', () => {
   it('should get a claim with the DID hidden', () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set('Some-DID', 'did:ethr:0x8643271e0b2cf8a903f9e2c7610ff54503af158e')
+     .set(PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -105,7 +133,7 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(HIDDEN_TEXT)
-     }))
+     })).timeout(4000)
 
   it('should add a new confirmation for that action', () =>
      request(Server)
@@ -211,7 +239,7 @@ describe('Action', () => {
   it('should get action with the right properties', () =>
      request(Server)
      .get('/api/action/' + firstId)
-     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+     .set(PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -233,12 +261,23 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     }))
+     })).timeout(4000)
 
-  it('should get action with hidden DID', () =>
+  it('should get complaint about a missing JWT', () =>
      request(Server)
      .get('/api/action/' + firstId)
-     .set('Some-DID', 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143f')
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(400)
+       expect(r.body)
+         .that.equals("Missing JWT")
+     }))
+
+
+  it('should get action with the DID hidden', () =>
+     request(Server)
+     .get('/api/action/' + firstId)
+     .set(PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -248,7 +287,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     }))
+     })).timeout(4000)
 
   it('should get no actions that match query', () =>
      request(Server)

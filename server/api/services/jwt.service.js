@@ -24,7 +24,10 @@ class JwtService {
         } else {
           return db.inNetwork(requesterDid, [jwt.issuer, jwt.subject])
             .then(rows => {
+              console.log("yoyoyo... issuer & subject", jwt.issuer, jwt.subject)
               if (rows.length == 0) {
+                console.log("... no matchie")
+
                 jwt["issuer"] = HIDDEN_TEXT
                 jwt["subject"] = HIDDEN_TEXT
                 delete jwt.claimEncoded
