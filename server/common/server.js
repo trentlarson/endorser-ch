@@ -6,7 +6,8 @@ import * as os from 'os';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import l from './logger';
-import { UPORT_PUSH_TOKEN } from '../api/services/util';
+import JwtService from '../api/services/jwt.service';
+import { UPORT_PUSH_TOKEN_HEADER } from '../api/services/util';
 
 const app = new Express();
 const expressSwagger = require('express-swagger-generator')(app);
@@ -43,6 +44,28 @@ let options = {
   files: ['../routes.js', '../**/*-router.js'] //Path to the API handle folder
 };
 
+function requesterInfo(req, res, next) {
+  let jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
+  if (!jwt) {
+    res.status(401).json('Missing JWT In ' + UPORT_PUSH_TOKEN_HEADER).end()
+  } else {
+    JwtService.decodeAndVerifyJwt(jwt)
+      .then(({payload, header, signature, data, doc, authenticators, issuer}) => {
+        //console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
+        if (!payload || !header) {
+          res.status(401).json('Unverified JWT').end()
+        } else if (payload.exp < Math.floor(new Date().getTime() / 1000) ) {
+          res.status(401).json('JWT Expired').end()
+        } else if (header.typ === 'none') {
+          res.status(401).json('Insecure JWT type').end()
+        } else {
+          res.locals.tokenIssuer = payload.iss
+          next();
+        }
+      })
+  }
+}
+
 export default class ExpressServer {
   constructor() {
     const root = path.normalize(`${__dirname}/../..`);
@@ -51,7 +74,8 @@ export default class ExpressServer {
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser(process.env.SESSION_SECRET));
     app.use(Express.static(`${root}/public`));
-    app.use(cors({"allowedHeaders":["Content-Type", UPORT_PUSH_TOKEN]}))
+    app.use(cors({"allowedHeaders":["Content-Type", UPORT_PUSH_TOKEN_HEADER]}))
+    app.use('/api', requesterInfo)
   }
 
   router(routes) {

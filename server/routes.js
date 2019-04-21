@@ -11,5 +11,5 @@ export default function routes(app) {
   app.use('/api/event', eventRouter)
   app.use('/api/report', reportRouter)
   app.use('/api/tenure', tenureRouter)
-  app.use('/api/util', utilRouter)
+  app.use('/util', utilRouter)
 }

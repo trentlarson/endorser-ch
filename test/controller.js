@@ -5,7 +5,7 @@ import request from 'supertest';
 import { DateTime } from 'luxon'
 
 import Server from '../server';
-import { calcBbox, HIDDEN_TEXT, PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { calcBbox, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 
 let dbInfo = require('../conf/flyway.js')
 
@@ -60,7 +60,7 @@ describe('Util', () => {
 
   it('should get a sorted object', () =>
      request(Server)
-     .get('/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
+     .get('/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(JSON.stringify(r.body))
@@ -74,16 +74,18 @@ describe('Claim', () => {
   it('should get no claims', () =>
      request(Server)
      .get('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     }))
+     })).timeout(4000) // looks like the first time through JWT processing just takes longer
 
-  it('should get a 404, missing claim #0', () =>
+  it('should get a 404, missing first claim', () =>
      request(Server)
      .get('/api/claim/' + firstId)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .then(r => {
        expect(400)
      }))
@@ -91,6 +93,7 @@ describe('Claim', () => {
   it('should add a new action claim', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDczNjMyMDQsImV4cCI6MTU0NzQ0OTYwNCwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLjAwMC0wNzowMCJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.uwutl2jx7lHqLeDRbEv6mKxUSUY75X91g-V0fpJcKZ2dO9jUYnZ9VEkS7rpsD8lcdYoQ7f5H8_3LT_vhqE-9UgA"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -102,7 +105,7 @@ describe('Claim', () => {
   it('should get a claim #' + firstId, () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set(PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -120,7 +123,7 @@ describe('Claim', () => {
   it('should get a claim with the DID hidden', () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set(PUSH_TOKEN_HEADER, globalJwt2)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -138,6 +141,7 @@ describe('Claim', () => {
   it('should add a new confirmation for that action', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg0ODQxMTEsImV4cCI6MTU0ODU3MDUxMSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsIm9yaWdpbmFsQ2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLjAwMC0wNzowMCJ9fX0sImlzcyI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9.5l1NTMNk0rxBm9jj91hFnT3P463aYELbmPVeQcFCkHZ2Gj9sP3FgbidCI69AeSArAVKvvRGAjcifJ94UtiEdfAA"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -149,6 +153,7 @@ describe('Claim', () => {
   it('should get 2 claims', () =>
      request(Server)
      .get('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -159,6 +164,7 @@ describe('Claim', () => {
   it('should get 1 JoinAction claim', () =>
      request(Server)
      .get('/api/claim?claimType=JoinAction')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -169,6 +175,7 @@ describe('Claim', () => {
   it('should get 1 comfirmation', () =>
      request(Server)
      .get('/api/claim?claimType=Confirmation')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -179,6 +186,7 @@ describe('Claim', () => {
   it('should add another new claim', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDc4NjcxOTIsImV4cCI6MTU0Nzk1MzU5Miwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6Ik1lLCBNeXNlbGYsIGFuZCBJIn0sIm5hbWUiOiJGcmlkYXkgbmlnaHQiLCJzdGFydFRpbWUiOiIyMDE5LTAxLTE4VDIwOjAwOjAwLjAwMC0wNzowMCJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.VFEcx8lHicvjVr_b_md1QREmvjp7y1ggBvQ0H4T50sz_JXVhrOelnzI6FQWhOkNoAw-GTdz6ce3O-Nq4VEtwIAE"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -190,6 +198,7 @@ describe('Claim', () => {
   it('should add yet another new claim', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDc1MjczMzQsImV4cCI6MTU0NzYxMzczNCwic3ViIjoiZGlkOmV0aHI6MHg0ZmYxY2ZlYjU2ZGZhYTUxMjA4Njk2ZWEwMjk1NGJmYWFhMjliNTJhIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4NGZmMWNmZWI1NmRmYWE1MTIwODY5NmVhMDI5NTRiZmFhYTI5YjUyYSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE5LTAxLTEzVDA4OjAwOjAwLjAwMC0wNzowMCJ9fSwiaXNzIjoiZGlkOmV0aHI6MHg0ZmYxY2ZlYjU2ZGZhYTUxMjA4Njk2ZWEwMjk1NGJmYWFhMjliNTJhIn0.njNEA1neEdRLDJQDLpnt1fs_s37DWx58uGh3kA6U86Xv8a8-UGL8lYtVP3DFuKMZQTR_7bOGD0tEk4aqbZFxKgA"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -201,6 +210,7 @@ describe('Claim', () => {
   it('should add another new confirmation', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg0ODQ0OTQsImV4cCI6MTU0ODU3MDg5NCwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsIm9yaWdpbmFsQ2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLjAwMC0wNzowMCJ9fX0sImlzcyI6ImRpZDpldGhyOjB4NGZmMWNmZWI1NmRmYWE1MTIwODY5NmVhMDI5NTRiZmFhYTI5YjUyYSJ9.aCVQwIGcM5Wt9lKT9KASMWs-R_jHvpxdCVDaAG7vdXSI54m-3ZxGW6YByZemKcXLhc6CSxIaEMVNj1b1oeOE4AA"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -212,6 +222,7 @@ describe('Claim', () => {
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg5OTY2ODUsImV4cCI6MTU0OTA4MzA4NSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IlRyZW50IEAgaG9tZSJ9LCJuYW1lIjoiVGh1cnMgbmlnaHQgZGVidWciLCJzdGFydFRpbWUiOiIyMDE5LTAyLTAxVDAyOjAwOjAwWiJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.BzIZK1rZ-8pGjkl2A8pA4tulBA9ugK8isbT4EExlrN0IZh5LG5IA7Bs4Qvxd200ST9DwIgK4aBplAEZ1D1jfuAE"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -224,6 +235,7 @@ describe('Claim', () => {
   it('should add another new confirmation of two claims', () =>
      request(Server)
      .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTIxODYyNDIsImV4cCI6MTU1MjI3MjY0Miwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsIm9yaWdpbmFsQ2xhaW1zIjpbeyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiVHJlbnQgQCBob21lIn0sIm5hbWUiOiJUaHVycyBuaWdodCBkZWJ1ZyIsInN0YXJ0VGltZSI6IjIwMTktMDItMDEgMDI6MDA6MDAifX0seyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjkgMTU6MDA6MDAifX1dfSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.yBxNZ77UHPlQ5Vdga11fSPuvsp3z9jwt6ExC4eHLu_2VFET6e_V5nBvv4acHVk33_r1R9cuD_o09SVFkG8IYXgE"})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -239,7 +251,7 @@ describe('Action', () => {
   it('should get action with the right properties', () =>
      request(Server)
      .get('/api/action/' + firstId)
-     .set(PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -270,14 +282,14 @@ describe('Action', () => {
      .then(r => {
        expect(400)
        expect(r.body)
-         .that.equals("Missing JWT")
+         .that.equals("Missing JWT In " + UPORT_PUSH_TOKEN_HEADER)
      }))
 
 
   it('should get action with the DID hidden', () =>
      request(Server)
      .get('/api/action/' + firstId)
-     .set(PUSH_TOKEN_HEADER, globalJwt2)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -292,6 +304,7 @@ describe('Action', () => {
   it('should get no actions that match query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T14:59:59Z')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -302,6 +315,7 @@ describe('Action', () => {
   it('should get one action that matched query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T15:00:00Z')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -328,6 +342,7 @@ describe('Action', () => {
   it('should get enough past claims', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + DAY_START_TIME_STRING)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -354,6 +369,7 @@ describe('Action', () => {
   it('should get no claims today', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + TODAY_START_TIME_STRING)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -368,6 +384,7 @@ describe('Event', () => {
   it('should get event with the right properties', () =>
      request(Server)
      .get('/api/event/' + firstId)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -385,6 +402,7 @@ describe('Event', () => {
   it('should get 1 event', () =>
      request(Server)
      .get('/api/event?orgName=Bountiful%20Voluntaryist%20Community')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -395,6 +413,7 @@ describe('Event', () => {
   it('should get a set of action claims & confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -421,6 +440,7 @@ describe('Tenure', () => {
   it ('should create a tenure', () =>
       request(Server)
       .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
       .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -432,6 +452,7 @@ describe('Tenure', () => {
   it('should get 1 claim', () =>
      request(Server)
      .get('/api/claim?claimType=Tenure')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -446,6 +467,7 @@ describe('Report', () => {
   it('should get right aggregated info', () =>
      request(Server)
      .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=' + START_TIME_STRING)
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -465,6 +487,7 @@ describe('Report', () => {
   it('should get 1 tenure', () =>
      request(Server)
      .get('/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -475,6 +498,7 @@ describe('Report', () => {
   it('should get no tenures', () =>
      request(Server)
      .get('/api/report/tenureClaimsAtPoint?lat=40.883943&lon=-111.884787')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)

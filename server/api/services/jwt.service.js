@@ -24,10 +24,7 @@ class JwtService {
         } else {
           return db.inNetwork(requesterDid, [jwt.issuer, jwt.subject])
             .then(rows => {
-              console.log("yoyoyo... issuer & subject", jwt.issuer, jwt.subject)
               if (rows.length == 0) {
-                console.log("... no matchie")
-
                 jwt["issuer"] = HIDDEN_TEXT
                 jwt["subject"] = HIDDEN_TEXT
                 delete jwt.claimEncoded
@@ -55,7 +52,7 @@ class JwtService {
 
     // this line is lifted from didJwt.verifyJWT
     const {payload, header, signature, data} = didJwt.decodeJWT(encoded)
-    l.debug(payload, `${this.constructor.name} decoded payload`)
+    l.trace(payload, `${this.constructor.name} decoded payload`)
     l.trace(header, `${this.constructor.name} decoded header`)
     l.trace(signature, `${this.constructor.name} decoded signature`)
     l.trace(data, `${this.constructor.name} decoded data`)

@@ -225,8 +225,9 @@ db.each(selectSql, [], function(err, row) {
 
 
 
-- 100 0 errors in local data on report screens
-- 90 2 add search for claim #claim
+- 95 1 add push token to all uport-demo requests
+- 95 1 network check & global remove DID
+- 90 0 add helmet
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 2 add search for endorser (in network?)
@@ -250,7 +251,7 @@ db.each(selectSql, [], function(err, row) {
 - 70 2 add Typescript
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
-- 80 0 fix API docs http://localhost:3000/api-explorer/ (linked from main page)
+- 80 0 fix swagger API docs http://localhost:3000/api-explorer/ (linked from main page)
 - 60 6 put all functionality in uport mobile app
 - 70 0 bug: if there's already a response JWT & message then a new one might not show
 - 70 0 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
@@ -259,7 +260,6 @@ db.each(selectSql, [], function(err, row) {
 - 70 1 run tests while disconnected from the internet
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - 85 0 remove "subject" from terminology in code; prefer "agent"
-- 90 0 add helmet
 - 80 1 add SSL
 - 90 1 run prod in prod mode (ie. not: npm run dev)
 - 80 1 db
