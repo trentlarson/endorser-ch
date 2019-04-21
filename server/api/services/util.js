@@ -55,4 +55,27 @@ function calcBbox(polygonStr) {
   return bbox
 }
 
-module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+function isDid(value) {
+  return value.startsWith("did:") && (value.substring(5).indexOf(":") > -1)
+}
+
+function hideDids(allowedDids, result) {
+  if (Object.prototype.toString.call(result) === "[object String]") {
+    if (isDid(result)) {
+      if (allowedDids.indexOf(result) > -1) {
+        return result
+      } else {
+        return HIDDEN_TEXT
+      }
+    } else {
+      return result
+    }
+  } else if (result instanceof Object) {
+    // works for both arrays and objects
+    return R.map(R.curry(hideDids)(allowedDids), result)
+  } else {
+    return result
+  }
+}
+
+module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, hideDids, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

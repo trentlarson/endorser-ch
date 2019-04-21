@@ -225,8 +225,8 @@ db.each(selectSql, [], function(err, row) {
 
 
 
-- 95 1 in text search: show claim contents instead of DB records
 - 95 1 network check & global remove DID
+- 95 1 in text search: show claim contents instead of DB records
 - 90 0 add helmet
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 2 add search for claim on parcel of land #cplot ^claim
@@ -250,6 +250,7 @@ db.each(selectSql, [], function(err, row) {
 - 90 5 write & support use-cases
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 70 2 add Typescript
+- 70 1 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix swagger API docs http://localhost:3000/api-explorer/ (linked from main page)

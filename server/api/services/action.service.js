@@ -4,7 +4,7 @@ import R from 'ramda'
 import l from '../../common/logger'
 import db from './endorser.db.service'
 import netCache from './network-cache.service.js'
-import { buildConfirmationList, HIDDEN_TEXT } from './util'
+import { buildConfirmationList, HIDDEN_TEXT, hideDids } from './util'
 
 async function getNetwork(requesterDid) {
   return db.getNetwork(requesterDid)
@@ -19,15 +19,12 @@ class ActionService {
         if (!actionClaim) {
           return null
         } else {
-          var objects = netCache.get(requesterDid)
-          if (!objects) {
-            objects = await db.getNetwork(requesterDid)
-            netCache.set(requesterDid, objects)
+          var allowedDids = netCache.get(requesterDid)
+          if (!allowedDids) {
+            allowedDids = await db.getNetwork(requesterDid)
+            netCache.set(requesterDid, allowedDids)
           }
-          if (objects.indexOf(actionClaim.agentDid) === -1) {
-            actionClaim["agentDid"] = HIDDEN_TEXT
-          }
-          return actionClaim
+          return hideDids(allowedDids, actionClaim)
         }
       })
   }

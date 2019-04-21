@@ -5,7 +5,7 @@ import request from 'supertest';
 import { DateTime } from 'luxon'
 
 import Server from '../server';
-import { calcBbox, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 
 let dbInfo = require('../conf/flyway.js')
 
@@ -58,6 +58,38 @@ describe('Util', () => {
      .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
     )
 
+  it('should hide DIDs', () => {
+    let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
+    let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
+    let addra = 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761'
+    let addrd = 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'
+    let addru = 'did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts'
+    var someObj = {a: 1, b: addr0, c: {d: addr6, e: [], f: [9, {g: addru}]}}
+    var replObj1 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
+    var replObj2 = {a: 1, b: addr0, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: addru}]}}
+    var allowedDids
+
+    allowedDids = []
+    expect(hideDids(allowedDids, null)).to.be.equal(null)
+    expect(hideDids(allowedDids, 9)).to.be.equal(9)
+    expect(hideDids(allowedDids, false)).to.be.equal(false)
+    expect(hideDids(allowedDids, "Some random randomness")).to.be.equal("Some random randomness")
+    expect(hideDids(allowedDids, addru)).to.be.equal(HIDDEN_TEXT)
+    expect(hideDids(allowedDids, {})).to.be.deep.equal({})
+    expect(hideDids(allowedDids, someObj)).to.be.deep.equal(replObj1)
+    expect(hideDids(allowedDids, [])).to.be.deep.equal([])
+    expect(hideDids(allowedDids, [someObj])).to.be.deep.equal([replObj1])
+
+    allowedDids = [addrd]
+    expect(hideDids(allowedDids, addrd)).to.be.deep.equal(addrd)
+    expect(hideDids(allowedDids, addru)).to.be.deep.equal(HIDDEN_TEXT)
+
+    allowedDids = [addr0, addrd, addru]
+    expect(hideDids(allowedDids, addr0)).to.be.deep.equal(addr0)
+    expect(hideDids(allowedDids, addra)).to.be.deep.equal(HIDDEN_TEXT)
+    expect(hideDids(allowedDids, someObj)).to.be.deep.equal(replObj2)
+  })
+
   it('should get a sorted object', () =>
      request(Server)
      .get('/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
@@ -80,7 +112,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     })).timeout(4000) // looks like the first time through JWT processing just takes longer
+     })).timeout(4001) // looks like the first time through JWT processing just takes longer
 
   it('should get a 404, missing first claim', () =>
      request(Server)
@@ -136,7 +168,7 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(HIDDEN_TEXT)
-     })).timeout(4000)
+     })).timeout(4001)
 
   it('should add a new confirmation for that action', () =>
      request(Server)
@@ -170,7 +202,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
-     }))
+     })).timeout(4001)
 
   it('should get 1 comfirmation', () =>
      request(Server)
@@ -273,7 +305,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     })).timeout(4000)
+     })).timeout(4001)
 
   it('should get complaint about a missing JWT', () =>
      request(Server)
@@ -299,7 +331,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     })).timeout(4000)
+     })).timeout(4001)
 
   it('should get no actions that match query', () =>
      request(Server)
@@ -310,7 +342,7 @@ describe('Action', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     }))
+     })).timeout(4001)
 
   it('should get one action that matched query', () =>
      request(Server)
@@ -337,7 +369,7 @@ describe('Action', () => {
        expect(action1)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     }))
+     })).timeout(4001)
 
   it('should get enough past claims', () =>
      request(Server)
@@ -397,7 +429,7 @@ describe('Event', () => {
        expect(r.body)
          .that.has.property('startTime')
          .that.equals('2018-12-29 15:00:00')
-     }))
+     })).timeout(4001)
 
   it('should get 1 event', () =>
      request(Server)
