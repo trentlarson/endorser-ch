@@ -8,6 +8,7 @@ import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 import { HIDDEN_TEXT } from './util'
+import { addDidSeenByUser, hideDidsForUser } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
@@ -19,20 +20,7 @@ class JwtService {
     l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
     return db.jwtById(id)
       .then(jwt => {
-        if (!jwt) {
-          return null
-        } else {
-          return db.inNetwork(requesterDid, [jwt.issuer, jwt.subject])
-            .then(rows => {
-              if (rows.length == 0) {
-                jwt["issuer"] = HIDDEN_TEXT
-                jwt["subject"] = HIDDEN_TEXT
-                delete jwt.claimEncoded
-                delete jwt.jwtEncoded
-              }
-              return jwt
-            })
-        }
+        return hideDidsForUser(requesterDid, jwt)
       })
   }
 
@@ -132,10 +120,8 @@ class JwtService {
     let results = []
 
     // put the issuer in the confirmed claim-agent's network
-    results.push(db.networkInsert(agentOrPartyDid, issuerDid)
-                .catch(err => {
-                  throw new Error(`Got error saving network entry from ${agentOrPartyDid} to ${issuerDid}: ${util.inspect(err)}`)
-                }))
+    l.trace(`Adding network entry from ${agentOrPartyDid} to ${issuerDid}`)
+    results.push(addDidSeenByUser(agentOrPartyDid, issuerDid))
 
     if (actionClaimId) {
       // put the issuer in the confirmed claim's confirmed-issuer network
@@ -143,10 +129,8 @@ class JwtService {
                    .then(confirmations => {
                      let subResults = []
                      for (var confirm of confirmations) {
-                       subResults.push(db.networkInsert(confirm.issuer, issuerDid)
-                                       .catch(err => {
-                                         throw new Error(`Error saving network entry from ${confirm.issuer} to ${issuerDid}: ${util.inspect(err)}`)
-                                       }))
+                       l.trace(`Adding network entry from ${confirm.issuer} to ${issuerDid}`)
+                       subResults.push(addDidSeenByUser(confirm.issuer, issuerDid))
                      }
                      return Promise.all(subResults)
                    }))
@@ -157,10 +141,8 @@ class JwtService {
                    .then(confirmations => {
                      let subResults = []
                      for (var confirm of confirmations) {
-                       subResults.push(db.networkInsert(confirm.issuer, issuerDid)
-                                       .catch(err => {
-                                         throw new Error(`Error saving network entry from ${confirm.issuer} to ${issuerDid}: ${util.inspect(err)}`)
-                                       }))
+                       l.trace(`Adding network entry from ${confirm.issuer} to ${issuerDid}`)
+                       subResults.push(addDidSeenByUser(confirm.issuer, issuerDid))
                      }
                      return Promise.all(subResults)
                    }))

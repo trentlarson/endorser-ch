@@ -1,6 +1,7 @@
-var sqlite3 = require('sqlite3').verbose()
-var dbInfo = require('../../../conf/flyway.js')
-var db = new sqlite3.Database(dbInfo.fileLoc)
+const sqlite3 = require('sqlite3').verbose()
+const dbInfo = require('../../../conf/flyway.js')
+const db = new sqlite3.Database(dbInfo.fileLoc)
+import l from '../../common/logger'
 
 
 
@@ -525,9 +526,10 @@ class EndorserDatabase {
    **/
   async networkInsert(subject, object) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO network VALUES (?, ?)")
+      var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?)")
       db.run(stmt, [subject, object], function(err) {
         if (err) {
+          // This check is no longer necessary due to "OR IGNORE". Nuke it when you've tested.
           if (err.errno === 19) {
             // If you print out this error, it looks like this:
             // { [Error: SQLITE_CONSTRAINT: UNIQUE constraint failed: network.subject, network.object] errno: 19, code: 'SQLITE_CONSTRAINT' }
@@ -548,26 +550,8 @@ class EndorserDatabase {
   async getNetwork(subject) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT object FROM network WHERE subject = ? ORDER BY object", subject, function(err, row) {
+      db.each("SELECT object FROM network WHERE subject = ? ORDER BY object", [subject], function(err, row) {
         data.push(row.object)
-      }, function(err, num) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(data)
-        }
-      })
-    })
-  }
-
-  // deprecated (use getNetwork with NetworkCache)
-  async inNetwork(subject, objects) {
-    return new Promise((resolve, reject) => {
-      var data = []
-      let marks = "?,".repeat(objects.length).substring(0, objects.length*2-1)
-      let inputs = [subject].concat(objects)
-      db.each("SELECT * FROM network WHERE subject = ? AND object in (" + marks + ")", inputs, function(err, row) {
-        data.push({subject:row.subject, object:row.object})
       }, function(err, num) {
         if (err) {
           reject(err)

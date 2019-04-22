@@ -230,9 +230,8 @@ db.each(selectSql, [], function(err, row) {
 - 90 0 add helmet
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 2 add search for claim on parcel of land #cplot ^claim
-- 90 2 add search for endorser (in network?)
+- 90 0 network: remove inserts and add explicit allowance for requester
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
-- 90 0 remove DB-based network lookup: inNetwork call in jwt.service
 - 90 0 rename issuer to issuerDid in confirmation table
 - 90 0 retrieveTenureClaimsAndConfirmations & retrieveActionClaimsAndConfirmations should be OUTER JOIN?
 - 90 0 remove issuerDid from *_claim tables and build into logic (since >1 issuer could claim each)
