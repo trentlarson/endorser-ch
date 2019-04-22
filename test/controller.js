@@ -112,7 +112,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     })).timeout(4001) // looks like the first time through JWT processing just takes longer
+     })).timeout(3001) // looks like the first time through JWT processing just takes longer
 
   it('should get a 404, missing first claim', () =>
      request(Server)
@@ -150,7 +150,7 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
-     }))
+     })).timeout(3001)
 
   it('should get a claim with the DID hidden', () =>
      request(Server)
@@ -168,7 +168,7 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(HIDDEN_TEXT)
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should add a new confirmation for that action', () =>
      request(Server)
@@ -180,7 +180,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 1)
-     })).timeout(5000)
+     })).timeout(6002)
 
   it('should get 2 claims', () =>
      request(Server)
@@ -191,7 +191,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
-     }))
+     })).timeout(3001)
 
   it('should get 1 JoinAction claim', () =>
      request(Server)
@@ -202,7 +202,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should get 1 comfirmation', () =>
      request(Server)
@@ -225,7 +225,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 2)
-     })).timeout(5000)
+     })).timeout(6002)
 
   it('should add yet another new claim', () =>
      request(Server)
@@ -249,7 +249,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 4)
-     })).timeout(5000)
+     })).timeout(6002)
 
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
@@ -261,7 +261,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 5)
-     })).timeout(5000)
+     })).timeout(6002)
 
 
   it('should add another new confirmation of two claims', () =>
@@ -274,7 +274,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 6)
-     })).timeout(5000)
+     })).timeout(6002)
 
 })
 
@@ -305,7 +305,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should get complaint about a missing JWT', () =>
      request(Server)
@@ -331,7 +331,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should get no actions that match query', () =>
      request(Server)
@@ -342,7 +342,7 @@ describe('Action', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should get one action that matched query', () =>
      request(Server)
@@ -369,7 +369,7 @@ describe('Action', () => {
        expect(action1)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should get enough past claims', () =>
      request(Server)
@@ -407,7 +407,7 @@ describe('Action', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     }))
+     })).timeout(3001)
 
 })
 
@@ -429,7 +429,7 @@ describe('Event', () => {
        expect(r.body)
          .that.has.property('startTime')
          .that.equals('2018-12-29 15:00:00')
-     })).timeout(4001)
+     })).timeout(3001)
 
   it('should get 1 event', () =>
      request(Server)
@@ -525,7 +525,7 @@ describe('Report', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
-     }))
+     })).timeout(3001)
 
   it('should get no tenures', () =>
      request(Server)

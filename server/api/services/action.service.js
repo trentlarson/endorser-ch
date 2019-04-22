@@ -3,8 +3,8 @@ import R from 'ramda'
 
 import l from '../../common/logger'
 import db from './endorser.db.service'
-import netCache from './network-cache.service.js'
-import { buildConfirmationList, HIDDEN_TEXT, hideDids } from './util'
+import { hideDidsForUser } from './network-cache.service'
+import { buildConfirmationList, HIDDEN_TEXT } from './util'
 
 async function getNetwork(requesterDid) {
   return db.getNetwork(requesterDid)
@@ -16,16 +16,7 @@ class ActionService {
     l.info(`${this.constructor.name}.byId(${id},${requesterDid})`);
     return db.actionClaimById(id)
       .then(async actionClaim => {
-        if (!actionClaim) {
-          return null
-        } else {
-          var allowedDids = netCache.get(requesterDid)
-          if (!allowedDids) {
-            allowedDids = await db.getNetwork(requesterDid)
-            netCache.set(requesterDid, allowedDids)
-          }
-          return hideDids(allowedDids, actionClaim)
-        }
+        return hideDidsForUser(requesterDid, actionClaim)
       })
   }
 
