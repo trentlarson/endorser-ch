@@ -112,7 +112,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     })).timeout(5001) // these 5001 waits were added after JWT verify was added
+     })).timeout(5001) // these 5001 & 6001 waits were added after JWT verify was added
 
   it('should get a 404, missing first claim', () =>
      request(Server)
@@ -440,7 +440,7 @@ describe('Event', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
-     }))
+     })).timeout(5001)
 
   it('should get a set of action claims & confirmations', () =>
      request(Server)
@@ -462,8 +462,7 @@ describe('Event', () => {
          .that.has.property(0)
          .that.has.property('issuer')
          .that.equals('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
-
-     }))
+     })).timeout(5001)
 
 })
 

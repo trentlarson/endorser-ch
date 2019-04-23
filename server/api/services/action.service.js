@@ -3,21 +3,13 @@ import R from 'ramda'
 
 import l from '../../common/logger'
 import db from './endorser.db.service'
-import { hideDidsForUser } from './network-cache.service'
-import { buildConfirmationList, HIDDEN_TEXT } from './util'
-
-async function getNetwork(requesterDid) {
-  return db.getNetwork(requesterDid)
-}
+import { buildConfirmationList } from './util'
 
 class ActionService {
 
-  byId(id, requesterDid) {
-    l.info(`${this.constructor.name}.byId(${id},${requesterDid})`);
+  byId(id) {
+    l.info(`${this.constructor.name}.byId(${id})`);
     return db.actionClaimById(id)
-      .then(async actionClaim => {
-        return hideDidsForUser(requesterDid, actionClaim)
-      })
   }
 
   async byQuery(params) {

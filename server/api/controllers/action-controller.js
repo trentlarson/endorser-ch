@@ -1,13 +1,13 @@
 import didJwt from 'did-jwt'
 import ActionService from '../services/action.service'
-import JwtService from '../services/jwt.service'
-import { PUSH_TOKEN_HEADER } from '../services/util'
+import { hideDidsForUser } from '../services/network-cache.service'
 
 export class Controller {
 
   getById(req, res) {
     ActionService
-      .byId(req.params.id, res.locals.tokenIssuer)
+      .byId(req.params.id)
+      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
@@ -16,11 +16,13 @@ export class Controller {
 
   getByQuery(req, res) {
     ActionService.byQuery(req.query)
+      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
 
   getActionClaimsAndConfirmationsSince(req, res) {
     ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
+      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
 

@@ -2,13 +2,16 @@ import * as express from 'express'
 import actionController from './action-controller'
 
 import TenureService from '../services/tenure.service';
+import { hideDidsForUser } from '../services/network-cache.service'
 class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
+      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
   getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
+      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
 }
