@@ -225,7 +225,7 @@ db.each(selectSql, [], function(err, row) {
 
 
 
-- 95 1 network check & global remove DID
+- 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
 - 90 0 add helmet
 - 90 0 wrap all async functions (eg. services) in try-catch blocks

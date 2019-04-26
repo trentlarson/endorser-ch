@@ -1,6 +1,4 @@
-import * as childProcess from 'child_process';
 import chai from 'chai';
-import didJWT from 'did-jwt'
 import request from 'supertest';
 import { DateTime } from 'luxon'
 
@@ -14,13 +12,15 @@ const expect = chai.expect;
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
-const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
 
 
 // Set up some JWTs for calls.
-let tomorrow = Math.floor(new Date().getTime() / 1000) + (24 * 60 * 60 * 1000)
+let tomorrow = Math.floor(new Date().getTime() / 1000) + (24 * 60 * 60)
 var globalJwt1 = null
+
 // from https://github.com/uport-project/did-jwt#1-create-a-did-jwt
+import didJWT from 'did-jwt'
+const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
 didJWT.createJWT(
   //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
   {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: tomorrow, name: 'uPort Developer'},
@@ -34,16 +34,14 @@ didJWT.createJWT(
   .then( response => { globalJwt2 = response; console.log("Created JWT", globalJwt2) });
 
 
-
 var firstId = 1
 
 describe('Util', () => {
 
-  // I couldn't find a way to wait for that JWT creation (without putting all these tests in a function).
   it('should already have a JWT', () => {
     if (!globalJwt1) {
       console.log("Never got the initial JWT created in time, so will stop.")
-      console.log("If we can't get past this, we'll have to try a real approach, eg. https://mochajs.org/#delayed-root-suite")
+      console.log("If we can't get past this, we'll have to try a real approach, eg. controller2.js or https://mochajs.org/#delayed-root-suite")
       process.exit(1)
     }
   })
@@ -535,6 +533,33 @@ describe('Report', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
+     })).timeout(5001)
+
+})
+
+describe('Tenure 2: Competing', () => {
+
+  it ('should create a tenure', () =>
+      request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body)
+          .to.be.a('number')
+          .that.equals(firstId + 8)
+      })).timeout(6000)
+
+  it('should get 2 tenure claims', () =>
+     request(Server)
+     .get('/api/claim?claimType=Tenure')
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
      })).timeout(5001)
 
 })

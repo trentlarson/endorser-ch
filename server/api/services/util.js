@@ -79,4 +79,4 @@ function hideDids(allowedDids, result) {
   }
 }
 
-module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, hideDids, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, hideDids, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
