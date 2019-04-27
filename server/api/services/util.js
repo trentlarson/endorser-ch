@@ -2,7 +2,7 @@ import R from 'ramda'
 import util from 'util'
 import l from '../../common/logger'
 
-const HIDDEN_TEXT = 'did::U CANNOT C'
+const HIDDEN_TEXT = 'did:nope:NO YOU MAY NOT SEE'
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token'
 
 // create confirmation list from a list of actionClaimsAndConfirmations for the same action

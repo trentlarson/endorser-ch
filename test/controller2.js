@@ -4,6 +4,7 @@ import R from 'ramda'
 
 import Server from '../server'
 import { HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util'
+import { allDidsAreHidden } from './util'
 
 const expect = chai.expect
 
@@ -11,48 +12,89 @@ const expect = chai.expect
 const { Credentials } = require('uport-credentials')
 // from Credentials.createIdentity();
 var creds = [
-  { did: 'did:ethr:0x7bc41517a0397b24eef6a5f2875cdad84c6595df', privateKey: 'f2e9656d76980171bba6791be99a000aa2babde1b41a7da77049ce20c7daebf0' },
+  { did: 'did:ethr:0x0e1caa561c163793d91f341c806fab4a7a424056', privateKey: '0fb8231512c9edc5b9603a628f5b11836b97b313f4e6b3e8335e66f546c9364c' },
+  { did: 'did:ethr:0x11f49dbec23864aa0ff1a36af72807a0e3b20b76', privateKey: '069a375bad04b638aed5895a12d103ea57bbf19616d4add0b0ba3bf634044681' },
   { did: 'did:ethr:0x275cee0e4657075d3b9564940fe39194e9cedceb', privateKey: '923035e1d86a95d11859be1e8c8657aa1725edfaab1792faedcc94d82467b57c' },
-  { did: 'did:ethr:0xbfb23cacc8659cb79cd9582d6b11fe0a2c8e7478', privateKey: 'ece0e7d174f80ff6164dd5dc94c616de457e753f72de1cfc913c440e11dd76a5' },
-  { did: 'did:ethr:0x9e4d3803025b9989c7e49f0e0be193e28463e3c7', privateKey: '589391737cdf00ce1f9467ed7b3d90c259699818d838badeceb02de248ba0ece' }
+  { did: 'did:ethr:0x36d39b6f92f2fccdb5067e8b11154d906caf44cc', privateKey: '1866028146a25960e0a48e363c127765ace5c4e340c4bbcf35f4524a5f04f24a' },
 ]
 
 var credentials = R.map((c) => new Credentials(c), creds)
 
-let tomorrow = Math.floor(new Date().getTime() / 1000) + (24 * 60 * 60)
+let nowEpoch = Math.floor(new Date().getTime() / 1000)
+let tomorrowEpoch = nowEpoch + (24 * 60 * 60)
 
-let pushTokens = R.map((c) => c.createVerification({ exp: tomorrow }), credentials)
+let pushTokenProms = R.map((c) => c.createVerification({ exp: tomorrowEpoch }), credentials)
 
-var allTokens
+let tenureFor0 =
+{
+  "iat": nowEpoch,
+  "exp": tomorrowEpoch,
+  "sub": creds[0].did,
+  "claim": {
+    "@context": "http://endorser.ch",
+    "@type": "Tenure",
+    "spatialUnit": {
+      "geo": {
+        "@type": "GeoShape",
+        "polygon": "40.890431,-111.870292 40.890425,-111.869691 40.890867,-111.869654 40.890890-111.870295 40.890431-111.870292"
+      }
+    },
+    "party": {
+      "did": creds[0].did
+    }
+  },
+  "iss": creds[0].did
+}
+
+let user0TokenProms = R.map((c) => credentials[0].createVerification(c), [tenureFor0])
+
+var pushTokens, user0Tokens
 before(async () => {
-  await Promise.all(pushTokens).then((allJwts) => { allTokens = allJwts })
+  await Promise.all(pushTokenProms).then((allJwts) => { pushTokens = allJwts })
+  console.log("Created controller2 push tokens", pushTokens)
+  await Promise.all(user0TokenProms).then((jwts) => { user0Tokens = jwts })
+  console.log("Created controller2 user 0 tokens", user0Tokens)
 })
 
 describe('Set of Test Claims', () => {
 
-  it ('should create a tenure', () => {
-      request(Server)
-      .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, allTokens[0])
-      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body)
-          .to.be.a('number')
-      })}).timeout(5001)
-
-  it('should get claims but cannot see inside', () => {
+  it('should get claims from other tests but cannot see inside any', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, allTokens[0])
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body)
+         .to.be.an('array')
        for (var i = 0; i < r.body.length; i++) {
          expect(allDidsAreHidden(r.body[i]))
            .to.be.true
        }
-     })})
+     })).timeout(5001)
+
+  it('should create a new tenure', () =>
+      request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({ "jwtEncoded": user0Tokens[0] })
+      .expect('Content-Type', /json/)
+      .then(r => {
+        console.log("body", r.body)
+        expect(r.body)
+          .to.be.a('number')
+      })).timeout(5001)
+
+  it('should get claims and can see inside the most recent one', () =>
+     request(Server)
+     .get('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+       expect(allDidsAreHidden(r.body[0]))
+         .to.be.false
+     })).timeout(5001)
 
 })
-
 

@@ -4,7 +4,7 @@ import { DateTime } from 'luxon'
 
 import Server from '../server';
 import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
-import {allDidsAreHidden} from './util'
+import { allDidsAreHidden } from './util'
 
 let dbInfo = require('../conf/flyway.js')
 
