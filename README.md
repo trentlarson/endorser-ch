@@ -225,6 +225,8 @@ db.each(selectSql, [], function(err, row) {
 
 
 
+- show one hop away
+- see Sonia one hop away, send search for her to replicate
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
 - 90 0 add helmet

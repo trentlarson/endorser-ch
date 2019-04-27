@@ -4,6 +4,7 @@ import { DateTime } from 'luxon'
 
 import Server from '../server';
 import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import {allDidsAreHidden} from './util'
 
 let dbInfo = require('../conf/flyway.js')
 
@@ -55,6 +56,19 @@ describe('Util', () => {
      expect(calcBbox("40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515"))
      .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
     )
+
+  it('should test for hidden DIDs', () => {
+    expect(allDidsAreHidden(null)).to.be.true
+    expect(allDidsAreHidden(9)).to.be.true
+    expect(allDidsAreHidden(true)).to.be.true
+    expect(allDidsAreHidden("stuff")).to.be.true
+    expect(allDidsAreHidden(HIDDEN_TEXT)).to.be.true
+    expect(allDidsAreHidden("did:x:0xabc123...")).to.be.false
+    expect(allDidsAreHidden({a:HIDDEN_TEXT, b:[HIDDEN_TEXT]})).to.be.true
+    expect(allDidsAreHidden({a:"did:x:0xabc123...", b:[HIDDEN_TEXT]})).to.be.false
+    expect(allDidsAreHidden(["a", "b", "c", {d: HIDDEN_TEXT}])).to.be.true
+    expect(allDidsAreHidden(["a", "b", "c", {d: "did:x:0xabc123..."}])).to.be.false
+  })
 
   it('should hide DIDs', () => {
     let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
