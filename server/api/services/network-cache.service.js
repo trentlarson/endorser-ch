@@ -25,7 +25,7 @@ async function getSeenByDids(object) {
   if (!allowedDids) {
     allowedDids = await db.getSeenByNetwork(object)
     l.trace(`Here are the currently allowed DIDs from DB who ${object} can see: ` + JSON.stringify(allowedDids))
-    SeenByNetworkCache.set(requesterDid, allowedDids)
+    SeenByNetworkCache.set(object, allowedDids)
   }
   return allowedDids
 }
