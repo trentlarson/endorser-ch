@@ -8,7 +8,7 @@ import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 import { HIDDEN_TEXT } from './util'
-import { addCanSee, hideDidsForUser } from './network-cache.service'
+import { addCanSee } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
@@ -19,9 +19,6 @@ class JwtService {
   async byId(id, requesterDid) {
     l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
     return db.jwtById(id)
-      .then(jwt => {
-        return hideDidsForUser(requesterDid, jwt)
-      })
   }
 
   async byQuery(params, requesterDid) {

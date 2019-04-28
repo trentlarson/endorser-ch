@@ -2,7 +2,7 @@ import * as express from 'express';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import JwtService from '../services/jwt.service';
-import { hideDidsForUser } from '../services/network-cache.service'
+import { hideDidsForUser } from '../services/util-higher'
 class Controller {
   getById(req, res) {
     JwtService

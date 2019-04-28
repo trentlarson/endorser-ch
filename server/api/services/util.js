@@ -62,29 +62,35 @@ function isDid(value) {
   return value && value.startsWith("did:") && (value.substring(5).indexOf(":") > -1)
 }
 
-function hideDids(allowedDids, result) {
-  if (Object.prototype.toString.call(result) === "[object String]") {
-    if (isDid(result)) {
-      if (allowedDids.indexOf(result) > -1) {
-        return result
+function hideDids(allowedDids, input) {
+
+  // Note that this process is copied in util-higher addLinkToNetwork. Change both!
+  // (Nobody will see that.)
+
+  if (Object.prototype.toString.call(input) === "[object String]") {
+    if (isDid(input)) {
+      if (allowedDids.indexOf(input) > -1) {
+        return input
       } else {
         return HIDDEN_TEXT
       }
     } else {
-      return result
+      return input
     }
-  } else if (result instanceof Object) {
-    if (!Array.isArray(result)) {
-      for (let key of R.keys(result)) {
+  } else if (input instanceof Object) {
+    let result = R.map(R.curry(hideDids)(allowedDids), input)
+    if (!Array.isArray(input)) {
+      // it's an object
+      for (let key of R.keys(input)) {
         if (isDid(key)) {
           // We could get around this by generating suffixes or something, but I don't like that.
           throw new Error("Do not use DIDs for keys (because you'll get conflicts in hideDids).")
         }
       }
     }
-    return R.map(R.curry(hideDids)(allowedDids), result)
-  } else {
     return result
+  } else {
+    return input
   }
 }
 

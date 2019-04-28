@@ -2,7 +2,7 @@ import NodeCache from 'node-cache'
 import R from 'ramda'
 
 import db from './endorser.db.service'
-import { hideDids } from './util'
+
 import l from '../../common/logger'
 
 // I expect this is a singleton.
@@ -65,8 +65,4 @@ async function seesObjectThroughOthers(requesterDid, finalObject) {
   return R.intersection(seesList, seenByList)
 }
 
-async function hideDidsForUser(requesterDid, result) {
-  return getSeesDids(requesterDid).then(allowedDids => hideDids(allowedDids, result))
-}
-
-module.exports = { addCanSee, hideDidsForUser }
+module.exports = { addCanSee, getSeesDids, seesObjectThroughOthers }

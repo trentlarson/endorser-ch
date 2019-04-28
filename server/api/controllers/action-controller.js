@@ -1,6 +1,6 @@
 import didJwt from 'did-jwt'
 import ActionService from '../services/action.service'
-import { hideDidsForUser } from '../services/network-cache.service'
+import { hideDidsForUser } from '../services/util-higher'
 
 export class Controller {
 
