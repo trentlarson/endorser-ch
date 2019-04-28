@@ -31,7 +31,12 @@ class ActionService {
     // now aggregate all confirmations for each DID-action
     let acacObjectByDid = R.map(R.map(buildConfirmationList))(acacListsByDidThenAction)
     let acacListByDid = R.map(R.values)(acacObjectByDid)
-    return acacListByDid
+    // now create an array so that the DIDs aren't used as keys
+    var result = []
+    for (let key of R.keys(acacListByDid)) {
+      result.push({did:key, actions:acacListByDid[key]})
+    }
+    return result
   }
 
 }

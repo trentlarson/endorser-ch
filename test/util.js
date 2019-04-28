@@ -12,7 +12,7 @@ export function allDidsAreHidden(result) {
     var values = result
     if (!Array.isArray(result)) {
       // assuming it's an object since it's not an array
-      values = R.values(result)
+      values = R.keys(result).concat(R.values(result))
     }
     return R.reduce((a,b) => a && b, true, R.map(allDidsAreHidden, values))
   } else {

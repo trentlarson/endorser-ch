@@ -24,7 +24,7 @@ class JwtService {
       })
   }
 
-  async byQuery(params) {
+  async byQuery(params, requesterDid) {
     l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     var resultData
     if (params.claimContents) {
@@ -32,8 +32,15 @@ class JwtService {
     } else {
       resultData = await db.jwtByParams(params)
     }
-    let result = resultData.map(j => ({id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claimEncoded:j.claimEncoded}))
-    return result;
+    let result = resultData.map(j => {
+      let thisOne = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType}
+      // only show full claim if this was the issuer
+      if (j.issuedAt === requesterDid) {
+        thisOne.claimEncoded = j.claimEncoded
+      }
+      return thisOne
+    })
+    return result
   }
 
   jwtDecoded(encoded) {

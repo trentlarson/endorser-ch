@@ -14,7 +14,7 @@ class Controller {
       });
   }
   getByQuery(req, res) {
-    JwtService.byQuery(req.query)
+    JwtService.byQuery(req.query, res.locals.tokenIssuer)
       .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
@@ -67,7 +67,7 @@ export default express
  * @param {String} claimType.query.optional
  * @param {String} issuedAt.query.optional
  * @param {String} subject.query.optional
- * @returns {Array.object} 200 - many Claim JWTs (up to 50)
+ * @returns {Array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requestor
  * @returns {Error}  default - Unexpected error
  */
   .get('/', controller.getByQuery)

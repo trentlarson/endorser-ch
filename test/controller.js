@@ -1,14 +1,15 @@
-import chai from 'chai';
-import request from 'supertest';
+import chai from 'chai'
+import request from 'supertest'
 import { DateTime } from 'luxon'
+import R from 'ramda'
 
-import Server from '../server';
+import Server from '../server'
 import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import { allDidsAreHidden } from './util'
 
 let dbInfo = require('../conf/flyway.js')
 
-const expect = chai.expect;
+const expect = chai.expect
 
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
@@ -68,6 +69,10 @@ describe('Util', () => {
     expect(allDidsAreHidden({a:"did:x:0xabc123...", b:[HIDDEN_TEXT]})).to.be.false
     expect(allDidsAreHidden(["a", "b", "c", {d: HIDDEN_TEXT}])).to.be.true
     expect(allDidsAreHidden(["a", "b", "c", {d: "did:x:0xabc123..."}])).to.be.false
+    expect(allDidsAreHidden({"did:x:0xabc123...":["a"], b:[HIDDEN_TEXT]})).to.be.false
+    let test = {b:[HIDDEN_TEXT]}
+    test[HIDDEN_TEXT] = ["a"]
+    expect(allDidsAreHidden(test)).to.be.true
   })
 
   it('should hide DIDs', () => {
@@ -76,9 +81,11 @@ describe('Util', () => {
     let addra = 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761'
     let addrd = 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'
     let addru = 'did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts'
-    var someObj = {a: 1, b: addr0, c: {d: addr6, e: [], f: [9, {g: addru}]}}
-    var replObj1 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
-    var replObj2 = {a: 1, b: addr0, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: addru}]}}
+    var someObj1 = {a: 1, b: addr0,       c: {d: addr6,       e: [], f: [9, {g: addru}]}}
+    var repObj11 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
+    var repObj12 = {a: 1, b: addr0,       c: {d: HIDDEN_TEXT, e: [], f: [9, {g: addru}]}}
+    var someObj2 = {a: 1, b: 2}
+    someObj2[addr0] = 9
     var allowedDids
 
     allowedDids = []
@@ -88,9 +95,10 @@ describe('Util', () => {
     expect(hideDids(allowedDids, "Some random randomness")).to.be.equal("Some random randomness")
     expect(hideDids(allowedDids, addru)).to.be.equal(HIDDEN_TEXT)
     expect(hideDids(allowedDids, {})).to.be.deep.equal({})
-    expect(hideDids(allowedDids, someObj)).to.be.deep.equal(replObj1)
+    expect(hideDids(allowedDids, someObj1)).to.be.deep.equal(repObj11)
     expect(hideDids(allowedDids, [])).to.be.deep.equal([])
-    expect(hideDids(allowedDids, [someObj])).to.be.deep.equal([replObj1])
+    expect(hideDids(allowedDids, [someObj1])).to.be.deep.equal([repObj11])
+    expect(() => hideDids(allowedDids, someObj2)).to.throw()
 
     allowedDids = [addrd]
     expect(hideDids(allowedDids, addrd)).to.be.deep.equal(addrd)
@@ -99,7 +107,8 @@ describe('Util', () => {
     allowedDids = [addr0, addrd, addru]
     expect(hideDids(allowedDids, addr0)).to.be.deep.equal(addr0)
     expect(hideDids(allowedDids, addra)).to.be.deep.equal(HIDDEN_TEXT)
-    expect(hideDids(allowedDids, someObj)).to.be.deep.equal(replObj2)
+    expect(hideDids(allowedDids, someObj1)).to.be.deep.equal(repObj12)
+    expect(() => hideDids(allowedDids, someObj2)).to.throw()
   })
 
   it('should get a sorted object', () =>
@@ -514,17 +523,29 @@ describe('Report', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+       expect(r.body[0])
          .to.be.an('object')
-         .that.has.property('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
-       let df0Claims = r.body['did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e']
+         .that.has.property('did')
+       expect(r.body[0].did)
+         .to.be.a('string')
+         .that.is.equal('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+       let df0Index =
+           R.findIndex(R.whereEq({did: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'}))(r.body)
+       let df0Claims = r.body[df0Index].actions
        expect(df0Claims)
          .to.be.an('array')
+         .of.length(3)
        expect(df0Claims[0].confirmations)
          .to.be.an('array')
          .of.length(2)
-       expect(r.body)
-         .to.be.an('object')
-         .that.has.property('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
+       expect(r.body[1].did)
+         .to.be.an('string')
+         .that.is.equal('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
+       expect(r.body[1].actions)
+         .to.be.an('array')
+         .of.length(1)
      })).timeout(5001)
 
   it('should get 1 tenure', () =>

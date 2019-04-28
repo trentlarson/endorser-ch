@@ -72,7 +72,14 @@ function hideDids(allowedDids, result) {
       return result
     }
   } else if (result instanceof Object) {
-    // works for both arrays and objects
+    if (!Array.isArray(result)) {
+      for (let key of R.keys(result)) {
+        if (isDid(key)) {
+          // We could get around this by generating suffixes or something, but I don't like that.
+          throw new Error("Do not use DIDs for keys (because you'll get conflicts in hideDids).")
+        }
+      }
+    }
     return R.map(R.curry(hideDids)(allowedDids), result)
   } else {
     return result
