@@ -23,13 +23,15 @@ class ActionService {
   }
 
   async getActionClaimsAndConfirmationsForEventsSince(dateTime) {
-    let resultData = await db.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
+    // Note that the following is very similar to TenureService.getClaimsAndConfirmationsAtPoint
+
+    let acacs = await db.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
     // group all actions by DID
-    let acacListsByDid = R.groupBy(acac => acac.action.agentDid)(resultData)
+    let acacListsByDid = R.groupBy(acac => acac.action.agentDid)(acacs)
     // now make an action group for each DID
     let acacListsByDidThenAction = R.map(acacList => R.groupBy(acac => acac.action.id)(acacList))(acacListsByDid)
     // now aggregate all confirmations for each DID-action
-    let acacObjectByDid = R.map(R.map(buildConfirmationList))(acacListsByDidThenAction)
+    let acacObjectByDid = R.map(R.map(R.curry(buildConfirmationList)('action')))(acacListsByDidThenAction)
     let acacListByDid = R.map(R.values)(acacObjectByDid)
     // now create an array so that the DIDs aren't used as keys
     var result = []

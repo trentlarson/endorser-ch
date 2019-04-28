@@ -2,18 +2,20 @@ import R from 'ramda'
 import util from 'util'
 import l from '../../common/logger'
 
-const HIDDEN_TEXT = 'did:nope:NO YOU MAY NOT SEE'
+// the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
+const HIDDEN_TEXT = 'did:none:U_CANNOT_C'
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token'
 
-// create confirmation list from a list of actionClaimsAndConfirmations for the same action
+// create confirmation list from a list of "ClaimsAndConfirmations" for the same claim
 // internal helper function
-function buildConfirmationList(acacList) {
-  return {
-    action: acacList[0].action,
-    confirmations: (acacList.length == 1 && !acacList[0].confirmation)
+function buildConfirmationList(key, cacList) {
+  let result = {
+    confirmations: (cacList.length == 1 && !cacList[0].confirmation)
       ? []
-      : R.map(acac=>acac.confirmation)(acacList)
+      : R.map(cac=>cac.confirmation)(cacList)
   }
+  result[key] = cacList[0][key]
+  return result
 }
 
 function withKeysSorted(myObject) {

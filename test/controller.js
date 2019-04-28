@@ -571,30 +571,3 @@ describe('Report', () => {
      })).timeout(5001)
 
 })
-
-describe('Tenure 2: Competing', () => {
-
-  it ('should create a tenure', () =>
-      request(Server)
-      .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body)
-          .to.be.a('number')
-          .that.equals(firstId + 8)
-      })).timeout(6000)
-
-  it('should get 2 tenure claims', () =>
-     request(Server)
-     .get('/api/claim?claimType=Tenure')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body)
-         .to.be.an('array')
-         .of.length(2)
-     })).timeout(5001)
-
-})

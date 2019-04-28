@@ -503,7 +503,7 @@ class EndorserDatabase {
   /**
      @returns all tenures claimed at that point
   **/
-  retrieveTenureClaimsAndConfirmationsByPoint(lat, lon) {
+  retrieveTenureClaimsAndConfirmationsAtPoint(lat, lon) {
     return new Promise((resolve, reject) => {
       var data = []
         db.each("SELECT t.rowid as tid, t.partyDid as tenurePartyDid, t.polygon, c.rowid AS cid, c.issuer as confirmDid, c.tenureRowId from tenure_claim t LEFT JOIN confirmation c on c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat", [lon, lon, lat, lat], function(err, row) {

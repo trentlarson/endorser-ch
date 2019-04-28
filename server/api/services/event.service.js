@@ -22,7 +22,7 @@ class EventService {
     l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`)
     let resultData = await db.retrieveActionClaimsAndConfirmationsByEventId(id)
     let acacListById = R.groupBy(acac => ""+acac.action.id)(resultData)
-    let acacListByAction = R.map(buildConfirmationList)(acacListById)
+    let acacListByAction = R.map(R.curry(buildConfirmationList)('action'))(acacListById)
     return R.values(acacListByAction)
   }
 

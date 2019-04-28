@@ -25,7 +25,7 @@ let tomorrowEpoch = nowEpoch + (24 * 60 * 60)
 
 let pushTokenProms = R.map((c) => c.createVerification({ exp: tomorrowEpoch }), credentials)
 
-let tenureFor0 =
+let tenureFor0AtFoodPantry =
 {
   "iat": nowEpoch,
   "exp": tomorrowEpoch,
@@ -46,7 +46,28 @@ let tenureFor0 =
   "iss": creds[0].did
 }
 
-let user0TokenProms = R.map((c) => credentials[0].createVerification(c), [tenureFor0])
+let tenureFor0AtCornerBakery =
+    {
+      "iat": nowEpoch,
+      "exp": tomorrowEpoch,
+      "sub": creds[0].did,
+      "claim": {
+        "@context": "http://endorser.ch",
+        "@type": "Tenure",
+        "spatialUnit": {
+          "geo": {
+            "@type": "GeoShape",
+            "polygon": "40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"
+          }
+        },
+        "party": {
+          "did": creds[0].did
+        }
+      },
+      "iss": creds[0].did
+    }
+
+let user0TokenProms = R.map((c) => credentials[0].createVerification(c), [tenureFor0AtFoodPantry, tenureFor0AtCornerBakery])
 
 var pushTokens, user0Tokens
 before(async () => {
@@ -56,7 +77,7 @@ before(async () => {
   console.log("Created controller2 user 0 tokens", user0Tokens)
 })
 
-describe('Set of Test Claims', () => {
+describe('Test Claim DID Visibility', () => {
 
   it('should get claims from other tests but cannot see inside any', () =>
      request(Server)
@@ -79,7 +100,6 @@ describe('Set of Test Claims', () => {
       .send({ "jwtEncoded": user0Tokens[0] })
       .expect('Content-Type', /json/)
       .then(r => {
-        console.log("body", r.body)
         expect(r.body)
           .to.be.a('number')
       })).timeout(5001)
@@ -96,5 +116,52 @@ describe('Set of Test Claims', () => {
          .to.be.false
      })).timeout(5001)
 
+  it('should get 2 tenure claims', () =>
+     request(Server)
+     .get('/api/claim?claimType=Tenure')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+     })).timeout(5001)
+
 })
 
+describe('Tenure 2: Competing Tenure Claims', () => {
+
+  it('should create a new tenure', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({ "jwtEncoded": user0Tokens[1] })
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(5001)
+
+  it('should get 3 tenure claims', () =>
+     request(Server)
+     .get('/api/claim?claimType=Tenure')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+     })).timeout(5001)
+
+  it('should get 2 competing tenures and confirmations', () =>
+     request(Server)
+     .get('/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+     })).timeout(5001)
+
+})

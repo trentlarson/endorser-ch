@@ -231,6 +231,7 @@ db.each(selectSql, [], function(err, row) {
 - 95 1 in text search: show claim contents instead of DB records
 - 90 0 add helmet
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
+- 90 1 don't count any confirmations by original claimiant in UI reporting
 - 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 0 network: remove inserts and add explicit allowance for requester
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
@@ -249,6 +250,7 @@ db.each(selectSql, [], function(err, row) {
   - x 90 1 add in-network data for each insert
   - 90 2 change each of the SQL searches to check in-network
 - 90 5 write & support use-cases
+- 85 1 look into the actoin & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 70 2 add Typescript
 - 70 1 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
