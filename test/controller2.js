@@ -150,7 +150,7 @@ describe('Tenure 2: Competing Tenure Claims', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('array')
-         .of.length(2)
+         .of.length(3)
      })).timeout(5001)
 
   it('should get 2 competing tenures and confirmations', () =>
