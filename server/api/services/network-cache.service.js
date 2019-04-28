@@ -6,27 +6,67 @@ import { hideDids } from './util'
 import l from '../../common/logger'
 
 // I expect this is a singleton.
-const NetworkCache = new NodeCache()
+const SeesInNetworkCache = new NodeCache()
+const SeenByNetworkCache = new NodeCache()
 
-async function hideDidsForUser(requesterDid, result) {
-  var allowedDids = NetworkCache.get(requesterDid)
+async function getSeesDids(requesterDid) {
+  var allowedDids = SeesInNetworkCache.get(requesterDid)
   if (!allowedDids) {
-    allowedDids = await db.getNetwork(requesterDid)
-    l.trace(`Here are the currently allowedDids from DB for requester ${requesterDid}`)
-    l.trace(JSON.stringify(allowedDids)) // because empty arrays would show as nothing (ug1)
-    NetworkCache.set(requesterDid, allowedDids)
+    allowedDids = await db.getSeesNetwork(requesterDid)
+    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids))
+    l.trace() // because empty arrays would show as nothing (ug1)
+    SeesInNetworkCache.set(requesterDid, allowedDids)
   }
-  return hideDids(allowedDids, result)
+  return allowedDids
 }
 
-async function addDidSeenByUser(subject, object) {
+async function getSeenByDids(object) {
+  var allowedDids = SeenByNetworkCache.get(object)
+  if (!allowedDids) {
+    allowedDids = await db.getSeenByNetwork(object)
+    l.trace(`Here are the currently allowed DIDs from DB who ${object} can see: ` + JSON.stringify(allowedDids))
+    SeenByNetworkCache.set(requesterDid, allowedDids)
+  }
+  return allowedDids
+}
+
+/**
+   add user to DB and caches
+**/
+async function addCanSee(subject, object) {
   db.networkInsert(subject, object)
 
-  var allowedDids = NetworkCache.get(subject)
-  if (!allowedDids) {
-    allowedDids = []
+  var seesDids = SeesInNetworkCache.get(subject)
+  if (!seesDids) {
+    seesDids = []
   }
-  NetworkCache.set(subject, R.concat(allowedDids, [object]))
+  if (R.indexOf(object, seesDids) == -1) {
+    let newList = R.concat(seesDids, [object])
+    SeesInNetworkCache.set(subject, newList)
+  }
+
+  var seenByDids = SeenByNetworkCache.get(object)
+  if (!seenByDids) {
+    seenByDids = []
+  }
+  if (R.indexOf(subject, seenByDids) == -1) {
+    let newList = R.concat(seenByDids, [subject])
+    SeenByNetworkCache.set(object, newList)
+  }
 }
 
-module.exports = { addDidSeenByUser, hideDidsForUser }
+/**
+  Takes an initial subject and who they'd like to see
+  and returns all the DIDs who are seen by subject and who can see finalObject
+ **/
+async function seesObjectThroughOthers(requesterDid, finalObject) {
+  var seesList = getSeesDids(requesterDid)
+  var seenByList = getSeenByDids(finalObject)
+  return R.intersection(seesList, seenByList)
+}
+
+async function hideDidsForUser(requesterDid, result) {
+  return getSeesDids(requesterDid).then(allowedDids => hideDids(allowedDids, result))
+}
+
+module.exports = { addCanSee, hideDidsForUser }

@@ -8,7 +8,7 @@ import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 import { HIDDEN_TEXT } from './util'
-import { addDidSeenByUser, hideDidsForUser } from './network-cache.service'
+import { addCanSee, hideDidsForUser } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
@@ -128,7 +128,7 @@ class JwtService {
 
     // put the issuer in the confirmed claim-agent's network
     l.trace(`Adding network entry from ${agentOrPartyDid} to ${issuerDid}`)
-    results.push(addDidSeenByUser(agentOrPartyDid, issuerDid))
+    results.push(addCanSee(agentOrPartyDid, issuerDid))
 
     if (actionClaimId) {
       // put the issuer in the confirmed claim's confirmed-issuer network
@@ -137,7 +137,7 @@ class JwtService {
                      let subResults = []
                      for (var confirm of confirmations) {
                        l.trace(`Adding network entry from ${confirm.issuer} to ${issuerDid}`)
-                       subResults.push(addDidSeenByUser(confirm.issuer, issuerDid))
+                       subResults.push(addCanSee(confirm.issuer, issuerDid))
                      }
                      return Promise.all(subResults)
                    }))
@@ -149,7 +149,7 @@ class JwtService {
                      let subResults = []
                      for (var confirm of confirmations) {
                        l.trace(`Adding network entry from ${confirm.issuer} to ${issuerDid}`)
-                       subResults.push(addDidSeenByUser(confirm.issuer, issuerDid))
+                       subResults.push(addCanSee(confirm.issuer, issuerDid))
                      }
                      return Promise.all(subResults)
                    }))

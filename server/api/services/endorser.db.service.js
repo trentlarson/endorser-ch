@@ -546,12 +546,28 @@ class EndorserDatabase {
     })
   }
 
-  // return list of objects that are linked by that subject
-  async getNetwork(subject) {
+  // return list of objects that are seen by subject
+  async getSeesNetwork(subject) {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT object FROM network WHERE subject = ? ORDER BY object", [subject], function(err, row) {
         data.push(row.object)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
+  // return list of subjects that can see object
+  async getSeenByNetwork(object) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT subject FROM network WHERE object = ? ORDER BY subject", [object], function(err, row) {
+        data.push(row.subject)
       }, function(err, num) {
         if (err) {
           reject(err)
