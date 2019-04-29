@@ -2,16 +2,16 @@ import * as express from 'express';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import TenureService from '../services/tenure.service';
-import { hideDidsForUser } from '../services/util-higher'
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class TenureController {
   getById(req, res) {
     TenureService.byId(req.params.id)
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
   getByQuery(req, res) {
     TenureService.byQuery()
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
 }

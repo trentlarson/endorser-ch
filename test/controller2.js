@@ -60,7 +60,22 @@ let claimCornerBakery = {
   }
 }
 
-let claimFoodPantryFor0By0 =
+let claimIIW2019a = {
+  "@context": "http://schema.org",
+  "@type": "JoinAction",
+  "agent": {
+    // supply "did"
+  },
+  "event": {
+    "organizer": {
+      "name": "Internet Identity Workshop"
+    },
+    "name": "The Internet Identity Workshop XXVIII (#28)",
+    "startTime": "2019-04-30T08:00:00.000-07:00"
+  }
+}
+
+let claimFoodPantryFor0By0Jwt =
 {
   "iat": nowEpoch,
   "exp": tomorrowEpoch,
@@ -95,15 +110,47 @@ confirmCornerBakeryTenureFor0By1Jwt.claim = R.clone(confirmationTemplate)
 confirmCornerBakeryTenureFor0By1Jwt.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor0))
 confirmCornerBakeryTenureFor0By1Jwt.iss = creds[1].did
 
+let claimIIW2019aFor1 = R.clone(claimIIW2019a)
+claimIIW2019aFor1.agent.did = creds[1].did
+
+let claimIIW2019aFor2 = R.clone(claimIIW2019a)
+claimIIW2019aFor2.agent.did = creds[2].did
+
+let claimIIW2019aFor1By1Jwt = R.clone(jwtTemplate)
+claimIIW2019aFor1By1Jwt.sub = creds[1].did
+claimIIW2019aFor1By1Jwt.claim = R.clone(claimIIW2019aFor1)
+claimIIW2019aFor1By1Jwt.iss = creds[1].did
+
+let claimIIW2019aFor2By2Jwt = R.clone(jwtTemplate)
+claimIIW2019aFor2By2Jwt.sub = creds[2].did
+claimIIW2019aFor2By2Jwt.claim = R.clone(claimIIW2019aFor2)
+claimIIW2019aFor2By2Jwt.iss = creds[2].did
+
+let confirmIIW2019aFor1By0Jwt = R.clone(jwtTemplate)
+confirmIIW2019aFor1By0Jwt.sub = creds[1].did
+confirmIIW2019aFor1By0Jwt.claim = R.clone(confirmationTemplate)
+confirmIIW2019aFor1By0Jwt.claim.originalClaims.push(R.clone(claimIIW2019aFor1))
+confirmIIW2019aFor1By0Jwt.iss = creds[0].did
+
+let confirmIIW2019aFor2By1Jwt = R.clone(jwtTemplate)
+confirmIIW2019aFor2By1Jwt.sub = creds[2].did
+confirmIIW2019aFor2By1Jwt.claim = R.clone(confirmationTemplate)
+confirmIIW2019aFor2By1Jwt.claim.originalClaims.push(R.clone(claimIIW2019aFor2))
+confirmIIW2019aFor2By1Jwt.iss = creds[1].did
+
 let user0TokenProms =
     R.map((c) => credentials[0].createVerification(c),
-          [claimCornerBakeryTenureFor0By0Jwt, claimFoodPantryFor0By0])
+          [claimCornerBakeryTenureFor0By0Jwt, claimFoodPantryFor0By0Jwt, confirmIIW2019aFor1By0Jwt])
 
 let user1TokenProms =
     R.map((c) => credentials[0].createVerification(c),
-          [confirmCornerBakeryTenureFor0By1Jwt])
+          [confirmCornerBakeryTenureFor0By1Jwt, claimIIW2019aFor1By1Jwt, confirmIIW2019aFor2By1Jwt])
 
-var pushTokens, user0Tokens, user1Tokens
+let user2TokenProms =
+    R.map((c) => credentials[0].createVerification(c),
+          [claimIIW2019aFor2By2Jwt])
+
+var pushTokens, user0Tokens, user1Tokens, user2Tokens
 before(async () => {
   await Promise.all(pushTokenProms).then((allJwts) => { pushTokens = allJwts })
   console.log("Created controller2 push tokens", pushTokens)
@@ -113,6 +160,9 @@ before(async () => {
 
   await Promise.all(user1TokenProms).then((jwts) => { user1Tokens = jwts })
   console.log("Created controller2 user 1 tokens", user1Tokens)
+
+  await Promise.all(user2TokenProms).then((jwts) => { user2Tokens = jwts })
+  console.log("Created controller2 user 2 tokens", user2Tokens)
 })
 
 describe('Tenure 2: Competing Tenure Claim', () => {
@@ -185,6 +235,55 @@ describe('Tenure 2: Competing Tenure Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
+     })).timeout(5001)
+
+})
+
+describe('Transitive Connections', () => {
+
+  it('should claim attendance for 1', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({"jwtEncoded": user1Tokens[1]})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       console.log("result from claim", r.body)
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(5001)
+
+  it('should claim attendance for 2', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .send({"jwtEncoded": user2Tokens[0]})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(5001)
+
+  it('should confirm attendance for 1 by 0', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": user0Tokens[2]})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(5001)
+
+  it('should confirm attendance for 2 by 1', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({"jwtEncoded": user1Tokens[2]})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
      })).timeout(5001)
 
 })

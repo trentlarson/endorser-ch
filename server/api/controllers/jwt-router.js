@@ -2,12 +2,12 @@ import * as express from 'express';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import JwtService from '../services/jwt.service';
-import { hideDidsForUser } from '../services/util-higher'
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class Controller {
   getById(req, res) {
     JwtService
       .byId(req.params.id, res.locals.tokenIssuer)
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
@@ -15,13 +15,13 @@ class Controller {
   }
   getByQuery(req, res) {
     JwtService.byQuery(req.query, res.locals.tokenIssuer)
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
   importClaim(req, res) {
     JwtService
       .createWithClaimRecord(req.body.jwtEncoded)
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)

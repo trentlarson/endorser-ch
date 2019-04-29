@@ -3,16 +3,16 @@ import actionController from './action-controller'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import TenureService from '../services/tenure.service';
-import { hideDidsForUser } from '../services/util-higher'
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
   getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsForUser(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
   }
 }
