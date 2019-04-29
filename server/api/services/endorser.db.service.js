@@ -353,8 +353,8 @@ class EndorserDatabase {
     let where = constructWhere(params, excludeConfirmations)
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded})
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim})
       }, function(err, num) {
         if (err) {
           reject(err)
