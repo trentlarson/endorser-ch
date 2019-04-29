@@ -102,7 +102,7 @@ class JwtService {
       return {newId:result, tenureClaimId}
 
     } else {
-      l.warning("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
+      l.warn("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
       return {}
     }
   }
@@ -203,6 +203,7 @@ class JwtService {
             eastLon: bbox.eastLon,
             maxLat: bbox.maxLat
           }
+
       let tenureId = await db.tenureInsert(entity)
 
       await this.createNetworkRecords(claim.party && claim.party.did, issuerDid, null, tenureId)
