@@ -30,11 +30,7 @@ class JwtService {
       resultData = await db.jwtByParams(params)
     }
     let result = resultData.map(j => {
-      let thisOne = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType}
-      // only show full claim if this was the issuer
-      if (j.issuedAt === requesterDid) {
-        thisOne.claimEncoded = j.claimEncoded
-      }
+      let thisOne = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
       return thisOne
     })
     return result
