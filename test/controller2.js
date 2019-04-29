@@ -11,6 +11,7 @@ const expect = chai.expect
 // from https://developer.uport.space/uport-credentials/reference/index and https://developer.uport.space/credentials/transactions
 const { Credentials } = require('uport-credentials')
 // from Credentials.createIdentity();
+
 var creds = [
   { did: 'did:ethr:0x00c9c2326c73f73380e8402b01de9defcff2b064', privateKey: '8de6e2bd938a29a8348316cbae3811475f22f2ae87a42ad0ece727ff25c613b5' },
   { did: 'did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557', privateKey: 'e4a3d47ed1058e5c07ed825b5cf0516aab757b1d141a4dc24392271537e10aa0' },
@@ -29,7 +30,28 @@ let tomorrowEpoch = nowEpoch + (24 * 60 * 60)
 
 let pushTokenProms = R.map((c) => c.createVerification({ exp: tomorrowEpoch }), credentials)
 
-let tenureFor0AtFoodPantry =
+let tenureAtCornerBakeryFor0 =
+    {
+      "iat": nowEpoch,
+      "exp": tomorrowEpoch,
+      "sub": creds[0].did,
+      "claim": {
+        "@context": "http://endorser.ch",
+        "@type": "Tenure",
+        "spatialUnit": {
+          "geo": {
+            "@type": "GeoShape",
+            "polygon": "40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"
+          }
+        },
+        "party": {
+          "did": creds[0].did
+        }
+      }
+    }
+
+
+let tenureAtFoodPantryFor0By0 =
 {
   "iat": nowEpoch,
   "exp": tomorrowEpoch,
@@ -50,35 +72,31 @@ let tenureFor0AtFoodPantry =
   "iss": creds[0].did
 }
 
-let tenureFor0AtCornerBakery =
-    {
-      "iat": nowEpoch,
-      "exp": tomorrowEpoch,
-      "sub": creds[0].did,
-      "claim": {
-        "@context": "http://endorser.ch",
-        "@type": "Tenure",
-        "spatialUnit": {
-          "geo": {
-            "@type": "GeoShape",
-            "polygon": "40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"
-          }
-        },
-        "party": {
-          "did": creds[0].did
-        }
-      },
-      "iss": creds[0].did
-    }
 
-let user0TokenProms = R.map((c) => credentials[0].createVerification(c), [tenureFor0AtFoodPantry, tenureFor0AtCornerBakery])
+let tenureAtCornerBakeryFor0By0 = R.clone(tenureAtCornerBakeryFor0)
+tenureAtCornerBakeryFor0By0.iss = creds[0].did
 
-var pushTokens, user0Tokens
+let tenureAtCornerBakeryFor0By1 = R.clone(tenureAtCornerBakeryFor0)
+tenureAtCornerBakeryFor0By1.iss = creds[1].did
+
+let user0TokenProms =
+    R.map((c) => credentials[0].createVerification(c),
+          [tenureAtCornerBakeryFor0By0, tenureAtFoodPantryFor0By0])
+
+let user1TokenProms =
+    R.map((c) => credentials[0].createVerification(c),
+          [tenureAtCornerBakeryFor0By1])
+
+var pushTokens, user0Tokens, user1Tokens
 before(async () => {
   await Promise.all(pushTokenProms).then((allJwts) => { pushTokens = allJwts })
   console.log("Created controller2 push tokens", pushTokens)
+
   await Promise.all(user0TokenProms).then((jwts) => { user0Tokens = jwts })
   console.log("Created controller2 user 0 tokens", user0Tokens)
+
+  await Promise.all(user1TokenProms).then((jwts) => { user1Tokens = jwts })
+  console.log("Created controller2 user 1 tokens", user1Tokens)
 })
 
 describe('Test Claim DID Visibility', () => {
@@ -139,14 +157,25 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-     .send({ "jwtEncoded": user0Tokens[1] })
+     .send({ "jwtEncoded": user0Tokens[0] })
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
          .to.be.a('number')
      })).timeout(5001)
 
-  it('should get 3 tenure claims', () =>
+  it('should create another new tenure', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({ "jwtEncoded": user1Tokens[0] })
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(5001)
+
+  it('should get 4 tenure claims', () =>
      request(Server)
      .get('/api/claim?claimType=Tenure')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -154,7 +183,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('array')
-         .of.length(3)
+         .of.length(4)
      })).timeout(5001)
 
   it('should get 2 competing tenures and confirmations', () =>
