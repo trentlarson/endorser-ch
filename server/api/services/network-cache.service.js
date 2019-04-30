@@ -60,8 +60,8 @@ async function addCanSee(subject, object) {
   and returns all the DIDs who are seen by subject and who can see finalObject
  **/
 async function seesObjectThroughOthers(requesterDid, finalObject) {
-  var seesList = getSeesDids(requesterDid)
-  var seenByList = getSeenByDids(finalObject)
+  var seesList = await getSeesDids(requesterDid)
+  var seenByList = await getSeenByDids(finalObject)
   return R.intersection(seesList, seenByList)
 }
 

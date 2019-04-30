@@ -1,5 +1,6 @@
 
 echo "We believe you gotta be connected to the internet to run these (probably due to sig/JWT verification)."
+echo "For example, here's an error you might get: 'TypeError: Converting circular structure to JSON'"
 
 rm -f ../endorser-ch-test.sqlite3
 

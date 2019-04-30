@@ -4,6 +4,7 @@ import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import TenureService from '../services/tenure.service';
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+import { getSeesDids } from '../services/network-cache.service'
 class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
@@ -14,6 +15,10 @@ class TenureController {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r));
+  }
+  getCanSeeDids(req, res) {
+    getSeesDids(res.locals.tokenIssuer)
+      .then(r => res.json(r))
   }
 }
 let tenureController = new TenureController();
@@ -35,7 +40,7 @@ export default express
 /**
  * Get claims and confirmations for individual
  * @group report - Reports
- * @route GET /api/reports/actionClaimsAndConfirmations
+ * @route GET /api/report/actionClaimsAndConfirmations
  * @param {datetime} date.query.optional - the date from which to show actionclaims
  * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error}  default - Unexpected error
@@ -45,7 +50,7 @@ export default express
 /**
  * Get tenure claims for a point
  * @group report - Reports
- * @route GET /api/reports/tenureClaimsAtPoint
+ * @route GET /api/report/tenureClaimsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
  * @returns {Array.object} 200 - claimed tenures (up to 50)
@@ -56,10 +61,19 @@ export default express
 /**
  * Get tenure claims and confirmations for a point
  * @group report - Reports
- * @route GET /api/reports/tenureClaimsAndConfirmationsAtPoint
+ * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error}  default - Unexpected error
  */
   .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsAtPoint)
+
+/**
+ * Get all DIDs this person can see
+ * @group report - Reports
+ * @route GET /api/report/canSeeDids
+ * @returns {Array.object} 200 - list of DIDs user can see
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/canSeeDids', tenureController.getCanSeeDids)

@@ -123,9 +123,9 @@ curl 'http://localhost:3000/api/report/actionClaimsAndConfirmationsSince?dateTim
 curl 'http://localhost:3000/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"a":4\}'
 curl 'http://localhost:3000/api/action?eventStartTime=2018-12-29T08:00:00.000-07:00'
 curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"}'
-curl 'http://localhost:3000/api/tenure/1'
+curl 'http://localhost:3000/api/tenure/1' -H 'Uport-Push-Token: $UPORT_PUSH_TOKEN'
 curl 'http://localhost:3000/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787'
-curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787' -H 'Uport-Push-Token: XXX'
+curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787' -H 'Uport-Push-Token: $UPORT_PUSH_TOKEN' | json_pp
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -224,7 +224,6 @@ db.each(selectSql, [], function(err, row) {
 
 
 
-
 - show one hop away
 - see Sonia one hop away, send search for her to replicate
 - 99 1 Reports of "Your Claims" doesn't show details
@@ -252,6 +251,7 @@ db.each(selectSql, [], function(err, row) {
   - x 90 1 add in-network data for each insert
 - 90 5 write & support use-cases
 - 85 1 look into the actoin & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
+- 80 0 optimize seesObjectThroughOthers rather than 2 awaits
 - 80 1 don't insert same subject-object into network DB
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 70 2 add Typescript

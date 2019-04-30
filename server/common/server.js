@@ -49,6 +49,9 @@ function requesterInfo(req, res, next) {
   if (!jwt) {
     res.status(401).json('Missing JWT In ' + UPORT_PUSH_TOKEN_HEADER).end()
   } else {
+    // use this to force a particular user
+    //res.locals.tokenIssuer = "did:ethr:0x22c51a43844e44b59c112cf74f3f5797a057837a"
+    //next();
     JwtService.decodeAndVerifyJwt(jwt)
       .then(({payload, header, signature, data, doc, authenticators, issuer}) => {
         //console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
@@ -62,6 +65,9 @@ function requesterInfo(req, res, next) {
           res.locals.tokenIssuer = payload.iss
           next();
         }
+      })
+      .catch(e => {
+        res.status(401).json("Low-level error. " + e).end
       })
   }
 }

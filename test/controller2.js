@@ -179,7 +179,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
          expect(allDidsAreHidden(r.body[i]))
            .to.be.true
        }
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should create a new tenure', () =>
      request(Server)
@@ -190,7 +190,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should get claims and can see inside the most recent one', () =>
      request(Server)
@@ -202,7 +202,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
          .to.be.an('array')
        expect(allDidsAreHidden(r.body[0]))
          .to.be.false
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should confirm that competing tenure', () =>
      request(Server)
@@ -213,7 +213,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should get 2 tenure claims', () =>
      request(Server)
@@ -224,7 +224,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should get 2 competing tenures and confirmations', () =>
      request(Server)
@@ -235,7 +235,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
-     })).timeout(5001)
+     })).timeout(7001)
 
 })
 
@@ -251,7 +251,7 @@ describe('Transitive Connections', () => {
        console.log("result from claim", r.body)
        expect(r.body)
          .to.be.a('number')
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should claim attendance for 2', () =>
      request(Server)
@@ -262,7 +262,7 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should confirm attendance for 1 by 0', () =>
      request(Server)
@@ -273,7 +273,7 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-     })).timeout(5001)
+     })).timeout(7001)
 
   it('should confirm attendance for 2 by 1', () =>
      request(Server)
@@ -284,6 +284,6 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body)
          .to.be.a('number')
-     })).timeout(5001)
+     })).timeout(7001)
 
 })
