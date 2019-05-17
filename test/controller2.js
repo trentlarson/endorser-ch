@@ -170,7 +170,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
   it('should get claims from other tests but cannot see inside any', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)

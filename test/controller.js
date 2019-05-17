@@ -2,6 +2,7 @@ import chai from 'chai'
 import request from 'supertest'
 import { DateTime } from 'luxon'
 import R from 'ramda'
+const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
 import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
@@ -17,7 +18,8 @@ const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").to
 
 
 // Set up some JWTs for calls.
-let tomorrow = Math.floor(new Date().getTime() / 1000) + (24 * 60 * 60)
+let nowEpoch = Math.floor(new Date().getTime() / 1000)
+let tomorrowEpoch = nowEpoch + (24 * 60 * 60)
 var globalJwt1 = null
 
 // from https://github.com/uport-project/did-jwt#1-create-a-did-jwt
@@ -25,18 +27,178 @@ import didJWT from 'did-jwt'
 const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
 didJWT.createJWT(
   //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-  {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: tomorrow, name: 'uPort Developer'},
+  {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: tomorrowEpoch, name: 'uPort Developer'},
   {issuer: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', signer})
   .then( response => { globalJwt1 = response; console.log("Created JWT", globalJwt1) });
 var globalJwt2 = null
 didJWT.createJWT(
   //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-  {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: tomorrow, name: 'uPort Developer'},
+  {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: tomorrowEpoch, name: 'uPort Developer'},
   {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer})
   .then( response => { globalJwt2 = response; console.log("Created JWT", globalJwt2) });
 
 
 var firstId = 1
+
+let jwtTemplate = {
+  "iat": nowEpoch,
+  "exp": tomorrowEpoch,
+  // "sub": DID of subject
+  // "claim": object, usually including same DID of "sub"
+  // "iss": DID of issuer
+}
+
+let confirmationTemplate = {
+  "@context": "http://endorser.ch",
+  "@type": "Confirmation",
+  "originalClaims": [
+    // list of claim objects
+  ]
+}
+
+let claimBvc = {
+  "@context": "http://schema.org",
+  "@type": "JoinAction",
+  agent: {
+    // did: "..."
+  },
+  event: {
+    organizer: { name: "Bountiful Voluntaryist Community" },
+    name: "Saturday Morning Meeting",
+    startTime: "2018-12-29T08:00:00.000-07:00"
+  }
+}
+
+let claimMyNight = {
+  "@context": "http://schema.org",
+  "@type": "JoinAction",
+  agent: {
+    // did: "..."
+  },
+  event: {
+    organizer: { name: "Me, Myself, and I" },
+    name: "Friday night",
+    startTime: "2019-01-18T20:00:00.000-07:00"
+  }
+}
+
+let claimDebug = {
+  "@context": "http://schema.org",
+  "@type": "JoinAction",
+  agent: {
+    // did: "..."
+  },
+  event: {
+    organizer: { name: "Trent @ home" },
+    name: "Thurs night debug",
+    startTime: "2019-02-01T02:00:00Z"
+  }
+}
+
+var creds = [
+  { did: 'did:ethr:0x00c9c2326c73f73380e8402b01de9defcff2b064', privateKey: '8de6e2bd938a29a8348316cbae381147f22f2ae87a42ad0ece727ff25c613b5' },
+  { did: 'did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557', privateKey: 'e4a3d47ed1058e5c07ed825b5cf0516ab757b1d141a4dc24392271537e10aa0' },
+]
+var credentials = R.map((c) => new Credentials(c), creds)
+
+let pushTokenProms = R.map((c) => c.createVerification({ exp: tomorrowEpoch }), credentials)
+
+
+
+let claimBvcFor0 = R.clone(claimBvc)
+claimBvcFor0.agent.did = creds[0].did
+
+let claimBvcFor0By0JwtObj = R.clone(jwtTemplate)
+claimBvcFor0By0JwtObj.claim = R.clone(claimBvcFor0)
+claimBvcFor0By0JwtObj.iss = creds[0].did
+claimBvcFor0By0JwtObj.sub = creds[0].did
+let claimBvcFor0By0JwtProm = credentials[0].createVerification(claimBvcFor0By0JwtObj)
+
+let confirmBvcFor0By0JwtObj = R.clone(jwtTemplate)
+confirmBvcFor0By0JwtObj.claim = R.clone(confirmationTemplate)
+confirmBvcFor0By0JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
+confirmBvcFor0By0JwtObj.iss = creds[1].did
+confirmBvcFor0By0JwtObj.sub = creds[0].did
+let confirmBvcFor0By0JwtProm = credentials[0].createVerification(confirmBvcFor0By0JwtObj)
+
+let confirmBvcFor0By1JwtObj = R.clone(jwtTemplate)
+confirmBvcFor0By1JwtObj.claim = R.clone(confirmationTemplate)
+confirmBvcFor0By1JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
+confirmBvcFor0By1JwtObj.iss = creds[1].did
+confirmBvcFor0By1JwtObj.sub = creds[0].did
+let confirmBvcFor0By1JwtProm = credentials[1].createVerification(confirmBvcFor0By1JwtObj)
+
+
+
+let claimBvcFor1 = R.clone(claimBvc)
+claimBvcFor1.agent.did = creds[1].did
+claimBvcFor1.event.startTime = "2019-01-13T08:00:00.000-07:00"
+
+let claimBvcFor1By1JwtObj = R.clone(jwtTemplate)
+claimBvcFor1By1JwtObj.claim = R.clone(claimBvcFor1)
+claimBvcFor1By1JwtObj.iss = creds[1].did
+claimBvcFor1By1JwtObj.sub = creds[1].did
+let claimBvcFor1By1JwtProm = credentials[0].createVerification(claimBvcFor1By1JwtObj)
+
+
+
+let claimMyNightFor0 = R.clone(claimMyNight)
+claimMyNightFor0.agent.did = creds[0].did
+
+let claimMyNightFor0By0JwtObj = R.clone(jwtTemplate)
+claimMyNightFor0By0JwtObj.claim = R.clone(claimMyNightFor0)
+claimMyNightFor0By0JwtObj.iss = creds[0].did
+claimMyNightFor0By0JwtObj.sub = creds[0].did
+let claimMyNightFor0By0JwtProm = credentials[0].createVerification(claimMyNightFor0By0JwtObj)
+
+
+
+let claimDebugFor0 = R.clone(claimDebug)
+claimDebugFor0.agent.did = creds[0].did
+
+let claimDebugFor0By0JwtObj = R.clone(jwtTemplate)
+claimDebugFor0By0JwtObj.claim = R.clone(claimDebugFor0)
+claimDebugFor0By0JwtObj.iss = creds[0].did
+claimDebugFor0By0JwtObj.sub = creds[0].did
+let claimDebugFor0By0JwtProm = credentials[0].createVerification(claimDebugFor0By0JwtObj)
+
+
+
+let confirmMultipleFor0By0JwtObj = R.clone(jwtTemplate)
+confirmMultipleFor0By0JwtObj.claim = R.clone(confirmationTemplate)
+confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
+confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimDebugFor0))
+confirmMultipleFor0By0JwtObj.iss = creds[0].did
+confirmMultipleFor0By0JwtObj.sub = creds[0].did
+let confirmMultipleFor0By0JwtProm = credentials[0].createVerification(confirmMultipleFor0By0JwtObj)
+
+
+
+var pushTokens, claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, claimMyNightFor0By0JwtEnc, claimBvcFor1By1JwtEnc, claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc
+before(async () => {
+  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts })
+  console.log("Created controller push tokens", pushTokens)
+
+  await Promise.all([
+    claimBvcFor0By0JwtProm,
+    confirmBvcFor0By0JwtProm,
+    confirmBvcFor0By1JwtProm,
+    claimMyNightFor0By0JwtProm,
+    claimBvcFor1By1JwtProm,
+    claimDebugFor0By0JwtProm,
+    confirmMultipleFor0By0JwtProm,
+  ]).then((jwts) => {
+    claimBvcFor0By0JwtEnc = jwts[0]
+    confirmBvcFor0By0JwtEnc = jwts[1]
+    confirmBvcFor0By1JwtEnc = jwts[2]
+    claimMyNightFor0By0JwtEnc = jwts[3]
+    claimBvcFor1By1JwtEnc = jwts[4]
+    claimDebugFor0By0JwtEnc = jwts[5]
+    confirmMultipleFor0By0JwtEnc = jwts[6]
+    console.log("Created controller user tokens", jwts)
+  })
+})
+
 
 describe('Util', () => {
 
@@ -127,7 +289,7 @@ describe('Claim', () => {
   it('should get no claims', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -138,7 +300,7 @@ describe('Claim', () => {
   it('should get a 404, missing first claim', () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .then(r => {
        expect(400)
      })).timeout(7001)
@@ -146,8 +308,8 @@ describe('Claim', () => {
   it('should add a new action claim', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDczNjMyMDQsImV4cCI6MTU0NzQ0OTYwNCwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLjAwMC0wNzowMCJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.uwutl2jx7lHqLeDRbEv6mKxUSUY75X91g-V0fpJcKZ2dO9jUYnZ9VEkS7rpsD8lcdYoQ7f5H8_3LT_vhqE-9UgA"})
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -158,7 +320,7 @@ describe('Claim', () => {
   it('should get a claim #' + firstId, () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -170,7 +332,7 @@ describe('Claim', () => {
          .that.equals('JoinAction')
        expect(r.body)
          .that.has.a.property('issuer')
-         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+         .that.equals(creds[0].did)
      })).timeout(7001)
 
   it('should get a claim with the DID hidden', () =>
@@ -191,11 +353,11 @@ describe('Claim', () => {
          .that.equals(HIDDEN_TEXT)
      })).timeout(7001)
 
-  it('should add a new confirmation for that action', () =>
+  it('should add a confirmation for that action', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg0ODQxMTEsImV4cCI6MTU0ODU3MDUxMSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsIm9yaWdpbmFsQ2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLjAwMC0wNzowMCJ9fX0sImlzcyI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9.5l1NTMNk0rxBm9jj91hFnT3P463aYELbmPVeQcFCkHZ2Gj9sP3FgbidCI69AeSArAVKvvRGAjcifJ94UtiEdfAA"})
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -239,8 +401,8 @@ describe('Claim', () => {
   it('should add another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDc4NjcxOTIsImV4cCI6MTU0Nzk1MzU5Miwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6Ik1lLCBNeXNlbGYsIGFuZCBJIn0sIm5hbWUiOiJGcmlkYXkgbmlnaHQiLCJzdGFydFRpbWUiOiIyMDE5LTAxLTE4VDIwOjAwOjAwLjAwMC0wNzowMCJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.VFEcx8lHicvjVr_b_md1QREmvjp7y1ggBvQ0H4T50sz_JXVhrOelnzI6FQWhOkNoAw-GTdz6ce3O-Nq4VEtwIAE"})
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": claimMyNightFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -252,7 +414,7 @@ describe('Claim', () => {
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDc1MjczMzQsImV4cCI6MTU0NzYxMzczNCwic3ViIjoiZGlkOmV0aHI6MHg0ZmYxY2ZlYjU2ZGZhYTUxMjA4Njk2ZWEwMjk1NGJmYWFhMjliNTJhIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4NGZmMWNmZWI1NmRmYWE1MTIwODY5NmVhMDI5NTRiZmFhYTI5YjUyYSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE5LTAxLTEzVDA4OjAwOjAwLjAwMC0wNzowMCJ9fSwiaXNzIjoiZGlkOmV0aHI6MHg0ZmYxY2ZlYjU2ZGZhYTUxMjA4Njk2ZWEwMjk1NGJmYWFhMjliNTJhIn0.njNEA1neEdRLDJQDLpnt1fs_s37DWx58uGh3kA6U86Xv8a8-UGL8lYtVP3DFuKMZQTR_7bOGD0tEk4aqbZFxKgA"})
+     .send({"jwtEncoded": claimBvcFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -263,8 +425,8 @@ describe('Claim', () => {
   it('should add another new confirmation', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg0ODQ0OTQsImV4cCI6MTU0ODU3MDg5NCwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsIm9yaWdpbmFsQ2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IkJvdW50aWZ1bCBWb2x1bnRhcnlpc3QgQ29tbXVuaXR5In0sIm5hbWUiOiJTYXR1cmRheSBNb3JuaW5nIE1lZXRpbmciLCJzdGFydFRpbWUiOiIyMDE4LTEyLTI5VDA4OjAwOjAwLjAwMC0wNzowMCJ9fX0sImlzcyI6ImRpZDpldGhyOjB4NGZmMWNmZWI1NmRmYWE1MTIwODY5NmVhMDI5NTRiZmFhYTI5YjUyYSJ9.aCVQwIGcM5Wt9lKT9KASMWs-R_jHvpxdCVDaAG7vdXSI54m-3ZxGW6YByZemKcXLhc6CSxIaEMVNj1b1oeOE4AA"})
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -275,8 +437,8 @@ describe('Claim', () => {
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NDg5OTY2ODUsImV4cCI6MTU0OTA4MzA4NSwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vc2NoZW1hLm9yZyIsIkB0eXBlIjoiSm9pbkFjdGlvbiIsImFnZW50Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9LCJldmVudCI6eyJvcmdhbml6ZXIiOnsibmFtZSI6IlRyZW50IEAgaG9tZSJ9LCJuYW1lIjoiVGh1cnMgbmlnaHQgZGVidWciLCJzdGFydFRpbWUiOiIyMDE5LTAyLTAxVDAyOjAwOjAwWiJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.BzIZK1rZ-8pGjkl2A8pA4tulBA9ugK8isbT4EExlrN0IZh5LG5IA7Bs4Qvxd200ST9DwIgK4aBplAEZ1D1jfuAE"})
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": claimDebugFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -289,7 +451,7 @@ describe('Claim', () => {
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-     .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTIxODYyNDIsImV4cCI6MTU1MjI3MjY0Miwic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IkNvbmZpcm1hdGlvbiIsIm9yaWdpbmFsQ2xhaW1zIjpbeyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiVHJlbnQgQCBob21lIn0sIm5hbWUiOiJUaHVycyBuaWdodCBkZWJ1ZyIsInN0YXJ0VGltZSI6IjIwMTktMDItMDEgMDI6MDA6MDAifX0seyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjkgMTU6MDA6MDAifX1dfSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.yBxNZ77UHPlQ5Vdga11fSPuvsp3z9jwt6ExC4eHLu_2VFET6e_V5nBvv4acHVk33_r1R9cuD_o09SVFkG8IYXgE"})
+     .send({"jwtEncoded": confirmMultipleFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -304,13 +466,13 @@ describe('Action', () => {
   it('should get action with the right properties', () =>
      request(Server)
      .get('/api/action/' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
          .to.be.an('object')
          .that.has.property('agentDid')
-         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+         .that.equals(creds[0].did)
        expect(r.body)
          .that.has.property('jwtId')
          .that.equals(firstId)
@@ -368,7 +530,7 @@ describe('Action', () => {
   it('should get one action that matched query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T15:00:00Z')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -377,7 +539,7 @@ describe('Action', () => {
        let action1 = r.body[0]
        expect(action1)
          .that.has.property('agentDid')
-         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+         .that.equals(creds[0].did)
        expect(action1)
          .that.has.property('eventId')
          .that.equals(firstId)
@@ -395,7 +557,7 @@ describe('Action', () => {
   it('should get enough past claims', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + DAY_START_TIME_STRING)
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -404,7 +566,7 @@ describe('Action', () => {
        let action1 = r.body[0]
        expect(action1)
          .that.has.property('agentDid')
-         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+         .that.equals(creds[0].did)
        expect(action1)
          .that.has.property('eventId')
          .that.equals(firstId + 3)
@@ -466,7 +628,7 @@ describe('Event', () => {
   it('should get a set of action claims & confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -476,13 +638,19 @@ describe('Event', () => {
          .to.be.an('object')
          .that.has.property('action')
          .that.has.property('agentDid')
-         .that.equals('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+         .that.equals(creds[0].did)
        expect(r.body[0])
          .to.be.an('object')
          .that.has.property('confirmations')
          .that.has.property(0)
          .that.has.property('issuer')
-         .that.equals('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
+         .that.equals(creds[0].did)
+       expect(r.body[0])
+         .to.be.an('object')
+         .that.has.property('confirmations')
+         .that.has.property(1)
+         .that.has.property('issuer')
+         .that.equals(creds[1].did)
      })).timeout(7001)
 
 })
@@ -493,7 +661,7 @@ describe('Tenure', () => {
       request(Server)
       .post('/api/claim')
       .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-      .send({"jwtEncoded":"eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
+      .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body)
@@ -519,7 +687,7 @@ describe('Report', () => {
   it('should get right aggregated info', () =>
      request(Server)
      .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=' + START_TIME_STRING)
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -530,9 +698,9 @@ describe('Report', () => {
          .that.has.property('did')
        expect(r.body[0].did)
          .to.be.a('string')
-         .that.is.equal('did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e')
+         .that.is.equal(creds[0].did)
        let df0Index =
-           R.findIndex(R.whereEq({did: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'}))(r.body)
+           R.findIndex(R.whereEq({did: creds[0].did}))(r.body)
        let df0Claims = r.body[df0Index].actions
        expect(df0Claims)
          .to.be.an('array')
@@ -542,7 +710,7 @@ describe('Report', () => {
          .of.length(2)
        expect(r.body[1].did)
          .to.be.an('string')
-         .that.is.equal('did:ethr:0x4ff1cfeb56dfaa51208696ea02954bfaaa29b52a')
+         .that.is.equal(creds[1].did)
        expect(r.body[1].actions)
          .to.be.an('array')
          .of.length(1)

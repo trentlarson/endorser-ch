@@ -75,8 +75,12 @@ Run the Mocha unit tests
 or debug them
 
 ```shell
-npm run test:debug
+./test/test.sh :debug
 ```
+
+You can also run the server in offline test mode by setting environment variable
+`NODE_ENV=test` and then it won't do any real JWT validity checking. (This may
+be changed when I figure out how to validate JWTs without being online.)
 
 Let's create some claims.  First, a claim of attendance.  Here's the object structure:
 
@@ -224,7 +228,9 @@ db.each(selectSql, [], function(err, row) {
 
 
 
-- show one hop away
+"Converting circular structure to JSON" - network connected?
+why confirmation not showing in DB?
+why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - see Sonia one hop away, send search for her to replicate
 - 99 1 Reports of "Your Claims" doesn't show details
 - 95 1 allow read of all data in claims/confirmations issued by requester
