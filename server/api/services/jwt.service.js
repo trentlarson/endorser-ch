@@ -268,6 +268,11 @@ class JwtService {
   async decodeAndVerifyJwt(jwt) {
     if (process.env.NODE_ENV === 'test') {
       let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
+      let nowEpoch =  Math.floor(new Date().getTime() / 1000)
+      if (payload.exp < nowEpoch) {
+        l.warn("JWT with exp " + payload.exp + " has expired but we're in test mode so using a new time." )
+        payload.exp = nowEpoch + 100
+      }
       return {payload, header: {typ: "test"}} // all the other elements will be undefined, obviously
     } else {
       const {payload, header, signature, data} = this.jwtDecoded(jwt)

@@ -79,8 +79,24 @@ or debug them
 ```
 
 You can also run the server in offline test mode by setting environment variable
-`NODE_ENV=test` and then it won't do any real JWT validity checking. (This may
-be changed when I figure out how to validate JWTs without being online.)
+`NODE_ENV=test` and then it will accept all JWTs and it won't do any real JWT
+validity checking, including expiration. (This may be changed when I figure out
+how to validate JWTs without being online.) This is accomplished by the
+`process.env.NODE_ENV === 'test'` code currently only found in
+server/api/services/jwt.service.js
+
+
+## Try It
+
+For the full experience, use [this customized uPort demo](https://github.com/trentlarson/uport-demo) to connect to it.
+
+See API docs: http://localhost:3000/api-docs
+
+* Open you're browser to [http://localhost:3000](http://localhost:3000)
+* Invoke the `/examples` endpoint
+  ```shell
+  curl http://localhost:3000/api/examples
+  ```
 
 Let's create some claims.  First, a claim of attendance.  Here's the object structure:
 
@@ -137,15 +153,6 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 ```
 
 
-## Try It
-
-See API docs: http://localhost:3000/api-docs
-
-* Open you're browser to [http://localhost:3000](http://localhost:3000)
-* Invoke the `/examples` endpoint 
-  ```shell
-  curl http://localhost:3000/api/examples
-  ```
 
 
 
@@ -194,7 +201,8 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 ## Related Work
 
-- [Sovrin](https://sovrin.org)
+- [Sovrin AKA Hyperledger Indy](https://sovrin.org)
+  - [Verifiable Organizations Network](https://vonx.io) who showed [a mobile demo at IIW 28](https://iiw.vonx.io).
 - [Accredible](https://www.accredible.com/) (... and their verification system)[https://verify.accredible.com] (uses Tierion)[https://help.accredible.com/hc/en-us/articles/115005058985-Manually-Verifying-Blockchain-Records]
 - [Blockcerts for blockchain credentials](https://www.blockcerts.org)
 - [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
