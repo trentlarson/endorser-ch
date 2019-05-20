@@ -377,6 +377,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
@@ -388,6 +389,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -399,6 +401,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -411,6 +414,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimMyNightFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 2)
@@ -423,6 +427,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimBvcFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 3)
@@ -435,6 +440,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 4)
@@ -447,6 +453,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimDebugFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 5)
@@ -460,6 +467,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": confirmMultipleFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 6)
@@ -475,6 +483,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('agentDid')
@@ -502,6 +511,7 @@ describe('Action', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(400)
+       expect(r.status).that.equals(401)
        expect(r.body)
          .that.equals("Missing JWT In " + UPORT_PUSH_TOKEN_HEADER)
      }))
@@ -513,6 +523,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('agentDid')
@@ -528,6 +539,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
@@ -539,6 +551,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -566,6 +579,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(4)
@@ -593,6 +607,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
@@ -608,6 +623,7 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('orgName')
@@ -626,6 +642,7 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
@@ -637,6 +654,7 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -670,6 +688,7 @@ describe('Tenure', () => {
       .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
       .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.status).that.equals(201)
         expect(r.body)
           .to.be.a('number')
           .that.equals(firstId + 7)
@@ -681,6 +700,7 @@ describe('Tenure', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -696,6 +716,7 @@ describe('Report', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
@@ -728,6 +749,7 @@ describe('Report', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -739,6 +761,7 @@ describe('Report', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)

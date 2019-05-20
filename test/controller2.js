@@ -173,6 +173,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
        for (var i = 0; i < r.body.length; i++) {
@@ -188,6 +189,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .send({ "jwtEncoded": user0Tokens[0] })
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
      })).timeout(7001)
@@ -198,6 +200,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
        expect(allDidsAreHidden(r.body[0]))
@@ -211,6 +214,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .send({ "jwtEncoded": user1Tokens[0] })
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
      })).timeout(7001)
@@ -221,6 +225,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
@@ -232,6 +237,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
@@ -248,7 +254,7 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": user1Tokens[1]})
      .expect('Content-Type', /json/)
      .then(r => {
-       console.log("result from claim", r.body)
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
      })).timeout(7001)
@@ -260,6 +266,7 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": user2Tokens[0]})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
      })).timeout(7001)
@@ -271,6 +278,7 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": user0Tokens[2]})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
      })).timeout(7001)
@@ -282,6 +290,7 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": user1Tokens[2]})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
      })).timeout(7001)
