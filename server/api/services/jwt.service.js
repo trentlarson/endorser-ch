@@ -72,13 +72,13 @@ class JwtService {
         && origClaim['@type'] === 'JoinAction') {
 
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
-      if (events.length === 0) throw new Error("Attempted to confirm action at an unrecorded event.")
+      if (events.length === 0) Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
 
       let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
-      if (actionClaimId === null) throw new Error("Attempted to confirm an unrecorded action.")
+      if (actionClaimId === null) Promise.reject(new Error("Attempted to confirm an unrecorded action."))
 
       let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
-      if (confirmation !== null) throw new Error(`Attemtpted to confirm an action already confirmed in # ${confirmation.id}`)
+      if (confirmation !== null) Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
 
       let origClaimStr = JSON.stringify(origClaim)
 
@@ -90,10 +90,10 @@ class JwtService {
                && origClaim['@type'] === 'Tenure') {
 
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
-      if (tenureClaimId === null) throw new Error("Attempted to confirm an unrecorded tenure.")
+      if (tenureClaimId === null) Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
 
       let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
-      if (confirmation !== null) throw new Error(`Attemtpted to confirm a tenure already confirmed in # ${confirmation.id}`)
+      if (confirmation !== null) Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
 
       let origClaimStr = JSON.stringify(origClaim)
 
@@ -162,7 +162,7 @@ class JwtService {
       let agentDid = claim.agent.did
       if (!agentDid) {
         l.error(`${this.constructor.name} JoinAction for ${jwtId} has no agent DID.`)
-        throw new Error("Attempted to record a JoinAction claim with no agent DID.")
+        Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
       }
 
       var event
@@ -179,7 +179,7 @@ class JwtService {
         }
 
         let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
-        if (actionClaimId) throw new Error("Attempted to record an action claim that already exists with ID " + actionClaimId)
+        if (actionClaimId) Promise.reject(new Error("Attempted to record an action claim that already exists with ID " + actionClaimId))
 
       }
 
@@ -187,6 +187,9 @@ class JwtService {
       l.trace(`${this.constructor.name} New action # ${attId}`)
 
       await this.createNetworkRecords(agentDid, issuerDid, attId, null)
+        .catch(err => {
+          l.error("Got error creating network records after action claim was created.", err)
+        })
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Tenure') {
@@ -207,6 +210,9 @@ class JwtService {
       let tenureId = await db.tenureInsert(entity)
 
       await this.createNetworkRecords(claim.party && claim.party.did, issuerDid, null, tenureId)
+        .catch(err => {
+          l.error("Got error creating network records after tenure claimwas created.", err)
+        })
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
@@ -221,14 +227,21 @@ class JwtService {
               .then(confirmData => {
                 if (confirmData.actionClaimId) {
                   return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
+                    .catch(err => {
+                      l.error("Got error creating network records after a confirmation was created.", err)
+                    })
                 } else if (confirmData.tenureClaimId) {
                   return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
+                    .catch(err => {
+                      l.error("Got error creating network records after a confirmation was created.", err)
+                    })
                 } else {
                   throw new Error("Failed to create confirmation for JWT " + jwtId)
                 }
               })
               .catch(err => {
                 l.error(err)
+                Promise.reject(err)
               })
           )
 
@@ -243,14 +256,22 @@ class JwtService {
                 .then(confirmData => {
                   if (confirmData.actionClaimId) {
                     return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
+                      .catch(err => {
+                        l.error("Got error creating network records after a confirmation was created.", err)
+                      })
                   } else if (confirmData.tenureClaimId) {
                     return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
+                      .catch(err => {
+                        l.error("Got error creating network records after a confirmation was created.", err)
+                      })
+
                   } else {
                     throw new Error("Failed to create confirmation for JWT " + jwtId)
                   }
                 })
                 .catch(err => {
                   l.error(err)
+                  Promise.reject(err)
                 })
             )
           }
@@ -261,12 +282,12 @@ class JwtService {
       await Promise.all(recordings)
 
     } else {
-      throw new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'])
+      Promise.reject(new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type']))
     }
   }
 
   async decodeAndVerifyJwt(jwt) {
-    if (process.env.NODE_ENV === 'test') {
+    if (process.env.NODE_ENV === 'test-local') {
       let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
       if (payload.exp < nowEpoch) {

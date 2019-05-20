@@ -166,7 +166,7 @@ let claimDebugFor0By0JwtProm = credentials[0].createVerification(claimDebugFor0B
 
 let confirmMultipleFor0By0JwtObj = R.clone(jwtTemplate)
 confirmMultipleFor0By0JwtObj.claim = R.clone(confirmationTemplate)
-confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
+confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimMyNightFor0))
 confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimDebugFor0))
 confirmMultipleFor0By0JwtObj.iss = creds[0].did
 confirmMultipleFor0By0JwtObj.sub = creds[0].did
@@ -360,6 +360,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equal(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 1)

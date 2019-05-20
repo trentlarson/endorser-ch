@@ -79,10 +79,10 @@ or debug them
 ```
 
 You can also run the server in offline test mode by setting environment variable
-`NODE_ENV=test` and then it will accept all JWTs and it won't do any real JWT
-validity checking, including expiration. (This may be changed when I figure out
-how to validate JWTs without being online.) This is accomplished by the
-`process.env.NODE_ENV === 'test'` code currently only found in
+`NODE_ENV=test-local` and then it will accept all JWTs and it won't do any real
+JWT validity checking, including expiration. (This may be changed when I figure
+out how to validate JWTs without being online.) This is accomplished by the
+`process.env.NODE_ENV === 'test-local'` code currently only found in
 server/api/services/jwt.service.js
 
 
@@ -237,14 +237,17 @@ db.each(selectSql, [], function(err, row) {
 
 
 "Converting circular structure to JSON" - network connected?
-why confirmation not showing in DB?
-why do some claims (eg. claimIIW2019aFor1) not have iss set?
-- see Sonia one hop away, send search for her to replicate
+
+- 90 2 export to Neo4J
+- 99 0 backup DB (& automate)
 - 99 1 Reports of "Your Claims" doesn't show details
+- 98 0 why confirmation not showing in DB?
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
 - 90 0 add helmet
 - 90 0 disallow duplicate tenure claims
+- 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
+- 90 0 see Sonia one hop away, send search for her to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 1 don't count any confirmations by original claimiant in UI reporting
 - 90 2 add search for claim on parcel of land #cplot ^claim
@@ -292,6 +295,7 @@ why do some claims (eg. claimIIW2019aFor1) not have iss set?
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
 - 80 0 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
 - 80 0 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
+- 80 0 gotta report errors to user (eg. repeated confirmation so should see mix of successes and errors)
 - 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 80 0 usability: add a "waiting" spinner when remote method is called
 - 60 3 neo4j?
