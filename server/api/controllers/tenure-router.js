@@ -7,12 +7,14 @@ class TenureController {
   getById(req, res) {
     TenureService.byId(req.params.id)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r));
+      .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
   getByQuery(req, res) {
     TenureService.byQuery()
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r));
+      .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
 }
 let tenureController = new TenureController();

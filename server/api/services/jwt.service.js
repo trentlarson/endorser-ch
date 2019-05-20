@@ -280,6 +280,9 @@ class JwtService {
       l.debug(`${this.constructor.name} Created ${recordings.length} confirmations.`)
 
       await Promise.all(recordings)
+        .catch(err => {
+          Promise.reject(err)
+        })
 
     } else {
       Promise.reject(new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type']))

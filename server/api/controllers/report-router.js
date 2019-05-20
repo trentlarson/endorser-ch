@@ -9,16 +9,19 @@ class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r));
+      .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
   getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r));
+      .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
   getCanSeeDids(req, res) {
     getSeesDids(res.locals.tokenIssuer)
       .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
 }
 let tenureController = new TenureController();

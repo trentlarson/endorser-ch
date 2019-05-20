@@ -292,6 +292,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
@@ -303,6 +304,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .then(r => {
        expect(400)
+       expect(r.status).that.equals(404)
      })).timeout(7001)
 
   it('should add a new action claim', () =>
@@ -312,6 +314,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId)
@@ -323,6 +326,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
@@ -341,6 +345,7 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
@@ -360,7 +365,7 @@ describe('Claim', () => {
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equal(201)
+       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 1)

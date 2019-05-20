@@ -11,12 +11,14 @@ class Controller {
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
-      });
+      })
+      .catch(err => res.status(500).end())
   }
   getByQuery(req, res) {
     JwtService.byQuery(req.query, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r));
+      .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
   importClaim(req, res) {
     JwtService
@@ -25,7 +27,8 @@ class Controller {
       .then(r => res
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)
-            .json(r));
+            .json(r))
+      .catch(err => res.status(500).end())
   }
 }
 let controller = new Controller();
