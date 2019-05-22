@@ -17,7 +17,15 @@ NODE_ENV=test-local DBUSER=sa DBPASS=sasa PORT=3330 npm run test$1
 
 
 
+
 echo "Now will run tests with JWT validation (which are slower)."
+echo "in 3..."
+sleep 1
+echo "2..."
+sleep 1
+echo "1..."
+sleep 1
+echo "now."
 
 rm -f ../endorser-ch-test.sqlite3
 

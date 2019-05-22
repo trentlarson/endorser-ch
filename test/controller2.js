@@ -4,7 +4,7 @@ import R from 'ramda'
 
 import Server from '../server'
 import { HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util'
-import { allDidsAreHidden } from './util'
+import testUtil from './util'
 
 const expect = chai.expect
 
@@ -25,26 +25,7 @@ var creds = [
 
 var credentials = R.map((c) => new Credentials(c), creds)
 
-let nowEpoch = Math.floor(new Date().getTime() / 1000)
-let tomorrowEpoch = nowEpoch + (24 * 60 * 60)
-
-let pushTokenProms = R.map((c) => c.createVerification({ exp: tomorrowEpoch }), credentials)
-
-let jwtTemplate = {
-  "iat": nowEpoch,
-  "exp": tomorrowEpoch,
-  // supply "sub"
-  // supply "claim", usually including same DID of "sub"
-  // supply "iss"
-}
-
-let confirmationTemplate = {
-  "@context": "http://endorser.ch",
-  "@type": "Confirmation",
-  "originalClaims": [
-    // supply claims
-  ]
-}
+let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
 let claimCornerBakery = {
   "@context": "http://endorser.ch",
@@ -77,8 +58,8 @@ let claimIIW2019a = {
 
 let claimFoodPantryFor0By0Jwt =
 {
-  "iat": nowEpoch,
-  "exp": tomorrowEpoch,
+  "iat": testUtil.nowEpoch,
+  "exp": testUtil.tomorrowEpoch,
   "sub": creds[0].did,
   "claim": {
     "@context": "http://endorser.ch",
@@ -99,14 +80,14 @@ let claimFoodPantryFor0By0Jwt =
 let claimCornerBakeryTenureFor0 = R.clone(claimCornerBakery)
 claimCornerBakeryTenureFor0.party.did = creds[0].did
 
-let claimCornerBakeryTenureFor0By0Jwt = R.clone(jwtTemplate)
+let claimCornerBakeryTenureFor0By0Jwt = R.clone(testUtil.jwtTemplate)
 claimCornerBakeryTenureFor0By0Jwt.sub = creds[0].did
 claimCornerBakeryTenureFor0By0Jwt.claim = R.clone(claimCornerBakeryTenureFor0)
 claimCornerBakeryTenureFor0By0Jwt.iss = creds[0].did
 
-let confirmCornerBakeryTenureFor0By1Jwt = R.clone(jwtTemplate)
+let confirmCornerBakeryTenureFor0By1Jwt = R.clone(testUtil.jwtTemplate)
 confirmCornerBakeryTenureFor0By1Jwt.sub = creds[0].did
-confirmCornerBakeryTenureFor0By1Jwt.claim = R.clone(confirmationTemplate)
+confirmCornerBakeryTenureFor0By1Jwt.claim = R.clone(testUtil.confirmationTemplate)
 confirmCornerBakeryTenureFor0By1Jwt.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor0))
 confirmCornerBakeryTenureFor0By1Jwt.iss = creds[1].did
 
@@ -116,25 +97,25 @@ claimIIW2019aFor1.agent.did = creds[1].did
 let claimIIW2019aFor2 = R.clone(claimIIW2019a)
 claimIIW2019aFor2.agent.did = creds[2].did
 
-let claimIIW2019aFor1By1Jwt = R.clone(jwtTemplate)
+let claimIIW2019aFor1By1Jwt = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor1By1Jwt.sub = creds[1].did
 claimIIW2019aFor1By1Jwt.claim = R.clone(claimIIW2019aFor1)
 claimIIW2019aFor1By1Jwt.iss = creds[1].did
 
-let claimIIW2019aFor2By2Jwt = R.clone(jwtTemplate)
+let claimIIW2019aFor2By2Jwt = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor2By2Jwt.sub = creds[2].did
 claimIIW2019aFor2By2Jwt.claim = R.clone(claimIIW2019aFor2)
 claimIIW2019aFor2By2Jwt.iss = creds[2].did
 
-let confirmIIW2019aFor1By0Jwt = R.clone(jwtTemplate)
+let confirmIIW2019aFor1By0Jwt = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor1By0Jwt.sub = creds[1].did
-confirmIIW2019aFor1By0Jwt.claim = R.clone(confirmationTemplate)
+confirmIIW2019aFor1By0Jwt.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor1By0Jwt.claim.originalClaims.push(R.clone(claimIIW2019aFor1))
 confirmIIW2019aFor1By0Jwt.iss = creds[0].did
 
-let confirmIIW2019aFor2By1Jwt = R.clone(jwtTemplate)
+let confirmIIW2019aFor2By1Jwt = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor2By1Jwt.sub = creds[2].did
-confirmIIW2019aFor2By1Jwt.claim = R.clone(confirmationTemplate)
+confirmIIW2019aFor2By1Jwt.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor2By1Jwt.claim.originalClaims.push(R.clone(claimIIW2019aFor2))
 confirmIIW2019aFor2By1Jwt.iss = creds[1].did
 
@@ -177,7 +158,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
        expect(r.body)
          .to.be.an('array')
        for (var i = 0; i < r.body.length; i++) {
-         expect(allDidsAreHidden(r.body[i]))
+         expect(testUtil.allDidsAreHidden(r.body[i]))
            .to.be.true
        }
      })).timeout(7001)
@@ -203,7 +184,7 @@ describe('Tenure 2: Competing Tenure Claim', () => {
        expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
-       expect(allDidsAreHidden(r.body[0]))
+       expect(testUtil.allDidsAreHidden(r.body[0]))
          .to.be.false
      })).timeout(7001)
 

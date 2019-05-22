@@ -6,7 +6,7 @@ const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
 import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
-import { allDidsAreHidden } from './util'
+import testUtil from './util'
 
 let dbInfo = require('../conf/flyway.js')
 
@@ -18,8 +18,6 @@ const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").to
 
 
 // Set up some JWTs for calls.
-let nowEpoch = Math.floor(new Date().getTime() / 1000)
-let tomorrowEpoch = nowEpoch + (24 * 60 * 60)
 var globalJwt1 = null
 
 // from https://github.com/uport-project/did-jwt#1-create-a-did-jwt
@@ -27,34 +25,18 @@ import didJWT from 'did-jwt'
 const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
 didJWT.createJWT(
   //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-  {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: tomorrowEpoch, name: 'uPort Developer'},
+  {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
   {issuer: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', signer})
   .then( response => { globalJwt1 = response; console.log("Created JWT", globalJwt1) });
 var globalJwt2 = null
 didJWT.createJWT(
   //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-  {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: tomorrowEpoch, name: 'uPort Developer'},
+  {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
   {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer})
   .then( response => { globalJwt2 = response; console.log("Created JWT", globalJwt2) });
 
 
 var firstId = 1
-
-let jwtTemplate = {
-  "iat": nowEpoch,
-  "exp": tomorrowEpoch,
-  // "sub": DID of subject
-  // "claim": object, usually including same DID of "sub"
-  // "iss": DID of issuer
-}
-
-let confirmationTemplate = {
-  "@context": "http://endorser.ch",
-  "@type": "Confirmation",
-  "originalClaims": [
-    // list of claim objects
-  ]
-}
 
 let claimBvc = {
   "@context": "http://schema.org",
@@ -101,28 +83,28 @@ var creds = [
 ]
 var credentials = R.map((c) => new Credentials(c), creds)
 
-let pushTokenProms = R.map((c) => c.createVerification({ exp: tomorrowEpoch }), credentials)
+let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
 
 
 let claimBvcFor0 = R.clone(claimBvc)
 claimBvcFor0.agent.did = creds[0].did
 
-let claimBvcFor0By0JwtObj = R.clone(jwtTemplate)
+let claimBvcFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimBvcFor0By0JwtObj.claim = R.clone(claimBvcFor0)
 claimBvcFor0By0JwtObj.iss = creds[0].did
 claimBvcFor0By0JwtObj.sub = creds[0].did
 let claimBvcFor0By0JwtProm = credentials[0].createVerification(claimBvcFor0By0JwtObj)
 
-let confirmBvcFor0By0JwtObj = R.clone(jwtTemplate)
-confirmBvcFor0By0JwtObj.claim = R.clone(confirmationTemplate)
+let confirmBvcFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
+confirmBvcFor0By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcFor0By0JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
 confirmBvcFor0By0JwtObj.iss = creds[1].did
 confirmBvcFor0By0JwtObj.sub = creds[0].did
 let confirmBvcFor0By0JwtProm = credentials[0].createVerification(confirmBvcFor0By0JwtObj)
 
-let confirmBvcFor0By1JwtObj = R.clone(jwtTemplate)
-confirmBvcFor0By1JwtObj.claim = R.clone(confirmationTemplate)
+let confirmBvcFor0By1JwtObj = R.clone(testUtil.jwtTemplate)
+confirmBvcFor0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcFor0By1JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
 confirmBvcFor0By1JwtObj.iss = creds[1].did
 confirmBvcFor0By1JwtObj.sub = creds[0].did
@@ -134,7 +116,7 @@ let claimBvcFor1 = R.clone(claimBvc)
 claimBvcFor1.agent.did = creds[1].did
 claimBvcFor1.event.startTime = "2019-01-13T08:00:00.000-07:00"
 
-let claimBvcFor1By1JwtObj = R.clone(jwtTemplate)
+let claimBvcFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
 claimBvcFor1By1JwtObj.claim = R.clone(claimBvcFor1)
 claimBvcFor1By1JwtObj.iss = creds[1].did
 claimBvcFor1By1JwtObj.sub = creds[1].did
@@ -145,7 +127,7 @@ let claimBvcFor1By1JwtProm = credentials[0].createVerification(claimBvcFor1By1Jw
 let claimMyNightFor0 = R.clone(claimMyNight)
 claimMyNightFor0.agent.did = creds[0].did
 
-let claimMyNightFor0By0JwtObj = R.clone(jwtTemplate)
+let claimMyNightFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimMyNightFor0By0JwtObj.claim = R.clone(claimMyNightFor0)
 claimMyNightFor0By0JwtObj.iss = creds[0].did
 claimMyNightFor0By0JwtObj.sub = creds[0].did
@@ -156,7 +138,7 @@ let claimMyNightFor0By0JwtProm = credentials[0].createVerification(claimMyNightF
 let claimDebugFor0 = R.clone(claimDebug)
 claimDebugFor0.agent.did = creds[0].did
 
-let claimDebugFor0By0JwtObj = R.clone(jwtTemplate)
+let claimDebugFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimDebugFor0By0JwtObj.claim = R.clone(claimDebugFor0)
 claimDebugFor0By0JwtObj.iss = creds[0].did
 claimDebugFor0By0JwtObj.sub = creds[0].did
@@ -164,8 +146,8 @@ let claimDebugFor0By0JwtProm = credentials[0].createVerification(claimDebugFor0B
 
 
 
-let confirmMultipleFor0By0JwtObj = R.clone(jwtTemplate)
-confirmMultipleFor0By0JwtObj.claim = R.clone(confirmationTemplate)
+let confirmMultipleFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
+confirmMultipleFor0By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimMyNightFor0))
 confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimDebugFor0))
 confirmMultipleFor0By0JwtObj.iss = creds[0].did
@@ -221,20 +203,20 @@ describe('Util', () => {
     )
 
   it('should test for hidden DIDs', () => {
-    expect(allDidsAreHidden(null)).to.be.true
-    expect(allDidsAreHidden(9)).to.be.true
-    expect(allDidsAreHidden(true)).to.be.true
-    expect(allDidsAreHidden("stuff")).to.be.true
-    expect(allDidsAreHidden(HIDDEN_TEXT)).to.be.true
-    expect(allDidsAreHidden("did:x:0xabc123...")).to.be.false
-    expect(allDidsAreHidden({a:HIDDEN_TEXT, b:[HIDDEN_TEXT]})).to.be.true
-    expect(allDidsAreHidden({a:"did:x:0xabc123...", b:[HIDDEN_TEXT]})).to.be.false
-    expect(allDidsAreHidden(["a", "b", "c", {d: HIDDEN_TEXT}])).to.be.true
-    expect(allDidsAreHidden(["a", "b", "c", {d: "did:x:0xabc123..."}])).to.be.false
-    expect(allDidsAreHidden({"did:x:0xabc123...":["a"], b:[HIDDEN_TEXT]})).to.be.false
+    expect(testUtil.allDidsAreHidden(null)).to.be.true
+    expect(testUtil.allDidsAreHidden(9)).to.be.true
+    expect(testUtil.allDidsAreHidden(true)).to.be.true
+    expect(testUtil.allDidsAreHidden("stuff")).to.be.true
+    expect(testUtil.allDidsAreHidden(HIDDEN_TEXT)).to.be.true
+    expect(testUtil.allDidsAreHidden("did:x:0xabc123...")).to.be.false
+    expect(testUtil.allDidsAreHidden({a:HIDDEN_TEXT, b:[HIDDEN_TEXT]})).to.be.true
+    expect(testUtil.allDidsAreHidden({a:"did:x:0xabc123...", b:[HIDDEN_TEXT]})).to.be.false
+    expect(testUtil.allDidsAreHidden(["a", "b", "c", {d: HIDDEN_TEXT}])).to.be.true
+    expect(testUtil.allDidsAreHidden(["a", "b", "c", {d: "did:x:0xabc123..."}])).to.be.false
+    expect(testUtil.allDidsAreHidden({"did:x:0xabc123...":["a"], b:[HIDDEN_TEXT]})).to.be.false
     let test = {b:[HIDDEN_TEXT]}
     test[HIDDEN_TEXT] = ["a"]
-    expect(allDidsAreHidden(test)).to.be.true
+    expect(testUtil.allDidsAreHidden(test)).to.be.true
   })
 
   it('should hide DIDs', () => {
