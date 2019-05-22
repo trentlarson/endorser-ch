@@ -77,10 +77,8 @@ let claimDebug = {
   }
 }
 
-var creds = [
-  { did: 'did:ethr:0x00c9c2326c73f73380e8402b01de9defcff2b064', privateKey: '8de6e2bd938a29a8348316cbae381147f22f2ae87a42ad0ece727ff25c613b5' },
-  { did: 'did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557', privateKey: 'e4a3d47ed1058e5c07ed825b5cf0516ab757b1d141a4dc24392271537e10aa0' },
-]
+var creds = testUtil.creds
+
 var credentials = R.map((c) => new Credentials(c), creds)
 
 let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)

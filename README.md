@@ -238,6 +238,7 @@ db.each(selectSql, [], function(err, row) {
 
 "Converting circular structure to JSON" - network connected?
 
+- 95 0 in uport-demo: consolidate test "creds" across Test & App
 - 90 2 export to Neo4J
 - 99 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
 - 99 0 backup DB (& automate)
