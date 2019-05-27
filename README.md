@@ -152,8 +152,12 @@ rm ../endorser-ch-dev.sqlite3
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 ```
 
+####
 
+Export to Neo4J
 
+http://blog.brian-underwood.codes/sql/neo4j/neo4apis/activerecord/announcements/2015/01/08/loading_sql_to_neo4j_like_magic/
+```neo4apis activerecord all_tables --identify-model --import-all-associations```
 
 
 ## Debug It

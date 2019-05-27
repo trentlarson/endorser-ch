@@ -1,0 +1,7 @@
+#development:
+#  type: http
+#  url: http://localhost:7474
+
+development:
+  type: bolt
+  url: bolt://localhost:7687

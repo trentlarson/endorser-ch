@@ -1,11 +1,13 @@
 
 CREATE TABLE event (
+       id INTEGER PRIVATE KEY,
        orgName VARCHAR(120),
        name VARCHAR(250),
        startTime DATETIME
 );
 
 CREATE TABLE action_claim (
+       id INTEGER PRIVATE KEY,
        jwtRowId BIGINT,
        agentDid CHARACTER(60), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
        eventRowId BIGINT,
@@ -15,6 +17,7 @@ CREATE TABLE action_claim (
 );
 
 CREATE TABLE confirmation (
+       id INTEGER PRIVATE KEY,
        jwtRowId BIGINT,
        issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        actionRowId BIGINT,
@@ -22,6 +25,7 @@ CREATE TABLE confirmation (
 );
 
 CREATE TABLE jwt (
+       id INTEGER PRIVATE KEY,
        issuedAt DATETIME,
        issuer CHARACTER(60), -- DID of the confirming entity; did:ethr are 52 chars
        subject VARCHAR(100),

@@ -1,0 +1,6 @@
+development:
+  adapter: sqlite3
+  encoding: unicode
+  pool: 5
+  host: localhost
+  database: /Users/tlarson/dev/home/endorser-ch-test.sqlite3
