@@ -238,6 +238,18 @@ db.each(selectSql, [], function(err, row) {
 
 "Converting circular structure to JSON" - network connected?
 
+User story:
+- in endorser-ch
+  - run test/test.sh (can quit after first tests)
+  - run: NODE_ENV=test-local npm run dev
+- in uport-demo
+  - see duplicate claims Duane's Friend (and maybe as Trent)
+  - as Trent, confirm something about Duane 0x11bb3621f8ea471a750870ae8dd5f4b8203e9557
+  - now Duane's friend can see a link to see the other claim
+
+
+
+
 - 95 0 in uport-demo: consolidate test "creds" across Test & App
 - 90 1 create user story that shows a link between the user and tenure claim (since Duane test didn't work)
 - 90 2 export to Neo4J
