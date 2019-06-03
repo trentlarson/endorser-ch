@@ -8,8 +8,6 @@ import Server from '../server'
 import { calcBbox, hideDids, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
-let dbInfo = require('../conf/flyway.js')
-
 const expect = chai.expect
 
 const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
@@ -37,6 +35,8 @@ didJWT.createJWT(
 
 
 var firstId = 1
+
+var creds = testUtil.creds
 
 let claimBvc = {
   "@context": "http://schema.org",
@@ -77,7 +77,41 @@ let claimDebug = {
   }
 }
 
-var creds = testUtil.creds
+let claimIIW2019a = {
+  "@context": "http://schema.org",
+  "@type": "JoinAction",
+  "agent": {
+    // supply "did"
+  },
+  "event": {
+    "organizer": {
+      "name": "Internet Identity Workshop"
+    },
+    "name": "The Internet Identity Workshop XXVIII (#28)",
+    "startTime": "2019-04-30T08:00:00.000-07:00"
+  }
+}
+
+let claimFoodPantryFor0By0Jwt =
+    {
+      "iat": testUtil.nowEpoch,
+      "exp": testUtil.tomorrowEpoch,
+      "sub": creds[0].did,
+      "claim": {
+        "@context": "http://endorser.ch",
+        "@type": "Tenure",
+        "spatialUnit": {
+          "geo": {
+            "@type": "GeoShape",
+            "polygon": "40.890431,-111.870292 40.890425,-111.869691 40.890867,-111.869654 40.890890-111.870295 40.890431-111.870292"
+          }
+        },
+        "party": {
+          "did": creds[0].did
+        }
+      },
+      "iss": creds[0].did
+    }
 
 var credentials = R.map((c) => new Credentials(c), creds)
 
@@ -154,7 +188,72 @@ let confirmMultipleFor0By0JwtProm = credentials[0].createVerification(confirmMul
 
 
 
-var pushTokens, claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, claimMyNightFor0By0JwtEnc, claimBvcFor1By1JwtEnc, claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc
+let claimCornerBakeryTenureFor0JwtObj = R.clone(testUtil.claimCornerBakery)
+claimCornerBakeryTenureFor0JwtObj.party.did = creds[0].did
+let claimCornerBakeryTenureFor0Prom = credentials[0].createVerification(claimCornerBakeryTenureFor0JwtObj)
+
+let claimCornerBakeryTenureFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
+claimCornerBakeryTenureFor0By0JwtObj.sub = creds[0].did
+claimCornerBakeryTenureFor0By0JwtObj.claim = R.clone(claimCornerBakeryTenureFor0JwtObj)
+claimCornerBakeryTenureFor0By0JwtObj.iss = creds[0].did
+let claimCornerBakeryTenureFor0By0JwtProm = credentials[0].createVerification(claimCornerBakeryTenureFor0By0JwtObj)
+
+let confirmCornerBakeryTenureFor0By1JwtObj = R.clone(testUtil.jwtTemplate)
+confirmCornerBakeryTenureFor0By1JwtObj.sub = creds[0].did
+confirmCornerBakeryTenureFor0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmCornerBakeryTenureFor0By1JwtObj.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor0JwtObj))
+confirmCornerBakeryTenureFor0By1JwtObj.iss = creds[1].did
+let confirmCornerBakeryTenureFor0By1JwtProm = credentials[0].createVerification(confirmCornerBakeryTenureFor0By1JwtObj)
+
+let claimIIW2019aFor1 = R.clone(claimIIW2019a)
+claimIIW2019aFor1.agent.did = creds[1].did
+
+let claimIIW2019aFor2 = R.clone(claimIIW2019a)
+claimIIW2019aFor2.agent.did = creds[2].did
+
+let claimIIW2019aFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
+claimIIW2019aFor1By1JwtObj.sub = creds[1].did
+claimIIW2019aFor1By1JwtObj.claim = R.clone(claimIIW2019aFor1)
+claimIIW2019aFor1By1JwtObj.iss = creds[1].did
+let claimIIW2019aFor1By1JwtProm = credentials[0].createVerification(claimIIW2019aFor1By1JwtObj)
+
+let claimIIW2019aFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
+claimIIW2019aFor2By2JwtObj.sub = creds[2].did
+claimIIW2019aFor2By2JwtObj.claim = R.clone(claimIIW2019aFor2)
+claimIIW2019aFor2By2JwtObj.iss = creds[2].did
+let claimIIW2019aFor2By2JwtProm = credentials[0].createVerification(claimIIW2019aFor2By2JwtObj)
+
+let confirmIIW2019aFor1By0JwtObj = R.clone(testUtil.jwtTemplate)
+confirmIIW2019aFor1By0JwtObj.sub = creds[1].did
+confirmIIW2019aFor1By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmIIW2019aFor1By0JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor1))
+confirmIIW2019aFor1By0JwtObj.iss = creds[0].did
+let confirmIIW2019aFor1By0JwtProm = credentials[0].createVerification(confirmIIW2019aFor1By0JwtObj)
+
+let confirmIIW2019aFor2By1JwtObj = R.clone(testUtil.jwtTemplate)
+confirmIIW2019aFor2By1JwtObj.sub = creds[2].did
+confirmIIW2019aFor2By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmIIW2019aFor2By1JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor2))
+confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
+let confirmIIW2019aFor2By1JwtProm = credentials[0].createVerification(confirmIIW2019aFor2By1JwtObj)
+
+let claimFoodPantryFor0By0JwtProm = credentials[0].createVerification(claimFoodPantryFor0By0Jwt)
+
+
+var pushTokens,
+    // claims for 0
+    claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, claimMyNightFor0By0JwtEnc,
+    claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc,
+    claimCornerBakeryTenureFor0By0JwtEnc, claimFoodPantryFor0By0JwtEnc,
+    confirmCornerBakeryTenureFor0By1JwtEnc,
+    // claims for 1
+    claimBvcFor1By1JwtEnc,
+    confirmIIW2019aFor1By0JwtEnc,
+    claimIIW2019aFor1By1JwtEnc,
+    // claims for 2
+    confirmIIW2019aFor2By1JwtEnc,
+    claimIIW2019aFor2By2JwtEnc
+
 before(async () => {
   await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts })
   console.log("Created controller push tokens", pushTokens)
@@ -167,6 +266,13 @@ before(async () => {
     claimBvcFor1By1JwtProm,
     claimDebugFor0By0JwtProm,
     confirmMultipleFor0By0JwtProm,
+    claimCornerBakeryTenureFor0By0JwtProm,
+    claimFoodPantryFor0By0JwtProm,
+    confirmIIW2019aFor1By0JwtProm,
+    confirmCornerBakeryTenureFor0By1JwtProm,
+    claimIIW2019aFor1By1JwtProm,
+    confirmIIW2019aFor2By1JwtProm,
+    claimIIW2019aFor2By2JwtProm,
   ]).then((jwts) => {
     claimBvcFor0By0JwtEnc = jwts[0]
     confirmBvcFor0By0JwtEnc = jwts[1]
@@ -175,6 +281,13 @@ before(async () => {
     claimBvcFor1By1JwtEnc = jwts[4]
     claimDebugFor0By0JwtEnc = jwts[5]
     confirmMultipleFor0By0JwtEnc = jwts[6]
+    claimCornerBakeryTenureFor0By0JwtEnc = jwts[7]
+    claimFoodPantryFor0By0JwtEnc = jwts[8]
+    confirmIIW2019aFor1By0JwtEnc = jwts[9]
+    confirmCornerBakeryTenureFor0By1JwtEnc = jwts[10]
+    claimIIW2019aFor1By1JwtEnc = jwts[11]
+    confirmIIW2019aFor2By1JwtEnc = jwts[12]
+    claimIIW2019aFor2By2JwtEnc = jwts[13]
     console.log("Created controller user tokens", jwts)
   })
 })
@@ -745,6 +858,138 @@ describe('Report', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
+     })).timeout(7001)
+
+})
+
+describe('Tenure 2: Competing Tenure Claim', () => {
+
+  it('should get claims from other tests but cannot see inside any', () =>
+     request(Server)
+     .get('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body)
+         .to.be.an('array')
+       for (var i = 0; i < r.body.length; i++) {
+         expect(testUtil.allDidsAreHidden(r.body[i]))
+           .to.be.true
+       }
+     })).timeout(7001)
+
+  it('should create a new tenure', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({ "jwtEncoded": claimCornerBakeryTenureFor0By0JwtEnc })
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(7001)
+
+  it('should get claims and can see inside the most recent one', () =>
+     request(Server)
+     .get('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body)
+         .to.be.an('array')
+       expect(testUtil.allDidsAreHidden(r.body[0]))
+         .to.be.false
+     })).timeout(7001)
+
+  it('should confirm that competing tenure', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({ "jwtEncoded": confirmCornerBakeryTenureFor0By1JwtEnc })
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(7001)
+
+  it('should get 2 tenure claims', () =>
+     request(Server)
+     .get('/api/claim?claimType=Tenure')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+     })).timeout(7001)
+
+  it('should get 2 competing tenures and confirmations', () =>
+     request(Server)
+     .get('/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+     })).timeout(7001)
+
+})
+
+describe('Transitive Connections', () => {
+
+  it('should claim attendance for 1', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({"jwtEncoded": claimIIW2019aFor1By1JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(7001)
+
+  it('should claim attendance for 2', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .send({"jwtEncoded": claimIIW2019aFor2By2JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(7001)
+
+  it('should confirm attendance for 1 by 0', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": confirmIIW2019aFor1By0JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+     })).timeout(7001)
+
+  it('should confirm attendance for 2 by 1', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({"jwtEncoded": confirmIIW2019aFor2By1JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
      })).timeout(7001)
 
 })
