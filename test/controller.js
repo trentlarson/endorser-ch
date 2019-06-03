@@ -16,22 +16,12 @@ const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").to
 
 
 // Set up some JWTs for calls.
-var globalJwt1 = null
-
+var globalJwt1, globalJwt2
 // from https://github.com/uport-project/did-jwt#1-create-a-did-jwt
 import didJWT from 'did-jwt'
+// This "signer" variable must be named "signer" or you get an error: No Signer functionality has been configured
 const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
-didJWT.createJWT(
-  //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-  {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
-  {issuer: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', signer})
-  .then( response => { globalJwt1 = response; console.log("Created JWT", globalJwt1) });
-var globalJwt2 = null
-didJWT.createJWT(
-  //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-  {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
-  {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer})
-  .then( response => { globalJwt2 = response; console.log("Created JWT", globalJwt2) });
+
 
 
 var firstId = 1
@@ -255,6 +245,18 @@ var pushTokens,
     claimIIW2019aFor2By2JwtEnc
 
 before(async () => {
+
+  await didJWT.createJWT(
+    //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
+    {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
+    {issuer: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', signer})
+    .then( response => { globalJwt1 = response; console.log("Created global JWT 1", globalJwt1) });
+
+  await didJWT.createJWT(
+    {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
+    {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer})
+    .then( response => { globalJwt2 = response; console.log("Created global JWT 2", globalJwt2) });
+
   await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts })
   console.log("Created controller push tokens", pushTokens)
 
