@@ -24,8 +24,6 @@ const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3
 
 
 
-var firstId = 1
-
 var creds = testUtil.creds
 
 let claimBvc = {
@@ -82,28 +80,21 @@ let claimIIW2019a = {
   }
 }
 
-let claimFoodPantryFor0By0Jwt =
-    {
-      "iat": testUtil.nowEpoch,
-      "exp": testUtil.tomorrowEpoch,
-      "sub": creds[0].did,
-      "claim": {
-        "@context": "http://endorser.ch",
-        "@type": "Tenure",
-        "spatialUnit": {
-          "geo": {
-            "@type": "GeoShape",
-            "polygon": "40.890431,-111.870292 40.890425,-111.869691 40.890867,-111.869654 40.890890-111.870295 40.890431-111.870292"
-          }
-        },
-        "party": {
-          "did": creds[0].did
-        }
-      },
-      "iss": creds[0].did
+let claimFoodPantryFor0 = {
+  "@context": "http://endorser.ch",
+  "@type": "Tenure",
+  "spatialUnit": {
+    "geo": {
+      "@type": "GeoShape",
+      "polygon": "40.890431,-111.870292 40.890425,-111.869691 40.890867,-111.869654 40.890890-111.870295 40.890431-111.870292"
     }
+  },
+  "party": {
+    "did": creds[0].did
+  }
+}
 
-var credentials = R.map((c) => new Credentials(c), creds)
+var credentials = testUtil.credentials
 
 let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
@@ -227,7 +218,11 @@ confirmIIW2019aFor2By1JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor2
 confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
 let confirmIIW2019aFor2By1JwtProm = credentials[0].createVerification(confirmIIW2019aFor2By1JwtObj)
 
-let claimFoodPantryFor0By0JwtProm = credentials[0].createVerification(claimFoodPantryFor0By0Jwt)
+let claimFoodPantryFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
+claimFoodPantryFor0By0JwtObj.claim = R.clone(claimFoodPantryFor0)
+claimFoodPantryFor0By0JwtObj.iss = creds[0].did
+claimFoodPantryFor0By0JwtObj.sub = creds[0].did
+let claimFoodPantryFor0By0JwtProm = credentials[0].createVerification(claimFoodPantryFor0By0JwtObj)
 
 
 var pushTokens,
@@ -257,8 +252,7 @@ before(async () => {
     {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer})
     .then( response => { globalJwt2 = response; console.log("Created global JWT 2", globalJwt2) });
 
-  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts })
-  console.log("Created controller push tokens", pushTokens)
+  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller push tokens", pushTokens) })
 
   await Promise.all([
     claimBvcFor0By0JwtProm,
@@ -293,7 +287,6 @@ before(async () => {
     console.log("Created controller user tokens", jwts)
   })
 })
-
 
 describe('Util', () => {
 
@@ -379,6 +372,8 @@ describe('Util', () => {
 
 })
 
+var firstId
+
 describe('Claim', () => {
 
   it('should get no claims', () =>
@@ -393,9 +388,9 @@ describe('Claim', () => {
          .of.length(0)
      })).timeout(7001) // these 7001 & 6001 waits were added after JWT verify was added
 
-  it('should get a 404, missing first claim', () =>
+  it('should get a 404, missing invalid claim number', () =>
      request(Server)
-     .get('/api/claim/' + firstId)
+     .get('/api/claim/999')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .then(r => {
        expect(400)
@@ -412,7 +407,7 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
-         .that.equals(firstId)
+       firstId = r.body
      })).timeout(7001)
 
   it('should get a claim #' + firstId, () =>
@@ -466,7 +461,7 @@ describe('Claim', () => {
          .that.equals(firstId + 1)
      })).timeout(7001)
 
-  it('should get 2 claims', () =>
+  it('should get 3 claims', () =>
      request(Server)
      .get('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
@@ -578,6 +573,7 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+       console.log("r.body",r.body)
        expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
