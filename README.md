@@ -258,7 +258,9 @@ User story:
 - 98 0 why confirmation not showing in DB?
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
+- 90 0 add .json(someErr) to all routers in the error path
 - 90 0 add helmet
+- 90 2 switch from Confirmation to AgreeAction
 - 90 0 disallow duplicate tenure claims
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 90 0 see Sonia one hop away, send search for her to replicate

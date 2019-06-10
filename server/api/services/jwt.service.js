@@ -72,13 +72,13 @@ class JwtService {
         && origClaim['@type'] === 'JoinAction') {
 
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
-      if (events.length === 0) Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
+      if (events.length === 0) return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
 
       let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
-      if (actionClaimId === null) Promise.reject(new Error("Attempted to confirm an unrecorded action."))
+      if (actionClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
 
       let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
-      if (confirmation !== null) Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
+      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
 
       let origClaimStr = JSON.stringify(origClaim)
 
@@ -90,10 +90,10 @@ class JwtService {
                && origClaim['@type'] === 'Tenure') {
 
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
-      if (tenureClaimId === null) Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
+      if (tenureClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
 
       let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
-      if (confirmation !== null) Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
+      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
 
       let origClaimStr = JSON.stringify(origClaim)
 
@@ -162,7 +162,7 @@ class JwtService {
       let agentDid = claim.agent.did
       if (!agentDid) {
         l.error(`${this.constructor.name} JoinAction for ${jwtId} has no agent DID.`)
-        Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
+        return Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
       }
 
       var event
@@ -179,7 +179,7 @@ class JwtService {
         }
 
         let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
-        if (actionClaimId) Promise.reject(new Error("Attempted to record an action claim that already exists with ID " + actionClaimId))
+        if (actionClaimId) return Promise.reject(new Error("Attempted to record an action claim that already exists with ID " + actionClaimId))
 
       }
 
@@ -241,7 +241,7 @@ class JwtService {
               })
               .catch(err => {
                 l.error(err)
-                Promise.reject(err)
+                return Promise.reject(err)
               })
           )
 
@@ -271,7 +271,7 @@ class JwtService {
                 })
                 .catch(err => {
                   l.error(err)
-                  Promise.reject(err)
+                  return Promise.reject(err)
                 })
             )
           }
@@ -281,11 +281,11 @@ class JwtService {
 
       await Promise.all(recordings)
         .catch(err => {
-          Promise.reject(err)
+          return Promise.reject(err)
         })
 
     } else {
-      Promise.reject(new Error("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type']))
+      l.warn("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
     }
   }
 
@@ -310,12 +310,20 @@ class JwtService {
     l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
-    let {payload, header, signature, data, doc, authenticators, issuer} = await this.decodeAndVerifyJwt(jwtEncoded)
+    let {payload, header, signature, data, doc, authenticators, issuer} =
+        await this.decodeAndVerifyJwt(jwtEncoded)
+        .catch((err) => {
+          return Promise.reject(err)
+        })
     if (payload.claim) {
       let claimStr = JSON.stringify(payload.claim)
       let claimEncoded = base64url.encode(claimStr)
       let jwtEntity = db.buildJwtEntity(payload, claimStr, claimEncoded, jwtEncoded)
-      let jwtId = await db.jwtInsert(jwtEntity)
+      let jwtId =
+          await db.jwtInsert(jwtEntity)
+          .catch((err) => {
+            return Promise.reject(err)
+          })
 
       //l.debug(doc, `${this.constructor.name} resolved doc`)
       //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
@@ -331,11 +339,12 @@ class JwtService {
           l.warn(err, `Failed to create embedded claim records.`)
         })
 
+      // when adjusting this to an object with "success", include any failures from createEmbeddedClaimRecords
       return jwtId
 
     } else {
       l.warn(`${this.constructor.name} JWT received without a claim.`)
-      return -1 // not undefined because the jwt-controller looks at r.id... how does that even work?
+      return {failure: "JWT had no 'claim' property."}
     }
   }
 

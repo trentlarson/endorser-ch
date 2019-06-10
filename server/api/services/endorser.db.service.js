@@ -386,7 +386,7 @@ class EndorserDatabase {
   async jwtInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt (issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded) VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?)");
-      console.log("entity.claim",entity.claim)
+      console.log("Inserted into DB JWT with entity.claim", entity.claim)
       db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claim, entity.claimEncoded, entity.jwtEncoded], function(err) {
         if (err) {
           reject(err)

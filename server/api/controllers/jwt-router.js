@@ -28,7 +28,7 @@ class Controller {
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)
             .json(r))
-      .catch(err => res.status(500).end())
+      .catch(err => res.status(500).json(err).end())
   }
 }
 let controller = new Controller();
