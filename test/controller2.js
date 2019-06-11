@@ -110,7 +110,7 @@ async function postClaim(pushToken, claimJwtEnc) {
         firstId = r.body
       } else {
         expect(r.body)
-          .that.equals(firstId++)
+          .that.equals(++firstId)
       }
       firstId = r.body
     }).catch((err) => {

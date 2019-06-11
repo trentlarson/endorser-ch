@@ -251,7 +251,6 @@ User story:
 
 
 - 95 0 in uport-demo: test full user story
-- 90 2 export to Neo4J
 - 99 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
 - 99 0 backup DB (& automate)
 - 99 1 Reports of "Your Claims" doesn't show details
@@ -287,6 +286,7 @@ User story:
 - 80 0 optimize seesObjectThroughOthers rather than 2 awaits
 - 80 1 don't insert same subject-object into network DB
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
+- 80 2 export to Neo4J
 - 70 2 add Typescript
 - 70 1 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
 - 80 5 switch/add format to verifiable credentials?
