@@ -64,7 +64,8 @@ function requesterInfo(req, res, next) {
         }
       })
       .catch(e => {
-        res.status(401).json("Low-level error. " + e).end
+        l.error(e)
+        res.status(401).json("Low-level error while parsing JWT: " + e).end
       })
   }
 }
@@ -79,6 +80,7 @@ export default class ExpressServer {
     app.use(Express.static(`${root}/public`));
     app.use(cors({"allowedHeaders":["Content-Type", UPORT_PUSH_TOKEN_HEADER]}))
     app.use('/api', requesterInfo)
+    app.use('/util/makeMeGloballyVisible', requesterInfo)
   }
 
   router(routes) {

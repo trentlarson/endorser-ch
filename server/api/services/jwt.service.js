@@ -188,7 +188,7 @@ class JwtService {
 
       await this.createNetworkRecords(agentDid, issuerDid, attId, null)
         .catch(err => {
-          l.error("Got error creating network records after action claim was created.", err)
+          l.error(err, "Got error creating network records after action claim was created.")
         })
 
     } else if (claim['@context'] === 'http://endorser.ch'
@@ -211,7 +211,7 @@ class JwtService {
 
       await this.createNetworkRecords(claim.party && claim.party.did, issuerDid, null, tenureId)
         .catch(err => {
-          l.error("Got error creating network records after tenure claimwas created.", err)
+          l.error(err, "Got error creating network records after tenure claimwas created.")
         })
 
     } else if (claim['@context'] === 'http://endorser.ch'
@@ -228,12 +228,12 @@ class JwtService {
                 if (confirmData.actionClaimId) {
                   return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
                     .catch(err => {
-                      l.error("Got error creating network records after a confirmation was created.", err)
+                      l.error(err, "Got error creating network records after a confirmation was created.")
                     })
                 } else if (confirmData.tenureClaimId) {
                   return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
                     .catch(err => {
-                      l.error("Got error creating network records after a confirmation was created.", err)
+                      l.error(err, "Got error creating network records after a confirmation was created.")
                     })
                 } else {
                   throw new Error("Failed to create confirmation for JWT " + jwtId)
@@ -257,12 +257,12 @@ class JwtService {
                   if (confirmData.actionClaimId) {
                     return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
                       .catch(err => {
-                        l.error("Got error creating network records after a confirmation was created.", err)
+                        l.error(err, "Got error creating network records after a confirmation was created.")
                       })
                   } else if (confirmData.tenureClaimId) {
                     return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
                       .catch(err => {
-                        l.error("Got error creating network records after a confirmation was created.", err)
+                        l.error(err, "Got error creating network records after a confirmation was created.")
                       })
 
                   } else {
@@ -291,6 +291,7 @@ class JwtService {
 
   async decodeAndVerifyJwt(jwt) {
     if (process.env.NODE_ENV === 'test-local') {
+      // This often yields the following error message if the JWT is malformed: "TypeError: Cannot read property 'toString' of undefined"
       let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
       if (payload.exp < nowEpoch) {

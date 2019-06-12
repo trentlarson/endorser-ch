@@ -26,9 +26,9 @@ let claimRecorder = {
       "@type": "Person",
       identifier: "", // "did:...:..."
     },
-    roleName: "President",
-    startDate: "2019-04-01",
-    endDate: "2020-03-31",
+    roleName: "LandRecorder",
+    startDate: "2000-00-01",
+    endDate: "2009-12-31",
   },
 }
 
@@ -106,21 +106,72 @@ async function postClaim(pushToken, claimJwtEnc) {
       expect(r.status).that.equals(201)
       expect(r.body)
         .to.be.a('number')
-      if (firstId === -1) {
-        firstId = r.body
-      } else {
-        expect(r.body)
-          .that.equals(++firstId)
-      }
-      firstId = r.body
+      expect(r.body)
+        .that.equals(++firstId)
     }).catch((err) => {
       return Promise.reject(err)
     })
 }
 
+describe('Visibility Util', () => {
+
+  it('should make user #2 visible to everyone', () =>
+     request(Server)
+     .post('/api/claim/makeMeGloballyVisible')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .send()
+     .then(r => {
+       expect(r.status).that.equals(201)
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+  )
+
+})
+
 describe('Role', () => {
-  it('should add a new LandRecorder role claim', () => postClaim(pushTokens[2], claimRecorderFor2By2JwtEnc)).timeout(7001)
+
+  it('should add a new LandRecorder role claim', () =>
+     //postClaim(pushTokens[2], claimRecorderFor2By2JwtEnc)
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .send({jwtEncoded: claimRecorderFor2By2JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+       firstId = r.body
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+    ).timeout(7001)
+
+  it('should add a new Secretary role claim', () =>
+     //postClaim(pushTokens[2], claimPresidentFor3By3JwtEnc)
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .send({jwtEncoded: claimPresidentFor3By3JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(201)
+       expect(r.body)
+         .to.be.a('number')
+       expect(r.body)
+         .that.equals(++firstId)
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+    ).timeout(7001)
+
   it('should add a new President role claim', () => postClaim(pushTokens[3], claimPresidentFor3By3JwtEnc)).timeout(7001)
   it('should add another new President role claim', () => postClaim(pushTokens[4], claimPresidentFor4By4JwtEnc)).timeout(7001)
+  it('should confirm first President role claim by 5', () => postClaim(pushTokens[5], claimPresidentFor3By3JwtEnc)).timeout(7001)
+  it('should confirm first President role claim by 6', () => postClaim(pushTokens[6], claimPresidentFor3By3JwtEnc)).timeout(7001)
+  it('should confirm second President role claim by 7', () => postClaim(pushTokens[7], claimPresidentFor4By4JwtEnc)).timeout(7001)
+  it('should confirm second President role claim by 8', () => postClaim(pushTokens[8], claimPresidentFor4By4JwtEnc)).timeout(7001)
+  it('should confirm second President role claim by 9', () => postClaim(pushTokens[9], claimPresidentFor4By4JwtEnc)).timeout(7001)
 
 })

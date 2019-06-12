@@ -860,7 +860,8 @@ describe('Report', () => {
 
 })
 
-describe('Tenure 2: Competing Tenure Claim', () => {
+
+describe('Visibility utils', () => {
 
   it('should get claims from other tests but cannot see inside any', () =>
      request(Server)

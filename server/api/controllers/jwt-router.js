@@ -2,8 +2,9 @@ import * as express from 'express';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import JwtService from '../services/jwt.service';
-import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+import { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible } from '../services/util-higher'
 class Controller {
+
   getById(req, res) {
     JwtService
       .byId(req.params.id, res.locals.tokenIssuer)
@@ -14,12 +15,14 @@ class Controller {
       })
       .catch(err => res.status(500).end())
   }
+
   getByQuery(req, res) {
     JwtService.byQuery(req.query, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => res.status(500).end())
   }
+
   importClaim(req, res) {
     JwtService
       .createWithClaimRecord(req.body.jwtEncoded)
@@ -30,6 +33,13 @@ class Controller {
             .json(r))
       .catch(err => res.status(500).json(err).end())
   }
+
+  makeMeGloballyVisible(req, res) {
+    makeMeGloballyVisible(res.locals.tokenIssuer)
+      .then(() => res.status(201).json({success:true}).end())
+      .catch(err => res.status(500).json({success:false, message:""+err}).end())
+  }
+
 }
 let controller = new Controller();
 
@@ -94,3 +104,9 @@ export default express
   .post('/raw', controller.create)
  */
 
+/**
+ * Consent to make push-token issuer's ID visible to the world
+ * @group claim - Reports
+ * @route POST /api/claim/makeMeGloballyVisible
+ */
+  .post('/makeMeGloballyVisible', controller.makeMeGloballyVisible)

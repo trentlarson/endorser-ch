@@ -1,5 +1,6 @@
 import R from 'ramda'
-import { getSeesDids, seesObjectThroughOthers } from './network-cache.service'
+import l from '../../common/logger'
+import { addCanSee, getSeesDids, seesObjectThroughOthers } from './network-cache.service'
 import { HIDDEN_TEXT, hideDids, isDid } from './util'
 
 async function hideDidsForUser(requesterDid, input) {
@@ -65,4 +66,12 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input) {
   }
 }
 
-module.exports = { hideDidsForUser, hideDidsAndAddLinksToNetwork }
+async function makeMeGloballyVisible(issuerDid) {
+  await addCanSee("*", issuerDid)
+    .catch(err => {
+      l.error(err, "Got error creating issuer-visible network record for " + issuerDid + " after claim was created.")
+      return Promise.reject("Got error creating issuer-visible network record for " + issuerDid + " after claim was created.")
+    })
+}
+
+module.exports = { hideDidsForUser, hideDidsAndAddLinksToNetwork, makeMeGloballyVisible }
