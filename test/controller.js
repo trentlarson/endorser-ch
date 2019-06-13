@@ -409,7 +409,7 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
-  it('should get a claim #' + firstId, () =>
+  it('should get a claim #1', () =>
      request(Server)
      .get('/api/claim/' + firstId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -870,8 +870,7 @@ describe('Visibility utils', () => {
      .then(r => {
        expect(r.body).to.be.an('array')
        for (var i = 0; i < r.body.length; i++) {
-         expect(testUtil.allDidsAreHidden(r.body[i]))
-           .to.be.true
+         expect(testUtil.allDidsAreHidden(r.body[i])).to.be.true
        }
        expect(r.status).that.equals(200)
      })).timeout(7001)
@@ -893,10 +892,8 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body)
-         .to.be.an('array')
-       expect(testUtil.allDidsAreHidden(r.body[0]))
-         .to.be.false
+       expect(r.body).to.be.an('array')
+       expect(testUtil.allDidsAreHidden(r.body[0])).to.be.false
        expect(r.status).that.equals(200)
      })).timeout(7001)
 

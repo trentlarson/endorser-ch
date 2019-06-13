@@ -155,7 +155,7 @@ before(async () => {
 
 })
 
-var firstId = -1
+var claimId
 
 async function postClaim(pushTokenNum, claimJwtEnc) {
   return request(Server)
@@ -164,10 +164,8 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
-      expect(r.body)
-        .that.equals(++firstId)
-      expect(r.body)
-        .to.be.a('number')
+      expect(r.body).that.equals(++claimId)
+      expect(r.body).to.be.a('number')
       expect(r.status).that.equals(201)
     }).catch((err) => {
       return Promise.reject(err)
@@ -175,6 +173,38 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
 }
 
 describe('Roles & Visibility', () => {
+
+  it('should add a new LandRecorder role claim', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .send({jwtEncoded: claimRecorderFor2By2JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body).to.be.a('number')
+       claimId = r.body
+       expect(r.status).that.equals(201)
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+    ).timeout(7001)
+
+  it('should get a claim #1 with all DIDs hidden', () =>
+     request(Server)
+     .get('/api/claim/' + claimId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.a.property('claimContext')
+         .that.equals('http://schema.org')
+       expect(r.body)
+         .that.has.a.property('claimType')
+         .that.equals('Organization')
+       expect(testUtil.allDidsAreHidden(r.body)).to.be.true
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
 
   it('should make user #2 visible to everyone', () =>
      request(Server)
@@ -186,23 +216,17 @@ describe('Roles & Visibility', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-  )
+       )
 
-  it('should add a new LandRecorder role claim', () =>
+  it('should get a claim #2 with some DIDs shown', () =>
      request(Server)
-     .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
-     .send({jwtEncoded: claimRecorderFor2By2JwtEnc})
+     .get('/api/claim/' + claimId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body)
-         .to.be.a('number')
-       firstId = r.body
-       expect(r.status).that.equals(201)
-     }).catch((err) => {
-       return Promise.reject(err)
-     })
-    ).timeout(7001)
+       expect(testUtil.allDidsAreHidden(r.body)).to.be.false
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
 
   it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(7001)
 
