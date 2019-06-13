@@ -298,7 +298,7 @@ class JwtService {
         l.warn("JWT with exp " + payload.exp + " has expired but we're in test mode so using a new time." )
         payload.exp = nowEpoch + 100
       }
-      return {payload, header: {typ: "test"}} // all the other elements will be undefined, obviously
+      return {payload, issuer: payload.iss, header: {typ: "test"}} // all the other elements will be undefined, obviously
     } else {
       const {payload, header, signature, data} = this.jwtDecoded(jwt)
       // this line is lifted from didJwt.verifyJWT
@@ -307,7 +307,7 @@ class JwtService {
     }
   }
 
-  async createWithClaimRecord(jwtEncoded) {
+  async createWithClaimRecord(jwtEncoded, authIssuerId) {
     l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
@@ -316,6 +316,11 @@ class JwtService {
         .catch((err) => {
           return Promise.reject(err)
         })
+
+    if (payload.iss && (payload.iss !== authIssuerId)) {
+      return Promise.reject(`JWT issuer ${authIssuerId} does not match claim iss ${payload.iss}`)
+    }
+
     if (payload.claim) {
       let claimStr = JSON.stringify(payload.claim)
       let claimEncoded = base64url.encode(claimStr)
@@ -345,7 +350,7 @@ class JwtService {
 
     } else {
       l.warn(`${this.constructor.name} JWT received without a claim.`)
-      return {failure: "JWT had no 'claim' property."}
+      return Promise.reject("JWT had no 'claim' property.")
     }
   }
 

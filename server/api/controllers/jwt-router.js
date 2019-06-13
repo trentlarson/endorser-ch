@@ -13,31 +13,31 @@ class Controller {
         if (r) res.json(r);
         else res.status(404).end();
       })
-      .catch(err => res.status(500).end())
+      .catch(err => res.status(500).json(""+err).end())
   }
 
   getByQuery(req, res) {
     JwtService.byQuery(req.query, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
-      .catch(err => res.status(500).end())
+      .catch(err => res.status(500).json(""+err).end())
   }
 
   importClaim(req, res) {
     JwtService
-      .createWithClaimRecord(req.body.jwtEncoded)
+      .createWithClaimRecord(req.body.jwtEncoded, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)
             .json(r))
-      .catch(err => res.status(500).json(err).end())
+      .catch(err => res.status(500).json(""+err).end())
   }
 
   makeMeGloballyVisible(req, res) {
     makeMeGloballyVisible(res.locals.tokenIssuer)
       .then(() => res.status(201).json({success:true}).end())
-      .catch(err => res.status(500).json({success:false, message:""+err}).end())
+      .catch(err => res.status(500).json(""+err).end())
   }
 
 }

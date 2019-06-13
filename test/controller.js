@@ -184,7 +184,7 @@ confirmCornerBakeryTenureFor0By1JwtObj.sub = creds[0].did
 confirmCornerBakeryTenureFor0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmCornerBakeryTenureFor0By1JwtObj.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor0JwtObj))
 confirmCornerBakeryTenureFor0By1JwtObj.iss = creds[1].did
-let confirmCornerBakeryTenureFor0By1JwtProm = credentials[0].createVerification(confirmCornerBakeryTenureFor0By1JwtObj)
+let confirmCornerBakeryTenureFor0By1JwtProm = credentials[1].createVerification(confirmCornerBakeryTenureFor0By1JwtObj)
 
 let claimIIW2019aFor1 = R.clone(claimIIW2019a)
 claimIIW2019aFor1.agent.did = creds[1].did
@@ -196,13 +196,13 @@ let claimIIW2019aFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor1By1JwtObj.sub = creds[1].did
 claimIIW2019aFor1By1JwtObj.claim = R.clone(claimIIW2019aFor1)
 claimIIW2019aFor1By1JwtObj.iss = creds[1].did
-let claimIIW2019aFor1By1JwtProm = credentials[0].createVerification(claimIIW2019aFor1By1JwtObj)
+let claimIIW2019aFor1By1JwtProm = credentials[1].createVerification(claimIIW2019aFor1By1JwtObj)
 
 let claimIIW2019aFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor2By2JwtObj.sub = creds[2].did
 claimIIW2019aFor2By2JwtObj.claim = R.clone(claimIIW2019aFor2)
 claimIIW2019aFor2By2JwtObj.iss = creds[2].did
-let claimIIW2019aFor2By2JwtProm = credentials[0].createVerification(claimIIW2019aFor2By2JwtObj)
+let claimIIW2019aFor2By2JwtProm = credentials[2].createVerification(claimIIW2019aFor2By2JwtObj)
 
 let confirmIIW2019aFor1By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor1By0JwtObj.sub = creds[1].did
@@ -216,7 +216,7 @@ confirmIIW2019aFor2By1JwtObj.sub = creds[2].did
 confirmIIW2019aFor2By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor2By1JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor2))
 confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
-let confirmIIW2019aFor2By1JwtProm = credentials[0].createVerification(confirmIIW2019aFor2By1JwtObj)
+let confirmIIW2019aFor2By1JwtProm = credentials[1].createVerification(confirmIIW2019aFor2By1JwtObj)
 
 let claimFoodPantryFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimFoodPantryFor0By0JwtObj.claim = R.clone(claimFoodPantryFor0)
@@ -404,10 +404,9 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
+       expect(r.body).to.be.a('number')
        firstId = r.body
+       expect(r.status).that.equals(201)
      })).timeout(7001)
 
   it('should get a claim #' + firstId, () =>
@@ -416,7 +415,6 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
@@ -427,6 +425,7 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(creds[0].did)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get a claim with the DID hidden', () =>
@@ -435,7 +434,6 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
@@ -446,6 +444,7 @@ describe('Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(HIDDEN_TEXT)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should add a confirmation for that action', () =>
@@ -455,10 +454,10 @@ describe('Claim', () => {
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 1)
+       expect(r.status).that.equals(201)
      })).timeout(7001)
 
   it('should get 3 claims', () =>
@@ -467,10 +466,10 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get 1 JoinAction claim', () =>
@@ -479,10 +478,10 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get 1 comfirmation', () =>
@@ -491,10 +490,10 @@ describe('Claim', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should add another new claim', () =>
@@ -504,23 +503,23 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimMyNightFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 2)
+       expect(r.status).that.equals(201)
      })).timeout(6002)
 
   it('should add yet another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .send({"jwtEncoded": claimBvcFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 3)
+       expect(r.status).that.equals(201)
      })).timeout(7500)
 
   it('should add another new confirmation', () =>
@@ -530,10 +529,10 @@ describe('Claim', () => {
      .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 4)
+       expect(r.status).that.equals(201)
      })).timeout(6002)
 
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
@@ -543,24 +542,24 @@ describe('Claim', () => {
      .send({"jwtEncoded": claimDebugFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 5)
+       expect(r.status).that.equals(201)
      })).timeout(6002)
 
 
   it('should add another new confirmation of two claims', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .send({"jwtEncoded": confirmMultipleFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(201)
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 6)
+       expect(r.status).that.equals(201)
      })).timeout(6002)
 
 })
@@ -574,7 +573,6 @@ describe('Action', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        console.log("r.body",r.body)
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('agentDid')
@@ -594,6 +592,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get complaint about a missing JWT', () =>
@@ -601,10 +600,10 @@ describe('Action', () => {
      .get('/api/action/' + firstId)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(400)
-       expect(r.status).that.equals(401)
        expect(r.body)
          .that.equals("Missing JWT In " + UPORT_PUSH_TOKEN_HEADER)
+       expect(400)
+       expect(r.status).that.equals(401)
      }))
 
 
@@ -614,7 +613,6 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('agentDid')
@@ -622,6 +620,7 @@ describe('Action', () => {
        expect(r.body)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get no actions that match query', () =>
@@ -630,10 +629,10 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get one action that matched query', () =>
@@ -642,7 +641,6 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -662,6 +660,7 @@ describe('Action', () => {
        expect(action1)
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29 15:00:00')
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get enough past claims', () =>
@@ -670,7 +669,6 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(4)
@@ -690,6 +688,7 @@ describe('Action', () => {
        expect(action1)
          .that.has.property('eventStartTime')
          .that.equals('2019-02-01 02:00:00')
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get no claims today', () =>
@@ -698,10 +697,10 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
 })
@@ -714,7 +713,6 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('orgName')
@@ -725,6 +723,7 @@ describe('Event', () => {
        expect(r.body)
          .that.has.property('startTime')
          .that.equals('2018-12-29 15:00:00')
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get 1 event', () =>
@@ -733,10 +732,10 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get a set of action claims & confirmations', () =>
@@ -745,7 +744,6 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
@@ -766,6 +764,7 @@ describe('Event', () => {
          .that.has.property(1)
          .that.has.property('issuer')
          .that.equals(creds[1].did)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
 })
@@ -779,10 +778,10 @@ describe('Tenure', () => {
       .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
       .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.status).that.equals(201)
         expect(r.body)
           .to.be.a('number')
           .that.equals(firstId + 7)
+        expect(r.status).that.equals(201)
       })).timeout(6000)
 
   it('should get 1 claim', () =>
@@ -791,10 +790,10 @@ describe('Tenure', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
 })
@@ -807,7 +806,6 @@ describe('Report', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
@@ -832,6 +830,7 @@ describe('Report', () => {
        expect(r.body[1].actions)
          .to.be.an('array')
          .of.length(1)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get 1 tenure', () =>
@@ -840,10 +839,10 @@ describe('Report', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get no tenures', () =>
@@ -852,10 +851,10 @@ describe('Report', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
 })
@@ -869,13 +868,12 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
-       expect(r.body)
-         .to.be.an('array')
+       expect(r.body).to.be.an('array')
        for (var i = 0; i < r.body.length; i++) {
          expect(testUtil.allDidsAreHidden(r.body[i]))
            .to.be.true
        }
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should create a new tenure', () =>
@@ -885,9 +883,8 @@ describe('Visibility utils', () => {
      .send({ "jwtEncoded": claimCornerBakeryTenureFor0By0JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body).to.be.a('number')
        expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
      })).timeout(7001)
 
   it('should get claims and can see inside the most recent one', () =>
@@ -896,11 +893,11 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
        expect(testUtil.allDidsAreHidden(r.body[0]))
          .to.be.false
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should confirm that competing tenure', () =>
@@ -910,9 +907,8 @@ describe('Visibility utils', () => {
      .send({ "jwtEncoded": confirmCornerBakeryTenureFor0By1JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body).to.be.a('number')
        expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
      })).timeout(7001)
 
   it('should get 2 tenure claims', () =>
@@ -921,10 +917,10 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
   it('should get 2 competing tenures and confirmations', () =>
@@ -933,10 +929,10 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.status).that.equals(200)
        expect(r.body)
          .to.be.an('array')
          .of.length(2)
+       expect(r.status).that.equals(200)
      })).timeout(7001)
 
 })
@@ -950,9 +946,8 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": claimIIW2019aFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body).to.be.a('number')
        expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
      })).timeout(7001)
 
   it('should claim attendance for 2', () =>
@@ -962,9 +957,8 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": claimIIW2019aFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body).to.be.a('number')
        expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
      })).timeout(7001)
 
   it('should confirm attendance for 1 by 0', () =>
@@ -974,9 +968,8 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": confirmIIW2019aFor1By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body).to.be.a('number')
        expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
      })).timeout(7001)
 
   it('should confirm attendance for 2 by 1', () =>
@@ -986,9 +979,8 @@ describe('Transitive Connections', () => {
      .send({"jwtEncoded": confirmIIW2019aFor2By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body).to.be.a('number')
        expect(r.status).that.equals(201)
-       expect(r.body)
-         .to.be.a('number')
      })).timeout(7001)
 
 })

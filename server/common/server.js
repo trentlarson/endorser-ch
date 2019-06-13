@@ -51,13 +51,16 @@ function requesterInfo(req, res, next) {
   } else {
     JwtService.decodeAndVerifyJwt(jwt)
       .then(({payload, header, signature, data, doc, authenticators, issuer}) => {
-        //console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
+        console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
         if (!payload || !header) {
           res.status(401).json('Unverified JWT').end()
         } else if (payload.exp < Math.floor(new Date().getTime() / 1000) ) {
           res.status(401).json('JWT Expired').end()
         } else if (header.typ === 'none') {
           res.status(401).json('Insecure JWT type').end()
+        } else if (payload.iss !== issuer) {
+          // I think this is already checked (and I've never hit this case) but it pays to be careful.
+          res.status(401).json(`JWT issuer ${issuer} does not match auth payload iss ${payload.iss}`).end()
         } else {
           res.locals.tokenIssuer = payload.iss
           next();
