@@ -65,6 +65,10 @@ function constructWhere(params, excludeConfirmations) {
 
 class EndorserDatabase {
 
+  ALL_SUBJECT_MATCH() {
+    return "*"
+  }
+
   constructor() {
     /** I feel like we should stop the DB, but this gets run twice on a kill and throws an error for some reason.
         Well, it doesn't look like it hurts anything to CTRL-C.
@@ -529,7 +533,7 @@ class EndorserDatabase {
       var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?)")
       db.run(stmt, [subject, object], function(err) {
         if (err) {
-          // This check is no longer necessary due to "OR IGNORE". Nuke it when you've tested.
+          // This SQLite check is no longer necessary due to "OR IGNORE". Nuke it when you've tested.
           if (err.errno === 19) {
             // If you print out this error, it looks like this:
             // { [Error: SQLITE_CONSTRAINT: UNIQUE constraint failed: network.subject, network.object] errno: 19, code: 'SQLITE_CONSTRAINT' }
@@ -546,7 +550,7 @@ class EndorserDatabase {
     })
   }
 
-  // return list of objects that are seen by subject
+  // return all objects that are explicitly seen by subject
   async getSeesNetwork(subject) {
     return new Promise((resolve, reject) => {
       var data = []
@@ -562,7 +566,23 @@ class EndorserDatabase {
     })
   }
 
-  // return list of subjects that can see object
+  // return all objects that are seen by everyone
+  async getSeenByAll() {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT object FROM network WHERE subject = '" + this.ALL_SUBJECT_MATCH() + "' ORDER BY object", [], function(err, row) {
+        data.push(row.object)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
+  // return all subjects that can explicitly see object
   async getSeenByNetwork(object) {
     return new Promise((resolve, reject) => {
       var data = []

@@ -3,6 +3,7 @@ import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import JwtService from '../services/jwt.service';
 import { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible } from '../services/util-higher'
+import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
 class Controller {
 
   getById(req, res) {
@@ -38,6 +39,12 @@ class Controller {
     makeMeGloballyVisible(res.locals.tokenIssuer)
       .then(() => res.status(201).json({success:true}).end())
       .catch(err => res.status(500).json(""+err).end())
+  }
+
+  getCanSeeDids(req, res) {
+    getAllDidsRequesterCanSee(res.locals.tokenIssuer)
+      .then(r => res.json(r))
+      .catch(err => res.status(500).end())
   }
 
 }
@@ -110,3 +117,12 @@ export default express
  * @route POST /api/claim/makeMeGloballyVisible
  */
   .post('/makeMeGloballyVisible', controller.makeMeGloballyVisible)
+
+/**
+ * Get all DIDs this person can see
+ * @group report - Reports
+ * @route GET /api/report/canSeeDids
+ * @returns {Array.object} 200 - list of DIDs user can see
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/whichDidsICanSee', controller.getCanSeeDids)

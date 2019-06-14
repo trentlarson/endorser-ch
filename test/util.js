@@ -6,6 +6,38 @@ const { Credentials } = require('uport-credentials')
 let NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
 let TOMORROW_EPOCH = NOW_EPOCH + (24 * 60 * 60)
 
+
+function hideDids(allowedDids, input) {
+
+  // Note that this process is similar in util-higher addLinkToNetwork. Change both!
+  // (Nobody will see this comment... let's just hope they find it during testing.)
+
+  if (Object.prototype.toString.call(input) === "[object String]") {
+    if (isDid(input)) {
+      if (allowedDids.indexOf(input) > -1) {
+        return input
+      } else {
+        return HIDDEN_TEXT
+      }
+    } else {
+      return input
+    }
+  } else if (input instanceof Object) {
+    let result = R.map(R.curry(hideDids)(allowedDids), input)
+    if (!Array.isArray(input)) {
+      // it's an object
+      for (let key of R.keys(input)) {
+        if (isDid(key)) {
+          // We could get around this by generating suffixes or something, but I don't like that.
+          throw new Error("Do not use DIDs for keys (because you'll get conflicts in hideDids).")
+        }
+      }
+    }
+    return result
+  } else {
+    return input
+  }
+}
 function allDidsAreHidden(result) {
   if (Object.prototype.toString.call(result) === "[object String]") {
     if (isDid(result) && result !== HIDDEN_TEXT) {

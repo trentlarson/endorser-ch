@@ -62,36 +62,4 @@ function isDid(value) {
   return value && value.startsWith("did:") && (value.substring(5).indexOf(":") > -1)
 }
 
-function hideDids(allowedDids, input) {
-
-  // Note that this process is copied in util-higher addLinkToNetwork. Change both!
-  // (Nobody will see that.)
-
-  if (Object.prototype.toString.call(input) === "[object String]") {
-    if (isDid(input)) {
-      if (allowedDids.indexOf(input) > -1) {
-        return input
-      } else {
-        return HIDDEN_TEXT
-      }
-    } else {
-      return input
-    }
-  } else if (input instanceof Object) {
-    let result = R.map(R.curry(hideDids)(allowedDids), input)
-    if (!Array.isArray(input)) {
-      // it's an object
-      for (let key of R.keys(input)) {
-        if (isDid(key)) {
-          // We could get around this by generating suffixes or something, but I don't like that.
-          throw new Error("Do not use DIDs for keys (because you'll get conflicts in hideDids).")
-        }
-      }
-    }
-    return result
-  } else {
-    return input
-  }
-}
-
-module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, hideDids, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

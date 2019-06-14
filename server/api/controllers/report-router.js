@@ -4,7 +4,6 @@ import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import TenureService from '../services/tenure.service';
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
-import { getSeesDids } from '../services/network-cache.service'
 class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
@@ -15,11 +14,6 @@ class TenureController {
   getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => res.status(500).end())
-  }
-  getCanSeeDids(req, res) {
-    getSeesDids(res.locals.tokenIssuer)
       .then(r => res.json(r))
       .catch(err => res.status(500).end())
   }
@@ -71,12 +65,3 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
   .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsAtPoint)
-
-/**
- * Get all DIDs this person can see
- * @group report - Reports
- * @route GET /api/report/canSeeDids
- * @returns {Array.object} 200 - list of DIDs user can see
- * @returns {Error}  default - Unexpected error
- */
-  .get('/canSeeDids', tenureController.getCanSeeDids)
