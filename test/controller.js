@@ -328,7 +328,6 @@ describe('Util', () => {
     expect(testUtil.allDidsAreHidden(test)).to.be.true
   })
 
-  /**
   it('should hide DIDs', () => {
     let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
     let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
@@ -352,7 +351,7 @@ describe('Util', () => {
     expect(hideDidsAndAddLinksToNetwork(addr0, someObj1)).to.eventually.deep.equal(repObj11)
     expect(hideDidsAndAddLinksToNetwork(addr0, [])).to.eventually.deep.equal([])
     expect(hideDidsAndAddLinksToNetwork(addr0, [someObj1])).to.eventually.deep.equal([repObj11])
-    expect(() => hideDidsAndAddLinksToNetwork(addr0, someObj2)).to.be.rejected()
+    expect(hideDidsAndAddLinksToNetwork(addr0, someObj2)).to.be.rejected
 
     allowedDids = [addrd]
     expect(hideDidsAndAddLinksToNetwork(allowedDids, addrd)).to.eventually.deep.equal(addrd)
@@ -362,9 +361,8 @@ describe('Util', () => {
     expect(hideDidsAndAddLinksToNetwork(allowedDids, addr0)).to.eventually.deep.equal(addr0)
     expect(hideDidsAndAddLinksToNetwork(allowedDids, addra)).to.eventually.deep.equal(HIDDEN_TEXT)
     expect(hideDidsAndAddLinksToNetwork(allowedDids, someObj1)).to.eventually.deep.equal(repObj12)
-    expect(() => hideDidsAndAddLinksToNetwork(allowedDids, someObj2)).to.throw()
+    expect(hideDidsAndAddLinksToNetwork(allowedDids, someObj2)).to.be.rejected
   })
-  **/
 
   it('should get a sorted object', () =>
      request(Server)

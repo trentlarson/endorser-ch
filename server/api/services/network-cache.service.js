@@ -35,8 +35,8 @@ async function getDidsRequesterCanSeeExplicitly(requesterDid) {
 **/
 async function getAllDidsRequesterCanSee(requesterDid) {
   let didsCanSee = await getDidsRequesterCanSeeExplicitly(requesterDid)
-  didsCanSee.concat(await getSeenByAll())
-  return didsCanSee
+  var result = didsCanSee.concat(await getSeenByAll())
+  return result
 }
 
 

@@ -51,7 +51,7 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
       for (let key of R.keys(input)) {
         if (isDid(key)) {
           // We could get around this by generating suffixes or something, but I don't like that.
-          throw new Error("Do not use DIDs for keys (because you'll get conflicts in hideDidsAndAddLinksToNetwork).")
+          return Promise.reject("Do not use DIDs for keys (because you'll get conflicts in hideDidsAndAddLinksToNetwork).")
         }
         if (result[key] === HIDDEN_TEXT) {
           // add list of anyone else who can see them

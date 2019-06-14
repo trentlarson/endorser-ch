@@ -215,8 +215,7 @@ describe('Roles & Visibility', () => {
        expect(r.status).that.equals(201)
      }).catch((err) => {
        return Promise.reject(err)
-     })
-       )
+     }))
 
   it('should get a claim #2 with some DIDs shown', () =>
      request(Server)
