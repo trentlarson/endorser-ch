@@ -3,7 +3,7 @@ import util from 'util'
 import l from '../../common/logger'
 
 // the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
-const HIDDEN_TEXT = 'did:none:U_CANNOT_C' // if you change this, edit uport-demo/src/utilities/claims.js
+const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token'
 
 // create confirmation list from a list of "ClaimsAndConfirmations" for the same claim
