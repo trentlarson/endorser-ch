@@ -123,9 +123,17 @@ class JwtService {
     l.trace(`Adding network entry from ${agentOrPartyDid} to ${issuerDid}`)
     results.push(addCanSee(agentOrPartyDid, issuerDid))
 
+    /**
+       So this was the approach where anyone you confirm would see your ID.
+       I don't know if that's quite what we want; now that we've got the
+       means to see any intermediate connection, I think that's a better way to
+       allow people to see connections.
+
+       If you decide to restore this, be sure to add new claim types, eg Org Role.
+
     if (actionClaimId) {
       // put the issuer in the confirmed claim's confirmed-issuer network
-      results.push(db.manyConfirmationsByActionClaim(actionClaimId)
+      results.push(db.confirmationsByActionClaim(actionClaimId)
                    .then(confirmations => {
                      let subResults = []
                      for (var confirm of confirmations) {
@@ -137,7 +145,7 @@ class JwtService {
     }
     if (tenureClaimId) {
       // put the issuer in the confirmed claim's confirmed-issuer network
-      results.push(db.manyConfirmationsByTenureClaim(tenureClaimId)
+      results.push(db.confirmationsByTenureClaim(tenureClaimId)
                    .then(confirmations => {
                      let subResults = []
                      for (var confirm of confirmations) {
@@ -147,6 +155,7 @@ class JwtService {
                      return Promise.all(subResults)
                    }))
     }
+    **/
 
     return Promise.all(results)
   }
@@ -183,12 +192,34 @@ class JwtService {
 
       }
 
-      let attId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
-      l.trace(`${this.constructor.name} New action # ${attId}`)
+      let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
+      l.trace(`${this.constructor.name} New action # ${actionId}`)
 
-      await this.createNetworkRecords(agentDid, issuerDid, attId, null)
+      await this.createNetworkRecords(agentDid, issuerDid, actionId, null)
         .catch(err => {
           l.error(err, "Got error creating network records after action claim was created.")
+        })
+
+    } else if (claim['@context'] === 'http://schema.org'
+               && claim['@type'] === 'Organization'
+               && claim.member
+               && claim.member['@type'] === 'OrganizationRole'
+               && claim.member.member.identifier) {
+
+      let entity = {
+        jwtRowId: jwtId,
+        issuerDid: issuerDid,
+        orgName: claim.name,
+        roleName: claim.member.roleName,
+        startDate: claim.member.startDate,
+        endDate: claim.member.endDate,
+        memberDid: claim.member.member.identifier
+      }
+      let orgRoleId = await db.orgRoleInsert(entity)
+
+      await this.createNetworkRecords(claim.member.member.identifier, issuerDid, null, null)
+        .catch(err => {
+          l.error(err, "Got error creating network records after org role claim was created.")
         })
 
     } else if (claim['@context'] === 'http://endorser.ch'
@@ -211,7 +242,7 @@ class JwtService {
 
       await this.createNetworkRecords(claim.party && claim.party.did, issuerDid, null, tenureId)
         .catch(err => {
-          l.error(err, "Got error creating network records after tenure claimwas created.")
+          l.error(err, "Got error creating network records after tenure claim was created.")
         })
 
     } else if (claim['@context'] === 'http://endorser.ch'

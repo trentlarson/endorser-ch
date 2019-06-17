@@ -80,3 +80,19 @@ UPDATE action_claim SET issuerDid = (SELECT jwt.issuer FROM jwt WHERE jwt.rowid 
 DELETE FROM jwt WHERE subject IS null;
 DELETE FROM action_claim WHERE agentDid IS NULL;
 
+--------------------------------------------------------------------------------
+-- Organizations
+
+CREATE TABLE org_role_claim (
+       jwtRowId INTEGER,
+       issuerDid TEXT, -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
+       orgName TEXT,
+       roleName TEXT,
+       startDate DATE,
+       endDate DATE,
+       memberDid TEXT -- DID of the member with the role; did:ethr are 52 chars
+);
+
+ALTER TABLE confirmation ADD COLUMN orgRoleRowId INTEGER;
+
+

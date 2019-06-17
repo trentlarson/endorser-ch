@@ -242,7 +242,7 @@ db.each(selectSql, [], function(err, row) {
 
 User story:
 - in endorser-ch
-  - run test/test.sh (can quit after first tests)
+  - run test/test.sh (can quit after first set of tests)
   - run: NODE_ENV=test-local npm run dev
 - in uport-demo
   - see duplicate claims Duane's Friend (and maybe as Trent)

@@ -81,6 +81,13 @@ class EndorserDatabase {
     **/
   }
 
+
+
+
+  /****************************************************************
+   * Action
+   **/
+
   actionClaimById(id) {
     return new Promise((resolve, reject) => {
       db.get("SELECT * FROM action_claim WHERE rowid = ?", [id], function(err, row) {
@@ -193,6 +200,13 @@ class EndorserDatabase {
     })
   }
 
+
+
+
+  /****************************************************************
+   * Confirmation
+   **/
+
   confirmationByIssuerAndAction(issuerDid, actionRowId) {
     return new Promise((resolve, reject) => {
       db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND actionRowId = ?", [issuerDid, actionRowId], function(err, row) {
@@ -221,7 +235,8 @@ class EndorserDatabase {
     })
   }
 
-  manyConfirmationsByActionClaim(actionRowId) {
+  /** see notes on previous usage in jwt.service.js
+  confirmationsByActionClaim(actionRowId) {
     return new Promise((resolve, reject) => {
       var data = []
       const sql = "SELECT rowid, * FROM confirmation WHERE actionRowId = ?"
@@ -237,7 +252,7 @@ class EndorserDatabase {
     })
   }
 
-  manyConfirmationsByTenureClaim(tenureRowId) {
+  confirmationsByTenureClaim(tenureRowId) {
     return new Promise((resolve, reject) => {
       var data = []
       const sql = "SELECT rowid, * FROM confirmation WHERE tenureRowId = ?"
@@ -252,6 +267,7 @@ class EndorserDatabase {
       })
         })
   }
+  **/
 
   confirmationInsert(issuer, jwtRowId, actionRowId, tenureRowId, origClaim) {
     return new Promise((resolve, reject) => {
@@ -265,6 +281,13 @@ class EndorserDatabase {
       })
     })
   }
+
+
+
+
+  /****************************************************************
+   * Event
+   **/
 
   eventById(id) {
     return new Promise((resolve, reject) => {
@@ -312,6 +335,13 @@ class EndorserDatabase {
       })
     })
   }
+
+
+
+
+  /****************************************************************
+   * JWT
+   **/
 
   buildJwtEntity(payload, claim, claimEncoded, jwtEncoded) {
     let issuedAt = new Date(payload.iat * 1000).toISOString()
@@ -400,6 +430,33 @@ class EndorserDatabase {
       })
     })
   }
+
+
+
+
+  /****************************************************************
+   * Org Role
+   **/
+
+  async orgRoleInsert(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO org_role_claim (jwtRowId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.orgName, entity.roleName, entity.startDate, entity.endDate, entity.memberDid], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+
+
+
+  /****************************************************************
+   * Tenure
+   **/
 
   async tenureClaimById(id) {
     return new Promise((resolve, reject) => {
@@ -524,6 +581,13 @@ class EndorserDatabase {
       })
     })
   }
+
+
+
+
+  /****************************************************************
+   * Network Visibility
+   **/
 
   /**
     If the pair already exists, will resolve ()instead of rejecting).

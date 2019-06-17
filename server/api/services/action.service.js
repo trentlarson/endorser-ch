@@ -23,7 +23,7 @@ class ActionService {
   }
 
   async getActionClaimsAndConfirmationsForEventsSince(dateTime) {
-    // Note that the following is very similar to TenureService.getClaimsAndConfirmationsAtPoint
+    // Note that the following is very similar to OrgService.getClaimsAndConfirmationsForRoleOnDate & TenureService.getClaimsAndConfirmationsAtPoint
 
     let acacs = await db.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
     // group all actions by DID

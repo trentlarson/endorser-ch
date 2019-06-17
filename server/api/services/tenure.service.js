@@ -27,7 +27,7 @@ class TenureService {
 
   async getClaimsAndConfirmationsAtPoint(lat, lon) {
     l.info(`${this.constructor.name}.getClaimsAndConfirmationsAtPoint(${lat}, ${lon})`);
-    // Note that this is very similar to ActionService.getActionClaimsAndConfirmationsForEventsSince
+    // Note that this is very similar to ActionService.getActionClaimsAndConfirmationsForEventsSince & OrgService.getActionClaimsAndConfirmationsForRoleOnDate
 
     let tcacs = await db.retrieveTenureClaimsAndConfirmationsAtPoint(lat, lon)
     // group all by DID
@@ -35,7 +35,6 @@ class TenureService {
     // now make a group for each DID
     let tcacListsByDidThenTenure = R.map(tcacList => R.groupBy(tcac => tcac.tenure.id)(tcacList))(tcacListsByDid)
     // now aggregate all confirmations for each DID-tenure
-    //let tcacObjectByDid = R.map(R.map(buildTenureConfirmationList))(tcacListsByDidThenTenure)
     let tcacObjectByDid = R.map(R.map(R.curry(buildConfirmationList)('tenure')))(tcacListsByDidThenTenure)
     let tcacListByDid = R.map(R.values)(tcacObjectByDid)
     // now create an array so that the DIDs aren't used as keys
