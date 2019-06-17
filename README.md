@@ -284,6 +284,7 @@ User story:
     - 90 2 send & check the JWT
   - x 90 1 add in-network data for each insert
 - 90 5 write & support use-cases
+- 90 0 fix display of bad JWT ID error, eg when signer doesn't match logged in (uport-demo test) user
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 80 0 optimize seesObjectThroughOthers rather than 2 awaits
