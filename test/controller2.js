@@ -82,46 +82,60 @@ claimSecretaryFor2By2JwtObj.iss = creds[2].did
 claimSecretaryFor2By2JwtObj.sub = creds[2].did
 let claimSecretaryFor2By2JwtProm = credentials[2].createVerification(claimSecretaryFor2By2JwtObj)
 
-let claimPresidentFor3JwtObj = R.clone(testUtil.jwtTemplate)
-claimPresidentFor3JwtObj.claim = R.clone(claimPresident)
-claimPresidentFor3JwtObj.claim.member.member.identifier = creds[3].did
-claimPresidentFor3JwtObj.sub = creds[3].did
+let claimPresidentFor3 = R.clone(claimPresident)
+claimPresidentFor3.member.member.identifier = creds[3].did
 
-let claimPresidentFor3By3JwtObj = R.clone(claimPresidentFor3JwtObj)
+let claimPresidentFor3By3JwtObj = R.clone(testUtil.jwtTemplate)
+claimPresidentFor3By3JwtObj.claim = R.clone(claimPresidentFor3)
 claimPresidentFor3By3JwtObj.iss = creds[3].did
+claimPresidentFor3By3JwtObj.sub = creds[3].did
 let claimPresidentFor3By3JwtProm = credentials[3].createVerification(claimPresidentFor3By3JwtObj)
 
-let claimPresidentFor3By5JwtObj = R.clone(claimPresidentFor3JwtObj)
-claimPresidentFor3By5JwtObj.iss = creds[5].did
-let claimPresidentFor3By5JwtProm = credentials[5].createVerification(claimPresidentFor3By5JwtObj)
+let confirmPresidentFor3By5JwtObj = R.clone(testUtil.jwtTemplate)
+confirmPresidentFor3By5JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmPresidentFor3By5JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor3))
+confirmPresidentFor3By5JwtObj.iss = creds[5].did
+let confirmPresidentFor3By5JwtProm = credentials[5].createVerification(confirmPresidentFor3By5JwtObj)
 
-let claimPresidentFor3By6JwtObj = R.clone(claimPresidentFor3JwtObj)
-claimPresidentFor3By6JwtObj.iss = creds[6].did
-let claimPresidentFor3By6JwtProm = credentials[6].createVerification(claimPresidentFor3By6JwtObj)
+let confirmPresidentFor3By6JwtObj = R.clone(testUtil.jwtTemplate)
+confirmPresidentFor3By6JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmPresidentFor3By6JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor3))
+confirmPresidentFor3By6JwtObj.iss = creds[6].did
+let confirmPresidentFor3By6JwtProm = credentials[6].createVerification(confirmPresidentFor3By6JwtObj)
 
-let claimPresidentFor4JwtObj = R.clone(testUtil.jwtTemplate)
-claimPresidentFor4JwtObj.claim = R.clone(claimPresident)
-claimPresidentFor4JwtObj.claim.member.member.identifier = creds[4].did
-claimPresidentFor4JwtObj.sub = creds[4].did
 
-let claimPresidentFor4By4JwtObj = R.clone(claimPresidentFor4JwtObj)
+
+let claimPresidentFor4 = R.clone(claimPresident)
+claimPresidentFor4.member.member.identifier = creds[4].did
+
+let claimPresidentFor4By4JwtObj = R.clone(testUtil.jwtTemplate)
+claimPresidentFor4By4JwtObj.claim = R.clone(claimPresidentFor4)
 claimPresidentFor4By4JwtObj.iss = creds[4].did
+claimPresidentFor4By4JwtObj.sub = creds[4].did
 let claimPresidentFor4By4JwtProm = credentials[4].createVerification(claimPresidentFor4By4JwtObj)
 
-let claimPresidentFor4By7JwtObj = R.clone(claimPresidentFor4JwtObj)
-claimPresidentFor4By7JwtObj.iss = creds[7].did
-let claimPresidentFor4By7JwtProm = credentials[7].createVerification(claimPresidentFor4By7JwtObj)
 
-let claimPresidentFor4By8JwtObj = R.clone(claimPresidentFor4JwtObj)
-claimPresidentFor4By8JwtObj.iss = creds[8].did
-let claimPresidentFor4By8JwtProm = credentials[8].createVerification(claimPresidentFor4By8JwtObj)
 
-let claimPresidentFor4By9JwtObj = R.clone(claimPresidentFor4JwtObj)
-claimPresidentFor4By9JwtObj.iss = creds[9].did
-let claimPresidentFor4By9JwtProm = credentials[9].createVerification(claimPresidentFor4By9JwtObj)
+let confirmPresidentFor4By7JwtObj = R.clone(testUtil.jwtTemplate)
+confirmPresidentFor4By7JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmPresidentFor4By7JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor4))
+confirmPresidentFor4By7JwtObj.iss = creds[7].did
+let confirmPresidentFor4By7JwtProm = credentials[7].createVerification(confirmPresidentFor4By7JwtObj)
 
-var pushTokens, claimPresidentFor3By3JwtEnc, claimPresidentFor3By5JwtEnc, claimPresidentFor3By6JwtEnc,
-    claimPresidentFor4By4JwtEnc, claimPresidentFor4By7JwtEnc, claimPresidentFor4By8JwtEnc, claimPresidentFor4By9JwtEnc,
+let confirmPresidentFor4By8JwtObj = R.clone(testUtil.jwtTemplate)
+confirmPresidentFor4By8JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmPresidentFor4By8JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor4))
+confirmPresidentFor4By8JwtObj.iss = creds[8].did
+let confirmPresidentFor4By8JwtProm = credentials[8].createVerification(confirmPresidentFor4By8JwtObj)
+
+let confirmPresidentFor4By9JwtObj = R.clone(testUtil.jwtTemplate)
+confirmPresidentFor4By9JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmPresidentFor4By9JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor4))
+confirmPresidentFor4By9JwtObj.iss = creds[9].did
+let confirmPresidentFor4By9JwtProm = credentials[9].createVerification(confirmPresidentFor4By9JwtObj)
+
+var pushTokens, claimPresidentFor3By3JwtEnc, confirmPresidentFor3By5JwtEnc, confirmPresidentFor3By6JwtEnc,
+    claimPresidentFor4By4JwtEnc, confirmPresidentFor4By7JwtEnc, confirmPresidentFor4By8JwtEnc, confirmPresidentFor4By9JwtEnc,
     claimRecorderFor2By2JwtEnc, claimSecretaryFor2By2JwtEnc
 
 before(async () => {
@@ -130,23 +144,23 @@ before(async () => {
 
   await Promise.all([
     claimPresidentFor3By3JwtProm,
-    claimPresidentFor3By5JwtProm,
-    claimPresidentFor3By6JwtProm,
+    confirmPresidentFor3By5JwtProm,
+    confirmPresidentFor3By6JwtProm,
     claimPresidentFor4By4JwtProm,
-    claimPresidentFor4By7JwtProm,
-    claimPresidentFor4By8JwtProm,
-    claimPresidentFor4By9JwtProm,
+    confirmPresidentFor4By7JwtProm,
+    confirmPresidentFor4By8JwtProm,
+    confirmPresidentFor4By9JwtProm,
     claimRecorderFor2By2JwtProm,
     claimSecretaryFor2By2JwtProm,
   ]).then((jwts) => {
     [
       claimPresidentFor3By3JwtEnc,
-      claimPresidentFor3By5JwtEnc,
-      claimPresidentFor3By6JwtEnc,
+      confirmPresidentFor3By5JwtEnc,
+      confirmPresidentFor3By6JwtEnc,
       claimPresidentFor4By4JwtEnc,
-      claimPresidentFor4By7JwtEnc,
-      claimPresidentFor4By8JwtEnc,
-      claimPresidentFor4By9JwtEnc,
+      confirmPresidentFor4By7JwtEnc,
+      confirmPresidentFor4By8JwtEnc,
+      confirmPresidentFor4By9JwtEnc,
       claimRecorderFor2By2JwtEnc,
       claimSecretaryFor2By2JwtEnc,
     ] = jwts
@@ -234,11 +248,11 @@ describe('Roles & Visibility', () => {
 
   it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(7001)
   it('should add another new President role claim', () => postClaim(4, claimPresidentFor4By4JwtEnc)).timeout(7001)
-  it('should confirm 3 as President role claim by 5', () => postClaim(5, claimPresidentFor3By5JwtEnc)).timeout(7001)
-  it('should confirm 3 as President role claim by 6', () => postClaim(6, claimPresidentFor3By6JwtEnc)).timeout(7001)
-  it('should confirm 4 as President role claim by 7', () => postClaim(7, claimPresidentFor4By7JwtEnc)).timeout(7001)
-  it('should confirm 4 as President role claim by 8', () => postClaim(8, claimPresidentFor4By8JwtEnc)).timeout(7001)
-  it('should confirm 4 as President role claim by 9', () => postClaim(9, claimPresidentFor4By9JwtEnc)).timeout(7001)
+  it('should confirm 3 as President role claim by 5', () => postClaim(5, confirmPresidentFor3By5JwtEnc)).timeout(7001)
+  it('should confirm 3 as President role claim by 6', () => postClaim(6, confirmPresidentFor3By6JwtEnc)).timeout(7001)
+  it('should confirm 4 as President role claim by 7', () => postClaim(7, confirmPresidentFor4By7JwtEnc)).timeout(7001)
+  it('should confirm 4 as President role claim by 8', () => postClaim(8, confirmPresidentFor4By8JwtEnc)).timeout(7001)
+  it('should confirm 4 as President role claim by 9', () => postClaim(9, confirmPresidentFor4By9JwtEnc)).timeout(7001)
 
   it('should get org role claims & confirmations', () =>
      request(Server)
