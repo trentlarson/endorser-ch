@@ -240,4 +240,14 @@ describe('Roles & Visibility', () => {
   it('should confirm 4 as President role claim by 8', () => postClaim(8, claimPresidentFor4By8JwtEnc)).timeout(7001)
   it('should confirm 4 as President role claim by 9', () => postClaim(9, claimPresidentFor4By9JwtEnc)).timeout(7001)
 
+  it('should get org role claims & confirmations', () =>
+     request(Server)
+     .get('/api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-07-01')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(testUtil.allDidsAreHidden(r.body)).to.be.false
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
 })

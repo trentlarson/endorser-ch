@@ -82,7 +82,7 @@ class JwtService {
 
       let origClaimStr = JSON.stringify(origClaim)
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, actionClaimId, null, origClaimStr)
+      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${actionClaimId}`);
       return {newId:result, actionClaimId}
 
@@ -97,9 +97,29 @@ class JwtService {
 
       let origClaimStr = JSON.stringify(origClaim)
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, null, tenureClaimId, origClaimStr)
+      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${tenureClaimId}`);
       return {newId:result, tenureClaimId}
+
+    } else if (origClaim['@context'] === 'http://schema.org'
+               && origClaim['@type'] === 'Organization'
+               && origClaim['@type'] === 'Organization'
+               && origClaim.member
+               && origClaim.member['@type'] === 'OrganizationRole'
+               && origClaim.member.member
+               && origClaim.member.member.identifier) {
+
+      let orgRoleClaimId = await db.orgRoleClaimIdByOrgAndDates(origClaim.name, origClaim.member.roleName, origClaim.member.startDate, origClaim.member.endDate, origClaim.member.member.identifier)
+      if (orgRoleClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
+
+      let confirmation = await db.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
+      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
+
+      let origClaimStr = JSON.stringify(origClaim)
+
+      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${orgRoleClaimId}`);
+      return {newId:result, orgRoleClaimId}
 
     } else {
       l.warn("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])

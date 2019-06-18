@@ -44,7 +44,7 @@ class Controller {
   getCanSeeDids(req, res) {
     getAllDidsRequesterCanSee(res.locals.tokenIssuer)
       .then(r => res.json(r))
-      .catch(err => res.status(500).end())
+      .catch(err => res.status(500).json(""+err).end())
   }
 
 }

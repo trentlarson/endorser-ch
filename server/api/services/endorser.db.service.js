@@ -221,13 +221,27 @@ class EndorserDatabase {
     })
   }
 
+  confirmationByIssuerAndOrgRole(issuerDid, orgRoleRowId) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND orgRoleRowId = ?", [issuerDid, orgRoleRowId], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, orgRoleId:row.orgRoleRowId})
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  }
+
   confirmationByIssuerAndTenure(issuerDid, tenureRowId) {
     return new Promise((resolve, reject) => {
       db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND tenureRowId = ?", [issuerDid, tenureRowId], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, tenureId:row.actionRowId})
+          resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, tenureId:row.tenureRowId})
         } else {
           resolve(null)
         }
@@ -269,7 +283,7 @@ class EndorserDatabase {
   }
   **/
 
-  confirmationInsert(issuer, jwtRowId, actionRowId, tenureRowId, origClaim) {
+  confirmationInsert(issuer, jwtRowId, origClaim, actionRowId, tenureRowId, orgRoleId) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO confirmation (jwtRowId, issuer, actionRowId, tenureRowId, origClaim) VALUES (?, ?, ?, ?, ?)")
       db.run(stmt, [jwtRowId, issuer, actionRowId, tenureRowId, origClaim], function(err) {
@@ -451,6 +465,44 @@ class EndorserDatabase {
     })
   }
 
+  orgRoleClaimIdByOrgAndDates(orgName, roleName, startDate, endDate, memberDid) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT rowid FROM org_role_claim WHERE orgName = ? AND roleName = ? AND startDate = date('" + startDate + "') AND endDate = date('" + endDate + "') AND memberDid = ?", [orgName, roleName, memberDid], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve(row.rowid)
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  }
+
+  /**
+     @param orgName
+     @param roleName
+     @param onDate date in ISO format
+     @Returns all role claims at that time, along with the confirmations
+  **/
+  retrieveOrgRoleClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      let sql = "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate, r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId FROM org_role_claim r LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid WHERE r.orgName = ? AND r.roleName = ? AND r.startDate <= date('" + onDateStr + "') AND date('" +  onDateStr + "') <= r.endDate"
+      db.each(sql, [orgName, roleName], function(err, row) {
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, orgRoleRowId:row.orgRoleRowId} : null
+        let both = {orgRole:{id:row.rid, memberDid:row.memberDid, orgName:row.orgName, roleName:row.roleName, startDate:row.startDate, endDate:row.endDate}, confirmation:confirmation}
+        data.push(both)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
 
 
 
@@ -526,27 +578,6 @@ class EndorserDatabase {
     })
   }
 
-  /**
-     @param dateTimeStr in ISO format
-     @Returns all actions on the event outer-joined with confirmations of those actions
-  **/
-  getTenureClaimsAndConfirmationsByPoint(lat, lon) {
-    return new Promise((resolve, reject) => {
-      var data = []
-      let sql = "SELECT t.rowid AS tid, t.partyDid, t.polygon, c.rowid AS cid, c.issuer AS confirmDid, c.tenureRowId FROM tenure_claim t LEFT OUTER JOIN confirmation c ON c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat"
-      db.each(sql, [lon, lon, lat, lat], function(err, row) {
-        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, tenureId:row.tenureRowId} : null
-        let both = {tenure:{id:row.tid, partyDid:row.partyDid, polygon:row.polygon}, confirmation:confirmation}
-        data.push(both)
-      }, function(err, num) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(data)
-        }
-      });
-    })
-  }
 
   async tenureInsert(entity) {
     return new Promise((resolve, reject) => {
@@ -562,7 +593,7 @@ class EndorserDatabase {
   }
 
   /**
-     @returns all tenures claimed at that point
+     @returns all tenures claimed at that point, plus any confirmations of them
   **/
   retrieveTenureClaimsAndConfirmationsAtPoint(lat, lon) {
     return new Promise((resolve, reject) => {

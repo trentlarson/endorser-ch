@@ -6,13 +6,17 @@ import l from '../../common/logger'
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token'
 
-// create confirmation list from a list of "ClaimsAndConfirmations" for the same claim
-// internal helper function
+/**
+   Take KEY and a list of claims-and-confirmations for the same claim
+   and return an object with properties of:
+     - KEY: for the data
+     - "confirmations": for the list of confirmations
+**/
 function buildConfirmationList(key, cacList) {
   let result = {
     confirmations: (cacList.length == 1 && !cacList[0].confirmation)
       ? []
-      : R.map(cac=>cac.confirmation)(cacList)
+      : R.map(cac => cac.confirmation)(cacList)
   }
   result[key] = cacList[0][key]
   return result
