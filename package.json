@@ -15,7 +15,7 @@
     "migrate": "flyway -c conf/flyway.js migrate",
     "test": "mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
-    "demo1": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
+    "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
   },
   "dependencies": {
     "body-parser": "^1.18.2",

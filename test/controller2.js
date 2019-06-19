@@ -169,7 +169,7 @@ before(async () => {
       claimRecorderFor2By2JwtEnc,
       claimSecretaryFor2By2JwtEnc,
     ] = jwts
-    console.log("Created controller-roles user tokens", jwts)
+    console.log("Created controller2 user tokens", jwts)
   })
 
 })
