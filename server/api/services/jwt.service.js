@@ -135,7 +135,7 @@ class JwtService {
      @param issuerDid is the issuer confirming it
      @return array of promises for all the insertions into the network table
    **/
-  async createNetworkRecords(agentOrPartyDid, issuerDid, actionClaimId, tenureClaimId) {
+  async createNetworkRecords(agentOrPartyDid, issuerDid) {
 
     let results = []
 
@@ -215,9 +215,9 @@ class JwtService {
       let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
 
-      await this.createNetworkRecords(agentDid, issuerDid, actionId, null)
+      await this.createNetworkRecords(agentDid, issuerDid)
         .catch(err => {
-          l.error(err, "Got error creating network records after action claim was created.")
+          l.error(err, "Got error creating network records after action claim was created with ID " + actionId)
         })
 
     } else if (claim['@context'] === 'http://schema.org'
@@ -237,9 +237,9 @@ class JwtService {
       }
       let orgRoleId = await db.orgRoleInsert(entity)
 
-      await this.createNetworkRecords(claim.member.member.identifier, issuerDid, null, null)
+      await this.createNetworkRecords(claim.member.member.identifier, issuerDid)
         .catch(err => {
-          l.error(err, "Got error creating network records after org role claim was created.")
+          l.error(err, "Got error creating network records after org role claim was created with ID " + orgRoleId)
         })
 
     } else if (claim['@context'] === 'http://endorser.ch'
@@ -260,9 +260,9 @@ class JwtService {
 
       let tenureId = await db.tenureInsert(entity)
 
-      await this.createNetworkRecords(claim.party && claim.party.did, issuerDid, null, tenureId)
+      await this.createNetworkRecords(claim.party && claim.party.did, issuerDid)
         .catch(err => {
-          l.error(err, "Got error creating network records after tenure claim was created.")
+          l.error(err, "Got error creating network records after tenure claim was created with ID " + tenureId)
         })
 
     } else if (claim['@context'] === 'http://endorser.ch'
@@ -277,17 +277,22 @@ class JwtService {
             this.createOneConfirmation(jwtId, issuerDid, origClaim)
               .then(confirmData => {
                 if (confirmData.actionClaimId) {
-                  return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
+                  return this.createNetworkRecords(origClaim.agent.did, issuerDid)
                     .catch(err => {
-                      l.error(err, "Got error creating network records after a confirmation was created.")
+                      l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
                     })
                 } else if (confirmData.tenureClaimId) {
-                  return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
+                  return this.createNetworkRecords(origClaim.party.did, issuerDid)
                     .catch(err => {
-                      l.error(err, "Got error creating network records after a confirmation was created.")
+                      l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
+                    })
+                } else if (confirmData.orgRoleClaimId) {
+                  return this.createNetworkRecords(origClaim.member.member.identifier, issuerDid)
+                    .catch(err => {
+                      l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
                     })
                 } else {
-                  throw new Error("Failed to create confirmation for JWT " + jwtId)
+                  throw new Error("Failed to create network record after confirmation for JWT " + jwtId)
                 }
               })
               .catch(err => {
@@ -306,18 +311,22 @@ class JwtService {
               this.createOneConfirmation(jwtId, issuerDid, origClaim)
                 .then(confirmData => {
                   if (confirmData.actionClaimId) {
-                    return this.createNetworkRecords(origClaim.agent.did, issuerDid, confirmData.actionClaimId, null)
+                    return this.createNetworkRecords(origClaim.agent.did, issuerDid)
                       .catch(err => {
-                        l.error(err, "Got error creating network records after a confirmation was created.")
+                        l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
                       })
                   } else if (confirmData.tenureClaimId) {
-                    return this.createNetworkRecords(origClaim.party.did, issuerDid, null, confirmData.tenureClaimId)
+                    return this.createNetworkRecords(origClaim.party.did, issuerDid)
                       .catch(err => {
-                        l.error(err, "Got error creating network records after a confirmation was created.")
+                        l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
                       })
-
+                  } else if (confirmData.orgRoleClaimId) {
+                    return this.createNetworkRecords(origClaim.member.member.identifier, issuerDid)
+                      .catch(err => {
+                        l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
+                      })
                   } else {
-                    throw new Error("Failed to create confirmation for JWT " + jwtId)
+                    throw new Error("Failed to create network record after confirmation for JWT " + jwtId)
                   }
                 })
                 .catch(err => {
