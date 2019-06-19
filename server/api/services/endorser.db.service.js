@@ -283,10 +283,10 @@ class EndorserDatabase {
   }
   **/
 
-  confirmationInsert(issuer, jwtRowId, origClaim, actionRowId, tenureRowId, orgRoleId) {
+  confirmationInsert(issuer, jwtRowId, origClaim, actionRowId, tenureRowId, orgRoleRowId) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO confirmation (jwtRowId, issuer, actionRowId, tenureRowId, origClaim) VALUES (?, ?, ?, ?, ?)")
-      db.run(stmt, [jwtRowId, issuer, actionRowId, tenureRowId, origClaim], function(err) {
+      var stmt = ("INSERT INTO confirmation (jwtRowId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId) VALUES (?, ?, ?, ?, ?, ?)")
+      db.run(stmt, [jwtRowId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
         if (err) {
           reject(err)
         } else {

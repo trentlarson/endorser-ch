@@ -260,7 +260,12 @@ describe('Roles & Visibility', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(testUtil.allDidsAreHidden(r.body)).to.be.false
+       expect(r.body).to.be.an('array').of.length(2)
+       expect(testUtil.allDidsAreHidden(r.body[0])).to.be.false
+       expect(r.body[0].orgRoles[0].confirmations).to.be.an('array').of.length(2)
+       expect(r.body[0].orgRoles[0].orgRole.memberDid).to.equal('did:ethr:0x332661e9e6af65eea6df253296a26257ff304647')
+       expect(testUtil.allDidsAreHidden(r.body[1])).to.be.true
+       expect(r.body[1].orgRoles[0].confirmations).to.be.an('array').of.length(3)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
