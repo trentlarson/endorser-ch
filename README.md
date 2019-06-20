@@ -245,9 +245,17 @@ User story:
   - run test/test.sh (can quit after first set of tests)
   - run: NODE_ENV=test-local npm run dev
 - in uport-demo
-  - see duplicate claims Duane's Friend (and maybe as Trent)
-  - as Trent, confirm something about Duane 0x11bb3621f8ea471a750870ae8dd5f4b8203e9557
-  - now Duane's friend can see a link to see the other claim
+  - change to user 7 in claimsTest.js
+  - search for "carpentry" and see all DIDs are hidden
+  - run in endorser-ch: npm run set-3-visible
+  - search for "carpentry" and see some DIDs are shown and some are transitive
+  - change to user 0 Duane's Friend in claimsTest.js
+  - see duplicate tenure claims
+  - change to user -1 Trent
+  - in tenure claim, see reachable user
+  - confirm something about Duane did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557
+  - change to user 0 Duane's friend
+  - in tenure claim, want to see a link to see the other claim... but not working yet
 
 
 
