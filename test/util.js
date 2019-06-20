@@ -20,6 +20,7 @@ function allDidsAreHidden(result) {
       values = result
     } else {
       // assuming it's an object since it's not an array
+      // (Hmmmm... this is inconsistent with other methods where the keys aren't checked.)
       values = R.keys(result).concat(R.values(result))
     }
     return R.reduce((a,b) => a && b, true, R.map(allDidsAreHidden, values))

@@ -1,7 +1,7 @@
 import R from 'ramda'
 import l from '../../common/logger'
 import { addCanSee, getAllDidsRequesterCanSee, whoDoesRequestorSeeWhoCanSeeObject } from './network-cache.service'
-import { HIDDEN_TEXT, hideDids, isDid } from './util'
+import { HIDDEN_TEXT, isDid } from './util'
 
 /**
   Accept the original result and the resultHidden with hidden DIDs
@@ -80,4 +80,4 @@ async function makeMeGloballyVisible(issuerDid) {
     })
 }
 
-module.exports = { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible }
+module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkSub, makeMeGloballyVisible }

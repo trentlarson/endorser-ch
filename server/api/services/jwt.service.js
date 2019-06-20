@@ -7,7 +7,7 @@ import db from './endorser.db.service'
 import { calcBbox } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
-import { HIDDEN_TEXT } from './util'
+import { allDidsInside, HIDDEN_TEXT } from './util'
 import { addCanSee } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
@@ -180,9 +180,9 @@ class JwtService {
     return Promise.all(results)
   }
 
-  async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
+  async createEmbeddedClaimRecords(jwtId, issuerDid, subjectDid, claim) {
 
-    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
+    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ${subjectDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
 
     if (claim['@context'] === 'http://schema.org'
@@ -273,71 +273,25 @@ class JwtService {
       { // handle a single claim
         let origClaim = claim['originalClaim']
         if (origClaim) {
-          recordings.push(
-            this.createOneConfirmation(jwtId, issuerDid, origClaim)
-              .then(confirmData => {
-                if (confirmData.actionClaimId) {
-                  return this.createNetworkRecords(origClaim.agent.did, issuerDid)
-                    .catch(err => {
-                      l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
-                    })
-                } else if (confirmData.tenureClaimId) {
-                  return this.createNetworkRecords(origClaim.party.did, issuerDid)
-                    .catch(err => {
-                      l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
-                    })
-                } else if (confirmData.orgRoleClaimId) {
-                  return this.createNetworkRecords(origClaim.member.member.identifier, issuerDid)
-                    .catch(err => {
-                      l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
-                    })
-                } else {
-                  throw new Error("Failed to create network record after confirmation for JWT " + jwtId)
-                }
-              })
-              .catch(err => {
-                l.error(err)
-                return Promise.reject(err)
-              })
-          )
-
+          recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
+          for (var did of allDidsInside(origClaim)) {
+            recordings.push(this.createNetworkRecords(did, issuerDid))
+          }
         }
       }
 
       { // handle multiple claims
-        if (claim['originalClaims']) {
-          for (var origClaim of claim['originalClaims']) {
-            recordings.push(
-              this.createOneConfirmation(jwtId, issuerDid, origClaim)
-                .then(confirmData => {
-                  if (confirmData.actionClaimId) {
-                    return this.createNetworkRecords(origClaim.agent.did, issuerDid)
-                      .catch(err => {
-                        l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
-                      })
-                  } else if (confirmData.tenureClaimId) {
-                    return this.createNetworkRecords(origClaim.party.did, issuerDid)
-                      .catch(err => {
-                        l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
-                      })
-                  } else if (confirmData.orgRoleClaimId) {
-                    return this.createNetworkRecords(origClaim.member.member.identifier, issuerDid)
-                      .catch(err => {
-                        l.error(err, "Got error creating network record after confirmation for JWT " + jwtId)
-                      })
-                  } else {
-                    throw new Error("Failed to create network record after confirmation for JWT " + jwtId)
-                  }
-                })
-                .catch(err => {
-                  l.error(err)
-                  return Promise.reject(err)
-                })
-            )
+        let origClaims = claim['originalClaims']
+        if (origClaims) {
+          for (var origClaim of origClaims) {
+            recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
+          }
+          for (var did of allDidsInside(origClaims)) {
+            recordings.push(this.createNetworkRecords(did, issuerDid))
           }
         }
       }
-      l.debug(`${this.constructor.name} Created ${recordings.length} confirmations.`)
+      l.debug(`${this.constructor.name} Created ${recordings.length} confirmations & network records.`)
 
       await Promise.all(recordings)
         .catch(err => {
@@ -400,7 +354,7 @@ class JwtService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.claim)
+      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.sub, payload.claim)
         .catch(err => {
           l.warn(err, `Failed to create embedded claim records.`)
         })

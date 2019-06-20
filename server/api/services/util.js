@@ -66,4 +66,30 @@ function isDid(value) {
   return value && value.startsWith("did:") && (value.substring(5).indexOf(":") > -1)
 }
 
-module.exports = { buildConfirmationList, calcBbox, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+function allDidsInside(input) {
+
+  if (Object.prototype.toString.call(input) === "[object String]") {
+    if (isDid(input)) {
+      return [input]
+    } else {
+      return []
+    }
+  } else if (input instanceof Object) {
+
+    var result = []
+    if (!Array.isArray(input)) {
+      // it's an object
+      for (let key of R.keys(input)) {
+        result = R.concat(result, allDidsInside(input[key]))
+      }
+    } else {
+      // it's an array
+      result = R.map(allDidsInside)(input)
+    }
+    return R.uniq(R.flatten(result))
+  } else {
+    return []
+  }
+}
+
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

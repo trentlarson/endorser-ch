@@ -6,8 +6,8 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import { calcBbox, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
-import { hideDidsAndAddLinksToNetwork } from '../server/api/services/util-higher';
+import { allDidsInside, calcBbox, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
 import testUtil from './util'
 
 chai.use(chaiAsPromised);
@@ -328,6 +328,43 @@ describe('Util', () => {
     expect(testUtil.allDidsAreHidden(test)).to.be.true
   })
 
+  it('should return all DIDs inside', () => {
+    expect(allDidsInside(null)).to.deep.equal([])
+    expect(allDidsInside(9)).to.deep.equal([])
+    expect(allDidsInside(true)).to.deep.equal([])
+    expect(allDidsInside("stuff")).to.deep.equal([])
+    expect(allDidsInside(HIDDEN_TEXT)).to.deep.equal([HIDDEN_TEXT])
+    expect(allDidsInside("did:x:0xabc123...")).to.deep.equal(["did:x:0xabc123..."])
+    expect(allDidsInside({a:HIDDEN_TEXT, b:[HIDDEN_TEXT]})).to.deep.equal([HIDDEN_TEXT])
+    expect(allDidsInside({a:"did:x:0xabc123...", b:[HIDDEN_TEXT]})).to.deep.equal(["did:x:0xabc123...", HIDDEN_TEXT])
+    expect(allDidsInside(["a", "b", "c", {d: HIDDEN_TEXT}])).to.deep.equal([HIDDEN_TEXT])
+    expect(allDidsInside(["a", "b", "c", {d: "did:x:0xabc123..."}])).to.deep.equal(["did:x:0xabc123..."])
+    expect(allDidsInside({"did:x:0xabc123...":["a"], b:[HIDDEN_TEXT]})).to.deep.equal([HIDDEN_TEXT])
+    let test = {b:[]}
+    test[HIDDEN_TEXT] = ["a"]
+    expect(allDidsInside(test)).to.deep.equal([])
+
+    let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
+    let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
+    let addra = 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761'
+    let addrd = 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'
+    let addru = 'did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts'
+    var someObj1 = {a: 1, b: addr0,       c: {d: addr6,       e: [], f: [9, {g: addru}]}}
+    var repObj11 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
+    var repObj12 = {a: 1, b: addr0,       c: {d: HIDDEN_TEXT, e: [], f: [9, {g: addru}]}}
+    var someObj2 = {a: 1, b: 2}
+    someObj2[addr0] = 9
+
+    expect(allDidsInside(addr0)).to.deep.equal([addr0])
+    expect(allDidsInside(someObj1)).to.deep.equal([addr0, addr6, addru])
+    expect(allDidsInside(repObj11)).to.deep.equal([HIDDEN_TEXT])
+    expect(allDidsInside(repObj12)).to.deep.equal([addr0, HIDDEN_TEXT, addru])
+    expect(allDidsInside(someObj2)).to.deep.equal([])
+  })
+
+  /**
+     It doesn't matter what I put for these values... they all succeed.  WTF?
+
   it('should hide DIDs', () => {
     let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
     let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
@@ -342,27 +379,29 @@ describe('Util', () => {
     var allowedDids
 
     allowedDids = []
-    expect(hideDidsAndAddLinksToNetwork(addr0, null)).to.eventually.equal(null)
-    expect(hideDidsAndAddLinksToNetwork(addr0, 9)).to.eventually.equal(9)
-    expect(hideDidsAndAddLinksToNetwork(addr0, false)).to.eventually.equal(false)
-    expect(hideDidsAndAddLinksToNetwork(addr0, "Some random randomness")).to.eventually.equal("Some random randomness")
-    expect(hideDidsAndAddLinksToNetwork(addr0, addru)).to.eventually.equal(HIDDEN_TEXT)
-    expect(hideDidsAndAddLinksToNetwork(addr0, {})).to.eventually.deep.equal({})
-    expect(hideDidsAndAddLinksToNetwork(addr0, someObj1)).to.eventually.deep.equal(repObj11)
-    expect(hideDidsAndAddLinksToNetwork(addr0, [])).to.eventually.deep.equal([])
-    expect(hideDidsAndAddLinksToNetwork(addr0, [someObj1])).to.eventually.deep.equal([repObj11])
-    expect(hideDidsAndAddLinksToNetwork(addr0, someObj2)).to.be.rejected
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, null)).to.eventually.deep.equal(null)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, 9)).to.eventually.equal(9)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, false)).to.eventually.equal(false)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, "Some random randomness")).to.eventually.equal("Some random randomness")
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, addru)).to.eventually.equal(HIDDEN_TEXT)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, {})).to.eventually.deep.equal({})
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, someObj1)).to.eventually.deep.equal(repObj11)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, [])).to.eventually.deep.equal([])
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, [someObj1])).to.eventually.deep.equal([repObj11])
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, someObj2)).to.be.rejected
 
     allowedDids = [addrd]
-    expect(hideDidsAndAddLinksToNetwork(allowedDids, addrd)).to.eventually.deep.equal(addrd)
-    expect(hideDidsAndAddLinksToNetwork(allowedDids, addru)).to.eventually.deep.equal(HIDDEN_TEXT)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, addrd)).to.eventually.deep.equal(addrd)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, addru)).to.eventually.deep.equal(HIDDEN_TEXT)
 
     allowedDids = [addr0, addrd, addru]
-    expect(hideDidsAndAddLinksToNetwork(allowedDids, addr0)).to.eventually.deep.equal(addr0)
-    expect(hideDidsAndAddLinksToNetwork(allowedDids, addra)).to.eventually.deep.equal(HIDDEN_TEXT)
-    expect(hideDidsAndAddLinksToNetwork(allowedDids, someObj1)).to.eventually.deep.equal(repObj12)
-    expect(hideDidsAndAddLinksToNetwork(allowedDids, someObj2)).to.be.rejected
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, addr0)).to.eventually.deep.equal(addr0)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, addra)).to.eventually.deep.equal(HIDDEN_TEXT)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, someObj1)).to.eventually.deep.equal(repObj12)
+    expect(hideDidsAndAddLinksToNetworkSub(allowedDids, addr0, someObj2)).to.be.rejected
   })
+
+  **/
 
   it('should get a sorted object', () =>
      request(Server)

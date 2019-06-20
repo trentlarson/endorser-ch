@@ -315,13 +315,14 @@ User story:
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
 - 80 0 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
 - 80 0 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
-- 80 0 gotta report errors to user (eg. repeated confirmation so should see mix of successes and errors)
+- 80 0 gotta report errors to user (eg. repeated or failed confirmations so should see mix of successes and errors)
 - 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 80 0 usability: add a "waiting" spinner when remote method is called
 - 60 3 neo4j?
 - 70 0 usability: fade out the confirmation button when pushed
 - 70 3 have someone audit use of uport.pushToken
 - 60 0 write migration to remove claimEncoded column
+- 50 1 fix & enable the "should hide DIDs" tests in controller.js
 - 30 0 on uport-demo: change store/play pics in Welcome.js to local files
 - 30 0 in confirmation, check whether it really is a JoinAction
 - 30 0 try-catch around jwt.service resolveAuthenticator when not connected to internet

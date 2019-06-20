@@ -250,7 +250,6 @@ describe('Roles & Visibility', () => {
      })).timeout(7001)
 
   it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(7001)
-
   it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(7001)
   it('should add another new President role claim', () => postClaim(4, claimPresidentFor4By4JwtEnc)).timeout(7001)
   it('should confirm 3 as President role claim by 5', () => postClaim(5, confirmPresidentFor3By5JwtEnc)).timeout(7001)
