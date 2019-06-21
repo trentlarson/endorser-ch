@@ -91,6 +91,20 @@ module.exports = {
     }
   },
 
+  claimFoodPantry: {
+    "@context": "http://endorser.ch",
+    "@type": "Tenure",
+    "spatialUnit": {
+      "geo": {
+        "@type": "GeoShape",
+        "polygon": "40.890431,-111.870292 40.890425,-111.869691 40.890867,-111.869654 40.890890,-111.870295 40.890431,-111.870292"
+      }
+    },
+    "party": {
+      // supply "did"
+    }
+  },
+
   allDidsAreHidden: allDidsAreHidden,
 
 }

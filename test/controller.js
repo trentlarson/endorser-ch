@@ -83,20 +83,6 @@ let claimIIW2019a = {
   }
 }
 
-let claimFoodPantryFor0 = {
-  "@context": "http://endorser.ch",
-  "@type": "Tenure",
-  "spatialUnit": {
-    "geo": {
-      "@type": "GeoShape",
-      "polygon": "40.890431,-111.870292 40.890425,-111.869691 40.890867,-111.869654 40.890890-111.870295 40.890431-111.870292"
-    }
-  },
-  "party": {
-    "did": creds[0].did
-  }
-}
-
 var credentials = testUtil.credentials
 
 let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
@@ -172,22 +158,21 @@ let confirmMultipleFor0By0JwtProm = credentials[0].createVerification(confirmMul
 
 
 
-let claimCornerBakeryTenureFor0JwtObj = R.clone(testUtil.claimCornerBakery)
-claimCornerBakeryTenureFor0JwtObj.party.did = creds[0].did
-let claimCornerBakeryTenureFor0Prom = credentials[0].createVerification(claimCornerBakeryTenureFor0JwtObj)
+let claimCornerBakeryTenureFor11 = R.clone(testUtil.claimCornerBakery)
+claimCornerBakeryTenureFor11.party.did = creds[11].did
 
-let claimCornerBakeryTenureFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
-claimCornerBakeryTenureFor0By0JwtObj.sub = creds[0].did
-claimCornerBakeryTenureFor0By0JwtObj.claim = R.clone(claimCornerBakeryTenureFor0JwtObj)
-claimCornerBakeryTenureFor0By0JwtObj.iss = creds[0].did
-let claimCornerBakeryTenureFor0By0JwtProm = credentials[0].createVerification(claimCornerBakeryTenureFor0By0JwtObj)
+let claimCornerBakeryTenureFor11By11JwtObj = R.clone(testUtil.jwtTemplate)
+claimCornerBakeryTenureFor11By11JwtObj.sub = creds[11].did
+claimCornerBakeryTenureFor11By11JwtObj.claim = R.clone(claimCornerBakeryTenureFor11)
+claimCornerBakeryTenureFor11By11JwtObj.iss = creds[11].did
+let claimCornerBakeryTenureFor11By11JwtProm = credentials[11].createVerification(claimCornerBakeryTenureFor11By11JwtObj)
 
-let confirmCornerBakeryTenureFor0By1JwtObj = R.clone(testUtil.jwtTemplate)
-confirmCornerBakeryTenureFor0By1JwtObj.sub = creds[0].did
-confirmCornerBakeryTenureFor0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmCornerBakeryTenureFor0By1JwtObj.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor0JwtObj))
-confirmCornerBakeryTenureFor0By1JwtObj.iss = creds[1].did
-let confirmCornerBakeryTenureFor0By1JwtProm = credentials[1].createVerification(confirmCornerBakeryTenureFor0By1JwtObj)
+let confirmCornerBakeryTenureFor11By10JwtObj = R.clone(testUtil.jwtTemplate)
+confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
+confirmCornerBakeryTenureFor11By10JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmCornerBakeryTenureFor11By10JwtObj.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor11))
+confirmCornerBakeryTenureFor11By10JwtObj.iss = creds[10].did
+let confirmCornerBakeryTenureFor11By10JwtProm = credentials[10].createVerification(confirmCornerBakeryTenureFor11By10JwtObj)
 
 let claimIIW2019aFor1 = R.clone(claimIIW2019a)
 claimIIW2019aFor1.agent.did = creds[1].did
@@ -221,26 +206,45 @@ confirmIIW2019aFor2By1JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor2
 confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
 let confirmIIW2019aFor2By1JwtProm = credentials[1].createVerification(confirmIIW2019aFor2By1JwtObj)
 
-let claimFoodPantryFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
-claimFoodPantryFor0By0JwtObj.claim = R.clone(claimFoodPantryFor0)
-claimFoodPantryFor0By0JwtObj.iss = creds[0].did
-claimFoodPantryFor0By0JwtObj.sub = creds[0].did
-let claimFoodPantryFor0By0JwtProm = credentials[0].createVerification(claimFoodPantryFor0By0JwtObj)
+
+
+
+let claimFoodPantryFor4 = R.clone(testUtil.claimFoodPantry)
+claimFoodPantryFor4.party.did = creds[4].did
+
+let claimFoodPantryFor4By4JwtObj = R.clone(testUtil.jwtTemplate)
+claimFoodPantryFor4By4JwtObj.claim = R.clone(claimFoodPantryFor4)
+claimFoodPantryFor4By4JwtObj.iss = creds[4].did
+claimFoodPantryFor4By4JwtObj.sub = creds[4].did
+let claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoodPantryFor4By4JwtObj)
+
+/**
+let confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
+confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
+confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmFoodPantryFor4By1JwtObj.claim.originalClaims.push(R.clone(claimFoodPantryFor4))
+confirmFoodPantryFor4By1JwtObj.iss = creds[1].did
+let confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
+**/
 
 
 var pushTokens,
     // claims for 0
     claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, claimMyNightFor0By0JwtEnc,
     claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc,
-    claimCornerBakeryTenureFor0By0JwtEnc, claimFoodPantryFor0By0JwtEnc,
-    confirmCornerBakeryTenureFor0By1JwtEnc,
     // claims for 1
     claimBvcFor1By1JwtEnc,
     confirmIIW2019aFor1By0JwtEnc,
     claimIIW2019aFor1By1JwtEnc,
     // claims for 2
     confirmIIW2019aFor2By1JwtEnc,
-    claimIIW2019aFor2By2JwtEnc
+    claimIIW2019aFor2By2JwtEnc,
+    // claims for 4
+    claimFoodPantryFor4By4JwtEnc,
+    //confirmFoodPantryFor4By1JwtEnc,
+    // claims for 11
+    claimCornerBakeryTenureFor11By11JwtEnc,
+    confirmCornerBakeryTenureFor11By10JwtEnc
 
 before(async () => {
 
@@ -265,28 +269,32 @@ before(async () => {
     claimBvcFor1By1JwtProm,
     claimDebugFor0By0JwtProm,
     confirmMultipleFor0By0JwtProm,
-    claimCornerBakeryTenureFor0By0JwtProm,
-    claimFoodPantryFor0By0JwtProm,
-    confirmIIW2019aFor1By0JwtProm,
-    confirmCornerBakeryTenureFor0By1JwtProm,
+    claimCornerBakeryTenureFor11By11JwtProm,
+    confirmCornerBakeryTenureFor11By10JwtProm,
+    claimFoodPantryFor4By4JwtProm,
+    //confirmFoodPantryFor4By1JwtProm,
     claimIIW2019aFor1By1JwtProm,
-    confirmIIW2019aFor2By1JwtProm,
+    confirmIIW2019aFor1By0JwtProm,
     claimIIW2019aFor2By2JwtProm,
+    confirmIIW2019aFor2By1JwtProm,
   ]).then((jwts) => {
-    claimBvcFor0By0JwtEnc = jwts[0]
-    confirmBvcFor0By0JwtEnc = jwts[1]
-    confirmBvcFor0By1JwtEnc = jwts[2]
-    claimMyNightFor0By0JwtEnc = jwts[3]
-    claimBvcFor1By1JwtEnc = jwts[4]
-    claimDebugFor0By0JwtEnc = jwts[5]
-    confirmMultipleFor0By0JwtEnc = jwts[6]
-    claimCornerBakeryTenureFor0By0JwtEnc = jwts[7]
-    claimFoodPantryFor0By0JwtEnc = jwts[8]
-    confirmIIW2019aFor1By0JwtEnc = jwts[9]
-    confirmCornerBakeryTenureFor0By1JwtEnc = jwts[10]
-    claimIIW2019aFor1By1JwtEnc = jwts[11]
-    confirmIIW2019aFor2By1JwtEnc = jwts[12]
-    claimIIW2019aFor2By2JwtEnc = jwts[13]
+    [
+      claimBvcFor0By0JwtEnc,
+      confirmBvcFor0By0JwtEnc,
+      confirmBvcFor0By1JwtEnc,
+      claimMyNightFor0By0JwtEnc,
+      claimBvcFor1By1JwtEnc,
+      claimDebugFor0By0JwtEnc,
+      confirmMultipleFor0By0JwtEnc,
+      claimCornerBakeryTenureFor11By11JwtEnc,
+      confirmCornerBakeryTenureFor11By10JwtEnc,
+      claimFoodPantryFor4By4JwtEnc,
+      //confirmFoodPantryFor4By1JwtEnc,
+      claimIIW2019aFor1By1JwtEnc,
+      confirmIIW2019aFor1By0JwtEnc,
+      claimIIW2019aFor2By2JwtEnc,
+      confirmIIW2019aFor2By1JwtEnc,
+    ] = jwts
     console.log("Created controller user tokens", jwts)
   })
 })
@@ -920,8 +928,8 @@ describe('Visibility utils', () => {
   it('should create a new tenure', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-     .send({ "jwtEncoded": claimCornerBakeryTenureFor0By0JwtEnc })
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[11])
+     .send({ "jwtEncoded": claimCornerBakeryTenureFor11By11JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('number')
@@ -942,8 +950,8 @@ describe('Visibility utils', () => {
   it('should confirm that competing tenure', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
-     .send({ "jwtEncoded": confirmCornerBakeryTenureFor0By1JwtEnc })
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[10])
+     .send({ "jwtEncoded": confirmCornerBakeryTenureFor11By10JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('number')
@@ -973,6 +981,30 @@ describe('Visibility utils', () => {
          .of.length(2)
        expect(r.status).that.equals(200)
      })).timeout(7001)
+
+  it('should create a tenure for the Food Pantry', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .send({ "jwtEncoded": claimFoodPantryFor4By4JwtEnc })
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body).to.be.a('number')
+       expect(r.status).that.equals(201)
+     })).timeout(7001)
+
+  /**
+  it('should confirm that tenure for the Food Pantry', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .send({ "jwtEncoded": confirmFoodPantryFor4By1JwtEnc })
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body).to.be.a('number')
+       expect(r.status).that.equals(201)
+     })).timeout(7001)
+  **/
 
 })
 
