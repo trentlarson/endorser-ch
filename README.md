@@ -57,10 +57,10 @@ npm run dev:debug
 Compiles the application and starts it in production production mode.
 
 ```shell
-scripts/deploy.sh
+scripts/deploy.sh release-X ~/.ssh/id_rsa.medici-2
 # Then SSH to the box and:
+#kill process: /usr/bin/node ... server
 npm run compile
-#npm start
 NODE_ENV=dev nohup npm run dev >> ../endorser.out 2>&1 &
 ```
 
@@ -215,7 +215,7 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 next deploy:
 - ci and migrate & populate jwt.claim (inside endorser-ch):
 
-$ # copy current DB to a new backup
+$ # First: copy current DB to a new backup!
 $ npm ci
 $ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 $ NODE_ENV=dev node
@@ -314,6 +314,7 @@ User story:
 - 90 0 fix display of bad JWT ID error, eg when signer doesn't match logged in (uport-demo test) user
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
+- 85 0 deploy from git rather than from local?  (It's all public.)
 - 80 0 optimize seesObjectThroughOthers rather than 2 awaits
 - 80 1 don't insert same subject-object into network DB
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
