@@ -26,7 +26,9 @@ rsync -azvu --exclude .git --exclude-from .gitignore -e "ssh -i $2" . ubuntu@end
 
 ssh -i $2 ubuntu@endorser.ch << EOF
   cd $DEPLOY_DIR
-  npm ci --production
-  npm prune --production
+  # need to add --production on the end of "npm ci"
+  npm ci
+  # need to add this
+  # npm prune --production
   perl -p -i -e "s/VERSION=.*/VERSION=$1/g" .env
 EOF

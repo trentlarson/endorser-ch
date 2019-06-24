@@ -56,12 +56,17 @@ npm run dev:debug
 
 Compiles the application and starts it in production production mode.
 
+If you move/remove the previous install, you'll need to copy the .env file to new endorser-ch dir.
+
 ```shell
 scripts/deploy.sh release-X ~/.ssh/id_rsa.medici-2
 # Then SSH to the box and:
-#kill process: /usr/bin/node ... server
-npm run compile
-NODE_ENV=dev nohup npm run dev >> ../endorser.out 2>&1 &
+# kill process: /usr/bin/node /home/ubuntu/.../_babel-node server
+# ... and may have to kill nodemon & pino-pretty processes separately
+cd endorser-ch
+#npm run compile # doesn't work; maybe do this inside the compile in deploy.sh?
+#npm start
+NODE_ENV=dev nohup npm run dev >> ../endorser-ch.out 2>&1 &
 ```
 
 ## Test It
@@ -211,6 +216,8 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 ## ToDo
 
+"CORS problems" - endorser-ch is running?
+"Unsupported DID method 'ethr'" - dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
 "Converting circular structure to JSON" - network connected?
 
 User story:
@@ -285,6 +292,7 @@ User story:
   - x 90 1 add in-network data for each insert
 - 90 5 write & support use-cases
 - 90 0 fix display of bad JWT ID error, eg when signer doesn't match logged in (uport-demo test) user
+- 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 85 0 deploy from git rather than from local?  (It's all public.)
