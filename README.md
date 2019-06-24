@@ -213,7 +213,7 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 
 next deploy:
-- ci and migrate & populate jwt.claim (inside endorser-ch):
+- ci, migrate, and populate jwt.claim (inside endorser-ch)
 
 $ # First: copy current DB to a new backup!
 $ npm ci

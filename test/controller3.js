@@ -124,9 +124,9 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
       }
 
 var claimId
-describe('Skills', () => {
+describe('Roles & Visibility', () => {
 
-  it('claim 3 with carpentry skills by 4', () =>
+  it('claimm 3 with carpentry skills by 4', () =>
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
