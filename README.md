@@ -264,8 +264,12 @@ User story:
 - 99 0 backup DB (& automate)
 - 99 1 Reports of "Your Claims" doesn't show details
 - 98 0 why confirmation not showing in DB?
+- 95 0 fix subject to be subject of claim eg. JoinAction (and fix Jun 29 claims by me)
+- 95 0 make logout be much longer (month? year?)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
+- 90 0 fix message when "Saved with ID" gives error message (eg. Expired)
+- 90 1 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 90 0 add .json(someErr) to all routers in the error path
 - 90 0 add helmet
 - 90 2 switch from Confirmation to AgreeAction

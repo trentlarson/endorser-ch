@@ -55,7 +55,7 @@ function requesterInfo(req, res, next) {
         if (!payload || !header) {
           res.status(401).json('Unverified JWT').end()
         } else if (payload.exp < Math.floor(new Date().getTime() / 1000) ) {
-          res.status(401).json('JWT Expired').end()
+          res.status(401).json({code: 'JWT Expired', userMessage: 'Your session has expired.  Please logout and login again.'}).end()
         } else if (header.typ === 'none') {
           res.status(401).json('Insecure JWT type').end()
         } else if (payload.iss !== issuer) {
