@@ -260,15 +260,11 @@ User story:
 
 
 - 95 0 in uport-demo: test full user story
-- 99 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
-- 99 0 backup DB (& automate)
-- 99 1 Reports of "Your Claims" doesn't show details
+- 95 0 and fix subjects (eg. Jun 29 claims by me for others)
+- 99 0 backup DB
 - 98 0 why confirmation not showing in DB?
-- 95 0 fix subject to be subject of claim eg. JoinAction (and fix Jun 29 claims by me)
-- 95 0 make logout be much longer (month? year?)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
-- 90 0 fix message when "Saved with ID" gives error message (eg. Expired)
 - 90 1 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 90 0 add .json(someErr) to all routers in the error path
 - 90 0 add helmet
@@ -300,7 +296,10 @@ User story:
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 85 0 deploy from git rather than from local?  (It's all public.)
+- 80 0 reportClaims page always shows "(no details)"
 - 80 0 optimize seesObjectThroughOthers rather than 2 awaits
+- 80 0 automate DB backup
+- 80 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
 - 80 1 don't insert same subject-object into network DB
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 80 2 export to Neo4J
@@ -349,3 +348,6 @@ User story:
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 
+References
+
+- uport-connect classes https://github.com/uport-project/uport-connect/blob/develop/docs/reference/index.md#Connect+requestDisclosure

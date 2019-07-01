@@ -180,9 +180,9 @@ class JwtService {
     return Promise.all(results)
   }
 
-  async createEmbeddedClaimRecords(jwtId, issuerDid, subjectDid, claim) {
+  async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
 
-    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ${subjectDid}, ...)`);
+    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
 
     if (claim['@context'] === 'http://schema.org'
@@ -354,7 +354,7 @@ class JwtService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.sub, payload.claim)
+      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.claim)
         .catch(err => {
           l.warn(err, `Failed to create embedded claim records.`)
         })
