@@ -259,10 +259,10 @@ User story:
 
 
 
-- 95 0 in uport-demo: test full user story
-- 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 99 0 backup DB
 - 98 0 why confirmation not showing in DB?
+- 95 0 in uport-demo: test full user story
+- 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
 - 90 1 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
@@ -274,7 +274,6 @@ User story:
 - 90 0 see Sonia one hop away, send search for her to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 1 don't count any confirmations by original claimiant in UI reporting
-- 90 2 add search for claim on parcel of land #cplot ^claim
 - 90 0 network: remove inserts and add explicit allowance for requester
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
 - 90 0 rename issuer to issuerDid in confirmation table
@@ -283,41 +282,22 @@ User story:
 - 90 2 add search for claim
   - 90 2 add search for claim on parcel of land
   - ?
-- 90 2 add search for endorser (in network?)
-  - ?
-- 90 1 check & verify the user credentials for every API request
-  - 90 1 add the user info to requests
-    - x 90 1 send & check the user DID
-    - 90 2 send & check the JWT
-  - x 90 1 add in-network data for each insert
-- 90 5 write & support use-cases
-- 90 0 fix display of bad JWT ID error, eg when signer doesn't match logged in (uport-demo test) user
 - 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
+- 90 1 run prod in prod mode (ie. not: npm run dev)
+- 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
+- 85 0 remove "subject" from terminology in code; prefer "agent"
 - 85 1 convert all response dates to ISO format (including zone)
-- 85 1 look into the action & tenure results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
+- 85 1 look into the action & tenure & role results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 85 0 deploy from git rather than from local?  (It's all public.)
-- 80 0 reportClaims page always shows "(no details)"
-- 80 0 optimize seesObjectThroughOthers rather than 2 awaits
 - 80 0 automate DB backup
 - 80 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
 - 80 1 don't insert same subject-object into network DB
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 80 2 export to Neo4J
-- 70 2 add Typescript
-- 70 1 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix swagger API docs http://localhost:3000/api-explorer/ (linked from main page)
-- 60 6 put all functionality in uport mobile app
-- 70 0 bug: if there's already a response JWT & message then a new one might not show
-- 70 0 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
-- 70 0 ensure JWT subject is counted as a confirmation
-- 70 0 bug when a claim is duplicated
-- 70 1 run tests while disconnected from the internet
-- 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
-- 85 0 remove "subject" from terminology in code; prefer "agent"
 - 80 1 add SSL
-- 90 1 run prod in prod mode (ie. not: npm run dev)
 - 80 1 db
   - add action_claim.startDateCanonical
     - and fill it
@@ -330,21 +310,28 @@ User story:
 - 80 0 gotta report errors to user (eg. repeated or failed confirmations so should see mix of successes and errors)
 - 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 80 0 usability: add a "waiting" spinner when remote method is called
-- 60 3 neo4j?
-- 70 0 usability: fade out the confirmation button when pushed
-- 70 3 have someone audit use of uport.pushToken
-- 60 0 write migration to remove claimEncoded column
-- 50 1 fix & enable the "should hide DIDs" tests in controller.js
-- 30 0 on uport-demo: change store/play pics in Welcome.js to local files
-- 30 0 in confirmation, check whether it really is a JoinAction
-- 30 0 try-catch around jwt.service resolveAuthenticator when not connected to internet
-- 40 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
-- 30 0 report page: who has the most activity for a time range
-- 60 0 make record IDs into hashes not sequentially increasing numbers
-- 70 1 tests: see above; duplicate JWT data; ACACs by different times; no claim in JWT
+- 70 0 bug: if there's already a response JWT & message then a new one might not show
+- 70 0 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
+- 70 0 bug when a claim is duplicated
 - 70 0 remove duplicate decode in JWT service
 - 70 0 add test for rejection of duplicate claim submissions
 - 70 0 handle "access_denied" when person rejects claim on phone
+- 70 0 usability: fade out the confirmation button when pushed
+- 70 3 have someone audit use of uport.pushToken
+- 70 1 tests: see above; duplicate JWT data; ACACs by different times; no claim in JWT
+- 70 2 add Typescript
+- 70 1 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
+- 60 0 make record IDs into hashes not sequentially increasing numbers
+- 60 0 write migration to remove claimEncoded column
+- 60 3 neo4j?
+- 50 1 fix & enable the "should hide DIDs" tests in controller.js
+- 50 0 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
+- 40 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
+- 40 6 put all functionality in uport mobile app
+- 30 0 on uport-demo: change store/play pics in Welcome.js to local files
+- 30 0 in confirmation, check whether it really is a JoinAction
+- 30 0 try-catch around jwt.service resolveAuthenticator when not connected to internet
+- 30 0 report page: who has the most activity for a time range
 
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 

@@ -1,4 +1,5 @@
-node_modules
-lib
 .env
 .DS_Store
+dist
+lib
+node_modules
