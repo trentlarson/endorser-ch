@@ -54,12 +54,12 @@ npm run dev:debug
 
 #### Run in *production* mode:
 
-Compiles the application and starts it in production production mode.
+Compiles the application and starts it in production mode.
 
 If you move/remove the previous install, you'll need to copy the .env file to new endorser-ch dir.
 
 ```shell
-scripts/deploy.sh release-X ~/.ssh/id_rsa.medici-2
+scripts/deploy.sh release-X ~/.ssh/id_rsa
 # Then SSH to the box and:
 # kill process: /usr/bin/node /home/ubuntu/.../_babel-node server
 # ... and may have to kill nodemon & pino-pretty processes separately
@@ -265,9 +265,12 @@ User story:
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
-- 90 1 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
+- 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
+- 90 1 change name of app from "uport demo" (when logging in)
+- 90 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 90 0 add .json(someErr) to all routers in the error path
 - 90 0 add helmet
+- 90 1 run with nginx forwarding on port 80
 - 90 2 switch from Confirmation to AgreeAction
 - 90 0 disallow duplicate tenure claims
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
