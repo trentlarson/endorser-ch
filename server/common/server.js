@@ -46,12 +46,21 @@ let options = {
 
 function requesterInfo(req, res, next) {
   let jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
-  if (!jwt) {
-    res.status(401).json('Missing JWT In ' + UPORT_PUSH_TOKEN_HEADER).end()
+  if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
+    if (req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince")
+        || req.originalUrl.startsWith("/api/claim?")
+        || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")) {
+      // these endcpoints are OK to hit without a token
+      res.locals.tokenIssuer = "ANONYMOUS"
+      next()
+    } else {
+      res.status(401).json('Missing JWT In ' + UPORT_PUSH_TOKEN_HEADER).end()
+    }
   } else {
     JwtService.decodeAndVerifyJwt(jwt)
       .then(({payload, header, signature, data, doc, authenticators, issuer}) => {
-        console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
+        console.log("JWT issuer:", issuer)
+        //console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
         if (!payload || !header) {
           res.status(401).json('Unverified JWT').end()
         } else if (payload.exp < Math.floor(new Date().getTime() / 1000) ) {
@@ -63,12 +72,12 @@ function requesterInfo(req, res, next) {
           res.status(401).json(`JWT issuer ${issuer} does not match auth payload iss ${payload.iss}`).end()
         } else {
           res.locals.tokenIssuer = payload.iss
-          next();
+          next()
         }
       })
       .catch(e => {
-        l.error(e)
-        res.status(401).json("Low-level error while parsing JWT: " + e).end
+        l.error("Low-level error while parsing JWT:", e)
+        res.status(401).json("Low-level error while parsing JWT: " + e).end()
       })
   }
 }
