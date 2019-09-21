@@ -613,6 +613,20 @@ class EndorserDatabase {
     })
   }
 
+  async voteInsert(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO vote_claim (jwtRowId, issuerDid, actionOption, candidate, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, datetime(?))");
+      console.log("entity.eventStartTime", entity.eventStartTime)
+      db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.actionOption, entity.candidate, entity.eventName, entity.eventStartTime], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
 
 
 

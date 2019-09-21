@@ -328,6 +328,7 @@ User story:
 - 60 0 write migration to remove claimEncoded column
 - 60 3 neo4j?
 - 50 1 fix & enable the "should hide DIDs" tests in controller.js
+- 50 1 show message when user rejects a claim
 - 50 0 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
 - 40 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
 - 40 6 put all functionality in uport mobile app

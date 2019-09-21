@@ -185,7 +185,25 @@ class JwtService {
     l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
 
-    if (claim['@context'] === 'http://schema.org'
+    if (Array.isArray(claim)) {
+
+      var recordings = []
+      { // handle multiple claims
+        for (var subClaim of claim) {
+          recordings.push(this.createEmbeddedClaimRecords(jwtId, issuerDid, subClaim))
+          for (var did of allDidsInside(subClaim)) {
+            recordings.push(this.createNetworkRecords(did, issuerDid))
+          }
+        }
+      }
+      l.debug(`${this.constructor.name} creating ${recordings.length} claim records.`)
+
+      await Promise.all(recordings)
+        .catch(err => {
+          return Promise.reject(err)
+        })
+
+    } else if (claim['@context'] === 'http://schema.org'
         && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
@@ -297,6 +315,20 @@ class JwtService {
         .catch(err => {
           return Promise.reject(err)
         })
+
+    } else if (claim['@context'] === 'http://schema.org'
+               && claim['@type'] === 'VoteAction') {
+
+      let vote = {
+        jwtRowId: jwtId,
+        issuerDid: issuerDid,
+        actionOption: claim.actionOption,
+        candidate: claim.candidate,
+        eventName: claim.object.event.name,
+        eventStartTime: claim.object.event.startDate,
+      }
+
+      let eventId = await db.voteInsert(vote)
 
     } else {
       l.warn("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
