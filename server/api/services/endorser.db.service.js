@@ -598,7 +598,7 @@ class EndorserDatabase {
   retrieveTenureClaimsAndConfirmationsAtPoint(lat, lon) {
     return new Promise((resolve, reject) => {
       var data = []
-        db.each("SELECT t.rowid as tid, t.partyDid as tenurePartyDid, t.polygon, c.rowid AS cid, c.issuer as confirmDid, c.tenureRowId from tenure_claim t LEFT JOIN confirmation c on c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat", [lon, lon, lat, lat], function(err, row) {
+      db.each("SELECT t.rowid as tid, t.partyDid as tenurePartyDid, t.polygon, c.rowid AS cid, c.issuer as confirmDid, c.tenureRowId from tenure_claim t LEFT JOIN confirmation c on c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat", [lon, lon, lat, lat], function(err, row) {
 
         let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, tenureRowId:row.tenureRowId} : null
         let both = {tenure:{id:row.tid, partyDid:row.tenurePartyDid, polygon:row.polygon}, confirmation:confirmation}
@@ -616,7 +616,6 @@ class EndorserDatabase {
   async voteInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO vote_claim (jwtRowId, issuerDid, actionOption, candidate, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, datetime(?))");
-      console.log("entity.eventStartTime", entity.eventStartTime)
       db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.actionOption, entity.candidate, entity.eventName, entity.eventStartTime], function(err) {
         if (err) {
           reject(err)
@@ -627,6 +626,23 @@ class EndorserDatabase {
     })
   }
 
+  async retrieveVoteCounts() {
+    return new Promise((resolve, reject) => {
+      var data = []
+      var stmt = ("select candidate, actionOption, count(*) as numVotes from vote_claim group by candidate, actionOption order by count(*) desc");
+      db.each(stmt, function(err, row) {
+
+        let result = {speaker: row.candidate, title: row.actionOption, count: row.numVotes}
+        data.push(result)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
 
 
 

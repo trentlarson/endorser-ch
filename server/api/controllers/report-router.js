@@ -33,6 +33,19 @@ class OrgRoleController {
 let orgRoleController = new OrgRoleController();
 
 
+import DbService from '../services/endorser.db.service';
+class DbController {
+  getVoteCounts(req, res) {
+    DbService.retrieveVoteCounts()
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => res.status(500).json(""+err).end())
+  }
+}
+let dbController = new DbController();
+
+
+
 export default express
   .Router()
   .all('*', function (req, res, next) {
@@ -89,3 +102,5 @@ export default express
  * @returns {Error} default - Unexpected error
  */
   .get('/orgRoleClaimsAndConfirmationsOnDate', orgRoleController.getClaimsAndConfirmationsOnDate)
+
+  .get('/voteCounts', dbController.getVoteCounts)
