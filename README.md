@@ -260,12 +260,13 @@ User story:
 
 
 - 99 0 backup DB
+- 98 0 make some reports world-readable (see what's already on the server)
 - 98 0 why confirmation not showing in DB?
+- 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
 - 95 0 in uport-demo: test full user story
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
-- 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
 - 90 1 change name of app from "uport demo" (when logging in)
 - 90 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 90 0 add .json(someErr) to all routers in the error path
