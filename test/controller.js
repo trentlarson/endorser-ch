@@ -6,7 +6,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import { allDidsInside, calcBbox, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { allDidsInside, calcBbox, hashChain, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
 import testUtil from './util'
 
@@ -417,6 +417,20 @@ describe('Util', () => {
          .to.deep.equal('{"a":4,"b":[5,1,2,3,{"ba":1,"bb":2,"bc":3}],"c":{"ca":1,"cb":2}}')
      }))
 
+  it('should create correct hash chains', () => {
+    let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
+    var someObj1 = {a: 1, b: 2}
+    var someObj2 = {a: 1, b: addr0}
+    expect(hashChain("", [])).to.equal("")
+    expect(hashChain("", [{id:0, claim:{}}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
+    // hash("" + hash(JSON.stringify(someObj1))) = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
+    expect(hashChain("", [{id:0, claim:someObj1}])).to.equal("5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac")
+    expect(hashChain("", [{id:1, claim:someObj1}])).to.equal("5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac")
+    // hash(JSON.stringify(hashDids(id,someObj2))) = "6e2ce3150c350414b2aab2ec291747eb57180daec990b0c38170645752201c52"
+    expect(hashChain("5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac", [{id:1, claim:someObj2}])).to.equal("97e22395bed678c2f0b8b733388a216c84c06ed3cac886ec056acfed904477a4")
+    expect(hashChain("", [{id:0, claim:someObj1}, {id:1, claim:someObj2}])).to.equal("97e22395bed678c2f0b8b733388a216c84c06ed3cac886ec056acfed904477a4")
+  })
+
 })
 
 var firstId
@@ -596,7 +610,7 @@ describe('Claim', () => {
      })).timeout(6002)
 
 
-  it('should add another new confirmation of two claims', () =>
+  it('should add yet another new confirmation of two claims', () =>
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])

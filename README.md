@@ -261,6 +261,7 @@ User story:
 
 - 99 0 backup DB
 - 98 0 make some reports world-readable (see what's already on the server)
+- 98 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
 - 98 0 why confirmation not showing in DB?
 - 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
 - 95 0 in uport-demo: test full user story

@@ -43,7 +43,7 @@ export async function resolveAuthenticator (alg, mnidOrDid, auth) {
   const authenticationKeys = auth ? (doc.authentication || []).map(({publicKey}) => publicKey) : true
   const authenticators = (doc.publicKey || []).filter(({type, id}) => types.find(supported => supported === type && (!auth || authenticationKeys.indexOf(id) >= 0)))
 
-  if (auth && (!authenticators || authenticators.length === 0)) throw new Error(`DID document for ${issuer} does not have public keys suitable for authenticationg user`)
+  if (auth && (!authenticators || authenticators.length === 0)) throw new Error(`DID document for ${issuer} does not have public keys suitable for authenticating user`)
   if (!authenticators || authenticators.length === 0) throw new Error(`DID document for ${issuer} does not have public keys for ${alg}`)
   return {authenticators, issuer, doc}
 }
