@@ -423,12 +423,16 @@ describe('Util', () => {
     var someObj2 = {a: 1, b: addr0}
     expect(hashChain("", [])).to.equal("")
     expect(hashChain("", [{id:0, claim:{}}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
+    // hash(JSON.stringify(someObj1)) = "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
     // hash("" + hash(JSON.stringify(someObj1))) = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
-    expect(hashChain("", [{id:0, claim:someObj1}])).to.equal("5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac")
-    expect(hashChain("", [{id:1, claim:someObj1}])).to.equal("5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac")
-    // hash(JSON.stringify(hashDids(id,someObj2))) = "6e2ce3150c350414b2aab2ec291747eb57180daec990b0c38170645752201c52"
-    expect(hashChain("5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac", [{id:1, claim:someObj2}])).to.equal("97e22395bed678c2f0b8b733388a216c84c06ed3cac886ec056acfed904477a4")
-    expect(hashChain("", [{id:0, claim:someObj1}, {id:1, claim:someObj2}])).to.equal("97e22395bed678c2f0b8b733388a216c84c06ed3cac886ec056acfed904477a4")
+    let chainedHashSomeObj1 = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
+    expect(hashChain("", [{id:0, claim:someObj1}])).to.equal(chainedHashSomeObj1)
+    // show that a change in the ID doesn't matter if there are no DIDs
+    expect(hashChain("", [{id:1, claim:someObj1}])).to.equal(chainedHashSomeObj1)
+    // hash(JSON.stringify(hashDids(id,someObj2))) = "f2da40ddc822ffca426e4709538a437b2fc5c796382b8b2cebb5f5aca7cced79"
+    expect(hashChain(chainedHashSomeObj1, [{id:1, claim:someObj2}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
+    expect(hashChain("", [{id:0, claim:someObj1}, {id:1, claim:someObj2}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
+
   })
 
 })

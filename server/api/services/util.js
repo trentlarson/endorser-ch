@@ -103,7 +103,7 @@ function hashSeedAndDid(seed, did) {
 function replaceDidsWithHashes(id, input) {
   if (Object.prototype.toString.call(input) === "[object String]") {
     if (isDid(input)) {
-      return hashSeedAndDid(id, input)
+      return "did:none:hashed:" + hashSeedAndDid(id, input)
     } else {
       return input
     }
@@ -123,7 +123,7 @@ function hashedClaimWithHashedDids(idAndClaim) {
   const hash = crypto.createHash('sha256');
   hash.update(claimStr)
   let result = hash.digest('hex')
-  console.log("hash(", claimStr, ") =", result)
+  //console.log("hash(", claimStr, ") =", result)
   return result
 }
 
@@ -132,7 +132,7 @@ function hashPreviousAndNext(prev, next) {
   hash.update(prev)
   hash.update(next)
   let result = hash.digest('hex')
-  console.log("hash(", prev, "+", next, ") =", result)
+  //console.log("hash(", prev, "+", next, ") =", result)
   return result
 }
 
