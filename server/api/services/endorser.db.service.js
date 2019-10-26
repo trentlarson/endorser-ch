@@ -445,6 +445,53 @@ class EndorserDatabase {
     })
   }
 
+  async jwtLastMerkleHash() {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT hashChainHex FROM jwt ORDER BY rowid DESC LIMIT 1", [], function(err, row) {
+        data.push({hashTreeHex:row.hashTreeHex})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
+  async jwtClaimsAndIdsUnmerkled() {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT rowid, claim FROM jwt WHERE hashChainHex is null ORDER BY rowid", [], function(err, row) {
+        data.push({id:row.rowid, claim:row.claim})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
+    })
+  }
+
+  async jwtSetHash(id, hash) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE jwt SET hashChainHex = ? WHERE rowid = ?");
+      db.run(stmt, [hash, id], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          if (this.changes === 1) {
+            resolve(hash)
+          } else {
+            reject("Expected to update 1 row but updated " + this.changes)
+          }
+        }
+      })
+    })
+  }
+
 
 
 

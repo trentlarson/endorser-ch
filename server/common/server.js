@@ -49,7 +49,8 @@ function requesterInfo(req, res, next) {
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
     if (req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince")
         || req.originalUrl.startsWith("/api/claim?")
-        || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")) {
+        || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")
+        || req.originalUrl.startsWith("/api/util/updateHashChain")) {
       // these endcpoints are OK to hit without a token
       res.locals.tokenIssuer = "ANONYMOUS"
       next()
@@ -76,7 +77,8 @@ function requesterInfo(req, res, next) {
         }
       })
       .catch(e => {
-        l.error("Low-level error while parsing JWT:", e)
+        // You would think that the separate parameter of "e" in this l.error would give the most info, but you'd be wrong in some cases such as when infura.io complains about "legacy access request rate exceeded".
+        l.error("Low-level error while parsing JWT:", e, " ... with toString(): " + e)
         res.status(401).json("Low-level error while parsing JWT: " + e).end()
       })
   }

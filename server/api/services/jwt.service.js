@@ -4,10 +4,9 @@ import util from 'util'
 import didJwt from 'did-jwt'
 import R from 'ramda'
 import db from './endorser.db.service'
-import { calcBbox } from './util';
+import { allDidsInside, calcBbox, hashChain, HIDDEN_TEXT } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
-import { allDidsInside, HIDDEN_TEXT } from './util'
 import { addCanSee } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
@@ -59,6 +58,33 @@ class JwtService {
     return db.jwtInsert(jwtEntity)
   }
   **/
+
+  async merkleUnmerkled() {
+    return db.jwtClaimsAndIdsUnmerkled()
+      .then(idAndClaimArray => {
+        return db.jwtLastMerkleHash()
+          .then(hashHexArray => {
+            var seedHex = ""
+            if (hashHexArray.length > 1) {
+              seedHex = hashHexArray[0].hashTreeHex
+            }
+            var inserts = []
+            var latestHash = seedHex
+            for (let idAndClaim of idAndClaimArray) {
+              let hash = hashChain(latestHash, [idAndClaim])
+              latestHash = hash
+              inserts.push(db.jwtSetHash(idAndClaim.id, hash))
+            }
+            return Promise.all(inserts)
+          })
+          .catch(e => {
+            return Promise.reject(e)
+          })
+      })
+      .catch(e => {
+        return Promise.reject(e)
+      })
+  }
 
   /**
      @return object with: {newId:NUMBER, actionClaimRowId:NUMBER}

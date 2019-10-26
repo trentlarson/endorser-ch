@@ -419,20 +419,29 @@ describe('Util', () => {
 
   it('should create correct hash chains', () => {
     let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
+    let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
     var someObj1 = {a: 1, b: 2}
     var someObj2 = {a: 1, b: addr0}
+    var someObj3 = {a: "gabba", b: [addr6]}
     expect(hashChain("", [])).to.equal("")
     expect(hashChain("", [{id:0, claim:{}}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
+    // hash("") = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     // hash(JSON.stringify(someObj1)) = "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
     // hash("" + hash(JSON.stringify(someObj1))) = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
     let chainedHashSomeObj1 = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
     expect(hashChain("", [{id:0, claim:someObj1}])).to.equal(chainedHashSomeObj1)
     // show that a change in the ID doesn't matter if there are no DIDs
     expect(hashChain("", [{id:1, claim:someObj1}])).to.equal(chainedHashSomeObj1)
-    // hash(JSON.stringify(hashDids(id,someObj2))) = "f2da40ddc822ffca426e4709538a437b2fc5c796382b8b2cebb5f5aca7cced79"
+    // hash(JSON.stringify(hashDids(1,someObj2))) = "f2da40ddc822ffca426e4709538a437b2fc5c796382b8b2cebb5f5aca7cced79"
     expect(hashChain(chainedHashSomeObj1, [{id:1, claim:someObj2}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
-    expect(hashChain("", [{id:0, claim:someObj1}, {id:1, claim:someObj2}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
+    // show that a change in the ID matters if there are DIDs
+    expect(hashChain(chainedHashSomeObj1, [{id:99, claim:someObj2}])).to.equal("8249a3e8e88b9fa8d2c18c4c35d8cf82b117d4aef6ac72df3c9564f04f380322")
 
+    // now an entire chain of size 2
+    expect(hashChain("", [{id:0, claim:someObj1}, {id:1, claim:someObj2}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
+    // now an entire chain of size 3
+    // hash(JSON.stringify(hashDids("abc",someObj3))) = "114c2b2db1f316658255764303c5cd8d6025fdd9d6088bfdbf39285c673f584b"
+    expect(hashChain("", [{id:0, claim:someObj1}, {id:1, claim:someObj2}, {id:"abc", claim:someObj3}])).to.equal("8b47201c5a6d8f5f772f922027f4e736fa4b971f677c561dd8dc25b73ab643c4")
   })
 
 })
