@@ -115,7 +115,7 @@ function replaceDidsWithHashes(id, input) {
 }
 
 function claimWithHashedDids(idAndClaim) {
-  return replaceDidsWithHashes(idAndClaim.id, idAndClaim.claim)
+  return replaceDidsWithHashes(idAndClaim.id, JSON.parse(idAndClaim.claim))
 }
 
 function hashedClaimWithHashedDids(idAndClaim) {
@@ -140,4 +140,4 @@ function hashChain(seed, idAndClaimList) {
   return R.reduce((prev, idAndClaim) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(idAndClaim)), seed, idAndClaimList)
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, hashChain, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

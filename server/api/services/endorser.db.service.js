@@ -445,11 +445,28 @@ class EndorserDatabase {
     })
   }
 
+  async jwtUpdateHash(jwtId, hash) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE jwt SET hashHex = ? WHERE rowid = ?");
+      db.run(stmt, [jwtId, hash], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          if (this.changes === 1) {
+            resolve(hash)
+          } else {
+            reject("Expected to update 1 row but updated " + this.changes)
+          }
+        }
+      })
+    })
+  }
+
   async jwtLastMerkleHash() {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT hashChainHex FROM jwt ORDER BY rowid DESC LIMIT 1", [], function(err, row) {
-        data.push({hashTreeHex:row.hashTreeHex})
+      db.each("SELECT hashChainHex FROM jwt WHERE hashChainHex is not null ORDER BY rowid DESC LIMIT 1", [], function(err, row) {
+        data.push({hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -463,8 +480,9 @@ class EndorserDatabase {
   async jwtClaimsAndIdsUnmerkled() {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, claim FROM jwt WHERE hashChainHex is null ORDER BY rowid", [], function(err, row) {
-        data.push({id:row.rowid, claim:row.claim})
+      // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
+      db.each("SELECT rowid, claim, hashHex FROM jwt WHERE hashChainHex is null ORDER BY rowid", [], function(err, row) {
+        data.push({id:row.rowid, claim:row.claim, hashHex:row.hashHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -475,15 +493,16 @@ class EndorserDatabase {
     })
   }
 
-  async jwtSetHash(id, hash) {
+  async jwtSetHash(id, hashHex, hashChainHex) {
+    // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET hashChainHex = ? WHERE rowid = ?");
-      db.run(stmt, [hash, id], function(err) {
+      var stmt = ("UPDATE jwt SET hashHex = ?, hashChainHex = ? WHERE rowid = ?");
+      db.run(stmt, [hashHex, hashChainHex, id], function(err) {
         if (err) {
           reject(err)
         } else {
           if (this.changes === 1) {
-            resolve(hash)
+            resolve(hashHex)
           } else {
             reject("Expected to update 1 row but updated " + this.changes)
           }

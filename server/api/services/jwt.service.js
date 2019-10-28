@@ -4,7 +4,7 @@ import util from 'util'
 import didJwt from 'did-jwt'
 import R from 'ramda'
 import db from './endorser.db.service'
-import { allDidsInside, calcBbox, hashChain, HIDDEN_TEXT } from './util';
+import { allDidsInside, calcBbox, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 import { addCanSee } from './network-cache.service'
@@ -65,23 +65,28 @@ class JwtService {
         return db.jwtLastMerkleHash()
           .then(hashHexArray => {
             var seedHex = ""
-            if (hashHexArray.length > 1) {
-              seedHex = hashHexArray[0].hashTreeHex
+            if (hashHexArray.length > 0) {
+              seedHex = hashHexArray[0].hashChainHex
             }
-            var inserts = []
-            var latestHash = seedHex
+            var updates = []
+            var latestHashChainHex = seedHex
             for (let idAndClaim of idAndClaimArray) {
-              let hash = hashChain(latestHash, [idAndClaim])
-              latestHash = hash
-              inserts.push(db.jwtSetHash(idAndClaim.id, hash))
+              latestHashChainHex = hashChain(latestHashChainHex, [idAndClaim])
+              // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
+              if (idAndClaim.hashHex === null) {
+                idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
+              }
+              updates.push(db.jwtSetHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
             }
-            return Promise.all(inserts)
+            return Promise.all(updates)
           })
           .catch(e => {
+            l.error(e, "Got error while saving hashes, with this toString(): " + e)
             return Promise.reject(e)
           })
       })
       .catch(e => {
+        l.error(e, "Got error while retrieving unchained claims, with this toString(): " + e)
         return Promise.reject(e)
       })
   }
@@ -234,7 +239,7 @@ class JwtService {
 
       let agentDid = claim.agent.did
       if (!agentDid) {
-        l.error(`${this.constructor.name} JoinAction for ${jwtId} has no agent DID.`)
+        l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no agent DID.`)
         return Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
       }
 
@@ -402,6 +407,8 @@ class JwtService {
           .catch((err) => {
             return Promise.reject(err)
           })
+
+      await db.jwtUpdate(jwtId, hashedClaimWithHashedDids)
 
       //l.debug(doc, `${this.constructor.name} resolved doc`)
       //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
