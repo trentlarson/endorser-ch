@@ -259,6 +259,11 @@ User story:
 
 
 
+Next deploy:
+- run migrate
+- call merkle endpoint
+
+
 - 99 0 backup DB
 - 99 0 check why a new user who has confirmed me has HIDDEN on confirmation DID
 - 98 0 make some reports world-readable (see what's already on the server; all HIDDEN)

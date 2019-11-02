@@ -76,7 +76,7 @@ class JwtService {
               if (idAndClaim.hashHex === null) {
                 idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
               }
-              updates.push(db.jwtSetHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
+              updates.push(db.jwtSetMerkleHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
             }
             return Promise.all(updates)
           })
@@ -408,7 +408,8 @@ class JwtService {
             return Promise.reject(err)
           })
 
-      await db.jwtUpdate(jwtId, hashedClaimWithHashedDids)
+      let savedJwt = await db.jwtById(jwtId)
+      await db.jwtSetHash(jwtId, hashedClaimWithHashedDids({id:jwtId, claim:claimStr}))
 
       //l.debug(doc, `${this.constructor.name} resolved doc`)
       //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)

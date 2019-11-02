@@ -378,8 +378,8 @@ class EndorserDatabase {
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claimEncoded, jwtEncoded FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
-        data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded}
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
+        data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -401,8 +401,8 @@ class EndorserDatabase {
     let where = constructWhere(params, excludeConfirmations)
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim})
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -419,8 +419,8 @@ class EndorserDatabase {
   jwtByContent(text) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim FROM jwt WHERE INSTR(claim, ?) > 0 ORDER BY issuedAt DESC LIMIT 50", [text], function(err, row) {
-        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim})
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE INSTR(claim, ?) > 0 ORDER BY issuedAt DESC LIMIT 50", [text], function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -431,7 +431,7 @@ class EndorserDatabase {
     })
   }
 
-  async jwtInsert(entity) {
+  jwtInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt (issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded) VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?)");
       console.log("Inserted into DB JWT with entity.claim", entity.claim)
@@ -445,24 +445,7 @@ class EndorserDatabase {
     })
   }
 
-  async jwtUpdateHash(jwtId, hash) {
-    return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET hashHex = ? WHERE rowid = ?");
-      db.run(stmt, [jwtId, hash], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          if (this.changes === 1) {
-            resolve(hash)
-          } else {
-            reject("Expected to update 1 row but updated " + this.changes)
-          }
-        }
-      })
-    })
-  }
-
-  async jwtLastMerkleHash() {
+  jwtLastMerkleHash() {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT hashChainHex FROM jwt WHERE hashChainHex is not null ORDER BY rowid DESC LIMIT 1", [], function(err, row) {
@@ -477,7 +460,7 @@ class EndorserDatabase {
     })
   }
 
-  async jwtClaimsAndIdsUnmerkled() {
+  jwtClaimsAndIdsUnmerkled() {
     return new Promise((resolve, reject) => {
       var data = []
       // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
@@ -493,7 +476,24 @@ class EndorserDatabase {
     })
   }
 
-  async jwtSetHash(id, hashHex, hashChainHex) {
+  jwtSetHash(jwtId, hashHex) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE jwt SET hashHex = ? WHERE rowid = ?");
+      db.run(stmt, [hashHex, jwtId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          if (this.changes === 1) {
+            resolve(hashHex)
+          } else {
+            reject("Expected to update 1 row but updated " + this.changes)
+          }
+        }
+      })
+    })
+  }
+
+  jwtSetMerkleHash(id, hashHex, hashChainHex) {
     // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE jwt SET hashHex = ?, hashChainHex = ? WHERE rowid = ?");
