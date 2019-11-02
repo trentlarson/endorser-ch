@@ -260,10 +260,12 @@ User story:
 
 
 - 99 0 backup DB
-- 98 0 make some reports world-readable (see what's already on the server)
+- 99 0 check why a new user who has confirmed me has HIDDEN on confirmation DID
+- 98 0 make some reports world-readable (see what's already on the server; all HIDDEN)
 - 98 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
 - 98 0 why confirmation not showing in DB?
 - 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
+  - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 95 0 in uport-demo: test full user story
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
