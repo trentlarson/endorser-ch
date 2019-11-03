@@ -36,7 +36,8 @@ async function getDidsRequesterCanSeeExplicitly(requesterDid) {
 async function getAllDidsRequesterCanSee(requesterDid) {
   let didsCanSee = await getDidsRequesterCanSeeExplicitly(requesterDid)
   var result = didsCanSee.concat(await getSeenByAll())
-  return result
+  var result2 = result.concat([requesterDid]) // themself
+  return result2
 }
 
 
@@ -77,7 +78,17 @@ async function getAllDidsWhoCanSeeObject(object) {
    add subject/object combo to DB and caches
 **/
 async function addCanSee(subject, object) {
-  db.networkInsert(subject, object)
+
+  if (subject.startsWith("did:none:")) {
+    // No need to continue with this, since nobody can make a valid submission with this DID method.
+    // This often happens for HIDDEN, when people are confirming without looking.
+    return
+  }
+
+  if (subject !== object) {
+    // no need to save themselves in the DB (heck: we could do without the caching, too, but it's fast, so whatever)
+    db.networkInsert(subject, object)
+  }
 
   var seesDids = SeesInNetworkCache.get(subject)
   if (!seesDids) {

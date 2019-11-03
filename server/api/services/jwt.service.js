@@ -167,74 +167,14 @@ class JwtService {
      @return array of promises for all the insertions into the network table
    **/
   async createNetworkRecords(agentOrPartyDid, issuerDid) {
-
-    let results = []
-
     // put the issuer in the confirmed claim-agent's network
     l.trace(`Adding network entry from ${agentOrPartyDid} to ${issuerDid}`)
-    results.push(addCanSee(agentOrPartyDid, issuerDid))
-
-    /**
-       So this was the approach where anyone you confirm would see your ID.
-       I don't know if that's quite what we want; now that we've got the
-       means to see any intermediate connection, I think that's a better way to
-       allow people to see connections.
-
-       If you decide to restore this, be sure to add new claim types, eg Org Role.
-
-    if (actionClaimId) {
-      // put the issuer in the confirmed claim's confirmed-issuer network
-      results.push(db.confirmationsByActionClaim(actionClaimId)
-                   .then(confirmations => {
-                     let subResults = []
-                     for (var confirm of confirmations) {
-                       l.trace(`Adding network entry from ${confirm.issuer} to ${issuerDid}`)
-                       subResults.push(addCanSee(confirm.issuer, issuerDid))
-                     }
-                     return Promise.all(subResults)
-                   }))
-    }
-    if (tenureClaimId) {
-      // put the issuer in the confirmed claim's confirmed-issuer network
-      results.push(db.confirmationsByTenureClaim(tenureClaimId)
-                   .then(confirmations => {
-                     let subResults = []
-                     for (var confirm of confirmations) {
-                       l.trace(`Adding network entry from ${confirm.issuer} to ${issuerDid}`)
-                       subResults.push(addCanSee(confirm.issuer, issuerDid))
-                     }
-                     return Promise.all(subResults)
-                   }))
-    }
-    **/
-
-    return Promise.all(results)
+    return addCanSee(agentOrPartyDid, issuerDid)
   }
 
-  async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
+  async createEmbeddedClaimRecord(jwtId, issuerDid, claim) {
 
-    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
-    l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
-
-    if (Array.isArray(claim)) {
-
-      var recordings = []
-      { // handle multiple claims
-        for (var subClaim of claim) {
-          recordings.push(this.createEmbeddedClaimRecords(jwtId, issuerDid, subClaim))
-          for (var did of allDidsInside(subClaim)) {
-            recordings.push(this.createNetworkRecords(did, issuerDid))
-          }
-        }
-      }
-      l.debug(`${this.constructor.name} creating ${recordings.length} claim records.`)
-
-      await Promise.all(recordings)
-        .catch(err => {
-          return Promise.reject(err)
-        })
-
-    } else if (claim['@context'] === 'http://schema.org'
+    if (claim['@context'] === 'http://schema.org'
         && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
@@ -264,11 +204,6 @@ class JwtService {
       let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
 
-      await this.createNetworkRecords(agentDid, issuerDid)
-        .catch(err => {
-          l.error(err, "Got error creating network records after action claim was created with ID " + actionId)
-        })
-
     } else if (claim['@context'] === 'http://schema.org'
                && claim['@type'] === 'Organization'
                && claim.member
@@ -286,10 +221,6 @@ class JwtService {
       }
       let orgRoleId = await db.orgRoleInsert(entity)
 
-      await this.createNetworkRecords(claim.member.member.identifier, issuerDid)
-        .catch(err => {
-          l.error(err, "Got error creating network records after org role claim was created with ID " + orgRoleId)
-        })
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Tenure') {
@@ -309,11 +240,6 @@ class JwtService {
 
       let tenureId = await db.tenureInsert(entity)
 
-      await this.createNetworkRecords(claim.party && claim.party.did, issuerDid)
-        .catch(err => {
-          l.error(err, "Got error creating network records after tenure claim was created with ID " + tenureId)
-        })
-
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 
@@ -323,9 +249,6 @@ class JwtService {
         let origClaim = claim['originalClaim']
         if (origClaim) {
           recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
-          for (var did of allDidsInside(origClaim)) {
-            recordings.push(this.createNetworkRecords(did, issuerDid))
-          }
         }
       }
 
@@ -334,9 +257,6 @@ class JwtService {
         if (origClaims) {
           for (var origClaim of origClaims) {
             recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
-          }
-          for (var did of allDidsInside(origClaims)) {
-            recordings.push(this.createNetworkRecords(did, issuerDid))
           }
         }
       }
@@ -362,8 +282,44 @@ class JwtService {
       let eventId = await db.voteInsert(vote)
 
     } else {
-      l.warn("Attempted to submit unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
+      l.warn("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
     }
+
+  }
+
+  async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
+
+    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
+    l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
+
+    if (Array.isArray(claim)) {
+
+      var recordings = []
+      { // handle multiple claims
+        for (var subClaim of claim) {
+          recordings.push(this.createEmbeddedClaimRecord(jwtId, issuerDid, subClaim))
+        }
+      }
+      l.debug(`${this.constructor.name} creating ${recordings.length} claim records.`)
+
+      await Promise.all(recordings)
+        .catch(err => {
+          return Promise.reject(err)
+        })
+    } else {
+      this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
+    }
+
+    // now record all the "sees" relationships to the issuer
+    var netRecords = []
+    for (var did of allDidsInside(claim)) {
+      netRecords.push(this.createNetworkRecords(did, issuerDid))
+    }
+    await Promise.all(netRecords)
+      .catch(err => {
+        return Promise.reject(err)
+      })
+
   }
 
   async decodeAndVerifyJwt(jwt) {
