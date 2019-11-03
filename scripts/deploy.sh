@@ -32,3 +32,5 @@ ssh -i $2 ubuntu@endorser.ch << EOF
   # npm prune --production
   perl -p -i -e "s/VERSION=.*/VERSION=$1/g" .env
 EOF
+
+echo "Deployed.  Now log in and get into screen and start the app."
