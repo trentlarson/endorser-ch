@@ -265,10 +265,11 @@ Next deploy:
 
 
 - 99 0 backup DB
-- 99 0 check why a new user who has confirmed me has HIDDEN on confirmation DID
+- 98 0 disallow signing a claim if they're not logged in (because people end up signing without data.  Did Kyle get any claims without a subject in on Nov 16? ... and does it give us a success if we do that?)
+- 98 1 change confirmations to load real-time (so they don't have to refresh the page)
 - 98 0 make some reports world-readable (see what's already on the server; all HIDDEN)
-- 98 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
-- 98 0 why confirmation not showing in DB?
+- 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging) (eg. 11/9 Brandon 422 != 404)
+- 95 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
 - 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 95 0 in uport-demo: test full user story
@@ -297,7 +298,7 @@ Next deploy:
 - 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
 - 90 1 run prod in prod mode (ie. not: npm run dev)
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
-- 85 0 remove "subject" from terminology in code; prefer "agent"
+- 85 0 remove "subject" from terminology in code; prefer "agent" (Why?) (... or did I change JoinClaim?)
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure & role results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 85 0 deploy from git rather than from local?  (It's all public.)
