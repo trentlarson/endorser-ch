@@ -145,7 +145,7 @@ var pushTokens, claimPresidentFor3By3JwtEnc, confirmPresidentFor3By5JwtEnc, conf
 
 before(async () => {
 
-  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller push tokens", pushTokens) })
+  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller2 push tokens", pushTokens) })
 
   await Promise.all([
     claimPresidentFor3By3JwtProm,

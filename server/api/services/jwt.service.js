@@ -307,7 +307,7 @@ class JwtService {
           return Promise.reject(err)
         })
     } else {
-      this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
+      await this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
     }
 
     // now record all the "sees" relationships to the issuer
