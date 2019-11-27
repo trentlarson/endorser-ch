@@ -77,17 +77,20 @@ async function getAllDidsWhoCanSeeObject(object) {
 /**
    add subject/object combo to DB and caches
 **/
-async function addCanSee(subject, object) {
+async function addCanSee(subject, object, url) {
 
   if (subject.startsWith("did:none:")) {
     // No need to continue with this, since nobody can make a valid submission with this DID method.
     // This often happens for HIDDEN, when people are confirming without looking.
+    l.trace(`... but actually not adding a network entry since the DID type is 'none'.`)
     return
   }
 
   if (subject !== object) {
-    // no need to save themselves in the DB (heck: we could do without the caching, too, but it's fast, so whatever)
-    db.networkInsert(subject, object)
+    // no need to save themselves in the DB (heck: we could do without the caching, too, since we always add this person via getAllDidsRequesterCanSee, but it's fast, so whatever)
+    await db.networkInsert(subject, object, url)
+  } else {
+    l.trace("... but not adding DB network entry since it's the same DID.")
   }
 
   var seesDids = SeesInNetworkCache.get(subject)

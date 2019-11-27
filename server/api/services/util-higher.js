@@ -72,11 +72,11 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
   }
 }
 
-async function makeMeGloballyVisible(issuerDid) {
-  await addCanSee("*", issuerDid)
+async function makeMeGloballyVisible(issuerDid, url) {
+  await addCanSee("*", issuerDid, url)
     .catch(err => {
-      l.error(err, "Got error creating issuer-visible network record for " + issuerDid + " after claim was created.")
-      return Promise.reject("Got error creating issuer-visible network record for " + issuerDid + " after claim was created.")
+      l.error(err, "Got error creating issuer-visible network record for " + issuerDid)
+      return Promise.reject("Got error creating issuer-visible network record for " + issuerDid)
     })
 }
 

@@ -719,10 +719,10 @@ class EndorserDatabase {
   /**
     If the pair already exists, will resolve ()instead of rejecting).
    **/
-  async networkInsert(subject, object) {
+  async networkInsert(subject, object, url) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?)")
-      db.run(stmt, [subject, object], function(err) {
+      var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?, ?)")
+      db.run(stmt, [subject, object, url], function(err) {
         if (err) {
           // This SQLite check is no longer necessary due to "OR IGNORE". Nuke it when you've tested.
           if (err.errno === 19) {

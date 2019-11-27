@@ -152,7 +152,7 @@ curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"j
 curl http://localhost:3000/api/tenure/1 -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
 curl 'http://localhost:3000/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787' -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
 curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787' -H "Uport-Push-Token: $UPORT_PUSH_TOKEN" | json_pp
-curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
+curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-Type: application/json" -H "Uport-Push-Token: $UPORT_PUSH_TOKEN" -d '{"url":"http://IgniteCommunity.org"}'
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
@@ -319,7 +319,9 @@ Next deploy:
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
 - 80 0 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
 - 80 0 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
-- 80 0 gotta report errors to user (eg. repeated or failed confirmations so should see mix of successes and errors)
+- 80 1 gotta report errors to user
+  - eg. repeated or failed confirmations so should see mix of successes and errors
+  - eg. remove hashHex column and see how parts succeed but there's still an error
 - 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 80 0 usability: add a "waiting" spinner when remote method is called
 - 70 0 bug: if there's already a response JWT & message then a new one might not show

@@ -36,7 +36,7 @@ class Controller {
   }
 
   makeMeGloballyVisible(req, res) {
-    makeMeGloballyVisible(res.locals.tokenIssuer)
+    makeMeGloballyVisible(res.locals.tokenIssuer, req.body.url)
       .then(() => res.status(201).json({success:true}).end())
       .catch(err => res.status(500).json(""+err).end())
   }
