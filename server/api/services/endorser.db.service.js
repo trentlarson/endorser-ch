@@ -204,6 +204,26 @@ class EndorserDatabase {
 
 
   /****************************************************************
+   * Age
+   **/
+
+  ageInsert(jwtRowId, issuedAt, issuerDid, personDid, overAge) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO age_claim (jwtRowId, issuedAt, issuerDid, personDid, overAge) VALUES (?, ?, ?, ?, ?)")
+      db.run(stmt, [jwtRowId, issuedAt, issuerDid, personDid, overAge], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+
+
+
+  /****************************************************************
    * Confirmation
    **/
 
@@ -287,6 +307,27 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO confirmation (jwtRowId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId) VALUES (?, ?, ?, ?, ?, ?)")
       db.run(stmt, [jwtRowId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+
+        }
+      })
+    })
+  }
+
+
+
+
+  /****************************************************************
+   * Domicile
+   **/
+
+  domicileInsert(jwtRowId, issuerDid, personDid, lon, lat, radiusMeters) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO domicile_claim (jwtRowId, issuerDid, personDid, lon, lat, radiusMeters) VALUES (?, ?, ?, ?, ?)")
+      db.run(stmt, [jwtRowId, issuerDid, personDid, lon, lat, radiusMeters], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -678,6 +719,13 @@ class EndorserDatabase {
       })
     })
   }
+
+
+
+
+  /****************************************************************
+   * Vote
+   **/
 
   async voteInsert(entity) {
     return new Promise((resolve, reject) => {

@@ -1,0 +1,18 @@
+
+CREATE TABLE age_claim (
+       jwtRowId BIGINT,
+       issuedAt DATETIME,
+       issuerDid TEXT, -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
+       personDid TEXT, -- DID of the person with that age; did:ethr are 52 chars
+       overAge INT -- minimum age of person (inclusive)
+);
+
+CREATE TABLE domicile_claim (
+       jwtRowId BIGINT,
+       issuerDid TEXT, -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
+       personDid TEXT, -- DID of the person living there; did:ethr are 52 chars
+       lon REAL, -- longitude
+       lat REAL, -- latitude
+       radiusMeters REAL -- the radius around lat & long wherein the domicile might be
+);
+
