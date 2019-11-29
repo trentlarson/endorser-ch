@@ -259,10 +259,6 @@ User story:
 
 
 
-Next deploy:
-- run migrate
-- call merkle endpoint
-
 
 - 99 0 backup DB
 - 98 0 make some reports world-readable (see what's already on the server; all HIDDEN)
@@ -275,10 +271,11 @@ Next deploy:
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
+- 95 2 security: GitHub vulnerabilities
 - 90 1 change name of app from "uport demo" (when logging in)
 - 90 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 90 0 add .json(someErr) to all routers in the error path
-- 90 0 add helmet
+- 90 0 security: add helmet
 - 90 1 run with nginx forwarding on port 80
 - 90 2 switch from Confirmation to AgreeAction
 - 90 0 disallow duplicate tenure claims
