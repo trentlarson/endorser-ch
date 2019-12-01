@@ -596,6 +596,20 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
      })).timeout(7500)
 
+  it('should get a set of action claims & one confirmation', () =>
+     request(Server)
+     .get('/api/event/1/actionClaimsAndConfirmations')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body[0])
+         .to.be.an('object')
+         .that.has.property('confirmations')
+         .to.be.an('array')
+         .of.length(1)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
   it('should add another new confirmation', () =>
      request(Server)
      .post('/api/claim')
@@ -621,7 +635,6 @@ describe('Claim', () => {
          .that.equals(firstId + 5)
        expect(r.status).that.equals(201)
      })).timeout(6002)
-
 
   it('should add yet another new confirmation of two claims', () =>
      request(Server)
@@ -812,7 +825,7 @@ describe('Event', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should get a set of action claims & confirmations', () =>
+  it('should get a set of action claims & two confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -829,6 +842,11 @@ describe('Event', () => {
        expect(r.body[0])
          .to.be.an('object')
          .that.has.property('confirmations')
+         .to.be.an('array')
+         .of.length(2)
+       expect(r.body[0])
+         .to.be.an('object')
+         .that.has.property('confirmations')
          .that.has.property(0)
          .that.has.property('issuer')
          .that.equals(creds[0].did)
@@ -838,6 +856,31 @@ describe('Event', () => {
          .that.has.property(1)
          .that.has.property('issuer')
          .that.equals(creds[1].did)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('should not add a duplicate confirmation for this action', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       // It creates a JWT record but not a new confirmation.
+       expect(r.status).that.equals(201)
+     })).timeout(7001)
+
+  it('should get a set of action claims & still two confirmations', () =>
+     request(Server)
+     .get('/api/event/1/actionClaimsAndConfirmations')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body[0])
+         .to.be.an('object')
+         .that.has.property('confirmations')
+         .to.be.an('array')
+         .of.length(2)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -854,7 +897,7 @@ describe('Tenure', () => {
       .then(r => {
         expect(r.body)
           .to.be.a('number')
-          .that.equals(firstId + 7)
+          .that.equals(firstId + 8)
         expect(r.status).that.equals(201)
       })).timeout(6000)
 

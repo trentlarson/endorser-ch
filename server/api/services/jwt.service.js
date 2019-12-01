@@ -92,8 +92,8 @@ class JwtService {
   }
 
   /**
-     @return object with: {newId:NUMBER, actionClaimRowId:NUMBER}
-       ... where newId is -1 if something went wrong
+     @return object with: {confirmId:NUMBER, actionClaimRowId:NUMBER}
+       ... where confirmId is -1 if something went wrong
    **/
   async createOneConfirmation(jwtId, issuerDid, origClaim) {
 
@@ -114,8 +114,8 @@ class JwtService {
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${actionClaimId}`);
-      return {newId:result, actionClaimId}
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
+      return {confirmId:result, actionClaimId}
 
     } else if (origClaim['@context'] === 'http://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
@@ -129,8 +129,8 @@ class JwtService {
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${tenureClaimId}`);
-      return {newId:result, tenureClaimId}
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
+      return {confirmId:result, tenureClaimId}
 
     } else if (origClaim['@context'] === 'http://schema.org'
                && origClaim['@type'] === 'Organization'
@@ -149,12 +149,27 @@ class JwtService {
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for ${orgRoleClaimId}`);
-      return {newId:result, orgRoleClaimId}
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
+      return {confirmId:result, orgRoleClaimId}
 
     } else {
-      l.warn("Attempted to confirm unknown claim with @context " + origClaim['@context'] + " and @type " + origClaim['@type'])
-      return {}
+
+
+      let confirmation = await db.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
+      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
+
+      let origClaimStr = JSON.stringify(origClaim)
+
+      // If we choose to add the subject, it's found in these places (as of today):
+      //   claim.agent.did
+      //   claim.member.member.identifier
+      //   claim.party.did
+      //   claim.identifier
+
+      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
+      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for a generic confirmation`);
+      return {confirmId:result}
+
     }
   }
 
