@@ -60,7 +60,6 @@ function requesterInfo(req, res, next) {
   } else {
     JwtService.decodeAndVerifyJwt(jwt)
       .then(({payload, header, signature, data, doc, authenticators, issuer}) => {
-        console.log("JWT issuer:", issuer)
         //console.log("Elements of the decoded JWT", {payload, header, signature, data, doc, authenticators, issuer})
         if (!payload || !header) {
           res.status(401).json('Unverified JWT').end()

@@ -17,7 +17,9 @@ class JwtService {
 
   async byId(id, requesterDid) {
     l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
-    return db.jwtById(id)
+    let j = await db.jwtById(id)
+    let result = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
+    return result
   }
 
   async byQuery(params, requesterDid) {
