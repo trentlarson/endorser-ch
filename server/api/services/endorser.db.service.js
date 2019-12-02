@@ -207,6 +207,23 @@ class EndorserDatabase {
    * Confirmation
    **/
 
+  confirmationById(confirmationId) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      const sql = "SELECT rowid, * FROM confirmation WHERE rowId = ?"
+      db.each(sql, [confirmationId], function(err, row) {
+        data.push({issuer: row.issuer, origClaim: row.origClaim})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
+  // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndAction(issuerDid, actionRowId) {
     return new Promise((resolve, reject) => {
       db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND actionRowId = ?", [issuerDid, actionRowId], function(err, row) {
@@ -235,6 +252,7 @@ class EndorserDatabase {
     })
   }
 
+  // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndOrgRole(issuerDid, orgRoleRowId) {
     return new Promise((resolve, reject) => {
       db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND orgRoleRowId = ?", [issuerDid, orgRoleRowId], function(err, row) {
@@ -249,6 +267,7 @@ class EndorserDatabase {
     })
   }
 
+  // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndTenure(issuerDid, tenureRowId) {
     return new Promise((resolve, reject) => {
       db.get("SELECT rowid, * FROM confirmation WHERE issuer = ? AND tenureRowId = ?", [issuerDid, tenureRowId], function(err, row) {
@@ -258,6 +277,22 @@ class EndorserDatabase {
           resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, tenureId:row.tenureRowId})
         } else {
           resolve(null)
+        }
+      })
+    })
+  }
+
+  confirmationsByClaim(claimStr) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      const sql = "SELECT rowid, * FROM confirmation WHERE origClaim = ?"
+      db.each(sql, [claimStr], function(err, row) {
+        data.push({issuer: row.issuer})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
         }
       })
     })
@@ -392,8 +427,8 @@ class EndorserDatabase {
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
-        data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
+        data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim: row.claim, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -424,6 +459,24 @@ class EndorserDatabase {
           resolve(data)
         }
       })
+    })
+  }
+
+  /**
+     @param full claim text to find
+  **/
+  jwtByClaim(claimStr) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
+        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      });
     })
   }
 

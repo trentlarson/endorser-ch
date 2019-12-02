@@ -35,6 +35,24 @@ class JwtService {
     return result
   }
 
+  async allClaimsAndConfirmationsMatchingClaim(claimId) {
+    let jwtClaim = await db.jwtById(claimId)
+    if (!jwtClaim) {
+      return []
+    } else {
+      if (jwtClaim.claimType == 'Confirmation') {
+        return Promise.reject("It doesn't make sense to ask for confirmations of a confirmation.")
+      } else {
+        let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
+        let allDids = R.append(
+          jwtClaim.issuer,
+          R.map((c)=>c.issuer, confirmations)
+        )
+        return R.uniq(allDids)
+      }
+    }
+  }
+
   jwtDecoded(encoded) {
 
     // this line is lifted from didJwt.verifyJWT
@@ -108,6 +126,7 @@ class JwtService {
       let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
       if (actionClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
 
+      // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
 
@@ -123,6 +142,7 @@ class JwtService {
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
 
+      // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
 
@@ -143,6 +163,7 @@ class JwtService {
       let orgRoleClaimId = await db.orgRoleClaimIdByOrgAndDates(origClaim.name, origClaim.member.roleName, origClaim.member.startDate, origClaim.member.endDate, origClaim.member.member.identifier)
       if (orgRoleClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
 
+      // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
 

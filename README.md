@@ -266,6 +266,7 @@ User story:
 - 99 0 backup DB
 - 98 0 make some reports world-readable (see what's already on the server; all HIDDEN)
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging) (eg. 11/9 Brandon 422 != 404)
+  - ... and add confirmation IDs for confirmation claims
 - 95 1 Test: Did Kyle get any claims without a subject in on Nov 16? ... and does it give us a success if we do that?
 - 95 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
 - 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
@@ -281,7 +282,7 @@ User story:
 - 90 0 security: add helmet
 - 90 1 run with nginx forwarding on port 80
 - 90 2 switch from Confirmation to AgreeAction
-- 90 0 disallow duplicate tenure claims
+- 90 0 disallow duplicate claims
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 90 0 see Sonia one hop away, send search for her to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
@@ -301,9 +302,9 @@ User story:
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure & role results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 85 0 deploy from git rather than from local?  (It's all public.)
+- 85 2 use UUIDs instead of rowids
 - 80 0 automate DB backup
 - 80 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
-- 80 1 don't insert same subject-object into network DB
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
 - 80 2 export to Neo4J
 - 80 5 switch/add format to verifiable credentials?

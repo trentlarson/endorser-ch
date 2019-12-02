@@ -446,7 +446,7 @@ describe('Util', () => {
 
 })
 
-var firstId
+var firstId, firstConfirmationClaimId
 
 describe('Claim', () => {
 
@@ -531,6 +531,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.a('number')
          .that.equals(firstId + 1)
+       firstConfirmationClaimId = firstId + 1
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
@@ -882,6 +883,39 @@ describe('Event', () => {
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('should get two issuers for this claim', () =>
+     request(Server)
+     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(2)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('should get no issuers for an unknown claim', () =>
+     request(Server)
+     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=NOTHING')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(0)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('should get an error for confirming a confirmation', () =>
+     request(Server)
+     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstConfirmationClaimId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(500)
      })).timeout(7001)
 
 })

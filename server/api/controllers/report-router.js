@@ -3,6 +3,18 @@ import actionController from './action-controller'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
+import JwtService from '../services/jwt.service';
+class JwtController {
+  getIssuersMatchingClaim(req, res) {
+    JwtService.allClaimsAndConfirmationsMatchingClaim(req.query.claimId)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => res.status(500).json(""+err).end())
+  }
+}
+let jwtController = new JwtController();
+
+
 import TenureService from '../services/tenure.service';
 class TenureController {
   getAtPoint(req, res) {
@@ -58,6 +70,16 @@ export default express
 /**
  * See /server/common/server.js for other Swagger settings & pieces of generated docs.
  **/
+
+/**
+ * Get issuers for a claim
+ * @group report - Reports
+ * @route GET /api/report/issuersWhoClaimedOrConfirmed
+ * @param {claimId} date.query.required - the ID of the claim
+ * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
+ * @returns {Error} default - Unexpected error
+ */
+  .get('/issuersWhoClaimedOrConfirmed', jwtController.getIssuersMatchingClaim)
 
 /**
  * Get claims and confirmations for individual
