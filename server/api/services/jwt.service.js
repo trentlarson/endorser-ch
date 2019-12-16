@@ -17,9 +17,13 @@ class JwtService {
 
   async byId(id, requesterDid) {
     l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
-    let j = await db.jwtById(id)
-    let result = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
-    return result
+    let jwtRec = await db.jwtById(id)
+    if (jwtRec) {
+      let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject, claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim)}
+      return result
+    } else {
+      return null
+    }
   }
 
   async byQuery(params, requesterDid) {
@@ -37,7 +41,7 @@ class JwtService {
     return result
   }
 
-  async allClaimsAndConfirmationsMatchingClaim(claimId) {
+  async allClaimAndConfirmationIssuersMatchingClaim(claimId) {
     let jwtClaim = await db.jwtById(claimId)
     if (!jwtClaim) {
       return []

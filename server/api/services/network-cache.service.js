@@ -5,26 +5,45 @@ import db from './endorser.db.service'
 
 import l from '../../common/logger'
 
+const BLANK_URL = ""
+
+/**
+  URL for each public DID, as an key-value map (... so let's hope there are never too many!)
+**/
+var UrlsForPublicDids = null
+
+// return a URL or BLANK_URL if it's a public URL, otherwise return 'undefined'
+function getPublicDidUrl(did) {
+  return UrlsForPublicDids[did]
+}
+
 /**
    For each subject, what are the object DIDs they can see?
 **/
 const SeesInNetworkCache = new NodeCache()
 
-async function getSeenByAll() {
-  var seenByAll = SeesInNetworkCache.get(db.ALL_SUBJECT_MATCH())
-  if (!seenByAll) {
-    seenByAll = await db.getSeenByAll()
-    l.trace(`Here are the currently allowed DIDs from DB who everyone can see: ` + JSON.stringify(seenByAll)) // because empty arrays show as nothing (ug!)
-    SeesInNetworkCache.set(db.ALL_SUBJECT_MATCH(), seenByAll)
-  }
-  return seenByAll
-}
-
 async function getDidsRequesterCanSeeExplicitly(requesterDid) {
   var allowedDids = SeesInNetworkCache.get(requesterDid)
   if (!allowedDids) {
     allowedDids = await db.getSeesNetwork(requesterDid)
-    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids))
+    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids)) // because empty arrays show as nothing (ug!)
+    SeesInNetworkCache.set(requesterDid, allowedDids)
+  }
+  return allowedDids
+}
+
+async function getSeenByAll() {
+  let requesterDid = db.ALL_SUBJECT_MATCH()
+  var allowedDids = SeesInNetworkCache.get(requesterDid)
+  if (!allowedDids) {
+    var allowedDidsAndUrls = await db.getSeenByAll()
+    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids)) // because empty arrays show as nothing (ug!)
+
+    // set all the public URLs we see
+    UrlsForPublicDids = {}
+    R.map((r) => { UrlsForPublicDids[r.did] = r.url ? r.url : BLANK_URL })(allowedDidsAndUrls)
+
+    allowedDids = R.map((r) => r.did)(allowedDidsAndUrls)
     SeesInNetworkCache.set(requesterDid, allowedDids)
   }
   return allowedDids
@@ -37,7 +56,7 @@ async function getAllDidsRequesterCanSee(requesterDid) {
   let didsCanSee = await getDidsRequesterCanSeeExplicitly(requesterDid)
   var result = didsCanSee.concat(await getSeenByAll())
   var result2 = result.concat([requesterDid]) // themself
-  return result2
+  return R.uniq(result2)
 }
 
 
@@ -93,6 +112,11 @@ async function addCanSee(subject, object, url) {
     l.trace("... but not adding DB network entry since it's the same DID.")
   }
 
+  if (subject === db.ALL_SUBJECT_MATCH() && UrlsForPublicDids) {
+    UrlsForPublicDids[object] = url ? url : BLANK_URL
+  }
+  // else it has to be fully initialized from the DB before next read anyway
+
   var seesDids = SeesInNetworkCache.get(subject)
   if (!seesDids) {
     seesDids = []
@@ -124,4 +148,4 @@ async function whoDoesRequestorSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, getAllDidsRequesterCanSee, whoDoesRequestorSeeWhoCanSeeObject }
+module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequestorSeeWhoCanSeeObject }

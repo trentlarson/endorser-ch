@@ -1,12 +1,13 @@
 import * as express from 'express'
 import actionController from './action-controller'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
-import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+import { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible } from '../services/util-higher'
+import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
 
 import JwtService from '../services/jwt.service';
 class JwtController {
   getIssuersMatchingClaim(req, res) {
-    JwtService.allClaimsAndConfirmationsMatchingClaim(req.query.claimId)
+    JwtService.allClaimAndConfirmationIssuersMatchingClaim(req.query.claimId)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
@@ -51,12 +52,26 @@ class DbController {
     DbService.retrieveVoteCounts()
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+  getSeenByAll(req, res) {
+    DbService.getSeenByAll()
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+  makeMeGloballyVisible(req, res) {
+    makeMeGloballyVisible(res.locals.tokenIssuer, req.body.url)
+      .then(() => res.status(201).json({success:true}).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+  getCanSeeDids(req, res) {
+    getAllDidsRequesterCanSee(res.locals.tokenIssuer)
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 }
 let dbController = new DbController();
-
-
 
 export default express
   .Router()
@@ -84,7 +99,7 @@ export default express
 /**
  * Get claims and confirmations for individual
  * @group report - Reports
- * @route GET /api/report/actionClaimsAndConfirmations
+ * @route GET /api/report/actionClaimsAndConfirmationsSince
  * @param {datetime} date.query.optional - the date from which to show actionclaims
  * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} default - Unexpected error
@@ -126,3 +141,26 @@ export default express
   .get('/orgRoleClaimsAndConfirmationsOnDate', orgRoleController.getClaimsAndConfirmationsOnDate)
 
   .get('/voteCounts', dbController.getVoteCounts)
+
+/**
+ * Retrieve all globally-visible DIDs
+ * @group claim - Reports
+ * @route GET /api/report/globallyVisibleDids
+ */
+  .get('/globallyVisibleDids', dbController.getSeenByAll)
+
+/**
+ * Consent to make push-token issuer's ID visible to the world
+ * @group claim - Reports
+ * @route POST /api/report/makeMeGloballyVisible
+ */
+  .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
+
+/**
+ * Get all DIDs this person can see
+ * @group report - Reports
+ * @route GET /api/report/whichDidsICanSee
+ * @returns {Array.object} 200 - list of DIDs user can see
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/whichDidsICanSee', dbController.getCanSeeDids)

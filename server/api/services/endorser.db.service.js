@@ -824,12 +824,12 @@ class EndorserDatabase {
     })
   }
 
-  // return all objects that are seen by everyone
+  // return all {did, url} records that are seen by everyone
   async getSeenByAll() {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT object FROM network WHERE subject = '" + this.ALL_SUBJECT_MATCH() + "' ORDER BY object", [], function(err, row) {
-        data.push(row.object)
+      db.each("SELECT object, url FROM network WHERE subject = ? ORDER BY object", [this.ALL_SUBJECT_MATCH()], function(err, row) {
+        data.push({did: row.object, url: row.url})
       }, function(err, num) {
         if (err) {
           reject(err)

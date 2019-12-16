@@ -264,7 +264,6 @@ User story:
 
 
 - 99 0 backup DB
-- 98 0 make some reports world-readable (see what's already on the server; all HIDDEN)
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging) (eg. 11/9 Brandon 422 != 404)
   - ... and add confirmation IDs for confirmation claims
 - 95 1 Test: Did Kyle get any claims without a subject in on Nov 16? ... and does it give us a success if we do that?
@@ -310,7 +309,7 @@ User story:
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix swagger API docs http://localhost:3000/api-explorer/ (linked from main page)
-- 80 1 add SSL
+- 80 1 add SSL (and fix IgniteCommunity link)
 - 80 1 db
   - add action_claim.startDateCanonical
     - and fill it

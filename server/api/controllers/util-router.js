@@ -33,4 +33,4 @@ export default express
  * @returns 200 - success
  * @returns {Error} default - Unexpected error
  */
-  .post('/updateHashChain', (req, res) => JwtService.merkleUnmerkled().then(r => res.status(201).json({count:r.length, latest:R.last(r)}).end()).catch(err => res.status(500).json(""+err).end()))
+  .post('/updateHashChain', (req, res) => JwtService.merkleUnmerkled().then(r => res.status(201).json({count:r.length, latest:R.last(r)}).end()).catch(err => { console.log(err); res.status(500).json(""+err).end(); }))

@@ -1,6 +1,6 @@
 import R from 'ramda'
 import l from '../../common/logger'
-import { addCanSee, getAllDidsRequesterCanSee, whoDoesRequestorSeeWhoCanSeeObject } from './network-cache.service'
+import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequestorSeeWhoCanSeeObject } from './network-cache.service'
 import { HIDDEN_TEXT, isDid } from './util'
 
 /**
@@ -18,7 +18,16 @@ import { HIDDEN_TEXT, isDid } from './util'
 
 async function hideDidsAndAddLinksToNetwork(requesterDid, input) {
   let allowedDids = await getAllDidsRequesterCanSee(requesterDid)
-  return hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
+  let result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
+
+  // ensure the public URL lookup is initialized
+  await getSeenByAll()
+  let publicUrls = gatherPublicUrls(result)
+  if (R.length(R.keys(publicUrls)) > 0) {
+    result["publicUrls"] = publicUrls
+  }
+
+  return result
 }
 
 async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input) {
@@ -72,6 +81,34 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
   }
 }
 
+// make a map of {DID:URL} for every embedded public DID
+function gatherPublicUrls(input) {
+  if (Object.prototype.toString.call(input) === "[object String]") {
+    if (isDid(input)
+        && getPublicDidUrl(input) !== undefined) {
+      var result = {}
+      result[input] = getPublicDidUrl(input)
+      return result
+    } else {
+      return null
+    }
+  } else if (input instanceof Object) {
+
+    // nestedValues will be an object map or array
+    var nestedValues = R.map(value => gatherPublicUrls(value))(input)
+
+    if (!Array.isArray(input)) {
+      // it's an object, so extract all the values
+      nestedValues = R.values(nestedValues)
+    }
+    // now nestedValues is an array
+
+    return R.mergeAll(R.flatten(nestedValues))
+  } else {
+    return null
+  }
+}
+
 async function makeMeGloballyVisible(issuerDid, url) {
   await addCanSee("*", issuerDid, url)
     .catch(err => {
@@ -80,4 +117,4 @@ async function makeMeGloballyVisible(issuerDid, url) {
     })
 }
 
-module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkSub, makeMeGloballyVisible }
+module.exports = { hideDidsAndAddLinksToNetwork, getPublicDidUrl, hideDidsAndAddLinksToNetworkSub, makeMeGloballyVisible }

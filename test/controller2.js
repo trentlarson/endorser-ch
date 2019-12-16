@@ -224,17 +224,41 @@ describe('Roles & Visibility', () => {
        expect(r.body)
          .that.has.a.property('claimType')
          .that.equals('Organization')
+       expect(r.body)
+         .that.does.not.have.property('publicUrls')
        expect(testUtil.allDidsAreHidden(r.body)).to.be.true
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
+  it('should see one DID', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body).that.deep.equals([creds[5].did])
+     }).catch((err) => {
+       return Promise.reject(err)
+     }))
+
   it('should make user #2 visible to everyone', () =>
      request(Server)
-     .post('/api/claim/makeMeGloballyVisible')
+     .post('/api/report/makeMeGloballyVisible')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
-     .send()
+     .send({"url":"https://ignitecommunity.org"})
      .then(r => {
        expect(r.status).that.equals(201)
+     }).catch((err) => {
+       return Promise.reject(err)
+     }))
+
+  it('should see two DIDs', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body).that.deep.equals([creds[2].did, creds[5].did])
      }).catch((err) => {
        return Promise.reject(err)
      }))
@@ -246,6 +270,9 @@ describe('Roles & Visibility', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(testUtil.allDidsAreHidden(r.body)).to.be.false
+       expect(r.body)
+         .that.has.a.property('publicUrls')
+         .that.deep.equals({"did:ethr:0x22c51a43844e44b59c112cf74f3f5797a057837a":'https://ignitecommunity.org'})
        expect(r.status).that.equals(200)
      })).timeout(7001)
 

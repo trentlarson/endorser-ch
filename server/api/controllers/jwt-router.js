@@ -2,8 +2,7 @@ import * as express from 'express';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import JwtService from '../services/jwt.service';
-import { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible } from '../services/util-higher'
-import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class Controller {
 
   getById(req, res) {
@@ -14,14 +13,14 @@ class Controller {
         if (r) res.json(r);
         else res.status(404).end();
       })
-      .catch(err => res.status(500).json(""+err).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
   getByQuery(req, res) {
     JwtService.byQuery(req.query, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
   importClaim(req, res) {
@@ -32,19 +31,7 @@ class Controller {
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)
             .json(r))
-      .catch(err => res.status(500).json(""+err).end())
-  }
-
-  makeMeGloballyVisible(req, res) {
-    makeMeGloballyVisible(res.locals.tokenIssuer, req.body.url)
-      .then(() => res.status(201).json({success:true}).end())
-      .catch(err => res.status(500).json(""+err).end())
-  }
-
-  getCanSeeDids(req, res) {
-    getAllDidsRequesterCanSee(res.locals.tokenIssuer)
-      .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
 }
@@ -78,6 +65,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
   .post('/', controller.importClaim)
+
 /**
  * Get many Claim JWTs
  * @group jwt - Claim JWT storage
@@ -91,6 +79,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
   .get('/', controller.getByQuery)
+
 /**
  * Get a Claim JWT
  * @group jwt - Claim JWT storage
@@ -100,6 +89,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
  .get('/:id', controller.getById)
+
  /**
  * Add a Claim JWT raw, without any processing (not recommended)
  * @group jwt - Claim JWT storage
@@ -110,19 +100,3 @@ export default express
  *
   .post('/raw', controller.create)
  */
-
-/**
- * Consent to make push-token issuer's ID visible to the world
- * @group claim - Reports
- * @route POST /api/claim/makeMeGloballyVisible
- */
-  .post('/makeMeGloballyVisible', controller.makeMeGloballyVisible)
-
-/**
- * Get all DIDs this person can see
- * @group report - Reports
- * @route GET /api/report/canSeeDids
- * @returns {Array.object} 200 - list of DIDs user can see
- * @returns {Error}  default - Unexpected error
- */
-  .get('/whichDidsICanSee', controller.getCanSeeDids)

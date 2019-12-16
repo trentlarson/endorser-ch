@@ -462,7 +462,7 @@ describe('Claim', () => {
          .of.length(0)
      })).timeout(7001) // these 7001 & 6001 waits were added after JWT verify was added
 
-  it('should get a 404, missing invalid claim number', () =>
+  it('should get a 404 for an invalid claim number', () =>
      request(Server)
      .get('/api/claim/999')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -483,7 +483,7 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
-  it('should get a claim #1', () =>
+  it('should get our claim #1', () =>
      request(Server)
      .get('/api/claim/' + firstId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
