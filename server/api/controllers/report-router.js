@@ -8,7 +8,8 @@ import JwtService from '../services/jwt.service';
 class JwtController {
   getIssuersMatchingClaim(req, res) {
     JwtService.allClaimAndConfirmationIssuersMatchingClaim(req.query.claimId)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result =>
+            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, {result}))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
