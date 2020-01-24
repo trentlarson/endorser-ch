@@ -49,7 +49,9 @@ function requesterInfo(req, res, next) {
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
     if (req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince")
         || req.originalUrl.startsWith("/api/claim?")
+        || req.originalUrl.startsWith("/api/claim/")
         || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")
+        || req.originalUrl.startsWith("/api/report/issuersWhoClaimedOrConfirmed?")
         || req.originalUrl.startsWith("/api/util/updateHashChain")) {
       // these endcpoints are OK to hit without a token
       res.locals.tokenIssuer = "ANONYMOUS"

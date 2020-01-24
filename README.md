@@ -296,6 +296,7 @@ User story:
   - ?
 - 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
 - 90 1 run prod in prod mode (ie. not: npm run dev)
+- 90 1 on ReportClaim there's a "*" next to hidden addresses, so explain it
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - 85 0 remove "subject" from terminology in code; prefer "agent" (Why?) (... or did I change JoinClaim?)
 - 85 1 convert all response dates to ISO format (including zone)
@@ -322,6 +323,7 @@ User story:
 - 80 1 gotta report errors to user
   - eg. repeated or failed confirmations so should see mix of successes and errors
   - eg. remove hashHex column and see how parts succeed but there's still an error
+  - ... and guard every API call in uport-demo with a response.ok check & error catch (and loader)
 - 80 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 80 0 usability: add a "waiting" spinner when remote method is called
 - 70 0 bug: if there's already a response JWT & message then a new one might not show
