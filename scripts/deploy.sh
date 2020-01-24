@@ -22,7 +22,7 @@ git checkout $1
 
 DEPLOY_DIR=endorser-ch
 
-rsync -azvu --exclude .git --exclude-from .gitignore -e "ssh -i $2" . ubuntu@endorser.ch:$DEPLOY_DIR
+rsync -azv --exclude .git --exclude-from .gitignore -e "ssh -i $2" . ubuntu@endorser.ch:$DEPLOY_DIR
 
 ssh -i $2 ubuntu@endorser.ch << EOF
   cd $DEPLOY_DIR
