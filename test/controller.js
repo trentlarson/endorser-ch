@@ -650,6 +650,18 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
      })).timeout(6002)
 
+  it('should get 4 claims today', () =>
+     request(Server)
+     .get('/api/claim/?issuedAt_greaterThanOrEqualTo=' + TODAY_START_TIME_STRING + "&excludeConfirmations=true")
+     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(4)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
 })
 
 describe('Action', () => {
@@ -779,7 +791,7 @@ describe('Action', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should get no claims today', () =>
+  it('should get no actions today', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + TODAY_START_TIME_STRING)
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)

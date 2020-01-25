@@ -52,6 +52,9 @@ function constructWhere(params, excludeConfirmations) {
   }
 
   if (excludeConfirmations) {
+    if (whereClause.length > 0) {
+      whereClause += " AND"
+    }
     whereClause += " claimType != 'Confirmation'"
   }
 
