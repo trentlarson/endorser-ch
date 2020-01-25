@@ -61,6 +61,9 @@ function constructWhere(params, excludeConfirmations) {
   return { clause: whereClause, params: paramArray }
 }
 
+function zonify(dateTime) {
+  return dateTime + "Z"
+}
 
 
 class EndorserDatabase {
@@ -94,6 +97,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
+          row.eventStartTime = zonify(row.eventStartTime)
           resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime})
         } else {
           resolve(null)
@@ -132,6 +136,7 @@ class EndorserDatabase {
         delete row.eventRowId
         row.jwtId = row.jwtRowId
         delete row.jwtRowId
+        row.eventStartTime = zonify(row.eventStartTime)
 
         data.push(row)
       }, function(err, num) {
@@ -152,6 +157,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
+        row.eventStartTime = zonify(row.eventStartTime)
         let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
         let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
         data.push(both)
@@ -174,6 +180,7 @@ class EndorserDatabase {
       var data = []
       let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
       db.each(sql, [], function(err, row) {
+        row.eventStartTime = zonify(row.eventStartTime)
         let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionId:row.actionRowId} : null
         let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime}, confirmation:confirmation}
         data.push(both)
@@ -358,6 +365,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
+          row.startTime = zonify(row.startTime)
           resolve({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
         } else {
           resolve(null)
@@ -375,6 +383,7 @@ class EndorserDatabase {
       var data = []
       let sql = "SELECT rowid, orgName, name, startTime FROM event" + where.clause + " ORDER BY startTime DESC LIMIT 50"
       db.each(sql, where.params, function(err, row) {
+        row.startTime = zonify(row.startTime)
         data.push({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
       }, function(err, num) {
         if (err) {
@@ -428,6 +437,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = null
       db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
+        row.issuedAt = zonify(row.issuedAt)
         data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim: row.claim, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
       }, function(err, num) {
         if (err) {
@@ -451,6 +461,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
+        row.issuedAt = zonify(row.issuedAt)
         data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
@@ -469,6 +480,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
+        row.issuedAt = zonify(row.issuedAt)
         data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
@@ -487,6 +499,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE INSTR(claim, ?) > 0 ORDER BY issuedAt DESC LIMIT 50", [text], function(err, row) {
+        row.issuedAt = zonify(row.issuedAt)
         data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
