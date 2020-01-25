@@ -1,5 +1,34 @@
+import didJwt from 'did-jwt'
+import ActionService from '../services/action.service'
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+
+export class Controller {
+
+  getById(req, res) {
+    ActionService
+      .byId(req.params.id)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => {
+        if (r) res.json(r);
+        else res.status(404).end();
+      })
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+        }
+
+  getByQuery(req, res) {
+    ActionService.byQuery(req.query)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+        }
+
+}
+
+let controller = new Controller();
+
+
+
 import * as express from 'express';
-import controller from './action-controller';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 export default express

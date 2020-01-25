@@ -1,5 +1,40 @@
+import EventService from '../services/event.service';
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+
+export class Controller {
+
+  getById(req, res) {
+    EventService
+      .byId(req.params.id)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => {
+        if (r) res.json(r);
+        else res.status(404).end();
+      })
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+
+  getByQuery(req, res) {
+    EventService.byQuery(req.query)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+
+  getActionClaimsAndConfirmationsByEventId(req, res) {
+    EventService.getActionClaimsAndConfirmationsByEventId(req.params.id)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+
+}
+
+let controller = new Controller();
+
+
+
 import * as express from 'express';
-import controller from './event-controller';
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 export default express

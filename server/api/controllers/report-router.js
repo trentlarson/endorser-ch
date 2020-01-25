@@ -1,5 +1,4 @@
 import * as express from 'express'
-import actionController from './action-controller'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 import { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible } from '../services/util-higher'
 import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
@@ -15,6 +14,18 @@ class JwtController {
   }
 }
 let jwtController = new JwtController();
+
+
+import ActionService from '../services/action.service';
+class ActionController {
+  getActionClaimsAndConfirmationsSince(req, res) {
+    ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+}
+let actionController = new ActionController();
 
 
 import TenureService from '../services/tenure.service';
