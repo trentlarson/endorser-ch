@@ -891,7 +891,7 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body)
+       expect(r.body.result)
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
@@ -903,7 +903,7 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body)
+       expect(r.body.result)
          .to.be.an('array')
          .of.length(0)
        expect(r.status).that.equals(200)
