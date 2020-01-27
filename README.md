@@ -264,6 +264,7 @@ User story:
 
 
 - 99 0 backup DB
+- 99 2 "Error: Signature invalid for JWT" pop-up on confirmations for JoinAction (although Tenure & Organization work OK)
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging) (eg. 11/9 Brandon 422 != 404)
   - ... and add confirmation IDs for confirmation claims
 - 95 1 Test: Did Kyle get any claims without a subject in on Nov 16? ... and does it give us a success if we do that?
@@ -351,7 +352,10 @@ User story:
 - 30 0 try-catch around jwt.service resolveAuthenticator when not connected to internet
 - 30 0 report page: who has the most activity for a time range
 
+Open questions:
+- Should we require top-level @context and @type (where multiple become ItemList)?
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
+- What is the strange "notifications" JWT from 2020-01-26 21:59:50.106 ?
 
 References
 
