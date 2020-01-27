@@ -26,6 +26,7 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input) {
   if (R.length(R.keys(publicUrls)) > 0) {
     result["publicUrls"] = publicUrls
   }
+  //l.trace(result, "Final API result")
 
   return result
 }

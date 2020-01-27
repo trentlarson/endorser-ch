@@ -356,6 +356,36 @@ Open questions:
 - Should we require top-level @context and @type (where multiple become ItemList)?
 - How do I find the app address or ID? 0xa55...40b, from phone to IP: 0x669...e8a then 0x1b2...2e6
 - What is the strange "notifications" JWT from 2020-01-26 21:59:50.106 ?
+- Why does the did-jwt verifyJWT throw: Error: Signature invalid for JWT
+  ... on this content:
+
+```
+{
+  '@context': '123456789012345678',
+  '@type': '123456789012',
+  originalClaims: [
+    {
+      '@context': '12345678901234567',
+      '@type': '1234567890',
+      agent: {
+        did: '123456789012345678901234567890123456789012345678901'
+      },
+      event: {
+        organizer: {
+          name: '12345678901234567890123456789012'
+        },
+        name: '123456789012345678901234',
+        startTime: '12345678901234567890123456789'
+      }
+    }
+  ]
+}
+```
+
+  ... but if you add or remove a character anywhere then it validates just fine?
+  (Note that I tried another 340-character string and it's signature verified OK.)
+  If we fix this, we can fix some hacks in SignClaim (look for "milliseconds").
+
 
 References
 
