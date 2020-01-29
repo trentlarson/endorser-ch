@@ -264,10 +264,8 @@ User story:
 
 
 - 99 0 backup DB
-- 99 2 "Error: Signature invalid for JWT" pop-up on confirmations for JoinAction (although Tenure & Organization work OK)
-- 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging) (eg. 11/9 Brandon 422 != 404)
+- 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
-- 95 1 Test: Did Kyle get any claims without a subject in on Nov 16? ... and does it give us a success if we do that?
 - 95 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
 - 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
