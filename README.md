@@ -223,6 +223,23 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 "Unsupported DID method 'ethr'" - dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
 "Converting circular structure to JSON" - network connected?
 
+Deploy
+- backup DB
+- test/test.sh
+- test URLs
+http://localhost:3001/reportClaim?claimId=1
+... and see confirmations eventually (even if they're HIDDEN which causes console errors)
+http://localhost:3001/reportClaims
+... to see a list of claims
+http://localhost:3001/reportConfirms
+... plus push a button and see results
+http://localhost:3001/signClaim?claim=%7B%22%40context%22%3A%22http%3A%2F%2Fendorser.ch%22%2C%22%40type%22%3A%22Confirmation%22%2C%22originalClaims%22%3A%5B%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-elsest%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3AElsa's-sister%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%5D%7D
+... gives 5 confirmations
+... and then go to a place not logged in
+http://localhost:3001/reportBestAttendance
+... and see all hidden
+... then test the following user story if you have time
+
 User story:
 - in endorser-ch
   - run test/test.sh (can quit after first set of tests)
@@ -263,23 +280,22 @@ User story:
 
 
 
-- 99 0 backup DB
+- 95 1 add SSL (and then fix IDCommunity links)
+- 95 2 security: GitHub vulnerabilities
+- 95 0 security: add helmet
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
-- 95 2 fix infura.io "legacy access request rate exceeded" in tests for ethr-did-resolver
+- 95 2 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
 - 95 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
-- 95 0 in uport-demo: test full user story
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
-- 95 2 security: GitHub vulnerabilities
+- 92 1 run with nginx forwarding on port 80 (so we don't have to run uport-demo as root)
 - 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls"
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 92 0 add .json(someErr) to all routers in the error path
-- 92 0 security: add helmet
-- 92 1 run with nginx forwarding on port 80
 - 92 2 switch from Confirmation to AgreeAction
 - 90 0 disallow duplicate claims
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
@@ -310,7 +326,6 @@ User story:
 - 80 5 switch/add format to verifiable credentials?
 - 80 5 uport: inside JSON payload, show a name if DID matches a contact
 - 80 0 fix swagger API docs http://localhost:3000/api-explorer/ (linked from main page)
-- 80 1 add SSL (and fix IgniteCommunity link)
 - 80 1 db
   - add action_claim.startDateCanonical
     - and fill it
