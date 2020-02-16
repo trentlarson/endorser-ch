@@ -34,14 +34,12 @@ describe('Visibility setup', () => {
 
   it('make user 3 globally visible', () =>
      serverRequest
-     .post('/api/claim/makeMeGloballyVisible')
+     .post('/api/report/makeMeGloballyVisible')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
-     .send()
+     .send({url: "http://SomebodyTrustworthy.com"})
      .then(r => {
-       console.log("Made 3 visible")
-     })
-     .catch((err) => {
-       console.log("Got error making 3 visible:", err)
+       if (r.status != 201) { throw "Got bad result of " + r.status }
+       console.log("Made 3 visible.")
      })
     )
 

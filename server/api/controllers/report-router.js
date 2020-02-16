@@ -1,6 +1,6 @@
 import * as express from 'express'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
-import { hideDidsAndAddLinksToNetwork, makeMeGloballyVisible } from '../services/util-higher'
+import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
 
 import JwtService from '../services/jwt.service';
@@ -73,7 +73,7 @@ class DbController {
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeGloballyVisible(req, res) {
-    makeMeGloballyVisible(res.locals.tokenIssuer, req.body.url)
+    makeGloballyVisible(res.locals.tokenIssuer, req.body.url)
       .then(() => res.status(201).json({success:true}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

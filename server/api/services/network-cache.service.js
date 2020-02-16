@@ -10,7 +10,7 @@ const BLANK_URL = ""
 /**
   URL for each public DID, as an key-value map (... so let's hope there are never too many!)
 **/
-var UrlsForPublicDids = null
+var UrlsForPublicDids = {}
 
 // return a URL or BLANK_URL if it's a public URL, otherwise return 'undefined'
 function getPublicDidUrl(did) {
@@ -37,7 +37,7 @@ async function getSeenByAll() {
   var allowedDids = SeesInNetworkCache.get(requesterDid)
   if (!allowedDids) {
     var allowedDidsAndUrls = await db.getSeenByAll()
-    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids)) // because empty arrays show as nothing (ug!)
+    l.trace(`Here are the currently allowed DIDs from DB who everyone can see: ` + JSON.stringify(allowedDids)) // because empty arrays show as nothing (ug!)
 
     // set all the public URLs we see
     UrlsForPublicDids = {}
@@ -112,8 +112,8 @@ async function addCanSee(subject, object, url) {
     l.trace("... but not adding DB network entry since it's the same DID.")
   }
 
-  if (subject === db.ALL_SUBJECT_MATCH() && UrlsForPublicDids) {
-    UrlsForPublicDids[object] = url ? url : BLANK_URL
+  if (subject === db.ALL_SUBJECT_MATCH()) {
+    UrlsForPublicDids[object] = (url ? url : BLANK_URL)
   }
   // else it has to be fully initialized from the DB before next read anyway
 
@@ -125,6 +125,7 @@ async function addCanSee(subject, object, url) {
     let newList = R.concat(seesDids, [object])
     SeesInNetworkCache.set(subject, newList)
   }
+  l.info("Now", subject, "sees", SeesInNetworkCache.get(subject))
 
   var seenByDids = SeenByNetworkCache.get(object)
   if (!seenByDids) {
@@ -134,6 +135,7 @@ async function addCanSee(subject, object, url) {
     let newList = R.concat(seenByDids, [subject])
     SeenByNetworkCache.set(object, newList)
   }
+  l.info("Now", object, "is seen by", SeenByNetworkCache.get(object))
 }
 
 /**

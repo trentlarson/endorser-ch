@@ -110,7 +110,7 @@ function gatherPublicUrls(input) {
   }
 }
 
-async function makeMeGloballyVisible(issuerDid, url) {
+async function makeGloballyVisible(issuerDid, url) {
   await addCanSee("*", issuerDid, url)
     .catch(err => {
       l.error(err, "Got error creating issuer-visible network record for " + issuerDid)
@@ -118,4 +118,4 @@ async function makeMeGloballyVisible(issuerDid, url) {
     })
 }
 
-module.exports = { hideDidsAndAddLinksToNetwork, getPublicDidUrl, hideDidsAndAddLinksToNetworkSub, makeMeGloballyVisible }
+module.exports = { hideDidsAndAddLinksToNetwork, getPublicDidUrl, hideDidsAndAddLinksToNetworkSub, makeGloballyVisible }

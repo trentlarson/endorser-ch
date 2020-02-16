@@ -118,6 +118,9 @@ function claimWithHashedDids(idAndClaim) {
   return replaceDidsWithHashes(idAndClaim.id, JSON.parse(idAndClaim.claim))
 }
 
+/**
+ @param idAndClaim is { "id": String, "claim": Stringified JSON }
+ **/
 function hashedClaimWithHashedDids(idAndClaim) {
   const claimStr = JSON.stringify(claimWithHashedDids(idAndClaim))
   const hash = crypto.createHash('sha256');

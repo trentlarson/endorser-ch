@@ -244,13 +244,14 @@ User story:
 - in endorser-ch
   - run test/test.sh (can quit after first set of tests)
   - run: NODE_ENV=test-local npm run dev
+
 - in uport-demo
-  - change to user 11 Annabelle's Friend in claimsTest.js
+  - change to user 11 Annabelle's Friend in src/utilities/claimsTest.js
 
   - show search results for skills
     - search for "carpentry" and see all DIDs are hidden
     - run in endorser-ch: npm run set-3-visible
-    - search for "carpentry" and see some DIDs are shown and some are transitive
+    - search for "carpentry" and see some DIDs are shown and some are transitive, eg. in identifierVisibleToDids
 
   - show attendance results
     - on Best Attendance screen
@@ -280,7 +281,7 @@ User story:
 
 
 
-- 95 1 add SSL (and then fix IDCommunity links)
+- 95 1 fix IDCommunity links
 - 95 2 security: GitHub vulnerabilities
 - 95 0 security: add helmet
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
@@ -291,8 +292,9 @@ User story:
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
+- 95 1 add SSL certbot automated renewal https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
 - 92 1 run with nginx forwarding on port 80 (so we don't have to run uport-demo as root)
-- 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls"
+- 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 92 0 add .json(someErr) to all routers in the error path
@@ -313,6 +315,7 @@ User story:
 - 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
 - 90 1 run prod in prod mode (ie. not: npm run dev)
 - 90 1 on ReportClaim there's a "*" next to hidden addresses, so explain it
+- 85 2 add translation to verifiable credentials: credentialSubject, issuer, issuanceDate https://www.w3.org/TR/vc-data-model/#credential-subject
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - 85 0 remove "subject" from terminology in code; prefer "agent" (Why?) (... or did I change JoinClaim?)
 - 85 1 convert all response dates to ISO format (including zone)
