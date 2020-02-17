@@ -253,28 +253,30 @@ User story:
     - run in endorser-ch: npm run set-3-visible
     - search for "carpentry" and see some DIDs are shown and some are transitive, eg. in identifierVisibleToDids
 
-  - show attendance results
-    - on Best Attendance screen
-
   - show eligibility results
     - on search screen
       /api/report/actionClaimsAndConfirmationsSince?dateTime=2018-01-01T00:00:00Z
     - processed to see confirmations
       searchResults.map((obj) => {return {did: obj.did, numActions: obj.actions.length, numConfirms: R.sum(obj.actions.map((a)=>a.confirmations.length))}})
+      ... and see 3 confirmations
+
+  - show attendance results
+    - on Best Attendance screen and see all DIDs are hidden
 
   - show voting results
     - see votes from following
       /api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood Cryptography Club&roleName=President&onDate=2019-06-18
     - processed to see votes
       R.map(o=>{return {did:o.did, roles:R.map(role=>{return {votes:role.confirmations.length, roleName:role.orgRole.roleName}})(o.orgRoles)}})(searchResults)
+      ... and 2 votes, one hidden
 
   - show tenure results and links to find people
     - go to Residence Report
-    - see duplicate tenure claims
-    - change to user -1 Trent
+    - see duplicate tenure claims, one hidden
+    - change to user -1 Trent in claimsTest.js
     - in tenure claim, see reachable user
     - confirm something about Annabelle did:ethr:0xaaa29f09c29fb0666b8302b64871d7029032b479
-    - change to user 11 Annabelle's Friend
+    - change to user 11 Annabelle's Friend in claimsTest.js
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
 
