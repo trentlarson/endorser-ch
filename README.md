@@ -248,6 +248,9 @@ User story:
 - in uport-demo
   - change to user 11 Annabelle's Friend in src/utilities/claimsTest.js
 
+  - show attendance results
+    - on Best Attendance screen and see all DIDs are hidden
+
   - show search results for skills
     - search for "carpentry" and see all DIDs are hidden
     - run in endorser-ch: npm run set-3-visible
@@ -259,9 +262,6 @@ User story:
     - processed to see confirmations
       searchResults.map((obj) => {return {did: obj.did, numActions: obj.actions.length, numConfirms: R.sum(obj.actions.map((a)=>a.confirmations.length))}})
       ... and see 3 confirmations
-
-  - show attendance results
-    - on Best Attendance screen and see all DIDs are hidden
 
   - show voting results
     - see votes from following
