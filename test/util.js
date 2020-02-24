@@ -1,3 +1,5 @@
+// Load and run this file with: npm install esm; LOG_LEVEL=info node -r esm
+
 import R from 'ramda'
 import { HIDDEN_TEXT, isDid } from '../server/api/services/util'
 

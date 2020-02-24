@@ -284,6 +284,7 @@ User story:
 
 
 - 95 1 fix IDCommunity links
+- 95 1 show signatures for proof of confirmations
 - 95 2 security: GitHub vulnerabilities
 - 95 0 security: add helmet
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
@@ -294,8 +295,8 @@ User story:
 - 95 0 and fix subjects (eg. Jun 29 claims by me for others)
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
+- 95 1 in text search: remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
 - 95 1 add SSL certbot automated renewal https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
-- 92 1 run with nginx forwarding on port 80 (so we don't have to run uport-demo as root)
 - 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
