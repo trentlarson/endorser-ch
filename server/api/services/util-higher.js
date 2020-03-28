@@ -1,6 +1,6 @@
 import R from 'ramda'
 import l from '../../common/logger'
-import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequestorSeeWhoCanSeeObject } from './network-cache.service'
+import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequesterSeeWhoCanSeeObject } from './network-cache.service'
 import { HIDDEN_TEXT, isDid } from './util'
 
 /**
@@ -65,7 +65,7 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
         }
         if (result[key] === HIDDEN_TEXT) {
           // add list of anyone else who can see them
-          let canSee = await whoDoesRequestorSeeWhoCanSeeObject(requesterDid, input[key])
+          let canSee = await whoDoesRequesterSeeWhoCanSeeObject(requesterDid, input[key])
           if (canSee.length > 0) {
             result[key + "VisibleToDids"] = canSee
           }

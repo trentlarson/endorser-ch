@@ -143,11 +143,11 @@ async function addCanSee(subject, object, url) {
   and returns all the DIDs who are seen by subject and who can see finalObject.
   Note that this does not check for anyone who is seen by all; it assumes that has already been checked.
  **/
-async function whoDoesRequestorSeeWhoCanSeeObject(requesterDid, object) {
+async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   var seesList = await getAllDidsRequesterCanSee(requesterDid)
-  // Don't need to check for object as target of ALL_SUBJECT_MATCH because they'd already be visible to requestor if so.
+  // Don't need to check for object as target of ALL_SUBJECT_MATCH because they'd already be visible to requester if so.
   var seenByList = await getDidsWhoCanSeeExplicitly(object)
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequestorSeeWhoCanSeeObject }
+module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequesterSeeWhoCanSeeObject }
