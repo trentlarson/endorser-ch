@@ -288,7 +288,8 @@ User stories:
 
 
 ## Next Deploy
-- backup DB
+- backup DB (before new prod)
+- mv endorser-ch-dev.sqlite3 endorser-ch-prod.sqlite3
 - npm ci
 - ...and note the change to "npm run compile" and "npm start"
 
