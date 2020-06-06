@@ -25,6 +25,7 @@
     "dotenv": "^6.0.0",
     "ethr-did-resolver": "^0.2.0",
     "express": "^4.16.4",
+    "helmet": "^3.22.0",
     "luxon": "^1.12.0",
     "node-cache": "^4.2.0",
     "node-flywaydb": "^0.1.6",

@@ -1,6 +1,7 @@
 import Express from 'express';
 import * as path from 'path';
 import * as bodyParser from 'body-parser';
+import helmet from 'helmet';
 import * as http from 'http';
 import * as os from 'os';
 import cookieParser from 'cookie-parser';
@@ -10,6 +11,9 @@ import JwtService from '../api/services/jwt.service';
 import { UPORT_PUSH_TOKEN_HEADER } from '../api/services/util';
 
 const app = new Express();
+
+app.use(helmet())
+
 const expressSwagger = require('express-swagger-generator')(app);
 
 let options = {

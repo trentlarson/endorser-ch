@@ -298,7 +298,6 @@ User stories:
 - 99 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN?
 - 99 Why are didVisibleToDids in confirmations on Mar 14?
 
-- 95 0 security: add helmet
 - 95 2 use UUIDs instead of rowids
 - 95 1 run prod in prod mode (ie. not: npm run dev)
 - 95 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
