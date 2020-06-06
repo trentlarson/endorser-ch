@@ -64,9 +64,8 @@ scripts/deploy.sh release-X ~/.ssh/id_rsa
 # kill process: /usr/bin/node /home/ubuntu/.../_babel-node server
 # ... and may have to kill nodemon & pino-pretty processes separately
 cd endorser-ch
-#npm run compile # doesn't work; maybe do this inside the compile in deploy.sh?
-#npm start
-NODE_ENV=dev nohup npm run dev >> ../endorser-ch.out 2>&1 &
+npm run compile
+nohup npm start >> ../endorser-ch.out 2>&1 &
 ```
 
 ## Test It
@@ -241,6 +240,7 @@ http://localhost:3001/reportBestAttendance
 ... then test the following user story if you have time
 
 User stories:
+
 - in endorser-ch
   - run test/test.sh (can quit after first set of tests)
   - run: NODE_ENV=test-local npm run dev
@@ -290,7 +290,7 @@ User stories:
 ## Next Deploy
 - backup DB
 - npm ci
-
+- ...and note the change to "npm run compile" and "npm start"
 
 
 ## Tasks
@@ -299,8 +299,6 @@ User stories:
 - 99 Why are didVisibleToDids in confirmations on Mar 14?
 
 - 95 2 use UUIDs instead of rowids
-- 95 1 run prod in prod mode (ie. not: npm run dev)
-- 95 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 
 - 95 2 switch from Confirmation to AgreeAction
 - 95 0 in July: check SSL certbot automated renewal is after Aug 1 https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
@@ -416,7 +414,7 @@ Open questions:
 ```
 
   ... but if you add or remove a character anywhere then it validates just fine?
-  (Note that I tried another 340-character string and it's signature verified OK.)
+  (Note that I tried another 340-character string and its signature verified OK.)
   If we fix this, we can fix some hacks in SignClaim (look for "milliseconds").
 
 
