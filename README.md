@@ -289,6 +289,7 @@ User stories:
 
 ## Next Deploy
 - backup DB
+- npm ci
 
 
 
