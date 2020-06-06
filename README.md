@@ -240,7 +240,7 @@ http://localhost:3001/reportBestAttendance
 ... and see all hidden
 ... then test the following user story if you have time
 
-User story:
+User stories:
 - in endorser-ch
   - run test/test.sh (can quit after first set of tests)
   - run: NODE_ENV=test-local npm run dev
@@ -279,14 +279,25 @@ User story:
     - change to user 11 Annabelle's Friend in claimsTest.js
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
+  - show strong network; show networks with personal connection vs public DID; show fake network
 
 
 
 
-- 95 1 fix IDCommunity links
-- 95 1 show signatures for proof of confirmations
+
+- 99 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN?
+- 99 Why are didVisibleToDids in confirmations on Mar 14?
+
 - 95 2 security: GitHub vulnerabilities
 - 95 0 security: add helmet
+- 95 2 use UUIDs instead of rowids
+- 95 1 run prod in prod mode (ie. not: npm run dev)
+- 95 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
+
+- 95 2 switch from Confirmation to AgreeAction
+- 95 0 in July: check SSL certbot automated renewal is after Aug 1 https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
+- 95 1 fix IDCommunity links
+- 95 1 show signatures for proof of confirmations
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
 - 95 2 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
@@ -296,15 +307,12 @@ User story:
 - 95 1 allow read of all data in claims/confirmations issued by requester
 - 95 1 in text search: show claim contents instead of DB records
 - 95 1 in text search: remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
-- 95 1 add SSL certbot automated renewal https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
 - 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
 - 92 1 change name of app from "uport demo" (when logging in)
-- 92 2 update vulnerabilities in endorser-ch (from a836946c1b1897000dbe7e6d610df32aa32742ba )
 - 92 0 add .json(someErr) to all routers in the error path
-- 92 2 switch from Confirmation to AgreeAction
 - 90 0 disallow duplicate claims
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
-- 90 0 see Sonia one hop away, send search for her to replicate
+- 90 0 if we see someone in between 2 hops away, give a URL search for that person to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
 - 90 1 don't count any confirmations by original claimiant in UI reporting
 - 90 0 network: remove inserts and add explicit allowance for requester
@@ -316,7 +324,6 @@ User story:
   - 90 2 add search for claim on parcel of land
   - ?
 - 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
-- 90 1 run prod in prod mode (ie. not: npm run dev)
 - 90 1 on ReportClaim there's a "*" next to hidden addresses, so explain it
 - 85 2 add translation to verifiable credentials: credentialSubject, issuer, issuanceDate https://www.w3.org/TR/vc-data-model/#credential-subject
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
@@ -324,7 +331,6 @@ User story:
 - 85 1 convert all response dates to ISO format (including zone)
 - 85 1 look into the action & tenure & role results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
 - 85 0 deploy from git rather than from local?  (It's all public.)
-- 85 2 use UUIDs instead of rowids
 - 80 0 automate DB backup
 - 80 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
 - 80 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
