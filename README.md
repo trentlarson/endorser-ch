@@ -217,14 +217,14 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 - [Blockcerts for blockchain credentials](https://www.blockcerts.org)
 - [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
 
-## ToDo
+## Troubleshooting
 
 "CORS problems" - endorser-ch is running?
 "Unsupported DID method 'ethr'" - dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
 "Converting circular structure to JSON" - network connected?
 
-Deploy
-- backup DB
+## Tests
+
 - test/test.sh
 - test URLs
 http://localhost:3001/reportClaim?claimId=1
@@ -249,46 +249,54 @@ User stories:
   - change to user 11 Annabelle's Friend in src/utilities/claimsTest.js
 
   - show attendance results
-    - on Best Attendance screen and see all DIDs are hidden
+    - on Best Attendance screen
+      http://localhost:3001/reportBestAttendance
+      and see all DIDs are hidden except public 22c
 
   - show search results for skills
+    http://localhost:3001/reportSearch
     - search for "carpentry" and see all DIDs are hidden
     - run in endorser-ch: npm run set-3-visible
-    - search for "carpentry" and see some DIDs are shown and some are transitive, eg. in identifierVisibleToDids
+    - search for "carpentry" and see 332 DIDs are shown and some are transitive, eg. in identifierVisibleToDids
 
   - show eligibility results
-    - on search screen
+    - on search screen Call Endpoint with:
       /api/report/actionClaimsAndConfirmationsSince?dateTime=2018-01-01T00:00:00Z
     - processed to see confirmations
       searchResults.map((obj) => {return {did: obj.did, numActions: obj.actions.length, numConfirms: R.sum(obj.actions.map((a)=>a.confirmations.length))}})
-      ... and see 3 confirmations
+      ... and see 3 confirmations, two hidden and one 22c public
 
   - show voting results
-    - see votes from following
+    - see votes on search screen Call Endpoint with:
       /api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood Cryptography Club&roleName=President&onDate=2019-06-18
     - processed to see votes
       R.map(o=>{return {did:o.did, roles:R.map(role=>{return {votes:role.confirmations.length, roleName:role.orgRole.roleName}})(o.orgRoles)}})(searchResults)
-      ... and 2 votes, one hidden
+      ... and 2 results, three for hidden and two for 332
 
   - show tenure results and links to find people
     - go to Residence Report
+      http://localhost:3001/reportResidences
     - see duplicate tenure claims, one hidden
     - change to user -1 Trent in claimsTest.js
-    - in tenure claim, see reachable user
+    - in tenure claim, see a different user hidden
     - confirm something about Annabelle did:ethr:0xaaa29f09c29fb0666b8302b64871d7029032b479
+      ... and see claim with ID 32 saved
     - change to user 11 Annabelle's Friend in claimsTest.js
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
-  - show strong network; show networks with personal connection vs public DID; show fake network
+  - to do: show strong network; show networks with personal connection vs public DID; show fake network
+
+
+## Next Deploy
+- backup DB
 
 
 
-
+## Tasks
 
 - 99 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN?
 - 99 Why are didVisibleToDids in confirmations on Mar 14?
 
-- 95 2 security: GitHub vulnerabilities
 - 95 0 security: add helmet
 - 95 2 use UUIDs instead of rowids
 - 95 1 run prod in prod mode (ie. not: npm run dev)
