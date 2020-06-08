@@ -7,8 +7,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "compile": "cp tasks.yml public/.well-known/; babel server --out-dir dist --delete-dir-on-start --source-maps inline --copy-files",
-    "dev": "cp tasks.yml public/.well-known/; nodemon server --exec babel-node --config .nodemonrc.json | pino-pretty",
+    "compile": "babel server --out-dir dist --delete-dir-on-start --source-maps inline --copy-files",
+    "dev": "nodemon server --exec babel-node --config .nodemonrc.json | pino-pretty",
     "dev:debug": "nodemon server --exec babel-node --config .nodemonrc.json --inspect | pino-pretty",
     "lint": "eslint -c .eslintrc.json {server,test}/**",
     "lint:fix": "eslint --fix -c .eslintrc.json {server,test}/**",

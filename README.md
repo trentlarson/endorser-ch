@@ -296,7 +296,7 @@ User stories:
 
 ## Tasks
 
-See [tasks.yml](tasks.yml) or [the version on a running server under .well-known](/.well-known/tasks.yml).
+See [tasks.yml](tasks.yml), also found on a [front-end server](https://github.com/trentlarson/uport-demo) under /tasks.
 
 
 ## Misc

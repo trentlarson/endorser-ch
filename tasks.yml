@@ -1,5 +1,5 @@
 %TAG ! tag:taskyaml.org,2020:schema
---- !<tag:endorser.ch,2020:/.well-known/tasks.yml>
+--- !<tag:endorser.ch,2020:/tasks>
 - 99 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN? Why can 5ef only see 5ef & df0?
 - 99 Why are didVisibleToDids in confirmations on Mar 14?
 
@@ -26,7 +26,7 @@
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 90 0 if we see someone in between 2 hops away, give a URL search for that person to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
-- 90 1 don't count any confirmations by original claimiant in UI reporting
+- 90 1 don't count any confirmations by original claimant in UI reporting
 - 90 0 network: remove inserts and add explicit allowance for requester
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
 - 90 0 rename issuer to issuerDid in confirmation table
