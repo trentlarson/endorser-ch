@@ -23,6 +23,7 @@
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 0 add .json(someErr) to all routers in the error path
 - 90 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
+- 90 0 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 90 0 if we see someone in between 2 hops away, give a URL search for that person to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks

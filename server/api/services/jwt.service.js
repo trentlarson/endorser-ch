@@ -310,7 +310,7 @@ l.error('adding AgreeAction confirmation', claim)
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 
-      // deprecated; see AgreeAction
+      // this is for legacy Confirmation and can be deprecated; see AgreeAction
 
       var recordings = []
 

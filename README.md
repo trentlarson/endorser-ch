@@ -290,6 +290,7 @@ User stories:
 ## Next Deploy
 - backup DB (before new prod)
 - mv endorser-ch-dev.sqlite3 endorser-ch-prod.sqlite3
+- NODE_ENV=prod DBUSER=sa DBPASS=sasa npm run migrate
 - npm ci
 - ...and note the change to "npm run compile" and "npm start"
 
@@ -300,6 +301,8 @@ See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.
 
 
 ## Misc
+
+Note that new deployments can remove the "legacy Confirmation" code.
 
 Open questions:
 - Should we require top-level @context and @type (where multiple become ItemList)?
