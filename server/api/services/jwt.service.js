@@ -46,7 +46,7 @@ class JwtService {
     if (!jwtClaim) {
       return []
     } else {
-      if (jwtClaim.claimType == 'Confirmation') {
+      if (jwtClaim.claimType == 'AgreeAction') {
         return Promise.reject("It doesn't make sense to ask for confirmations of a confirmation.")
       } else {
         let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
@@ -217,6 +217,31 @@ class JwtService {
   async createEmbeddedClaimRecord(jwtId, issuerDid, claim) {
 
     if (claim['@context'] === 'http://schema.org'
+        && claim['@type'] === 'AgreeAction') {
+
+l.error('adding AgreeAction confirmation', claim)
+      // note that 'Confirmation' does similar logic (but is deprecated)
+
+      var recordings = []
+
+      {
+        let origClaim = claim['object']
+        if (Array.isArray(origClaim)) {
+          for (var claim of origClaim) {
+            recordings.push(this.createOneConfirmation(jwtId, issuerDid, claim))
+          }
+        } else if (origClaim) {
+          recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
+        }
+      }
+      l.debug(`${this.constructor.name} Created ${recordings.length} agreed claims & network records.`)
+
+      await Promise.all(recordings)
+        .catch(err => {
+          return Promise.reject(err)
+        })
+
+    } else if (claim['@context'] === 'http://schema.org'
         && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
@@ -284,6 +309,8 @@ class JwtService {
 
     } else if (claim['@context'] === 'http://endorser.ch'
                && claim['@type'] === 'Confirmation') {
+
+      // deprecated; see AgreeAction
 
       var recordings = []
 

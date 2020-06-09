@@ -22,7 +22,7 @@
 - 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 0 add .json(someErr) to all routers in the error path
-- 90 0 disallow duplicate claims
+- 90 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 90 0 if we see someone in between 2 hops away, give a URL search for that person to replicate
 - 90 0 wrap all async functions (eg. services) in try-catch blocks
@@ -68,7 +68,7 @@
 - 80 0 usability: add a "waiting" spinner when remote method is called
 - 70 0 bug: if there's already a response JWT & message then a new one might not show
 - 70 0 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
-- 70 0 bug when a claim is duplicated
+- 70 0 bug when a claim is duplicated (huh?)
 - 70 0 remove duplicate decode in JWT service
 - 70 0 add test for rejection of duplicate claim submissions
 - 70 0 handle "access_denied" when person rejects claim on phone
@@ -83,6 +83,7 @@
 - 50 1 fix & enable the "should hide DIDs" tests in controller.js
 - 50 1 show message when user rejects a claim
 - 50 0 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
+- 50 1 put hideDidsAndAddLinksToNetwork into middleware (so it always happens)
 - 40 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
 - 40 6 put all functionality in uport mobile app
 - 30 0 on uport-demo: change store/play pics in Welcome.js to local files

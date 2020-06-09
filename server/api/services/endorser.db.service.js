@@ -55,7 +55,7 @@ function constructWhere(params, excludeConfirmations) {
     if (whereClause.length > 0) {
       whereClause += " AND"
     }
-    whereClause += " claimType != 'Confirmation'"
+    whereClause += " claimType != 'AgreeAction'"
   }
 
   if (whereClause.length > 0) {
@@ -453,7 +453,7 @@ class EndorserDatabase {
   }
 
   /**
-     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'Confirmation'
+     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
    **/
   jwtByParams(params) {
     var excludeConfirmations = params.excludeConfirmations

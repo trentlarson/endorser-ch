@@ -93,14 +93,14 @@ let claimPresidentFor3By3JwtProm = credentials[3].createVerification(claimPresid
 
 let confirmPresidentFor3By5JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor3By5JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmPresidentFor3By5JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor3))
+confirmPresidentFor3By5JwtObj.claim.object.push(R.clone(claimPresidentFor3))
 confirmPresidentFor3By5JwtObj.iss = creds[5].did
 confirmPresidentFor3By5JwtObj.sub = creds[3].did
 let confirmPresidentFor3By5JwtProm = credentials[5].createVerification(confirmPresidentFor3By5JwtObj)
 
 let confirmPresidentFor3By6JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor3By6JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmPresidentFor3By6JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor3))
+confirmPresidentFor3By6JwtObj.claim.object.push(R.clone(claimPresidentFor3))
 confirmPresidentFor3By6JwtObj.iss = creds[6].did
 confirmPresidentFor3By6JwtObj.sub = creds[3].did
 let confirmPresidentFor3By6JwtProm = credentials[6].createVerification(confirmPresidentFor3By6JwtObj)
@@ -120,21 +120,21 @@ let claimPresidentFor4By4JwtProm = credentials[4].createVerification(claimPresid
 
 let confirmPresidentFor4By7JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor4By7JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmPresidentFor4By7JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor4))
+confirmPresidentFor4By7JwtObj.claim.object.push(R.clone(claimPresidentFor4))
 confirmPresidentFor4By7JwtObj.iss = creds[7].did
 confirmPresidentFor4By7JwtObj.sub = creds[4].did
 let confirmPresidentFor4By7JwtProm = credentials[7].createVerification(confirmPresidentFor4By7JwtObj)
 
 let confirmPresidentFor4By8JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor4By8JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmPresidentFor4By8JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor4))
+confirmPresidentFor4By8JwtObj.claim.object.push(R.clone(claimPresidentFor4))
 confirmPresidentFor4By8JwtObj.iss = creds[8].did
 confirmPresidentFor4By8JwtObj.sub = creds[4].did
 let confirmPresidentFor4By8JwtProm = credentials[8].createVerification(confirmPresidentFor4By8JwtObj)
 
 let confirmPresidentFor4By9JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor4By9JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmPresidentFor4By9JwtObj.claim.originalClaims.push(R.clone(claimPresidentFor4))
+confirmPresidentFor4By9JwtObj.claim.object.push(R.clone(claimPresidentFor4))
 confirmPresidentFor4By9JwtObj.iss = creds[9].did
 confirmPresidentFor4By9JwtObj.sub = creds[4].did
 let confirmPresidentFor4By9JwtProm = credentials[9].createVerification(confirmPresidentFor4By9JwtObj)

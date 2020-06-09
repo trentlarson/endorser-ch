@@ -72,9 +72,9 @@ module.exports = {
   },
 
   confirmationTemplate: {
-    "@context": "http://endorser.ch",
-    "@type": "Confirmation",
-    "originalClaims": [
+    "@context": "http://schema.org",
+    "@type": "AgreeAction",
+    "object": [
       // supply claims
     ]
   },

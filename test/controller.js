@@ -100,14 +100,14 @@ let claimBvcFor0By0JwtProm = credentials[0].createVerification(claimBvcFor0By0Jw
 
 let confirmBvcFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcFor0By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmBvcFor0By0JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
+confirmBvcFor0By0JwtObj.claim.object.push(R.clone(claimBvcFor0))
 confirmBvcFor0By0JwtObj.iss = creds[1].did
 confirmBvcFor0By0JwtObj.sub = creds[0].did
 let confirmBvcFor0By0JwtProm = credentials[0].createVerification(confirmBvcFor0By0JwtObj)
 
 let confirmBvcFor0By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcFor0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmBvcFor0By1JwtObj.claim.originalClaims.push(R.clone(claimBvcFor0))
+confirmBvcFor0By1JwtObj.claim.object.push(R.clone(claimBvcFor0))
 confirmBvcFor0By1JwtObj.iss = creds[1].did
 confirmBvcFor0By1JwtObj.sub = creds[0].did
 let confirmBvcFor0By1JwtProm = credentials[1].createVerification(confirmBvcFor0By1JwtObj)
@@ -150,8 +150,8 @@ let claimDebugFor0By0JwtProm = credentials[0].createVerification(claimDebugFor0B
 
 let confirmMultipleFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmMultipleFor0By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimMyNightFor0))
-confirmMultipleFor0By0JwtObj.claim.originalClaims.push(R.clone(claimDebugFor0))
+confirmMultipleFor0By0JwtObj.claim.object.push(R.clone(claimMyNightFor0))
+confirmMultipleFor0By0JwtObj.claim.object.push(R.clone(claimDebugFor0))
 confirmMultipleFor0By0JwtObj.iss = creds[0].did
 confirmMultipleFor0By0JwtObj.sub = creds[0].did
 let confirmMultipleFor0By0JwtProm = credentials[0].createVerification(confirmMultipleFor0By0JwtObj)
@@ -170,7 +170,7 @@ let claimCornerBakeryTenureFor11By11JwtProm = credentials[11].createVerification
 let confirmCornerBakeryTenureFor11By10JwtObj = R.clone(testUtil.jwtTemplate)
 confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
 confirmCornerBakeryTenureFor11By10JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmCornerBakeryTenureFor11By10JwtObj.claim.originalClaims.push(R.clone(claimCornerBakeryTenureFor11))
+confirmCornerBakeryTenureFor11By10JwtObj.claim.object.push(R.clone(claimCornerBakeryTenureFor11))
 confirmCornerBakeryTenureFor11By10JwtObj.iss = creds[10].did
 let confirmCornerBakeryTenureFor11By10JwtProm = credentials[10].createVerification(confirmCornerBakeryTenureFor11By10JwtObj)
 
@@ -195,14 +195,14 @@ let claimIIW2019aFor2By2JwtProm = credentials[2].createVerification(claimIIW2019
 let confirmIIW2019aFor1By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor1By0JwtObj.sub = creds[1].did
 confirmIIW2019aFor1By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmIIW2019aFor1By0JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor1))
+confirmIIW2019aFor1By0JwtObj.claim.object.push(R.clone(claimIIW2019aFor1))
 confirmIIW2019aFor1By0JwtObj.iss = creds[0].did
 let confirmIIW2019aFor1By0JwtProm = credentials[0].createVerification(confirmIIW2019aFor1By0JwtObj)
 
 let confirmIIW2019aFor2By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor2By1JwtObj.sub = creds[2].did
 confirmIIW2019aFor2By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmIIW2019aFor2By1JwtObj.claim.originalClaims.push(R.clone(claimIIW2019aFor2))
+confirmIIW2019aFor2By1JwtObj.claim.object.push(R.clone(claimIIW2019aFor2))
 confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
 let confirmIIW2019aFor2By1JwtProm = credentials[1].createVerification(confirmIIW2019aFor2By1JwtObj)
 
@@ -222,7 +222,7 @@ let claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoodP
 let confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
 confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmFoodPantryFor4By1JwtObj.claim.originalClaims.push(R.clone(claimFoodPantryFor4))
+confirmFoodPantryFor4By1JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
 confirmFoodPantryFor4By1JwtObj.iss = creds[1].did
 let confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
 **/
@@ -561,7 +561,7 @@ describe('Claim', () => {
 
   it('should get 1 comfirmation', () =>
      request(Server)
-     .get('/api/claim?claimType=Confirmation')
+     .get('/api/claim?claimType=AgreeAction')
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {

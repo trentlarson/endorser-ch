@@ -1,0 +1,2 @@
+
+UPDATE jwt SET claimContext = 'http://schema.org', claimType = 'AgreeAction' WHERE claimType = 'Confirmation';

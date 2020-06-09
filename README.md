@@ -296,7 +296,7 @@ User stories:
 
 ## Tasks
 
-See [tasks.yml](tasks.yml), also found on a [front-end server](https://github.com/trentlarson/uport-demo) under /tasks.
+See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.com/trentlarson/uport-demo) under /tasks.
 
 
 ## Misc
