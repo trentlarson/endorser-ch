@@ -1,12 +1,13 @@
 %TAG ! tag:taskyaml.org,2020:schema
 --- !<tag:endorser.ch,2020:/tasks>
-- 99 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN? Why can 5ef only see 5ef & df0?
-- 99 Why are didVisibleToDids in confirmations on Mar 14?
+- 99 1 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN? Why can 5ef only see 5ef & df0?
+- 99 1 Why are didVisibleToDids in confirmations on Mar 14?
 
+- 95 0 push latest changes with AgreeAction to prod
 - 95 2 use UUIDs instead of rowids
 
-- 95 2 switch from Confirmation to AgreeAction
 - 95 1 ensure uport-demo app runs in prod mode on prod
+- 95 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 95 0 in July: check SSL certbot automated renewal is after Aug 1 https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
 - 95 1 fix IDCommunity links
 - 95 1 show signatures for proof of confirmations

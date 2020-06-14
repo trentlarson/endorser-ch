@@ -58,14 +58,14 @@ Compiles the application and starts it in production mode.
 
 If you move/remove the previous install, you'll need to copy the .env file to new endorser-ch dir.
 
+Tag the release version (after updating the package.json version).
+
 ```shell
-scripts/deploy.sh release-X ~/.ssh/id_rsa
-# Then SSH to the box and:
-# kill process: /usr/bin/node /home/ubuntu/.../_babel-node server
+# SSH to the box and kill the "node dist/index.js".
 # ... and may have to kill nodemon & pino-pretty processes separately
+scripts/deploy.sh release-X ~/.ssh/id_rsa
 cd endorser-ch
-npm run compile
-nohup npm start >> ../endorser-ch.out 2>&1 &
+NODE_ENV=prod nohup npm start >> ../endorser-ch.out 2>&1 &
 ```
 
 ## Test It
