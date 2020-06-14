@@ -56,6 +56,8 @@ function constructWhere(params, excludeConfirmations) {
       whereClause += " AND"
     }
     whereClause += " claimType != 'AgreeAction'"
+    // this is for legacy Confirmation and can be deprecated
+    whereClause += " AND claimType != 'Confirmation'"
   }
 
   if (whereClause.length > 0) {
