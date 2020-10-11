@@ -826,8 +826,8 @@ class EndorserDatabase {
     })
   }
 
-  // return all objects that are explicitly seen by subject
-  async getSeesNetwork(subject) {
+  // return all objects that subject can explicitly see
+  async getSeenBy(subject) {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT object FROM network WHERE subject = ? ORDER BY object", [subject], function(err, row) {
@@ -858,8 +858,8 @@ class EndorserDatabase {
     })
   }
 
-  // return all subjects that can explicitly see object
-  async getSeenByNetwork(object) {
+  // return all subjects that can see object
+  async getWhoCanSee(object) {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT subject FROM network WHERE object = ? ORDER BY subject", [object], function(err, row) {

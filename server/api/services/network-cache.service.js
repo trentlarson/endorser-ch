@@ -20,31 +20,32 @@ function getPublicDidUrl(did) {
 /**
    For each subject, what are the object DIDs they can see?
 **/
-const SeesInNetworkCache = new NodeCache()
+const SeesNetworkCache = new NodeCache()
 
 async function getDidsRequesterCanSeeExplicitly(requesterDid) {
-  var allowedDids = SeesInNetworkCache.get(requesterDid)
+  var allowedDids = SeesNetworkCache.get(requesterDid)
   if (!allowedDids) {
-    allowedDids = await db.getSeesNetwork(requesterDid)
-    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids)) // because empty arrays show as nothing (ug!)
-    SeesInNetworkCache.set(requesterDid, allowedDids)
+    allowedDids = await db.getSeenBy(requesterDid)
+    l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids)) // using stringify because empty arrays show as nothing (ug!)
+    SeesNetworkCache.set(requesterDid, allowedDids)
   }
   return allowedDids
 }
 
-async function getSeenByAll() {
+async function getDidsSeenByAll() {
   let requesterDid = db.ALL_SUBJECT_MATCH()
-  var allowedDids = SeesInNetworkCache.get(requesterDid)
+  var allowedDids = SeesNetworkCache.get(requesterDid)
   if (!allowedDids) {
     var allowedDidsAndUrls = await db.getSeenByAll()
-    l.trace(`Here are the currently allowed DIDs from DB who everyone can see: ` + JSON.stringify(allowedDids)) // because empty arrays show as nothing (ug!)
 
     // set all the public URLs we see
     UrlsForPublicDids = {}
     R.map((r) => { UrlsForPublicDids[r.did] = r.url ? r.url : BLANK_URL })(allowedDidsAndUrls)
 
     allowedDids = R.map((r) => r.did)(allowedDidsAndUrls)
-    SeesInNetworkCache.set(requesterDid, allowedDids)
+
+    l.trace(`Here are the currently allowed DIDs & URLs from DB who everyone can see: ` + JSON.stringify(allowedDidsAndUrls)) // using stringify because empty arrays show as nothing (ug!)
+    SeesNetworkCache.set(requesterDid, allowedDids)
   }
   return allowedDids
 }
@@ -54,7 +55,7 @@ async function getSeenByAll() {
 **/
 async function getAllDidsRequesterCanSee(requesterDid) {
   let didsCanSee = await getDidsRequesterCanSeeExplicitly(requesterDid)
-  var result = didsCanSee.concat(await getSeenByAll())
+  var result = didsCanSee.concat(await getDidsSeenByAll())
   var result2 = result.concat([requesterDid]) // themself
   return R.uniq(result2)
 }
@@ -70,8 +71,8 @@ const SeenByNetworkCache = new NodeCache()
 async function getDidsWhoCanSeeExplicitly(object) {
   var allowedDids = SeenByNetworkCache.get(object)
   if (!allowedDids) {
-    allowedDids = await db.getSeenByNetwork(object)
-    l.trace(`Here are the currently allowed DIDs from DB who ${object} can see: ` + JSON.stringify(allowedDids))
+    allowedDids = await db.getWhoCanSee(object)
+    l.trace(`Here are the currently allowed DIDs from DB who can see ${object}: ` + JSON.stringify(allowedDids)) // using stringify because empty arrays show as nothing (ug!)
     SeenByNetworkCache.set(object, allowedDids)
   }
   return allowedDids
@@ -94,11 +95,12 @@ async function getAllDidsWhoCanSeeObject(object) {
 
 
 /**
-   add subject/object combo to DB and caches
+   add subject "can see" object relationship to DB and caches
 **/
 async function addCanSee(subject, object, url) {
 
-  if (subject.startsWith("did:none:")) {
+  if (subject.startsWith("did:none:")
+      || object.startsWith("did:none:")) {
     // No need to continue with this, since nobody can make a valid submission with this DID method.
     // This often happens for HIDDEN, when people are confirming without looking.
     l.trace(`... but actually not adding a network entry since the DID type is 'none'.`)
@@ -106,9 +108,9 @@ async function addCanSee(subject, object, url) {
   }
 
   if (subject !== object) {
-    // no need to save themselves in the DB (heck: we could do without the caching, too, since we always add this person via getAllDidsRequesterCanSee, but it's fast, so whatever)
     await db.networkInsert(subject, object, url)
   } else {
+    // no need to save themselves in the DB (heck: we could do without the caching, too, since we always add this person via getAllDidsRequesterCanSee, but it's fast, so whatever)
     l.trace("... but not adding DB network entry since it's the same DID.")
   }
 
@@ -117,15 +119,15 @@ async function addCanSee(subject, object, url) {
   }
   // else it has to be fully initialized from the DB before next read anyway
 
-  var seesDids = SeesInNetworkCache.get(subject)
+  var seesDids = SeesNetworkCache.get(subject)
   if (!seesDids) {
     seesDids = []
   }
   if (R.indexOf(object, seesDids) == -1) {
     let newList = R.concat(seesDids, [object])
-    SeesInNetworkCache.set(subject, newList)
+    SeesNetworkCache.set(subject, newList)
   }
-  l.info("Now", subject, "sees", SeesInNetworkCache.get(subject))
+  l.info("Now", subject, "sees", SeesNetworkCache.get(subject))
 
   var seenByDids = SeenByNetworkCache.get(object)
   if (!seenByDids) {
@@ -150,4 +152,4 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequesterSeeWhoCanSeeObject }
+module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, whoDoesRequesterSeeWhoCanSeeObject }

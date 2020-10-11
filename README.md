@@ -218,9 +218,32 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 ## Troubleshooting
 
-"CORS problems" - endorser-ch is running?
-"Unsupported DID method 'ethr'" - dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
-"Converting circular structure to JSON" - network connected?
+- Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)
+
+- "CORS problems": endorser-ch is running?
+
+- "Unsupported DID method 'ethr'": dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
+
+- "Converting circular structure to JSON": network connected?
+
+- This:
+../fsevents.cc:85:58: error: expected ';' after top level declarator
+void FSEvents::Initialize(v8::Handle<v8::Object> exports) {
+                                                         ^
+                                                         ;
+23 warnings and 9 errors generated.
+make: *** [Release/obj.target/fse/fsevents.o] Error 1
+gyp ERR! build error
+gyp ERR! stack Error: `make` failed with exit code: 2
+...
+node-pre-gyp ERR! build error
+node-pre-gyp ERR! stack Error: Failed to execute '/Users/tlarson/.nvm/versions/node/v12.13.1/bin/node /Users/tlarson/.nvm/versions/node/v12.13.1/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js ...
+...
+npm ERR! sqlite3@4.0.4 install: `node-pre-gyp install --fallback-to-build`
+npm ERR! Exit status 1
+...
+... probably means you're running a different version of node.  Prod is on node v10.15.0 and npm 6.4.1
+
 
 ## Tests
 
@@ -301,6 +324,8 @@ See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.
 
 
 ## Misc
+
+
 
 Note that new deployments can remove the "legacy Confirmation" code.
 

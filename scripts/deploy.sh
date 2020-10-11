@@ -40,6 +40,7 @@ ssh -i $2 ubuntu@endorser.ch << EOF
   cd $DEPLOY_DIR
 
   echo "Running: npm ci"
+  # Don't we need to add --production on the end of "npm ci"?
   npm ci
 
   echo "Running: npm compile"

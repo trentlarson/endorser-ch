@@ -1,6 +1,6 @@
 import R from 'ramda'
 import l from '../../common/logger'
-import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getSeenByAll, whoDoesRequesterSeeWhoCanSeeObject } from './network-cache.service'
+import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, whoDoesRequesterSeeWhoCanSeeObject } from './network-cache.service'
 import { HIDDEN_TEXT, isDid } from './util'
 
 /**
@@ -21,7 +21,7 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input) {
   let result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
 
   // ensure the public URL lookup is initialized
-  await getSeenByAll()
+  await getDidsSeenByAll()
   let publicUrls = gatherPublicUrls(result)
   if (R.length(R.keys(publicUrls)) > 0) {
     result["publicUrls"] = publicUrls

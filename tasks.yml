@@ -1,7 +1,7 @@
 %TAG ! tag:taskyaml.org,2020:schema
 --- !<tag:endorser.ch,2020:/tasks>
 - 99 1 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN? Why can 5ef only see 5ef & df0?
-- 99 1 Why are didVisibleToDids in confirmations on Mar 14?
+- 99 0 5ef and 730 should be able to see each other
 
 - 95 0 push latest changes with AgreeAction to prod
 - 95 2 use UUIDs instead of rowids
@@ -21,6 +21,7 @@
 - 95 1 in text search: show claim contents instead of DB records
 - 95 1 in text search: remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
 - 92 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
+- 92 0 remove the didVisibleToDids when listing possible confirmations
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 0 add .json(someErr) to all routers in the error path
 - 90 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
