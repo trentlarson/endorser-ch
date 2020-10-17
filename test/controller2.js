@@ -194,7 +194,7 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
 
 
 
-describe('Roles & Visibility', () => {
+describe('Visibility', () => {
 
   it('should add a new LandRecorder role claim', () =>
      request(Server)
@@ -211,7 +211,7 @@ describe('Roles & Visibility', () => {
      })
     ).timeout(7001)
 
-  it('should get a claim #1 with all DIDs hidden', () =>
+  it('should get that claim with all DIDs hidden', () =>
      request(Server)
      .get('/api/claim/' + claimId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
@@ -228,6 +228,15 @@ describe('Roles & Visibility', () => {
          .that.does.not.have.property('publicUrls')
        expect(testUtil.allDidsAreHidden(r.body)).to.be.true
        expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('user 3 should not see that full land claim JWT', () =>
+     request(Server)
+     .get('/api/claim/full/' + claimId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(403)
      })).timeout(7001)
 
   it('should see one DID', () =>
@@ -263,7 +272,7 @@ describe('Roles & Visibility', () => {
        return Promise.reject(err)
      }))
 
-  it('should get a claim #2 with some DIDs shown', () =>
+  it('should get that claim with DIDs shown', () =>
      request(Server)
      .get('/api/claim/' + claimId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
@@ -275,6 +284,22 @@ describe('Roles & Visibility', () => {
          .that.deep.equals({"did:ethr:0x22c51a43844e44b59c112cf74f3f5797a057837a":'https://ignitecommunity.org'})
        expect(r.status).that.equals(200)
      })).timeout(7001)
+
+  it('user 3 should now see that full land claim JWT', () =>
+     request(Server)
+     .get('/api/claim/full/' + claimId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+})
+
+
+
+
+describe('Role Claims on Date', () => {
 
   it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(7001)
   it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(7001)

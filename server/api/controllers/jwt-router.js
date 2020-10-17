@@ -29,8 +29,8 @@ class Controller {
                 resolve({
                   full: result,
                   fullClaim: resultClaim,
-                  scrubbed: scrubbed,
-                  scrubbedClaim: scrubbedClaim
+                  scrubbed: R.omit(['publicUrls'], scrubbed),
+                  scrubbedClaim: R.omit(['publicUrls'], scrubbedClaim)
                 })
               })
               .catch(err => reject(err))
