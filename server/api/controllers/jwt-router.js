@@ -1,7 +1,8 @@
-import * as express from 'express';
+import * as express from 'express'
+import R from 'ramda'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
-import JwtService from '../services/jwt.service';
+import JwtService from '../services/jwt.service'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class Controller {
 
@@ -12,6 +13,39 @@ class Controller {
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
+      })
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+        }
+
+  async getFullJwtById(req, res) {
+    JwtService
+      .fullJwtById(req.params.id, res.locals.tokenIssuer)
+      .then(result => new Promise((resolve, reject) => {
+        hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+          .then(scrubbed => {
+            let resultClaim = JSON.parse(result.claim)
+            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, resultClaim)
+              .then(scrubbedClaim => {
+                resolve({
+                  full: result,
+                  fullClaim: resultClaim,
+                  scrubbed: scrubbed,
+                  scrubbedClaim: scrubbedClaim
+                })
+              })
+              .catch(err => reject(err))
+          })
+          .catch(err => reject(err))
+      }))
+      .then(r => {
+        if (r
+            && R.equals(r.full, r.scrubbed)
+            && R.equals(r.fullClaim, r.scrubbedClaim)
+           ) {
+          res.json(r.full);
+        } else {
+          res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.tokenIssuer}.  Use a different endpoint to get scrubbed data.`).end();
+        }
       })
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -88,7 +122,17 @@ export default express
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
- .get('/:id', controller.getById)
+  .get('/:id', controller.getById)
+
+/**
+ * Get a Claim JWT with full encoding
+ * @group jwt - Claim JWT storage
+ * @route GET /api/claim/full/{id}
+ * @param {number} id.path.required - the ID of the Claim JWT record to retrieve
+ * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/full/:id', controller.getFullJwtById)
 
  /**
  * Add a Claim JWT raw, without any processing (not recommended)
