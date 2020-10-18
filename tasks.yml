@@ -2,10 +2,10 @@
 --- !<tag:endorser.ch,2020:/tasks>
 - 99 1 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN? Why can 5ef only see 5ef & df0?
 - 99 0 5ef and 730 should be able to see each other
+n
+- 95 2 independently verify a JWT
 
-- 95 0 push latest changes with AgreeAction to prod
-- 95 2 use UUIDs instead of rowids
-
+- 95 2 use UUIDs instead of rowids (why?)
 - 95 1 ensure uport-demo app runs in prod mode on prod
 - 95 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 95 0 in July: check SSL certbot automated renewal is after Aug 1 https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
@@ -41,7 +41,7 @@
   - ?
 - 90 1 fix deploy issues: npm ci & prune (in deploy.sh) and babel (above)
 - 90 1 on ReportClaim there's a "*" next to hidden addresses, so explain it
-- 85 2 add translation to verifiable credentials: credentialSubject, issuer, issuanceDate https://www.w3.org/TR/vc-data-model/#credential-subject
+- 85 2 add translation to verifiable credentials: vc, credentialSubject, issuer, issuanceDate https://www.w3.org/TR/vc-data-model/#credential-subject https://www.w3.org/TR/vc-data-model/#json-web-token
 - 85 0 fix error: user claims & confirmations not showing (currently by non-subject should be by issuer)
 - 85 0 remove "subject" from terminology in code; prefer "agent" (Why?) (... or did I change JoinClaim?)
 - 85 1 convert all response dates to ISO format (including zone)

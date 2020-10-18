@@ -1,5 +1,8 @@
 // from https://github.com/uport-project/did-jwt/blob/develop/src/JWT.js
 // ... unless we can find a way to access the code directly from the library
+//
+// Can I just say that it's ridiculous that this isn't eported by did-jwt?!
+//
 import { isMNID } from 'mnid'
 import resolve from 'did-resolver'
 

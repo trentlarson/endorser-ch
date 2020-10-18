@@ -30,6 +30,14 @@ NODE_ENV=dev npm run dev
 test/test.sh
 ```
 
+## Next Deploy
+- backup DB (before new prod)
+- mv endorser-ch-dev.sqlite3 endorser-ch-prod.sqlite3
+- NODE_ENV=prod DBUSER=sa DBPASS=sasa npm run migrate
+- npm ci
+- ...and note the change to "npm run compile" and "npm start"
+
+
 ## Install Dependencies
 
 Install all package dependencies (one time operation)
@@ -165,7 +173,7 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run migrate
 
 
 
-## Debug It
+## Debug It (... a section left over from original uPort project)
 
 #### Debug the server:
 
@@ -196,7 +204,7 @@ Fix all airbnb linter errors
 npm run lint
 ```
 
-## Deploy It
+## Deploy It (... a section left over from original uPort project)
 
 Deploy to CloudFoundry
 
@@ -310,14 +318,6 @@ User stories:
   - to do: show strong network; show networks with personal connection vs public DID; show fake network
 
 
-## Next Deploy
-- backup DB (before new prod)
-- mv endorser-ch-dev.sqlite3 endorser-ch-prod.sqlite3
-- NODE_ENV=prod DBUSER=sa DBPASS=sasa npm run migrate
-- npm ci
-- ...and note the change to "npm run compile" and "npm start"
-
-
 ## Tasks
 
 See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.com/trentlarson/uport-demo) under /tasks.
@@ -328,6 +328,29 @@ See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.
 
 
 Note that new deployments can remove the "legacy Confirmation" code.
+
+Here's a way to verify a JWT signature.
+- Go to an empty directory (where you'll install and run code)
+```
+yarn add did-jwt@4.0.0 ethr-did-resolver@3.0.0
+node
+
+const infuraProjectId = '0f439b3b9237480ea8eb9da7b1f3965a' // my ID... which you can use for a bit but it'd be nice if you got your own at infura.io
+const didJWT = require('did-jwt')
+const Resolver = require('did-resolver').Resolver
+const ethrDid = require('ethr-did-resolver').getResolver({rpcUrl: 'https://mainnet.infura.io/v3/' + infuraProjectId})
+let resolver = new Resolver(ethrDid)
+let result;
+async function verify(jwt) {
+  result = await didJWT.verifyJWT(jwt, {resolver: resolver})
+  console.log("Result of 'verify':\n", result, '\n... and doc\n', result.doc);
+}
+```
+- Finally, enter this with your JWT string: `verify("PASTE JWT HERE")`
+- If you see `Signature invalid for JWT`, you're being tricked.  Otherwise, it checks out.
+  - If you see some other error (eg. "expired"), that's OK... it still passed the signature check, as long as it gets past this line: https://github.com/decentralized-identity/did-jwt/blob/v4.0.0/src/JWT.ts#L232
+
+
 
 Open questions:
 - Should we require top-level @context and @type (where multiple become ItemList)?
