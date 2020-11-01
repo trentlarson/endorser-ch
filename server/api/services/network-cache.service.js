@@ -126,7 +126,7 @@ async function addCanSee(subject, object, url) {
   // The remainder sets the internal cache by adding that one subject-object pair,
   // but it really should just invalidate and reload from the DB.
 
-  let seesDids = getDidsRequesterCanSeeExplicitly(subject)
+  let seesDids = await getDidsRequesterCanSeeExplicitly(subject)
   if (!seesDids) {
     seesDids = []
   }
@@ -139,7 +139,7 @@ async function addCanSee(subject, object, url) {
   }
   l.info("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
 
-  let seenByDids = getDidsWhoCanSeeExplicitly(object)
+  let seenByDids = await getDidsWhoCanSeeExplicitly(object)
   if (!seenByDids) {
     seenByDids = []
   }
