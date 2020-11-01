@@ -71,7 +71,9 @@ Tag the release version (after updating the package.json version).
 ```shell
 # SSH to the box and kill the "node dist/index.js".
 # ... and may have to kill nodemon & pino-pretty processes separately
+# On local:
 scripts/deploy.sh release-X ~/.ssh/id_rsa
+# On remote:
 cd endorser-ch
 NODE_ENV=prod nohup npm start >> ../endorser-ch.out 2>&1 &
 ```
