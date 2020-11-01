@@ -348,7 +348,7 @@ async function verify(jwt) {
 ```
 - Finally, enter this with your JWT string: `verify("PASTE JWT HERE")`
 - If you see `Signature invalid for JWT`, you're being tricked.  Otherwise, it checks out.
-  - If you see some other error (eg. "expired"), that's OK... it still passed the signature check, as long as it gets past this line: https://github.com/decentralized-identity/did-jwt/blob/v4.0.0/src/JWT.ts#L232
+  - If you see some other error (eg. "expired"), that's OK... it still passed the signature check, as long as it gets past this line: https://github.com/decentralized-identity/did-jwt/blob/v4.0.0/src/JWT.ts#L231
 
 
 

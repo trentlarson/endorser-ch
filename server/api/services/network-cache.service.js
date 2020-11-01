@@ -9,6 +9,7 @@ const BLANK_URL = ""
 
 /**
   URL for each public DID, as an key-value map (... so let's hope there are never too many!)
+  These are inseted every time a public DID is requested from the DB.
 **/
 var UrlsForPublicDids = {}
 
@@ -55,8 +56,8 @@ async function getDidsSeenByAll() {
 **/
 async function getAllDidsRequesterCanSee(requesterDid) {
   let didsCanSee = await getDidsRequesterCanSeeExplicitly(requesterDid)
-  var result = didsCanSee.concat(await getDidsSeenByAll())
-  var result2 = result.concat([requesterDid]) // themself
+  let result = didsCanSee.concat(await getDidsSeenByAll())
+  let result2 = result.concat([requesterDid]) // themself
   return R.uniq(result2)
 }
 
@@ -66,14 +67,14 @@ async function getAllDidsRequesterCanSee(requesterDid) {
 /**
    For each object, what are the subject DIDs who can see them?
 **/
-const SeenByNetworkCache = new NodeCache()
+const WhoCanSeeNetworkCache = new NodeCache()
 
 async function getDidsWhoCanSeeExplicitly(object) {
-  var allowedDids = SeenByNetworkCache.get(object)
+  var allowedDids = WhoCanSeeNetworkCache.get(object)
   if (!allowedDids) {
     allowedDids = await db.getWhoCanSee(object)
     l.trace(`Here are the currently allowed DIDs from DB who can see ${object}: ` + JSON.stringify(allowedDids)) // using stringify because empty arrays show as nothing (ug!)
-    SeenByNetworkCache.set(object, allowedDids)
+    WhoCanSeeNetworkCache.set(object, allowedDids)
   }
   return allowedDids
 }
@@ -95,7 +96,7 @@ async function getAllDidsWhoCanSeeObject(object) {
 
 
 /**
-   add subject "can see" object relationship to DB and caches
+   add subject-can-see-object relationship to DB and caches
 **/
 async function addCanSee(subject, object, url) {
 
@@ -119,25 +120,37 @@ async function addCanSee(subject, object, url) {
   }
   // else it has to be fully initialized from the DB before next read anyway
 
-  var seesDids = SeesNetworkCache.get(subject)
+
+
+
+  // The remainder sets the internal cache by adding that one subject-object pair,
+  // but it really should just invalidate and reload from the DB.
+
+  let seesDids = getDidsRequesterCanSeeExplicitly(subject)
   if (!seesDids) {
     seesDids = []
   }
   if (R.indexOf(object, seesDids) == -1) {
     let newList = R.concat(seesDids, [object])
-    SeesNetworkCache.set(subject, newList)
+    const setResult = SeesNetworkCache.set(subject, newList)
+    if (!setResult) {
+      l.error('Failed to set SeesNetworkCache for key', subject, 'and value', newList)
+    }
   }
-  l.info("Now", subject, "sees", SeesNetworkCache.get(subject))
+  l.info("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
 
-  var seenByDids = SeenByNetworkCache.get(object)
+  let seenByDids = getDidsWhoCanSeeExplicitly(object)
   if (!seenByDids) {
     seenByDids = []
   }
   if (R.indexOf(subject, seenByDids) == -1) {
     let newList = R.concat(seenByDids, [subject])
-    SeenByNetworkCache.set(object, newList)
+    const setResult = WhoCanSeeNetworkCache.set(object, newList)
+    if (!setResult) {
+      l.error('Failed to set WhoCanSeeNetworkCache for key', object, 'and value', newList)
+    }
   }
-  l.info("Now", object, "is seen by", SeenByNetworkCache.get(object))
+  l.info("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
 }
 
 /**

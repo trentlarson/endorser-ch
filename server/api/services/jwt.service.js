@@ -232,7 +232,7 @@ class JwtService {
     if (claim['@context'] === 'http://schema.org'
         && claim['@type'] === 'AgreeAction') {
 
-l.error('adding AgreeAction confirmation', claim)
+      l.info('Adding AgreeAction confirmation', claim)
       // note that 'Confirmation' does similar logic (but is deprecated)
 
       var recordings = []

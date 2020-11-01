@@ -611,6 +611,18 @@ describe('Claim', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
+  it('should not see DID #1', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .to.not.include.members(['did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557'])
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
   it('should add another new confirmation', () =>
      request(Server)
      .post('/api/claim')
@@ -622,6 +634,18 @@ describe('Claim', () => {
          .to.be.a('number')
          .that.equals(firstId + 4)
        expect(r.status).that.equals(201)
+     })).timeout(6002)
+
+  it('should see DID #1', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .to.include.members(['did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557'])
+       expect(r.status).that.equals(200)
      })).timeout(6002)
 
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>

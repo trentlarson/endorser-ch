@@ -1,10 +1,5 @@
 %TAG ! tag:taskyaml.org,2020:schema
 --- !<tag:endorser.ch,2020:/tasks>
-- 99 1 Why are 89a's (April 11) and 5ef's (earlier?) showing HIDDEN? Why can 5ef only see 5ef & df0?
-- 99 0 5ef and 730 should be able to see each other
-n
-- 95 2 independently verify a JWT
-
 - 95 2 use UUIDs instead of rowids (why?)
 - 95 1 ensure uport-demo app runs in prod mode on prod
 - 95 0 show an error, eg. on a confirmation for a claim that doesn't exist
