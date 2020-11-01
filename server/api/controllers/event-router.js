@@ -28,6 +28,13 @@ export class Controller {
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
+  getActionClaimsAndConfirmationsByEventData(req, res) {
+    EventService.getActionClaimsAndConfirmationsByEventData(JSON.parse(req.query.event))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+
 }
 
 let controller = new Controller();
@@ -63,16 +70,6 @@ export default express
   .get('/', controller.getByQuery)
 
 /**
- * Get an event
- * @group event - Event storage
- * @route GET /api/event/{id}
- * @param {number} id.path.required - the ID of the event record to retrieve
- * @returns {object} 200 - event if it exists, otherwise 404
- * @returns {Error}  default - Unexpected error
- */
-  .get('/:id', controller.getById)
-
-/**
  * @typedef ActionClaim
  * @property {number} actionId.required
  * @property {string} actionDid.required
@@ -86,10 +83,42 @@ export default express
  */
 
 /**
+ * @typedef Organizer
+ * @property {string} name.required
+ */
+
+/**
+ * @typedef EventInput
+ * @property {Organizer} organizer.required
+ * @property {string} name.required
+ * @property {string} startTime.required
+ */
+
+/**
  * @typedef ActionClaimsConfirmations
  * @property {ActionClaim} action.required
  * @property {Array.Confirmation} confirmation.required
  */
+
+/**
+ * Get claims and confirmations for an event
+ * @group event - Event storage
+ * @route GET /api/event/actionClaimsAndConfirmations
+ * @param {EventInput} event.query.required - the event data
+ * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/actionClaimsAndConfirmations', controller.getActionClaimsAndConfirmationsByEventData)
+
+/**
+ * Get an event
+ * @group event - Event storage
+ * @route GET /api/event/{id}
+ * @param {number} id.path.required - the ID of the event record to retrieve
+ * @returns {object} 200 - event if it exists, otherwise 404
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/:id', controller.getById)
 
 /**
  * Get claims and confirmations for an event

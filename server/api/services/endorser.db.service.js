@@ -162,7 +162,30 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
-        row.eventStartTime = zonify(row.eventStartTime)
+        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
+        let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
+        data.push(both)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
+  /**
+     @param eventId
+     @returns all actions on the event outer-joined with confirmations of those actions
+
+     Result format is: { action: { id, agentDid, eventRowId }, confirmation: { id, issuer, actionRowId } }
+     ... where 'confirmation' may be null.
+   **/
+  retrieveActionClaimsAndConfirmationsByEventData(orgName, name, startTime) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventOrgName = ? AND a.eventName = ? AND a.eventStartTime = datetime(?)", [orgName, name, startTime], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
         let both = {action:{id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
         data.push(both)

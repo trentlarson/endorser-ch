@@ -3,6 +3,7 @@ import chaiAsPromised from "chai-as-promised"
 import request from 'supertest'
 import { DateTime } from 'luxon'
 import R from 'ramda'
+
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
@@ -611,6 +612,25 @@ describe('Claim', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
+  it('should get claims and confirmations for this event data', () => {
+    let claimEncoded = encodeURIComponent(JSON.stringify(claimBvcFor1.event))
+    return request(Server)
+      .get('/api/event/actionClaimsAndConfirmations?event=' + claimEncoded)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body)
+          .to.be.an('array')
+          .of.length(1)
+        expect(r.body[0])
+          .to.be.an('object')
+          .that.has.property('confirmations')
+          .to.be.an('array')
+          .of.length(0)
+        expect(r.status).that.equals(200)
+      })
+  }).timeout(7001)
+
   it('should not see DID #1', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
@@ -696,7 +716,6 @@ describe('Action', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-       console.log("r.body",r.body)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('agentDid')
@@ -729,7 +748,6 @@ describe('Action', () => {
        expect(400)
        expect(r.status).that.equals(401)
      }))
-
 
   it('should get action with the DID hidden', () =>
      request(Server)
@@ -907,7 +925,7 @@ describe('Event', () => {
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
-  it('should get a set of action claims & still two confirmations', () =>
+  it('should get multiple action claims & still two confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -921,7 +939,23 @@ describe('Event', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should get two issuers for this claim', () =>
+  it('should get multiple action claims and confirmations for this event data', () => {
+    let claimEncoded = encodeURIComponent(JSON.stringify(claimBvcFor0.event))
+    return request(Server)
+      .get('/api/event/actionClaimsAndConfirmations?event=' + claimEncoded)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body[0])
+          .to.be.an('object')
+          .that.has.property('confirmations')
+          .to.be.an('array')
+          .of.length(2)
+        expect(r.status).that.equals(200)
+      })
+  }).timeout(7001)
+
+  it('should get two issuers for this claim ID', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])

@@ -6,7 +6,7 @@ import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
 import JwtService from '../services/jwt.service';
 class JwtController {
   getIssuersMatchingClaim(req, res) {
-    JwtService.allClaimAndConfirmationIssuersMatchingClaim(req.query.claimId)
+    JwtService.allClaimAndConfirmationIssuersMatchingClaimId(req.query.claimId)
       .then(result =>
             hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, {result}))
       .then(r => res.json(r))

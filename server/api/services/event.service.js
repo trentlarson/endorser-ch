@@ -26,6 +26,29 @@ class EventService {
     return R.values(acacListByAction)
   }
 
+  /**
+   Result format is:
+   [
+     { action: { id, agentDid, eventRowId }, confirmations: [ { id, issuer, actionRowId } ... ] }
+     ...
+   ]
+   */
+  async getActionClaimsAndConfirmationsByEventData(event) {
+    l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventData(${util.inspect(event)})`);
+    if (!event.organizer
+        || !event.organizer.name
+        || !event.name
+        || !event.startTime) {
+      return Promise.reject("Requested event data but didn't supply organizer.name or name or startTime: " + JSON.stringify(event))
+    } else {
+      let claimsAndConfirmations = await db.retrieveActionClaimsAndConfirmationsByEventData(event.organizer.name, event.name, event.startTime)
+      let acacListById = R.groupBy(acac => ""+acac.action.id)(claimsAndConfirmations)
+      let acacListByAction = R.map(R.curry(buildConfirmationList)('action'))(acacListById)
+      let result = R.values(acacListByAction)
+      return result
+    }
+  }
+
 }
 
 export default new EventService();
