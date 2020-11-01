@@ -21,7 +21,7 @@ function getPublicDidUrl(did) {
 /**
    For each subject, what are the object DIDs they can see?
 **/
-const SeesNetworkCache = new NodeCache()
+const SeesNetworkCache = new NodeCache({ stdTTL: 60 * 60 })
 
 async function getDidsRequesterCanSeeExplicitly(requesterDid) {
   var allowedDids = SeesNetworkCache.get(requesterDid)
@@ -67,7 +67,7 @@ async function getAllDidsRequesterCanSee(requesterDid) {
 /**
    For each object, what are the subject DIDs who can see them?
 **/
-const WhoCanSeeNetworkCache = new NodeCache()
+const WhoCanSeeNetworkCache = new NodeCache({ stdTTL: 60 * 60 })
 
 async function getDidsWhoCanSeeExplicitly(object) {
   var allowedDids = WhoCanSeeNetworkCache.get(object)
