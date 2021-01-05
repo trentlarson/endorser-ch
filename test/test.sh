@@ -1,9 +1,4 @@
 
-echo "We believe you gotta be connected to the internet to run these (probably due to sig/JWT verification)."
-echo "For example, here's an error you might get: 'TypeError: Converting circular structure to JSON'"
-
-
-
 
 echo "First will run tests without JWT validation."
 
@@ -18,7 +13,8 @@ NODE_ENV=test-local DBUSER=sa DBPASS=sasa PORT=3330 npm run test$1
 
 
 
-echo "Now will run tests with JWT validation (which are slower)."
+echo "Now will run tests with JWT validation, which are much slower and which require internet."
+echo "This error indicates a network problem: 'TypeError: Converting circular structure to JSON'"
 echo "in 3..."
 sleep 1
 echo "2..."

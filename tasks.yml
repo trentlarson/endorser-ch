@@ -1,9 +1,7 @@
 %TAG ! tag:taskyaml.org,2020:schema
 --- !<tag:endorser.ch,2020:/tasks>
-- 95 2 use UUIDs instead of rowids (why?)
-- 95 1 ensure uport-demo app runs in prod mode on prod
+- 95 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 95 0 show an error, eg. on a confirmation for a claim that doesn't exist
-- 95 0 in July: check SSL certbot automated renewal is after Aug 1 https://www.digitalocean.com/community/tutorials/how-to-secure-haproxy-with-let-s-encrypt-on-ubuntu-14-04
 - 95 1 fix IDCommunity links
 - 95 1 show signatures for proof of confirmations
 - 95 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
@@ -19,6 +17,18 @@
 - 92 0 remove the didVisibleToDids when listing possible confirmations
 - 92 1 change name of app from "uport demo" (when logging in)
 - 92 0 add .json(someErr) to all routers in the error path
+- 90 5 put functionality in uport mobile app -- currently daf-mobile id:all-mobile
+  - allow addition of contact
+  - allow import of identity
+  - get running on Android
+  - check if Veramo is working
+- 90 6 write requests/offers into mobile app id:mobile-privacy
+  - allow publication of public request/offer
+  - allow publication of claim with private data
+  - allow search of public data
+  - allow search of private
+  - allow search via connected person
+  - allow messaging
 - 90 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
 - 90 0 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
 - 90 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
@@ -30,7 +40,7 @@
 - 90 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
 - 90 0 rename issuer to issuerDid in confirmation table
 - 90 0 retrieveTenureClaimsAndConfirmations & retrieveActionClaimsAndConfirmations should be OUTER JOIN?
-- 90 0 remove issuerDid from *_claim tables and build into logic (since >1 issuer could claim each)
+- 90 0 document decision on whether original issuerDid adds to count (or should be removed from *_claim tables and built into logic)
 - 90 2 add search for claim
   - 90 2 add search for claim on parcel of land
   - ?
@@ -84,7 +94,6 @@
 - 50 0 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
 - 50 1 put hideDidsAndAddLinksToNetwork into middleware (so it always happens)
 - 40 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
-- 40 6 put all functionality in uport mobile app
 - 30 0 on uport-demo: change store/play pics in Welcome.js to local files
 - 30 0 in confirmation, check whether it really is a JoinAction
 - 30 0 try-catch around jwt.service resolveAuthenticator when not connected to internet

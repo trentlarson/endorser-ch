@@ -279,7 +279,9 @@ User stories:
   - run: NODE_ENV=test-local npm run dev
 
 - in uport-demo
-  - change to user 11 Annabelle's Friend in src/utilities/claimsTest.js
+  - change to TEST_USER_NUME = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
+
+  - run: `npm run start`
 
   - show attendance results
     - on Best Attendance screen
@@ -310,11 +312,11 @@ User stories:
     - go to Residence Report
       http://localhost:3001/reportResidences
     - see duplicate tenure claims, one hidden
-    - change to user -1 Trent in claimsTest.js
+    - change to TEST_USER_NUM = -1 (Trent) in src/utilities/claimsTest.js
     - in tenure claim, see a different user hidden
     - confirm something about Annabelle did:ethr:0xaaa29f09c29fb0666b8302b64871d7029032b479
       ... and see claim with ID 32 saved
-    - change to user 11 Annabelle's Friend in claimsTest.js
+    - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
   - to do: show strong network; show networks with personal connection vs public DID; show fake network
