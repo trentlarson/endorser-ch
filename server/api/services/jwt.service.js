@@ -84,14 +84,24 @@ class JwtService {
     return {payload, header, signature, data}
   }
 
+  extractClaim(payload) {
+    let claim = payload.claim
+      || (payload.vc && payload.vc.credentialSubject)
+    if (claim) {
+      return claim;
+    } else {
+      throw Error("JWT payload must contain a 'claim' property or a 'vc' property with a 'credentialSubject'");
+    }
+  }
+
   /**
   create(jwtEncoded) {
     l.info(`${this.constructor.name}.create(ENCODED)`);
     l.trace(jwtEncoded, "ENCODED")
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
-    let claimEncoded = base64url.encode(payload.claim)
-    let jwtEntity = db.buildJwtEntity(payload, claimEncoded, jwtEncoded)
+    let claimEncoded = base64url.encode(this.extractClaim(payload))
+    let jwtEntity = db.buildJwtEntity(payload, ?, ?, claimEncoded, jwtEncoded)
     return db.jwtInsert(jwtEntity)
   }
   **/
@@ -425,7 +435,6 @@ class JwtService {
   async createWithClaimRecord(jwtEncoded, authIssuerId) {
     l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
-
     let {payload, header, signature, data, doc, authenticators, issuer} =
         await this.decodeAndVerifyJwt(jwtEncoded)
         .catch((err) => {
@@ -436,10 +445,11 @@ class JwtService {
       return Promise.reject(`JWT issuer ${authIssuerId} does not match claim iss ${payload.iss}`)
     }
 
-    if (payload.claim) {
-      let claimStr = JSON.stringify(payload.claim)
+    let payloadClaim = this.extractClaim(payload)
+    if (payloadClaim) {
+      let claimStr = JSON.stringify(payloadClaim)
       let claimEncoded = base64url.encode(claimStr)
-      let jwtEntity = db.buildJwtEntity(payload, claimStr, claimEncoded, jwtEncoded)
+      let jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)
       let jwtId =
           await db.jwtInsert(jwtEntity)
           .catch((err) => {
@@ -458,7 +468,7 @@ class JwtService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payload.claim)
+      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payloadClaim)
         .catch(err => {
           l.warn(err, `Failed to create embedded claim records.`)
         })

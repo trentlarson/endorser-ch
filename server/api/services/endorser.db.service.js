@@ -443,19 +443,19 @@ class EndorserDatabase {
    * JWT
    **/
 
-  buildJwtEntity(payload, claim, claimEncoded, jwtEncoded) {
+  buildJwtEntity(payload, claim, claimStr, claimEncoded, jwtEncoded) {
     let issuedAt = new Date(payload.iat * 1000).toISOString()
     let issuer = payload.iss
     let subject = payload.sub
-    let claimContext = payload.claim['@context']
-    let claimType = payload.claim['@type']
+    let claimContext = claim['@context']
+    let claimType = claim['@type']
     return {
       issuedAt: issuedAt,
       issuer: issuer,
       subject: subject,
       claimContext: claimContext,
       claimType: claimType,
-      claim: claim,
+      claim: claimStr,
       claimEncoded: claimEncoded,
       jwtEncoded: jwtEncoded
     }

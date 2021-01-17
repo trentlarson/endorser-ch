@@ -58,6 +58,10 @@ class Controller {
   }
 
   importClaim(req, res) {
+    if (!req.body.jwtEncoded) {
+      res.status(400).json("Request body is missing a 'jwtEncoded' property.").end();
+      return;
+    }
     JwtService
       .createWithClaimRecord(req.body.jwtEncoded, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
