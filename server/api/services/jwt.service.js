@@ -273,17 +273,24 @@ class JwtService {
         return Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
       }
 
+      if (!claim.event) {
+        l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no event info.`)
+        return Promise.reject(new Error("Attempted to record a JoinAction claim with no event info."))
+      }
+
       var event
-      var events = await db.eventsByParams({orgName:claim.event.organizer.name, name:claim.event.name, startTime:claim.event.startTime})
+      var orgName = claim.event.organizer && claim.event.organizer.name
+      var events = await db.eventsByParams({orgName:orgName, name:claim.event.name, startTime:claim.event.startTime})
+
       if (events.length === 0) {
-        let eventId = await db.eventInsert(claim.event.organizer.name, claim.event.name, claim.event.startTime)
-        event = {id:eventId, orgName:claim.event.organizer.name, name:claim.event.name, startTime:claim.event.startTime}
+        let eventId = await db.eventInsert(orgName, claim.event.name, claim.event.startTime)
+        event = {id:eventId, orgName:orgName, name:claim.event.name, startTime:claim.event.startTime}
         l.trace(`${this.constructor.name} New event # ${util.inspect(event)}`)
 
       } else {
         event = events[0]
         if (events.length > 1) {
-          l.warning(`${this.constructor.name} Multiple events exist with orgName ${claim.event.organizer.name} name ${claim.event.name} startTime ${claim.event.startTime}`)
+          l.warning(`${this.constructor.name} Multiple events exist with orgName ${orgName} name ${claim.event.name} startTime ${claim.event.startTime}`)
         }
 
         let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
