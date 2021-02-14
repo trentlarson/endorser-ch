@@ -421,6 +421,8 @@ class JwtService {
 
   }
 
+  // return Promise of { payload, issuer, header }
+  // ... and also if successful: signature, data, doc, authenticators
   async decodeAndVerifyJwt(jwt) {
     if (process.env.NODE_ENV === 'test-local') {
       // This often yields the following error message if the JWT is malformed: "TypeError: Cannot read property 'toString' of undefined"
@@ -436,6 +438,18 @@ class JwtService {
       // this line is lifted from didJwt.verifyJWT
       const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
       return {payload, header, signature, data, doc, authenticators, issuer}
+
+      /**
+      // This is an alternate, attempted when we got the following error
+      // which I believe was due to lack of a network connection.
+      // "TypeError: Converting circular structure to JSON" (XMLHttpRequest)
+      return resolveAuthenticator(header.alg, payload.iss, undefined).then(resolved => {
+        const {doc, authenticators, issuer} = resolved
+        return {payload, header, signature, data, doc, authenticators, issuer}
+      }).catch((err) => {
+        return Promise.reject('Error resolving JWT authenticator ' + err)
+      })
+      **/
     }
   }
 

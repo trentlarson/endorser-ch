@@ -86,7 +86,7 @@ function requesterInfo(req, res, next) {
         l.error("Low-level error while parsing JWT:", e, " ... with toString(): " + e)
         // ... and you'd think that those would at least hint at stack info but you'd be wrong.
         l.error(e.stack)
-        res.status(401).json("Low-level error while parsing JWT '" + jwt + "': " + e).end()
+        res.status(500).json("Low-level error while parsing JWT '" + jwt + "': " + e).end()
       })
   }
 }
