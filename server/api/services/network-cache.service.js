@@ -79,6 +79,12 @@ async function getDidsWhoCanSeeExplicitly(object) {
   return allowedDids
 }
 
+async function canSeeExplicitly(subject, object) {
+  const canSee = await getDidsWhoCanSeeExplicitly(object)
+  const result = R.includes(subject, canSee)
+  return result
+}
+
 /**
    return either [db.ALL_SUBJECT_MATCH()] or the list of DIDs who can explicitly see object (excluding db.ALL_SUBJECT_MATCH())
 **/
@@ -228,4 +234,4 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }
+module.exports = { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }

@@ -1213,6 +1213,16 @@ describe('Visibility utils', () => {
        expect(r.status).that.equals(200)
      })).timeout(6002)
 
+  it('#4 can tell that #5 can see them', () =>
+     request(Server)
+     .get('/api/report/canDidExplicitlySeeMe?did=' + creds[5].did)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body).to.be.true
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
   it('#4 should set invisible to #5', () =>
      request(Server)
      .post('/api/report/cannotSeeMe')

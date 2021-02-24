@@ -1,7 +1,7 @@
 import * as express from 'express'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
-import { addCanSee, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
+import { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
 
 import JwtService from '../services/jwt.service';
 class JwtController {
@@ -92,6 +92,11 @@ class DbController {
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
+  getCanSeeMeExplicitlyDids(req, res) {
+    canSeeExplicitly(req.query.did, res.locals.tokenIssuer)
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
 }
 let dbController = new DbController();
 
@@ -110,6 +115,7 @@ export default express
 
 /**
  * Get issuers for a claim
+ *
  * @group report - Reports
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
  * @param {claimId} date.query.required - the ID of the claim
@@ -120,6 +126,7 @@ export default express
 
 /**
  * Get claims and confirmations for individual
+ *
  * @group report - Reports
  * @route GET /api/report/actionClaimsAndConfirmationsSince
  * @param {datetime} date.query.optional - the date from which to show actionclaims
@@ -130,6 +137,7 @@ export default express
 
 /**
  * Get tenure claims for a point
+ *
  * @group report - Reports
  * @route GET /api/report/tenureClaimsAtPoint
  * @param {number} lat.query.required
@@ -141,6 +149,7 @@ export default express
 
 /**
  * Get tenure claims and confirmations for a point
+ *
  * @group report - Reports
  * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
@@ -152,6 +161,7 @@ export default express
 
 /**
  * Get org-role claims and confirmations for org & role & date
+ *
  * @group report - Reports
  * @route GET /api/report/orgRoleClaimsAndConfirmationsOnDate
  * @param {string} orgName.query.required
@@ -166,6 +176,7 @@ export default express
 
 /**
  * Retrieve all globally-visible DIDs
+ *
  * @group claim - Reports
  * @route GET /api/report/globallyVisibleDids
  */
@@ -173,20 +184,23 @@ export default express
 
 /**
  * Consent to make push-token issuer's ID visible to the given ID
+ *
  * @group claim - Reports
  * @route POST /api/report/canSeeMe
  */
   .post('/canSeeMe', dbController.makeMeVisibleTo)
 
 /**
- * Refuse to make push-token issuer's ID visible to the given ID
+ * Make push-token issuer's ID invisible to the given ID
+ *
  * @group claim - Reports
- * @route POST /api/report/canSeeMe
+ * @route POST /api/report/cannotSeeMe
  */
   .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
 
 /**
  * Consent to make push-token issuer's ID visible to the world
+ *
  * @group claim - Reports
  * @route POST /api/report/makeMeGloballyVisible
  */
@@ -194,9 +208,22 @@ export default express
 
 /**
  * Get all DIDs this person can see
+ *
  * @group report - Reports
  * @route GET /api/report/whichDidsICanSee
  * @returns {Array.object} 200 - list of DIDs user can see
  * @returns {Error}  default - Unexpected error
  */
   .get('/whichDidsICanSee', dbController.getCanSeeDids)
+
+/**
+ * Get all DIDs that can explicitly see this person.
+ * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
+ *
+ * @group report - Reports
+ * @route GET /api/report/whichDidsCanSeeMe
+ * @param {string} did.query.required
+ * @returns {Array.object} 200 - list of DIDs that can see this user
+ * @returns {Error}  default - Unexpected error
+ */
+  .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitlyDids)
