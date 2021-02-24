@@ -639,7 +639,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('array')
-         .to.not.include.members(['did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557'])
+         .to.not.include.members([creds[1].did])
        expect(r.status).that.equals(200)
      })).timeout(6002)
 
@@ -664,7 +664,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('array')
-         .to.include.members(['did:ethr:0x11bb3621f8ea471a750870ae8dd5f4b8203e9557'])
+         .to.include.members([creds[1].did])
        expect(r.status).that.equals(200)
      })).timeout(6002)
 
@@ -1176,6 +1176,64 @@ describe('Visibility utils', () => {
        expect(r.status).that.equals(201)
      })).timeout(7001)
   **/
+
+  //// Now #4 will toggle visibility from #5.
+
+  it('#5 should not see #4', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .to.not.include.members([creds[4].did])
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
+  it('#4 should set visible to #5', () =>
+     request(Server)
+     .post('/api/report/canSeeMe')
+     .send({ "did": creds[5].did })
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
+  it('#5 should see #4', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .to.include.members([creds[4].did])
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
+  it('#4 should set invisible to #5', () =>
+     request(Server)
+     .post('/api/report/cannotSeeMe')
+     .send({ "did": creds[5].did })
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
+  it('#5 should not see #4 again', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .to.not.include.members([creds[4].did])
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
 
 })
 

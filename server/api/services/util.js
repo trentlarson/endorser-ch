@@ -67,6 +67,27 @@ function isDid(value) {
   return value && value.startsWith("did:") && (value.substring(5).indexOf(":") > -1)
 }
 
+/**
+ *
+ * This was an attempt to handle check-summed ethr DIDs.
+ * But this opens a can of worms.
+ * Better to leave the search uncomplicated and let the client handle it.
+ *
+// return false if either are not DIDs (even if equivalent strings),
+// otherwise true if they're equivalent, even for mismatched-case "did:ethr:" DIDs
+function equivalentDids(did1, did2) {
+  if (isDid(did1) && isDid(did2)) {
+    if (did1.startsWith('did:ethr:')) {
+      did1 = did1.toLowerCase()
+      did2 = did2.toLowerCase()
+    }
+    return did1 === did2
+  } else {
+    return false
+  }
+}
+**/
+
 function allDidsInside(input) {
 
   if (Object.prototype.toString.call(input) === "[object String]") {

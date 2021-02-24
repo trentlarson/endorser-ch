@@ -1,7 +1,7 @@
 import * as express from 'express'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
-import { getAllDidsRequesterCanSee } from '../services/network-cache.service'
+import { addCanSee, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
 
 import JwtService from '../services/jwt.service';
 class JwtController {
@@ -72,9 +72,19 @@ class DbController {
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
+  makeMeVisibleTo(req, res) {
+    addCanSee(req.body.did, res.locals.tokenIssuer)
+      .then(() => res.status(200).json({success:true}).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+  makeMeInvisibleTo(req, res) {
+    removeCanSee(req.body.did, res.locals.tokenIssuer)
+      .then(() => res.status(200).json({success:true}).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
   makeMeGloballyVisible(req, res) {
     makeGloballyVisible(res.locals.tokenIssuer, req.body.url)
-      .then(() => res.status(201).json({success:true}).end())
+      .then(() => res.status(200).json({success:true}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getCanSeeDids(req, res) {
@@ -160,6 +170,20 @@ export default express
  * @route GET /api/report/globallyVisibleDids
  */
   .get('/globallyVisibleDids', dbController.getSeenByAll)
+
+/**
+ * Consent to make push-token issuer's ID visible to the given ID
+ * @group claim - Reports
+ * @route POST /api/report/canSeeMe
+ */
+  .post('/canSeeMe', dbController.makeMeVisibleTo)
+
+/**
+ * Refuse to make push-token issuer's ID visible to the given ID
+ * @group claim - Reports
+ * @route POST /api/report/canSeeMe
+ */
+  .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
 
 /**
  * Consent to make push-token issuer's ID visible to the world

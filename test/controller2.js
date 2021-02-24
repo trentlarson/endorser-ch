@@ -196,7 +196,7 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
 
 describe('Visibility', () => {
 
-  it('should add a new LandRecorder role claim', () =>
+  it('user 2 should add a new LandRecorder role claim', () =>
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
@@ -211,7 +211,7 @@ describe('Visibility', () => {
      })
     ).timeout(7001)
 
-  it('should get that claim with all DIDs hidden', () =>
+  it('user 3 should get that claim with all DIDs hidden', () =>
      request(Server)
      .get('/api/claim/' + claimId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
@@ -239,7 +239,7 @@ describe('Visibility', () => {
        expect(r.status).that.equals(403)
      })).timeout(7001)
 
-  it('should see one DID', () =>
+  it('user 5 should see one DID', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
@@ -250,18 +250,18 @@ describe('Visibility', () => {
        return Promise.reject(err)
      }))
 
-  it('should make user #2 visible to everyone', () =>
+  it('user 2 should make user 2 visible to everyone', () =>
      request(Server)
      .post('/api/report/makeMeGloballyVisible')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
      .send({"url":"https://ignitecommunity.org"})
      .then(r => {
-       expect(r.status).that.equals(201)
+       expect(r.status).that.equals(200)
      }).catch((err) => {
        return Promise.reject(err)
      }))
 
-  it('should see two DIDs', () =>
+  it('user 5 should see two DIDs', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
@@ -272,7 +272,7 @@ describe('Visibility', () => {
        return Promise.reject(err)
      }))
 
-  it('should get that claim with DIDs shown', () =>
+  it('user 3 should get that claim with DIDs shown', () =>
      request(Server)
      .get('/api/claim/' + claimId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])

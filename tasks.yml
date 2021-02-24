@@ -2,16 +2,19 @@
 --- !<tag:endorser.ch,2020:/tasks>
 - 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 5 put functionality in uport mobile app -- currently veramo id:all-mobile
+  - after saving contact, separately allow access to see me
+  - allow saving imported DID as lowercase
+  - show name if DID is in contacts
   - publish on Apple & Google & F-Droid
   - fix all app names
   - add my own name (for sharing with contacts)
   - store contact public key
-  - load claims and create & send confirmation
   - parameterize by endorser.ch server (eg. dev, prod)
   - allow for blank UPORT_PUSH_TOKEN in the case of VCs
   - push updates to app
-  - avoid multidex
   - report on confirmations
+  - fix DB crashes when doing a release test on Android
+  - avoid multidex
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
 - 1 show signatures for proof of confirmations
@@ -36,6 +39,9 @@
   - allow search via connected person
   - allow messaging
   - based on KERI
+  - add tests for endorser-mobile utility.testRecursivelyOnString
+  - -1 remove modal confirmation for saving a contact
+  - -1 warn about overwriting when saving a contact with existing DID
 - 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
 - 0 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
 - 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?

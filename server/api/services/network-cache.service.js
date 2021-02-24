@@ -100,11 +100,13 @@ async function getAllDidsWhoCanSeeObject(object) {
 **/
 async function addCanSee(subject, object, url) {
 
-  if (subject.startsWith("did:none:")
+  if (!subject
+      || subject.startsWith("did:none:")
+      || !object
       || object.startsWith("did:none:")) {
-    // No need to continue with this, since nobody can make a valid submission with this DID method.
+    // No need to continue with this, since nobody can make a valid request with this DID method.
     // This often happens for HIDDEN, when people are confirming without looking.
-    l.trace(`... but actually not adding a network entry since the DID type is 'none'.`)
+    l.trace(`Not adding a network entry since a DID is empty or has type 'none': ${subject} ${object}`)
     return
   }
 
@@ -112,7 +114,7 @@ async function addCanSee(subject, object, url) {
     await db.networkInsert(subject, object, url)
   } else {
     // no need to save themselves in the DB (heck: we could do without the caching, too, since we always add this person via getAllDidsRequesterCanSee, but it's fast, so whatever)
-    l.trace("... but not adding DB network entry since it's the same DID.")
+    l.trace("Not adding DB network entry since it's the same DID.")
   }
 
   if (subject === db.ALL_SUBJECT_MATCH()) {
@@ -154,6 +156,67 @@ async function addCanSee(subject, object, url) {
 }
 
 /**
+   remove subject-can-see-object relationship to DB and caches
+**/
+async function removeCanSee(subject, object) {
+
+  if (!subject
+      || subject.startsWith("did:none:")
+      || !object
+      || object.startsWith("did:none:")) {
+    // No need to continue with this, since nobody can make a valid request with this DID method.
+    l.trace(`Not removing a network entry since a DID is empty or has type 'none': ${subject} ${object}`)
+    return
+  }
+
+  if (subject !== object) {
+    await db.networkDelete(subject, object)
+  } else {
+    // we don't save themselves in the DB anyway
+    l.trace("Not removing DB network entry since it's the same DID.")
+  }
+
+  if (subject === db.ALL_SUBJECT_MATCH()) {
+    UrlsForPublicDids = R.omit([object], UrlsForPublicDids)
+  }
+  // else it has to be fully initialized from the DB before next read anyway
+
+
+
+
+  // The remainder sets the internal cache by removing that one subject-object pair,
+  // but it really should just invalidate and reload from the DB.
+
+  let seesDids = await getDidsRequesterCanSeeExplicitly(subject)
+  if (!seesDids) {
+    seesDids = []
+  }
+  const objectIndex = R.indexOf(object, seesDids)
+  if (objectIndex > -1) {
+    let newList = R.remove(objectIndex, 1, seesDids)
+    const setResult = SeesNetworkCache.set(subject, newList)
+    if (!setResult) {
+      l.error('Failed to set SeesNetworkCache for key', subject, 'and value', newList)
+    }
+  }
+  l.info("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
+
+  let seenByDids = await getDidsWhoCanSeeExplicitly(object)
+  if (!seenByDids) {
+    seenByDids = []
+  }
+  const subjectIndex = R.indexOf(subject, seenByDids)
+  if (subjectIndex > -1) {
+    let newList = R.remove(subjectIndex, 1, seenByDids)
+    const setResult = WhoCanSeeNetworkCache.set(object, newList)
+    if (!setResult) {
+      l.error('Failed to set WhoCanSeeNetworkCache for key', object, 'and value', newList)
+    }
+  }
+  l.info("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
+}
+
+/**
   Takes an initial subject and who they'd like to see
   and returns all the DIDs who are seen by subject and who can see finalObject.
   Note that this does not check for anyone who is seen by all; it assumes that has already been checked.
@@ -165,4 +228,4 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, whoDoesRequesterSeeWhoCanSeeObject }
+module.exports = { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }

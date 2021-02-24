@@ -223,20 +223,6 @@ class JwtService {
     }
   }
 
-  /**
-     Take a claim being confirmed by an issuer, and create network records from all targeted people to that issuer
-
-     @param actionClaimId is the claim being confirmed
-     @param actionClaimAgentDid is the agent of that claim
-     @param issuerDid is the issuer confirming it
-     @return array of promises for all the insertions into the network table
-   **/
-  async createNetworkRecords(agentOrPartyDid, issuerDid) {
-    // put the issuer in the confirmed claim-agent's network
-    l.trace(`Adding network entry from ${agentOrPartyDid} to ${issuerDid}`)
-    return addCanSee(agentOrPartyDid, issuerDid)
-  }
-
   async createEmbeddedClaimRecord(jwtId, issuerDid, claim) {
 
     if (claim['@context'] === 'http://schema.org'
@@ -412,7 +398,7 @@ class JwtService {
     // now record all the "sees" relationships to the issuer
     var netRecords = []
     for (var did of allDidsInside(claim)) {
-      netRecords.push(this.createNetworkRecords(did, issuerDid))
+      netRecords.push(addCanSee(did, issuerDid))
     }
     await Promise.all(netRecords)
       .catch(err => {
@@ -462,7 +448,7 @@ class JwtService {
           return Promise.reject(err)
         })
 
-    if (payload.iss && (payload.iss !== authIssuerId)) {
+    if (payload.iss !== authIssuerId) {
       return Promise.reject(`JWT issuer ${authIssuerId} does not match claim iss ${payload.iss}`)
     }
 

@@ -825,7 +825,7 @@ class EndorserDatabase {
    **/
 
   /**
-    If the pair already exists, will resolve ()instead of rejecting).
+    If the pair already exists, will resolve (instead of rejecting).
    **/
   async networkInsert(subject, object, url) {
     return new Promise((resolve, reject) => {
@@ -842,6 +842,19 @@ class EndorserDatabase {
           } else {
             reject(err)
           }
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
+
+  async networkDelete(subject, object, url) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("DELETE FROM network WHERE subject = ? AND object = ?")
+      db.run(stmt, [subject, object], function(err) {
+        if (err) {
+          reject(err)
         } else {
           resolve()
         }

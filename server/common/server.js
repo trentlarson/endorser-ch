@@ -77,7 +77,8 @@ function requesterInfo(req, res, next) {
           // I think this is already checked (and I've never hit this case) but it pays to be careful.
           res.status(401).json(`JWT issuer ${issuer} does not match auth payload iss ${payload.iss}`).end()
         } else {
-          res.locals.tokenIssuer = payload.iss
+          var requesterDid = payload.iss
+          res.locals.tokenIssuer = requesterDid
           next()
         }
       })
@@ -86,6 +87,7 @@ function requesterInfo(req, res, next) {
         l.error("Low-level error while parsing JWT:", e, " ... with toString(): " + e)
         // ... and you'd think that those would at least hint at stack info but you'd be wrong.
         l.error(e.stack)
+        l.error("Here's the JWT:", jwt)
         res.status(500).json("Low-level error while parsing JWT '" + jwt + "': " + e).end()
       })
   }
