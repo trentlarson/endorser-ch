@@ -2,19 +2,18 @@
 --- !<tag:endorser.ch,2020:/tasks>
 - 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 5 put functionality in uport mobile app -- currently veramo id:all-mobile
-  - after saving contact, separately allow access to see me
-  - allow saving imported DID as lowercase
-  - show name if DID is in contacts
+  - read new JWT QRs
   - publish on Apple & Google & F-Droid
   - fix all app names
-  - add my own name (for sharing with contacts)
+  - remove 88 errors
   - store contact public key
   - parameterize by endorser.ch server (eg. dev, prod)
   - allow for blank UPORT_PUSH_TOKEN in the case of VCs
   - push updates to app
-  - report on confirmations
   - fix DB crashes when doing a release test on Android
   - avoid multidex
+  - report on confirmations
+  - remove package.lock
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
 - 1 show signatures for proof of confirmations
@@ -38,6 +37,7 @@
   - allow search of private
   - allow search via connected person
   - allow messaging
+  - memcache contact list
   - based on KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
   - -1 remove modal confirmation for saving a contact
@@ -69,6 +69,7 @@
 - 0 automate DB backup
 - 1 debug: add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
 - 1 report page: who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
+- 0 fix network: if a DID with "*" tries to disallow, throw error
 - 2 export to Neo4J
 - 5 switch/add format to verifiable credentials?
 - 5 uport: inside JSON payload, show a name if DID matches a contact
