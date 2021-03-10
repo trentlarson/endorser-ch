@@ -64,7 +64,7 @@ function calcBbox(polygonStr) {
 }
 
 function isDid(value) {
-  return value && value.startsWith("did:") && (value.substring(5).indexOf(":") > -1)
+  return value && value.startsWith("did:")
 }
 
 /**
