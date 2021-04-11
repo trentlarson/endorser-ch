@@ -43,7 +43,7 @@ var mergeClaim = '\
   (e)-[:ACTION_EVENT]->(a) \
   RETURN *'
 
-let values = {name:'Saturday Morning Meeting', orgName:'Bountiful Voluntaryist Community', startTime:'2019-03-23T08:00:00.000-06:00', issuerDid:"did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e"}
+  let values = {name:'Saturday Morning Meeting', orgName:'Bountiful Voluntaryist Community', startTime:'2019-03-23T08:00:00.000-06:00', issuerDid:"did:ethr:0x00c9c2326c73f73380e8402b01de9defcff2b064"}
 
 session.run(mergeClaim, values).then(result => {
   result.records.forEach(record => {
@@ -70,7 +70,7 @@ let mergeConfirm =
   (c)-[:CONFIRM_ACTION]->(a) \
   RETURN *'
 
-let values = {name:'Saturday Morning Meeting', orgName:'Bountiful Voluntaryist Community', startTime:'2019-03-23T08:00:00.000-06:00', issuerDid:"did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e"}
+  let values = {name:'Saturday Morning Meeting', orgName:'Bountiful Voluntaryist Community', startTime:'2019-03-23T08:00:00.000-06:00', issuerDid:"did:ethr:0x00c9c2326c73f73380e8402b01de9defcff2b064"}
 
 session
   .run(mergeConfirm, values)

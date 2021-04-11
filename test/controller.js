@@ -168,6 +168,15 @@ claimCornerBakeryTenureFor11By11JwtObj.claim = R.clone(claimCornerBakeryTenureFo
 claimCornerBakeryTenureFor11By11JwtObj.iss = creds[11].did
 let claimCornerBakeryTenureFor11By11JwtProm = credentials[11].createVerification(claimCornerBakeryTenureFor11By11JwtObj)
 
+let claimCornerBakeryTenureFor12 = R.clone(testUtil.claimCornerBakery)
+claimCornerBakeryTenureFor12.party.did = creds[12].did
+
+let claimCornerBakeryTenureFor12By12JwtObj = R.clone(testUtil.jwtTemplate)
+claimCornerBakeryTenureFor12By12JwtObj.sub = creds[12].did
+claimCornerBakeryTenureFor12By12JwtObj.claim = R.clone(claimCornerBakeryTenureFor12)
+claimCornerBakeryTenureFor12By12JwtObj.iss = creds[12].did
+let claimCornerBakeryTenureFor12By12JwtProm = credentials[12].createVerification(claimCornerBakeryTenureFor12By12JwtObj)
+
 let confirmCornerBakeryTenureFor11By10JwtObj = R.clone(testUtil.jwtTemplate)
 confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
 confirmCornerBakeryTenureFor11By10JwtObj.claim = R.clone(testUtil.confirmationTemplate)
@@ -229,6 +238,9 @@ let confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmF
 **/
 
 
+
+
+
 var pushTokens,
     // claims for 0
     claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, claimMyNightFor0By0JwtEnc,
@@ -245,14 +257,15 @@ var pushTokens,
     //confirmFoodPantryFor4By1JwtEnc,
     // claims for 11
     claimCornerBakeryTenureFor11By11JwtEnc,
+    claimCornerBakeryTenureFor12By12JwtEnc,
     confirmCornerBakeryTenureFor11By10JwtEnc
 
 before(async () => {
 
   await didJWT.createJWT(
-    //did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts
-    {aud: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
-    {issuer: 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e', signer})
+
+    {aud: creds[12].did, exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
+    {issuer: creds[12].did, signer})
     .then( response => { globalJwt1 = response; console.log("Created global JWT 1", globalJwt1) });
 
   await didJWT.createJWT(
@@ -271,6 +284,7 @@ before(async () => {
     claimDebugFor0By0JwtProm,
     confirmMultipleFor0By0JwtProm,
     claimCornerBakeryTenureFor11By11JwtProm,
+    claimCornerBakeryTenureFor12By12JwtProm,
     confirmCornerBakeryTenureFor11By10JwtProm,
     claimFoodPantryFor4By4JwtProm,
     //confirmFoodPantryFor4By1JwtProm,
@@ -288,6 +302,7 @@ before(async () => {
       claimDebugFor0By0JwtEnc,
       confirmMultipleFor0By0JwtEnc,
       claimCornerBakeryTenureFor11By11JwtEnc,
+      claimCornerBakeryTenureFor12By12JwtEnc,
       confirmCornerBakeryTenureFor11By10JwtEnc,
       claimFoodPantryFor4By4JwtEnc,
       //confirmFoodPantryFor4By1JwtEnc,
@@ -356,7 +371,7 @@ describe('Util', () => {
     let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
     let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
     let addra = 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761'
-    let addrd = 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'
+    let addrd = 'did:ethr:0xddd6c03f186c9e27bc150d3629d14d5dbea0effd'
     let addru = 'did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts'
     var someObj1 = {a: 1, b: addr0,       c: {d: addr6,       e: [], f: [9, {g: addru}]}}
     var repObj11 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
@@ -375,7 +390,7 @@ describe('Util', () => {
     let addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
     let addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
     let addra = 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761'
-    let addrd = 'did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e'
+    let addrd = 'did:ethr:0xddd6c03f186c9e27bc150d3629d14d5dbea0effd'
     let addru = 'did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts'
     var someObj1 = {a: 1, b: addr0,       c: {d: addr6,       e: [], f: [9, {g: addru}]}}
     var repObj11 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
@@ -996,7 +1011,7 @@ describe('Tenure', () => {
       request(Server)
       .post('/api/claim')
       .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
-      .send({"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTUyNTgyODMsImV4cCI6MTU1NTM0NDY4Mywic3ViIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIiwiY2xhaW0iOnsiQGNvbnRleHQiOiJodHRwOi8vZW5kb3JzZXIuY2giLCJAdHlwZSI6IlRlbnVyZSIsInNwYXRpYWxVbml0Ijp7ImdlbyI6eyJAdHlwZSI6Ikdlb1NoYXBlIiwicG9seWdvbiI6IjQwLjg4Mzk0NCwtMTExLjg4NDc4NyA0MC44ODQwODgsLTExMS44ODQ3ODcgNDAuODg0MDg4LC0xMTEuODg0NTE1IDQwLjg4Mzk0NCwtMTExLjg4NDUxNSA0MC44ODM5NDQsLTExMS44ODQ3ODcifX0sInBhcnR5Ijp7ImRpZCI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9fSwiaXNzIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0.g7jKukK9a2NAf2AHrrtQLNWePmkU1iLya1EFUdRxvk18zNJBFdHF77YoZMhz5VAW4cIgaUhnzVqNgVrXLc7RSAE"})
+      .send({"jwtEncoded": claimCornerBakeryTenureFor12By12JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body)
@@ -1036,13 +1051,13 @@ describe('Report', () => {
        expect(r.body[0].did)
          .to.be.a('string')
          .that.is.equal(creds[0].did)
-       let df0Index =
+       let dddIndex =
            R.findIndex(R.whereEq({did: creds[0].did}))(r.body)
-       let df0Claims = r.body[df0Index].actions
-       expect(df0Claims)
+       let dddClaims = r.body[dddIndex].actions
+       expect(dddClaims)
          .to.be.an('array')
          .of.length(3)
-       expect(df0Claims[0].confirmations)
+       expect(dddClaims[0].confirmations)
          .to.be.an('array')
          .of.length(2)
        expect(r.body[1].did)

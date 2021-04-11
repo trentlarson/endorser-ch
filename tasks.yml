@@ -2,14 +2,13 @@
 --- !<tag:endorser.ch,2020:/tasks>
 - 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 5 put functionality in uport mobile app -- currently veramo id:all-mobile
-  - report on confirmations
-  - error with keys after creating an ID
-  - publish on Apple & Google & F-Droid
-  - parameterize by endorser.ch server (eg. dev, prod)
-  - push updates to app
+  - test DB
+  - add to the Veramo documents for migration
+  - documentation
+  - push uport-demo
+  - publish F-Droid
   - fix DB crashes when doing a release test on Android
-  - long lag on old phone when creating an ID
-  - type:bug when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
+  - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
   - regression tests - every screen, see every action
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
@@ -17,6 +16,7 @@
 - 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
 - 2 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
+  - may be due to SimpleSigner in controller.js and https://github.com/decentralized-identity/did-jwt/blob/937973e31d4bee3ee32dd1e077f11d31b6b868cb/README.md#1-create-a-did-jwt
 - 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 0 and fix subjects (eg. Jun 29 claims by me for others)
@@ -28,9 +28,17 @@
 - 1 change name of app from "uport demo" (when logging in)
 - 0 add .json(someErr) to all routers in the error path
 - 6 write requests/offers into mobile app id:mobile-privacy
+  - remove "Powered by React Native" and add a Kudos section
+  - spinner on import
+  - fix icons (since they're pixelated and look fuzzy)
+  - push updates
+  - Android confirmation-loading spinner is invisible
+  - load confirmations (on ID create, import, contact save... any await?)
+  - report on confirmations
+  - make contact DIDs selectable
   - log into website
   - verify contact signature from scanned JWT
-  - type:test check that previous uPort QR codes work
+  - type:CheckAction test that previous uPort QR codes work
   - allow publication of public request/offer
   - allow publication of claim with private data
   - allow search of public data
