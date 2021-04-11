@@ -14,8 +14,11 @@ NODE_ENV=test-local DBUSER=sa DBPASS=sasa PORT=3330 npm run test$1
 
 
 echo "Now will run tests with JWT validation, which are much slower and which require internet."
-echo "This error indicates a network problem: 'TypeError: Converting circular structure to JSON'"
-echo "in 3..."
+echo ""
+echo "If you get this error: 'TypeError: Converting circular structure to JSON'"
+echo "... it indicates a network problem."
+echo ""
+echo "In 3..."
 sleep 1
 echo "2..."
 sleep 1

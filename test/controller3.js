@@ -5,7 +5,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import { UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect
@@ -20,13 +20,22 @@ let claimCarpentry = {
   "@context": "http://schema.org",
   "@type": "Person",
   name: "Person",
-  identifier: "", // "did:...:..."
+  identifier: null, // change to "did:...:..."
   knowsAbout: "carpentry"
 }
 
 var credentials = R.map((c) => new Credentials(c), creds)
 
 let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+
+let claim_Carpentry_For0 = R.clone(claimCarpentry)
+claim_Carpentry_For0.identifier = creds[0].did
+
+let claim_Carpentry_For0_By0_JwtObj = R.clone(testUtil.jwtTemplate)
+claim_Carpentry_For0_By0_JwtObj.claim = R.clone(claim_Carpentry_For0)
+claim_Carpentry_For0_By0_JwtObj.iss = creds[0].did
+claim_Carpentry_For0_By0_JwtObj.sub = creds[0].did
+let claim_Carpentry_For0_By0_JwtProm = credentials[0].createVerification(claim_Carpentry_For0_By0_JwtObj)
 
 let claim_Carpentry_For3 = R.clone(claimCarpentry)
 claim_Carpentry_For3.identifier = creds[3].did
@@ -81,13 +90,19 @@ let confirm_Carpentry_For4_By6_JwtProm = credentials[6].createVerification(confi
 
 
 var pushTokens,
-    claim_Carpentry_For3_By4_JwtEnc, confirm_Carpentry_For3_By4_JwtEnc, confirm_Carpentry_For3_By5_JwtEnc, confirm_Carpentry_For3_By6_JwtEnc,
-    claim_Carpentry_For4_By4_JwtEnc, confirm_Carpentry_For4_By6_JwtEnc
+    claim_Carpentry_For0_By0_JwtEnc,
+    claim_Carpentry_For3_By4_JwtEnc,
+    confirm_Carpentry_For3_By4_JwtEnc,
+    confirm_Carpentry_For3_By5_JwtEnc,
+    confirm_Carpentry_For3_By6_JwtEnc,
+    claim_Carpentry_For4_By4_JwtEnc,
+    confirm_Carpentry_For4_By6_JwtEnc
 before(async () => {
 
   await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller push tokens", pushTokens) })
 
   await Promise.all([
+    claim_Carpentry_For0_By0_JwtProm,
     claim_Carpentry_For3_By4_JwtProm,
     confirm_Carpentry_For3_By4_JwtProm,
     confirm_Carpentry_For3_By5_JwtProm,
@@ -96,6 +111,7 @@ before(async () => {
     confirm_Carpentry_For4_By6_JwtProm
   ]).then((jwts) => {
     [
+      claim_Carpentry_For0_By0_JwtEnc,
       claim_Carpentry_For3_By4_JwtEnc,
       confirm_Carpentry_For3_By4_JwtEnc,
       confirm_Carpentry_For3_By5_JwtEnc,
@@ -126,6 +142,42 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
 var claimId
 describe('Skills', () => {
 
+  it('claim 0 with carpentry skills by themself', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({jwtEncoded: claim_Carpentry_For0_By0_JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body).to.be.a('number')
+       claimId = r.body
+       expect(r.status).that.equals(201)
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+  ).timeout(7001)
+
+  it('search reveals no direct connection with "carpentry"', () =>
+     request(Server)
+     .get('/api/claim?claimContents=carpentry')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+       console.log('r.body[0].subject',r.body[0].subject)
+       expect(r.body[0].claim.identifier).to.equal(HIDDEN_TEXT)
+       expect(r.body[0].claim.identifierVisibleToDids)
+         .to.be.an('array')
+         .to.include.members([creds[1].did])
+       expect(r.body[0].subject).to.equal(HIDDEN_TEXT)
+       expect(r.body[0].subjectVisibleToDids)
+         .to.be.an('array')
+         .to.include.members([creds[1].did])
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
   it('claim 3 with carpentry skills by 4', () =>
      request(Server)
      .post('/api/claim')
@@ -139,7 +191,7 @@ describe('Skills', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-       ).timeout(7001)
+  ).timeout(7001)
 
   it('confirm 3 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For3_By4_JwtEnc)).timeout(7001)
   it('confirm 3 with carpentry skills by 5', () => postClaim(5, confirm_Carpentry_For3_By5_JwtEnc)).timeout(7001)

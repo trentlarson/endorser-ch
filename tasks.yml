@@ -2,14 +2,7 @@
 --- !<tag:endorser.ch,2020:/tasks>
 - 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 5 put functionality in uport mobile app -- currently veramo id:all-mobile
-  - test DB
   - add to the Veramo documents for migration
-  - documentation
-  - push uport-demo
-  - publish F-Droid
-  - fix DB crashes when doing a release test on Android
-  - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
-  - regression tests - every screen, see every action
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
 - 1 show signatures for proof of confirmations
@@ -28,8 +21,12 @@
 - 1 change name of app from "uport demo" (when logging in)
 - 0 add .json(someErr) to all routers in the error path
 - 6 write requests/offers into mobile app id:mobile-privacy
+  - document
+  - publish F-Droid
+  - add Android 'release' build in the process
+  - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
   - remove "Powered by React Native" and add a Kudos section
-  - spinner on import
+  - add spinner on import
   - fix icons (since they're pixelated and look fuzzy)
   - push updates
   - Android confirmation-loading spinner is invisible
