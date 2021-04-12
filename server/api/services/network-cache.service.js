@@ -131,6 +131,8 @@ async function addCanSee(subject, object, url) {
 
 
 
+  // Similar code is in removeCanSee
+
   // The remainder sets the internal cache by adding that one subject-object pair,
   // but it really should just invalidate and reload from the DB.
 
@@ -189,6 +191,8 @@ async function removeCanSee(subject, object) {
 
 
 
+
+  // Similar code is in removeCanSee
 
   // The remainder sets the internal cache by removing that one subject-object pair,
   // but it really should just invalidate and reload from the DB.
