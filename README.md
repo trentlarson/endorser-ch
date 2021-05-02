@@ -102,11 +102,18 @@ server/api/services/jwt.service.js
 
 ## Try It
 
-For the full experience, use [this customized uPort demo](https://github.com/trentlarson/uport-demo) to connect to it.
+For the full experience, use [the mobile app](https://github.com/trentlarson/endorser-mobile) or [this customized uPort demo](https://github.com/trentlarson/uport-demo) to connect to it.
 
-See API docs: http://localhost:3000/api-docs
+API docs are here: http://localhost:3000/api-docs
 
-* Open you're browser to [http://localhost:3000](http://localhost:3000)
+Settings:
+
+- `APP_DB_FILE` is used to select the DB file (see conf/flyway.js)
+- `NODE_ENV` is used to determine the DB file if `APP_DB_FILE` is not set (see conf/flyway.js)
+
+Steps:
+
+* Open your browser to [http://localhost:3000](http://localhost:3000)
 * Invoke the `/examples` endpoint
   ```shell
   curl http://localhost:3000/api/examples
