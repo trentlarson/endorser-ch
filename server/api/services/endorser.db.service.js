@@ -11,7 +11,7 @@ const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
-function constructWhere(params, excludeConfirmations) {
+function constructWhere(params, claimContents, excludeConfirmations) {
 
   var whereClause = ""
   var paramArray = []
@@ -51,12 +51,20 @@ function constructWhere(params, excludeConfirmations) {
     }
   }
 
+  if (claimContents) {
+    if (whereClause.length > 0) {
+      whereClause += " AND"
+    }
+    whereClause += " INSTR(claim, ?) > 0"
+    paramArray.push(claimContents)
+  }
+
   if (excludeConfirmations) {
     if (whereClause.length > 0) {
       whereClause += " AND"
     }
     whereClause += " claimType != 'AgreeAction'"
-    // this is for legacy Confirmation and can be deprecated
+    // This is for legacy Confirmation and can be deprecated for any installations after this comment was written.
     whereClause += " AND claimType != 'Confirmation'"
   }
 
@@ -464,7 +472,7 @@ class EndorserDatabase {
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ? ORDER BY issuedAt DESC LIMIT 50", [id], function(err, row) {
+      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ?", [id], function(err, row) {
         row.issuedAt = zonify(row.issuedAt)
         data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim: row.claim, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
       }, function(err, num) {
@@ -478,14 +486,22 @@ class EndorserDatabase {
   }
 
   /**
-     @param object with a key-value for each column-value to filter, with a special key 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
+     @param object with a key-value for each column-value to filter, with some special keys:
+     - 'claimContents' for text to look for inside claims
+     - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
+     - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
+     - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
    **/
   jwtByParams(params) {
     var excludeConfirmations = params.excludeConfirmations
     if (params.excludeConfirmations) {
       delete params.excludeConfirmations
     }
-    let where = constructWhere(params, excludeConfirmations)
+    var claimContents = params.claimContents
+    if (params.claimContents) {
+      delete params.claimContents
+    }
+    let where = constructWhere(params, claimContents, excludeConfirmations)
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
@@ -508,25 +524,6 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
-        row.issuedAt = zonify(row.issuedAt)
-        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
-      }, function(err, num) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(data)
-        }
-      });
-    })
-  }
-
-  /**
-     @param string to search for in the claims
-   **/
-  jwtByContent(text) {
-    return new Promise((resolve, reject) => {
-      var data = []
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE INSTR(claim, ?) > 0 ORDER BY issuedAt DESC LIMIT 50", [text], function(err, row) {
         row.issuedAt = zonify(row.issuedAt)
         data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {

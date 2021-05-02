@@ -142,7 +142,7 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
 var claimId
 describe('Skills', () => {
 
-  it('claim 0 with carpentry skills by themself', () =>
+  it('insert claim for 0 with carpentry skills by themself', () =>
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -175,6 +175,30 @@ describe('Skills', () => {
        expect(r.body[0].subjectVisibleToDids)
          .to.be.an('array')
          .to.include.members([creds[1].did])
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('search reveals no personal claim of "carpentry"', () =>
+     request(Server)
+     .get('/api/claim?claimContents=carpentry&subject=' + creds[2].did)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(0)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('search reveals a personal claim of "carpentry"', () =>
+     request(Server)
+     .get('/api/claim?claimContents=carpentry&subject=' + creds[0].did)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 

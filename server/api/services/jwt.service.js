@@ -29,11 +29,7 @@ class JwtService {
   async byQuery(params, requesterDid) {
     l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     var resultData
-    if (params.claimContents) {
-      resultData = await db.jwtByContent(params.claimContents)
-    } else {
-      resultData = await db.jwtByParams(params)
-    }
+    resultData = await db.jwtByParams(params)
     let result = resultData.map(j => {
       let thisOne = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
       return thisOne
