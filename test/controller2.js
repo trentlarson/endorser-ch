@@ -279,9 +279,11 @@ describe('Visibility', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(testUtil.allDidsAreHidden(r.body)).to.be.false
+       var publicUrl = {}
+       publicUrl[creds[2].did] = 'https://ignitecommunity.org'
        expect(r.body)
          .that.has.a.property('publicUrls')
-         .that.deep.equals({"did:ethr:0x22c51a43844e44b59c112cf74f3f5797a057837a":'https://ignitecommunity.org'})
+         .that.deep.equals(publicUrl)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -319,7 +321,7 @@ describe('Role Claims on Date', () => {
        expect(r.body).to.be.an('array').of.length(2)
        expect(testUtil.allDidsAreHidden(r.body[0])).to.be.false
        expect(r.body[0].orgRoles[0].confirmations).to.be.an('array').of.length(2)
-       expect(r.body[0].orgRoles[0].orgRole.memberDid).to.equal('did:ethr:0x332661e9e6af65eea6df253296a26257ff304647')
+       expect(r.body[0].orgRoles[0].orgRole.memberDid).to.equal(creds[3].did)
        expect(testUtil.allDidsAreHidden(r.body[1])).to.be.true
        expect(r.body[1].orgRoles[0].confirmations).to.be.an('array').of.length(3)
        expect(r.status).that.equals(200)
