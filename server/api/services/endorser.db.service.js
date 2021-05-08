@@ -493,14 +493,10 @@ class EndorserDatabase {
      - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
    **/
   jwtByParams(params) {
-    var excludeConfirmations = params.excludeConfirmations
-    if (params.excludeConfirmations) {
-      delete params.excludeConfirmations
-    }
-    var claimContents = params.claimContents
-    if (params.claimContents) {
-      delete params.claimContents
-    }
+    let claimContents = params.claimContents
+    delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
+    let excludeConfirmations = params.excludeConfirmations
+    delete params.excludeConfirmations
     let where = constructWhere(params, claimContents, excludeConfirmations)
     return new Promise((resolve, reject) => {
       var data = []
