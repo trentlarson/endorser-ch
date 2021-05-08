@@ -31,7 +31,7 @@ class JwtService {
     var resultData
     resultData = await db.jwtByParams(params)
     let result = resultData.map(j => {
-      let thisOne = {id:j.id, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
+      let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
       return thisOne
     })
     return result
