@@ -9,6 +9,7 @@
     - 2 cases: original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
   - allow scanner to verify: signature, confirmation links
   - setup test server
+  - declare the type of cacList in VerifyCredential.tsx
   - see other bugs below
 - 1 show signatures for proof of confirmations
 - 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)

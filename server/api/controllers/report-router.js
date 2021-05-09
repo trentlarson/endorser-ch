@@ -118,7 +118,7 @@ export default express
  *
  * @group report - Reports
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
- * @param {claimId} date.query.required - the ID of the claim
+ * @param {string} claimId.query.required - the ID of the claim
  * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
  * @returns {Error} default - Unexpected error
  */
