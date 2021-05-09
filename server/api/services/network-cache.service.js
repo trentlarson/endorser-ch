@@ -228,7 +228,7 @@ async function removeCanSee(subject, object) {
 
 /**
   Takes an initial subject and who they'd like to see
-  and returns all the DIDs who are seen by subject and who can see finalObject.
+  and returns array of all the DIDs who are seen by subject and who can see finalObject.
   Note that this does not check for anyone who is seen by all; it assumes that has already been checked.
  **/
 async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {

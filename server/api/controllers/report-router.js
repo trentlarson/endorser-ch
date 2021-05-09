@@ -8,9 +8,9 @@ class JwtController {
   getIssuersMatchingClaim(req, res) {
     JwtService.allClaimAndConfirmationIssuersMatchingClaimId(req.query.claimId)
       .then(result =>
-            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, {result}))
+            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, { result : result}))
       .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
 }
 let jwtController = new JwtController();

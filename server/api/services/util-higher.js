@@ -6,14 +6,14 @@ import { HIDDEN_TEXT, isDid } from './util'
 /**
   Accept the original result and the resultHidden with hidden DIDs
   and return the appropriate result:
+    - if a non-map object, replace any non-visible DIDs with HIDDEN_DID value
+      ... but non-map usage is _DISCOURAGED_ because then the "publicUrls" can't be added
     - if a map object
-      1) for any values that are hidden DIDs, add a key
+      - recurse on values
+      - if any values are HIDDEN_DID, add a key
         - name is a prefix of the same name plus suffix of "VisibleToDids"
         - value is an array of all DIDs who the requester can see & who can see the hidden DID
-      2) recurse on all the other values
-    - otherwise, recurse if an array, then return it
-
-  Note the quirk with an array of DIDs, where the user will get no information if they're not found within a map-like object.
+      - if any DIDs are public, add a "publicUrls" key with value of a map from DID to URL
  **/
 
 async function hideDidsAndAddLinksToNetwork(requesterDid, input) {
@@ -63,12 +63,21 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
           // We could get around this by generating suffixes or something, but I don't like that.
           return Promise.reject("Do not use DIDs for keys (because you'll get conflicts in hideDidsAndAddLinksToNetwork).")
         }
+        let canSee = []
         if (result[key] === HIDDEN_TEXT) {
-          // add list of anyone else who can see them
-          let canSee = await whoDoesRequesterSeeWhoCanSeeObject(requesterDid, input[key])
-          if (canSee.length > 0) {
-            result[key + "VisibleToDids"] = canSee
+          // add to list of anyone else who can see them
+          canSee = await whoDoesRequesterSeeWhoCanSeeObject(requesterDid, input[key])
+        } else if (Array.isArray(result[key])) {
+          // add to list of anyone else who can see them
+          for (let i = 0; i < result[key].length; i++) {
+            if (result[key][i] === HIDDEN_TEXT) {
+              let newCanSee = await whoDoesRequesterSeeWhoCanSeeObject(requesterDid, input[key][i])
+              canSee = R.uniq(R.concat(canSee, newCanSee))
+            }
           }
+        }
+        if (canSee.length > 0) {
+          result[key + "VisibleToDids"] = canSee
         }
       }
     } else {
