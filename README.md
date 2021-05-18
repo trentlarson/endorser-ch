@@ -1,8 +1,10 @@
 # endorser-ch
 
-A server for recording assertions and then reporting on them
+A server for recording assertions and then querying about them in privacy-preserving ways
 
-This is simply an API for creating and querying claims.  For a full system, combine with https://github.com/trentlarson/uport-demo
+
+
+This repo is an API for creating and querying claims.  For a full system, use the mobile app linked at [the public endorser-ch server](https://endorser.ch); there's [a test server](https://test.endorser.ch:8000) which includes [API docs](https://test.endorser.ch:8000/api-docs).  (The old approach is with the uPort app and [this web app repo](https://github.com/trentlarson/uport-demo).)
 
 
 

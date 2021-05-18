@@ -7,9 +7,13 @@
 - next mobile release
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
     - 2 cases: original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - allow scanner to verify: signature, confirmation links
+  - check that original claim contents match proof contents
   - setup test server
+  - test where cacList has a linked confirmation
+  - allow scanner to verify: signature, confirmation links
   - declare the type of cacList in VerifyCredential.tsx
+  - 1 split out confirmations into multiple submissions, one for each subject
+  - when there's a network error, the error message is delayed (so seems like nothing happened)
   - see other bugs below
 - 1 show signatures for proof of confirmations
 - 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
@@ -36,6 +40,7 @@
   - add Android 'release' build in the process
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
   - add spinner on import
+  - check the date of the signed credential
   - handle errors if server is inaccessible
   - split up large QR presentation
   - fix icons (since they're pixelated and look fuzzy)
@@ -93,7 +98,7 @@
 - 2 export to Neo4J
 - 5 switch/add format to verifiable credentials?
 - 5 uport: inside JSON payload, show a name if DID matches a contact
-- 0 fix or disable swagger API docs http://localhost:3000/api-explorer/ (linked from main page(?); api-docs works)
+- 0 fix or eliminate swagger API docs public/api-explorer http://localhost:3000/api-explorer/ (/api-docs works)
 - 1 db
   - add action_claim.startDateCanonical
     - and fill it
