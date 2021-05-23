@@ -5,10 +5,11 @@
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
 - next mobile release
+  - setup test UI server
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
     - 2 cases: original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - check that original claim contents match proof contents
-  - setup test server
+  - fix verifiable presentation format (doesn't have verifiableCredential)
+  - show credential contents (and allow browsing)
   - test where cacList has a linked confirmation
   - allow scanner to verify: signature, confirmation links
   - declare the type of cacList in VerifyCredential.tsx
@@ -33,10 +34,11 @@
 - 0 put functionality in uport mobile app -- currently veramo id:mobile-doc
   - add to the Veramo documents for migration
 - 6 write requests/offers into mobile app id:mobile-privacy
-  - document
+  - document (eg enhancements to key derivation)
   - publish F-Droid
   - make submission a real VC with proof inside
   - -1 make contact DIDs selectable
+  - -1 clear the contact TextInput boxes after hitting "Create"
   - add Android 'release' build in the process
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
   - add spinner on import

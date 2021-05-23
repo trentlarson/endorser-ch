@@ -55,16 +55,12 @@ class JwtService {
     if (!jwtClaim) {
       return []
     } else {
-      if (jwtClaim.claimType == 'AgreeAction') {
-        return Promise.reject("It doesn't make sense to ask for confirmations of a confirmation.")
-      } else {
-        let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
-        let allDids = R.append(
-          jwtClaim.issuer,
-          R.map((c)=>c.issuer, confirmations)
-        )
-        return R.uniq(allDids)
-      }
+      let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
+      let allDids = R.append(
+        jwtClaim.issuer,
+        R.map((c)=>c.issuer, confirmations)
+      )
+      return R.uniq(allDids)
     }
   }
 
