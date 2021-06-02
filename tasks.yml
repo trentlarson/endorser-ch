@@ -5,16 +5,24 @@
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
 - next mobile release
-  - setup test UI server
+  - -2 when turning Test Mode off, still show test server, and warn if not default server
+  - -2 change "Set" to "Set..." everywhere
+  - -2 Search All gave a 'setTimeout' error
+  - -1 move Search All results to separate page, and let us apply TakeAction or AgreeAction
+  - -2 add confirmation prompt when they delete contact
+    - if visible to them, add note about them still seeing you
+    - note that there may be claims that you have made about that person, but you'll no longer have a record of who it is
+  - 0 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
     - 2 cases: original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - fix verifiable presentation format (doesn't have verifiableCredential)
+  - -1 fix verifiable presentation format (doesn't have verifiableCredential)
+  - -2 switch servers to test.endorser.ch when going into test mode
   - show credential contents (and allow browsing)
   - test where cacList has a linked confirmation
-  - allow scanner to verify: signature, confirmation links
   - declare the type of cacList in VerifyCredential.tsx
-  - 1 split out confirmations into multiple submissions, one for each subject
-  - when there's a network error, the error message is delayed (so seems like nothing happened)
+  - 1 when there's a network error, the error message is delayed (so seems like nothing happened)
+    - check all network & DB calls & then calls for error handlingp
+    - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
   - see other bugs below
 - 1 show signatures for proof of confirmations
 - 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
@@ -34,15 +42,21 @@
 - 0 put functionality in uport mobile app -- currently veramo id:mobile-doc
   - add to the Veramo documents for migration
 - 6 write requests/offers into mobile app id:mobile-privacy
+  - 1 edit contacts
+  - 0 add a way to retrieve all DIDs that can see me
+    - 0 add a way from the mobile app to audit all the DIDs that can see me
+  - 1 get review from professional: useEffect & useFocusEffect calls
+  - 1 bulk import contacts (and export via JSON)
+  - 1 split out confirmations into multiple submissions, one for each subject
   - document (eg enhancements to key derivation)
   - publish F-Droid
   - make submission a real VC with proof inside
   - -1 make contact DIDs selectable
   - -1 clear the contact TextInput boxes after hitting "Create"
-  - add Android 'release' build in the process
+  - 0 add Android 'release' build in the process
+  - -2 add spinner on import
+  - -2 change verbiage from "hide" & "not visible" to "blocked"
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
-  - add spinner on import
-  - check the date of the signed credential
   - handle errors if server is inaccessible
   - split up large QR presentation
   - fix icons (since they're pixelated and look fuzzy)
