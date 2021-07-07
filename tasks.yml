@@ -1,28 +1,45 @@
 %TAG ! tag:taskyaml.org,2020:schema
---- !<tag:endorser.ch,2020:/tasks>
+---
 - 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 1 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 0 show an error, eg. on a confirmation for a claim that doesn't exist
 - 1 fix IDCommunity links
 - next mobile release
-  - -2 when turning Test Mode off, still show test server, and warn if not default server
-  - -2 change "Set" to "Set..." everywhere
-  - -2 Search All gave a 'setTimeout' error
-  - -1 move Search All results to separate page, and let us apply TakeAction or AgreeAction
+
+  - -1 change default to did:peer
+    - write a peer DID resolver (to pass into verifyJWT)
+    - on server side, provide an auth mechanism for peer DIDs
+    - create a table for the provider & derivation? (include DID doc?)
+
+  - release
+
+  - -2 put "confirm" button on top of confirm page as well as on bottom
+  - 0 upgrade data-store
+  - -1 update from API level 29 to 30 (Android 11)
+  - -2 catch errors on import
+  - 0 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
+  - -2 change claim & issuer to not be blank when there is no verifiedResponse
   - -2 add confirmation prompt when they delete contact
     - if visible to them, add note about them still seeing you
     - note that there may be claims that you have made about that person, but you'll no longer have a record of who it is
-  - 0 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
-  - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
-    - 2 cases: original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - -1 fix verifiable presentation format (doesn't have verifiableCredential)
-  - -2 switch servers to test.endorser.ch when going into test mode
-  - show credential contents (and allow browsing)
-  - test where cacList has a linked confirmation
-  - declare the type of cacList in VerifyCredential.tsx
+  - -1 move Search All results to separate page, and let us apply TakeAction or AgreeAction
   - 1 when there's a network error, the error message is delayed (so seems like nothing happened)
     - check all network & DB calls & then calls for error handlingp
     - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
+    - handle errors if server is inaccessible
+  - -1 clear the contact TextInput boxes after hitting "Create"
+  - release for hardening
+
+  - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
+    - 2 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
+  - -1 fix verifiable presentation format (doesn't have verifiableCredential)
+  - -2 allow copying a presentation (eg. for emailing)
+  - -1 show credential contents (and allow browsing)
+  - -1 test where cacList has a linked confirmation
+  - -1 declare the type of cacList in VerifyCredential.tsx
+  - 1 edit contacts
+  - -1 make contact DIDs selectable
+  - -1 make submission a real VC with proof inside
   - see other bugs below
 - 1 show signatures for proof of confirmations
 - 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
@@ -42,29 +59,25 @@
 - 0 put functionality in uport mobile app -- currently veramo id:mobile-doc
   - add to the Veramo documents for migration
 - 6 write requests/offers into mobile app id:mobile-privacy
-  - 1 edit contacts
+  - 3 store claims & confirmations
+    - allow to download
+  - -1 remove modal confirmation for saving a contact
+  - -1 warn about overwriting when saving a contact with existing DID
   - 0 add a way to retrieve all DIDs that can see me
     - 0 add a way from the mobile app to audit all the DIDs that can see me
-  - 1 get review from professional: useEffect & useFocusEffect calls
+  - 1 get review from professional - useEffect & useFocusEffect calls
   - 1 bulk import contacts (and export via JSON)
   - 1 split out confirmations into multiple submissions, one for each subject
   - document (eg enhancements to key derivation)
   - publish F-Droid
-  - make submission a real VC with proof inside
-  - -1 make contact DIDs selectable
-  - -1 clear the contact TextInput boxes after hitting "Create"
   - 0 add Android 'release' build in the process
-  - -2 add spinner on import
-  - -2 change verbiage from "hide" & "not visible" to "blocked"
+  - -2 change verbiage from "hide" & "not visible" to "blocked"?
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
-  - handle errors if server is inaccessible
   - split up large QR presentation
   - fix icons (since they're pixelated and look fuzzy)
-  - push updates
   - Android confirmation-loading spinner is invisible
   - load confirmations (on ID create, import, contact save... any await?)
   - report on confirmations
-  - allow to download confirmations & show in a presentation
   - write advanced key manager
   - log into website
   - verify contact signature from scanned JWT
@@ -76,11 +89,10 @@
   - allow search via connected person
   - allow messaging
   - avoid multidex
+  - notify when there's an update
   - memcache contact list
   - based on KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
-  - -1 remove modal confirmation for saving a contact
-  - -1 warn about overwriting when saving a contact with existing DID
 - 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
 - 0 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
 - 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
@@ -149,7 +161,7 @@
 - 0 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
 - 1 put hideDidsAndAddLinksToNetwork into middleware (so it always happens)
 - 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
-- 0 on uport-demo: change store/play pics in Welcome.js to local files
+- 0 on uport-demo - change store/play pics in Welcome.js to local files
 - 0 in confirmation, check whether it really is a JoinAction
 - 0 try-catch around jwt.service resolveAuthenticator when not connected to internet
-- 0 report page: who has the most activity for a time range
+- 0 report page - who has the most activity for a time range
