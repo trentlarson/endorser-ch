@@ -1,80 +1,90 @@
-%TAG ! tag:taskyaml.org,2020:schema
 ---
-- 2 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
-- 1 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
-- 0 show an error, eg. on a confirmation for a claim that doesn't exist
-- 1 fix IDCommunity links
 - next mobile release :
 
-  - -1 move confirm under search?
-  - 2 encrypt seed phrase id:encrypt-seed
-  - 1 create items for sale/trade awaits:encrypt-seed
+  - bug - after import, home screen doesn't update
+  - Show data for web login, sign with mobile & send, then store in session as logged in. id:login
 
-  - 2 change default to did:peer
+- Stand up new server that delivers documents based on web login. :
+  - ref:#login
+
+- 04 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
+- 01 disallow search by DIDs
+- 04 create mobile app specifically for voluntaryists
+- 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
+- 01 show an error, eg. on a confirmation for a claim that doesn't exist
+- 02 fix IDCommunity links
+- next next mobile release :
+
+  - .5 move confirm under search?
+  - .5 add a verify at the top level to scan (just like under search)
+  - 02 include
+  - 02 create items for sale/trade awaits:encrypt-seed
+
+  - 04 change default to did:peer
     - write a peer DID resolver (to pass into verifyJWT)
     - on server side, provide an auth mechanism for peer DIDs
     - create a table for the provider & derivation? (include DID doc?)
 
-  - -2 put "confirm" button on top of confirm page as well as on bottom
-  - 0 upgrade data-store
-  - -1 update from API level 29 to 30 (Android 11)
-  - -2 catch errors on import (probably the seed, but look at contacts, too)
-  - 0 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
-  - -2 change claim & issuer to not be blank when there is no verifiedResponse
-  - -2 add confirmation prompt when they delete contact
+  - .2 put "confirm" button on top of confirm page as well as on bottom
+  - 01 upgrade data-store
+  - .5 update from API level 29 to 30 (Android 11)
+  - .2 catch errors on import (probably the seed, but look at contacts, too)
+  - 01 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
+  - .2 change claim & issuer to not be blank when there is no verifiedResponse
+  - .2 add confirmation prompt when they delete contact
     - if visible to them, add note about them still seeing you
     - note that there may be claims that you have made about that person, but you'll no longer have a record of who it is
-  - -1 move Search All results to separate page, and let us apply TakeAction or AgreeAction
-  - 1 when there's a network error, the error message is delayed (so seems like nothing happened)
+  - .5 move Search All results to separate page, and let us apply TakeAction or AgreeAction
+  - 02 when there's a network error, the error message is delayed (so seems like nothing happened)
     - check all network & DB calls & then calls for error handlingp
     - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
     - handle errors if server is inaccessible
-  - -1 clear the contact TextInput boxes after hitting "Create"
+  - .5 clear the contact TextInput boxes after hitting "Create"
   - release for hardening
 
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
-    - 2 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - -1 fix verifiable presentation format (doesn't have verifiableCredential)
-  - -2 allow copying a presentation (eg. for emailing)
-  - -1 show credential contents (and allow browsing)
-  - -1 test where cacList has a linked confirmation
-  - -1 declare the type of cacList in VerifyCredential.tsx
-  - 1 edit contacts
-  - -1 make contact DIDs selectable
-  - -1 make submission a real VC with proof inside
+    - 04 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
+  - .5 fix verifiable presentation format (doesn't have verifiableCredential)
+  - .2 allow copying a presentation (eg. for emailing)
+  - .5 show credential contents (and allow browsing)
+  - .5 test where cacList has a linked confirmation
+  - .5 declare the type of cacList in VerifyCredential.tsx
+  - 02 edit contacts
+  - .5 make contact DIDs selectable
+  - .5 make submission a real VC with proof inside
   - see other bugs below
-- 1 show signatures for proof of confirmations
-- 1 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
+- 02 show signatures for proof of confirmations
+- 02 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
-- 2 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
+- 04 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
   - may be due to SimpleSigner in controller.js and https://github.com/decentralized-identity/did-jwt/blob/937973e31d4bee3ee32dd1e077f11d31b6b868cb/README.md#1-create-a-did-jwt
-- 2 publish txid of merkle-tree of the transactions (then automate merkle-tree)
+- 04 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
-- 0 and fix subjects (eg. Jun 29 claims by me for others)
-- 1 allow read of all data in claims/confirmations issued by requester
-- 1 in text search - show claim contents instead of DB records
-- 1 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
-- 1 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
-- 0 remove the didVisibleToDids when listing possible confirmations
-- 1 change name of app from "uport demo" (when logging in)
-- 0 add .json(someErr) to all routers in the error path
-- 0 put functionality in uport mobile app -- currently veramo id:mobile-doc
+- 01 and fix subjects (eg. Jun 29 claims by me for others)
+- 02 allow read of all data in claims/confirmations issued by requester
+- 02 in text search - show claim contents instead of DB records
+- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
+- 02 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
+- 01 remove the didVisibleToDids when listing possible confirmations
+- 02 change name of app from "uport demo" (when logging in)
+- 01 add .json(someErr) to all routers in the error path
+- 01 put functionality in uport mobile app -- currently veramo id:mobile-doc
   - add to the Veramo documents for migration
 - mobile app:
-  - 6 write requests/offers into mobile app id:mobile-privacy
-  - 3 store claims & confirmations
+  - 64 write requests/offers into mobile app id:mobile-privacy
+  - 08 store claims & confirmations
     - allow to download
-  - -1 remove modal confirmation for saving a contact
-  - -1 warn about overwriting when saving a contact with existing DID
-  - 0 add a way to retrieve all DIDs that can see me
-    - 0 add a way from the mobile app to audit all the DIDs that can see me
-  - 1 get review from professional - useEffect & useFocusEffect calls
-  - 1 bulk import contacts (and export via JSON)
-  - 1 split out confirmations into multiple submissions, one for each subject
+  - .5 remove modal confirmation for saving a contact
+  - .5 warn about overwriting when saving a contact with existing DID
+  - 01 add a way to retrieve all DIDs that can see me
+    - 01 add a way from the mobile app to audit all the DIDs that can see me
+  - 02 get review from professional - useEffect & useFocusEffect calls
+  - 02 bulk import contacts (and export via JSON)
+  - 02 split out confirmations into multiple submissions, one for each subject
   - document (eg enhancements to key derivation)
   - publish F-Droid
-  - 0 add Android 'release' build in the process
-  - -2 change verbiage from "hide" & "not visible" to "blocked"?
+  - 01 add Android 'release' build in the process
+  - .2 change verbiage from "hide" & "not visible" to "blocked"?
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
   - split up large QR presentation
   - fix icons (since they're pixelated and look fuzzy)
@@ -96,75 +106,76 @@
   - memcache contact list
   - based on KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
-- 0 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
-- 0 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
-- 0 why do some claims (eg. claimIIW2019aFor1) not have iss set?
-- 3 allow links into contacts for contacting via text
-- 1 if we see someone in between 2 hops away, give a search URL for that person to replicate
-- 0 wrap all async functions (eg. services) in try-catch blocks
-- 0 don't save in network table if subject is not * or valid DID (eg. avoid HIDDEN)
-- 1 don't count any confirmations by original claimant in UI reporting (are other dups allowed?)
-- 0 network - remove inserts and add explicit allowance for requester
-- 1 rewrite vcPayload in SignSendToEndorser to use VerifiableCredentials library like in VerifiablePresentation
-- 0 is issuer used consistently from JWT (and is payload.iss usage accurate?)
-- 0 rename issuer to issuerDid in confirmation table
-- 0 retrieveTenureClaimsAndConfirmations & retrieveActionClaimsAndConfirmations should be OUTER JOIN?
-- 0 document decision on whether original issuerDid adds to count (or should be removed from *_claim tables and built into logic)
-- 2 add search for claim :
-  - 2 add search for claim on parcel of land
+
+- 01 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
+- 01 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
+- 01 why do some claims (eg. claimIIW2019aFor1) not have iss set?
+- 08 allow links into contacts for contacting via text
+- 02 if we see someone in between 2 hops away, give a search URL for that person to replicate
+- 01 wrap all async functions (eg. services) in try-catch blocks
+- 01 don't save in network table if subject is not * or valid DID (eg. avoid HIDDEN)
+- 02 don't count any confirmations by original claimant in UI reporting (are other dups allowed?)
+- 01 network - remove inserts and add explicit allowance for requester
+- 02 rewrite vcPayload in SignSendToEndorser to use VerifiableCredentials library like in VerifiablePresentation
+- 01 is issuer used consistently from JWT (and is payload.iss usage accurate?)
+- 01 rename issuer to issuerDid in confirmation table
+- 01 retrieveTenureClaimsAndConfirmations & retrieveActionClaimsAndConfirmations should be OUTER JOIN?
+- 01 document decision on whether original issuerDid adds to count (or should be removed from *_claim tables and built into logic)
+- 04 add search for claim :
+  - 04 add search for claim on parcel of land
   - ?
-- 1 fix deploy issues - npm ci & prune (in deploy.sh) and babel (above)
-- 1 on ReportClaim there's a "*" next to hidden addresses, so explain it
-- 2 add translation to verifiable credentials - vc, credentialSubject, issuer, issuanceDate https://www.w3.org/TR/vc-data-model/#credential-subject https://www.w3.org/TR/vc-data-model/#json-web-token
-- 0 fix error - user claims & confirmations not showing (currently by non-subject should be by issuer)
-- 0 remove "subject" from terminology in code; prefer "agent" (Why?) (... or did I change JoinClaim?)
-- 1 convert all response dates to ISO format (including zone)
-- 1 look into the action & tenure & role results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
-- 0 deploy from git rather than from local?  (It's all public.)
-- 6 remove reliance on Infura.io (used to route signing requests, and to validate JWTs)
-- 0 automate DB backup
-- 1 debug - add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
-- 1 report page - who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
-- 0 fix network - if a DID with "*" tries to disallow, throw error
-- 2 export to Neo4J
-- 5 switch/add format to verifiable credentials?
-- 5 uport - inside JSON payload, show a name if DID matches a contact
-- 0 fix or eliminate swagger API docs public/api-explorer http://localhost:3000/api-explorer/ (/api-docs works)
-- 1 db:
+- 02 fix deploy issues - npm ci & prune (in deploy.sh) and babel (above)
+- 02 on ReportClaim there's a "*" next to hidden addresses, so explain it
+- 04 add translation to verifiable credentials - vc, credentialSubject, issuer, issuanceDate https://www.w3.org/TR/vc-data-model/#credential-subject https://www.w3.org/TR/vc-data-model/#json-web-token
+- 01 fix error - user claims & confirmations not showing (currently by non-subject should be by issuer)
+- 01 remove "subject" from terminology in code; prefer "agent" (Why?) (... or did I change JoinClaim?)
+- 02 convert all response dates to ISO format (including zone)
+- 02 look into the action & tenure & role results from "ClaimsAndConfirmations" and make sure the top-level list organization makes sense
+- 01 deploy from git rather than from local?  (It's all public.)
+- 64 remove reliance on Infura.io (used to route signing requests, and to validate JWTs)
+- 01 automate DB backup
+- 02 debug - add "id INTEGER PRIMARY KEY," to event table and see failures with unhandled promises
+- 02 report page - who has confirmations for an activity, test various data combinations (eg. action confirmed by self)
+- 01 fix network - if a DID with "*" tries to disallow, throw error
+- 04 export to Neo4J
+- 32 switch/add format to verifiable credentials?
+- 32 uport - inside JSON payload, show a name if DID matches a contact
+- 01 fix or eliminate swagger API docs public/api-explorer http://localhost:3000/api-explorer/ (/api-docs works)
+- 02 db:
   - add action_claim.startDateCanonical
     - and fill it
   - add created date to each record
     - and fill it
   - remove jwt.claimEncoded
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
-- 0 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
-- 0 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
-- 1 gotta report errors to user
+- 01 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
+- 01 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
+- 02 gotta report errors to user
   - eg. repeated or failed confirmations so should see mix of successes and errors
   - eg. remove hashHex column and see how parts succeed but there's still an error
   - ... and guard every API call in uport-demo with a response.ok check & error catch (and loader)
-- 0 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
-- 0 usability - add a "waiting" spinner when remote method is called
-- 0 bug - if there's already a response JWT & message then a new one might not show
-- 0 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
-- 0 bug when a claim is duplicated (huh?)
-- 0 remove duplicate decode in JWT service
-- 0 add test for rejection of duplicate claim submissions
-- 0 handle "access_denied" when person rejects claim on phone
-- 0 usability - fade out the confirmation button when pushed
-- 3 have someone audit use of uport.pushToken
-- 1 tests - see above; duplicate JWT data; ACACs by different times; no claim in JWT
-- 2 add Typescript
-- 1 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
-- 0 make record IDs into hashes not sequentially increasing numbers
-- 0 write migration to remove claimEncoded column
-- 3 neo4j?
-- 1 fix & enable the "should hide DIDs" tests in controller.js
-- 1 show message when user rejects a claim
-- 0 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
-- 1 put hideDidsAndAddLinksToNetwork into middleware (so it always happens)
-- 0 after signing a claim, signing another claim doesn't even hit the server until page refresh
-- 0 on uport-demo - change store/play pics in Welcome.js to local files
-- 0 in confirmation, check whether it really is a JoinAction
-- 0 try-catch around jwt.service resolveAuthenticator when not connected to internet
-- 0 report page - who has the most activity for a time range
+- 01 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
+- 01 usability - add a "waiting" spinner when remote method is called
+- 01 bug - if there's already a response JWT & message then a new one might not show
+- 01 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
+- 01 bug when a claim is duplicated (huh?)
+- 01 remove duplicate decode in JWT service
+- 01 add test for rejection of duplicate claim submissions
+- 01 handle "access_denied" when person rejects claim on phone
+- 01 usability - fade out the confirmation button when pushed
+- 08 have someone audit use of uport.pushToken
+- 02 tests - see above; duplicate JWT data; ACACs by different times; no claim in JWT
+- 04 add Typescript
+- 02 DID validation check adds seconds to the tests (see timeout(4001)) so find a faster validation
+- 01 make record IDs into hashes not sequentially increasing numbers
+- 01 write migration to remove claimEncoded column
+- 08 neo4j?
+- 02 fix & enable the "should hide DIDs" tests in controller.js
+- 02 show message when user rejects a claim
+- 01 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
+- 02 put hideDidsAndAddLinksToNetwork into middleware (so it always happens)
+- 01 after signing a claim, signing another claim doesn't even hit the server until page refresh
+- 01 on uport-demo - change store/play pics in Welcome.js to local files
+- 01 in confirmation, check whether it really is a JoinAction
+- 01 try-catch around jwt.service resolveAuthenticator when not connected to internet
+- 01 report page - who has the most activity for a time range
