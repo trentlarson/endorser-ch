@@ -1,7 +1,6 @@
 ---
 - next mobile release :
-
-  - bug - after import, home screen doesn't update
+  - Allow choice from contacts when making Witness pledge.
   - Show data for web login, sign with mobile & send, then store in session as logged in. id:login
 
 - Stand up new server that delivers documents based on web login. :
