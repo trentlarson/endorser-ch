@@ -1,5 +1,6 @@
 ---
 - next mobile release :
+  - Change CSV export/import to Google headers
   - Allow choice from contacts when making Witness pledge.
   - Show data for web login, sign with mobile & send, then store in session as logged in. id:login
 
@@ -15,6 +16,7 @@
 - next next mobile release :
 
   - .5 move confirm under search?
+  - .5 consolidate code: Contacts.*allowtoseeme, Contacts modalView styles
   - .5 add a verify at the top level to scan (just like under search)
   - 02 include
   - 02 create items for sale/trade awaits:encrypt-seed

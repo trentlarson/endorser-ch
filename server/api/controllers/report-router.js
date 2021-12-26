@@ -114,6 +114,16 @@ export default express
  **/
 
 /**
+ * @typedef DidBody
+ * @property {string} did.required
+ */
+
+/**
+ * @typedef UrlBody
+ * @property {string} url
+ */
+
+/**
  * Get issuers for a claim
  *
  * @group report - Reports
@@ -187,6 +197,7 @@ export default express
  *
  * @group claim - Reports
  * @route POST /api/report/canSeeMe
+ * @param {DidBody.model} body.body.required
  */
   .post('/canSeeMe', dbController.makeMeVisibleTo)
 
@@ -195,6 +206,7 @@ export default express
  *
  * @group claim - Reports
  * @route POST /api/report/cannotSeeMe
+ * @param {DidBody.model} body.body.required
  */
   .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
 
@@ -203,6 +215,7 @@ export default express
  *
  * @group claim - Reports
  * @route POST /api/report/makeMeGloballyVisible
+ * @param {UrlBody.model} body.body.optional
  */
   .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
 
