@@ -1,7 +1,8 @@
 ---
 - next mobile release :
   - Change CSV export/import to Google headers
-  - Allow choice from contacts when making Witness pledge.
+  - add contact picker to Offer claims
+  - test for hundreds of contacts
   - Show data for web login, sign with mobile & send, then store in session as logged in. id:login
 
 - Stand up new server that delivers documents based on web login. :
@@ -42,6 +43,7 @@
     - handle errors if server is inaccessible
   - .5 clear the contact TextInput boxes after hitting "Create"
   - release for hardening
+  - .5 remove didManagerFind call from ConfirmOthers without causing an error
 
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
     - 04 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
