@@ -41,7 +41,7 @@ class JwtService {
    * Dangerous: this includes encoded data that might include private DIDs.
    */
   async fullJwtById(id, requesterDid) {
-    l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
+    l.info(`${this.constructor.name}.fullJwtById(${id}, ${requesterDid})`);
     let jwtRec = await db.jwtById(id)
     if (jwtRec) {
       return jwtRec

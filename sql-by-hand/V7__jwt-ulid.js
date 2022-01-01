@@ -6,6 +6,7 @@ First, run `sqlite3 ../endorser-ch-...sqlite3` and:
 
 ```
 ALTER TABLE jwt ADD COLUMN id TEXT;
+UPDATE jwt SET hashHex = null;
 -- funny that the flyway migrations fail on any column rename command
 ALTER TABLE action_claim   RENAME COLUMN jwtRowId TO jwtId;
 ALTER TABLE confirmation   RENAME COLUMN jwtRowId TO jwtId;
@@ -43,6 +44,7 @@ const sqlite3 = require('sqlite3').verbose()
 const dbInfo = require('./conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
 const ulidx = require('ulidx')
+const util = require('./server/api/services/util')
 
 var allResult = []
 db.each("SELECT rowid, * FROM jwt", function(err, row) {
@@ -53,9 +55,10 @@ db.each("SELECT rowid, * FROM jwt", function(err, row) {
     console.log('Error in select: null', )
   } else {
     var time = Date.parse(row.issuedAt)
-    var stmt = 'UPDATE jwt SET id = ? where rowid = ?'
     var id = ulidx.ulid(time)
-    db.run(stmt, [id, row.rowid], function(err2) {
+    var hashHex = util.hashedClaimWithHashedDids({id:id, claim:row.claim})
+    var stmt = 'UPDATE jwt SET id = ?, hashHex = ? where rowid = ?'
+    db.run(stmt, [id, hashHex, row.rowid], function(err2) {
       if (err) {
         console.log('Update to " + row.rowid + " error:', err)
       } else if (this.changes === 1) {

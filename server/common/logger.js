@@ -1,4 +1,4 @@
-import pino from 'pino';
+const pino = require('pino');
 
 const l = pino({
   name: process.env.APP_ID,
@@ -6,4 +6,4 @@ const l = pino({
   prettyPrint: {translateTime: true}
 });
 
-export default l;
+module.exports = l;

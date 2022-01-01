@@ -1,7 +1,6 @@
-import crypto from 'crypto';
-import R from 'ramda'
-import util from 'util'
-import l from '../../common/logger'
+const crypto = require('crypto')
+const R = require('ramda')
+const util = require('util')
 
 // the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
@@ -141,6 +140,7 @@ function claimWithHashedDids(idAndClaim) {
 
 /**
  @param idAndClaim is { "id": String, "claim": Stringified JSON }
+ @return hashed & hex-formatted JSON string where all DIDs are hashed via hashSeedAndDid
  **/
 function hashedClaimWithHashedDids(idAndClaim) {
   const claimStr = JSON.stringify(claimWithHashedDids(idAndClaim))

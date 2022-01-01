@@ -3,8 +3,7 @@ const ulidx = require('ulidx');
 
 const dbInfo = require('../../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
-import { hashedClaimWithHashedDids } from './util'
-import l from '../../common/logger'
+const util = require('./util')
 
 
 
@@ -459,7 +458,7 @@ class EndorserDatabase {
     let subject = payload.sub
     let claimContext = claim['@context']
     let claimType = claim['@type']
-    let hashHex = hashedClaimWithHashedDids({id:id, claim:claimStr})
+    let hashHex = util.hashedClaimWithHashedDids({id:id, claim:claimStr})
     return {
       id: id,
       issuedAt: issuedAt,
