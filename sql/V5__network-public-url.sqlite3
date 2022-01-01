@@ -1,2 +1,0 @@
-
-ALTER TABLE network ADD COLUMN url TEXT;

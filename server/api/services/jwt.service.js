@@ -286,7 +286,7 @@ class JwtService {
                && claim.member.member.identifier) {
 
       let entity = {
-        jwtRowId: jwtId,
+        jwtId: jwtId,
         issuerDid: issuerDid,
         orgName: claim.name,
         roleName: claim.member.roleName,
@@ -303,7 +303,7 @@ class JwtService {
       let bbox = calcBbox(claim.spatialUnit.geo.polygon)
       let entity =
           {
-            jwtRowId: jwtId,
+            jwtId: jwtId,
             issuerDid: issuerDid,
             partyDid: claim.party && claim.party.did,
             polygon: claim.spatialUnit.geo.polygon,
@@ -348,7 +348,7 @@ class JwtService {
                && claim['@type'] === 'VoteAction') {
 
       let vote = {
-        jwtRowId: jwtId,
+        jwtId: jwtId,
         issuerDid: issuerDid,
         actionOption: claim.actionOption,
         candidate: claim.candidate,
@@ -449,14 +449,11 @@ class JwtService {
       let claimStr = JSON.stringify(payloadClaim)
       let claimEncoded = base64url.encode(claimStr)
       let jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)
-      let jwtId =
+      let jwtRowId =
           await db.jwtInsert(jwtEntity)
           .catch((err) => {
             return Promise.reject(err)
           })
-
-      let savedJwt = await db.jwtById(jwtId)
-      await db.jwtSetHash(jwtId, hashedClaimWithHashedDids({id:jwtId, claim:claimStr}))
 
       //l.debug(doc, `${this.constructor.name} resolved doc`)
       //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
@@ -467,13 +464,13 @@ class JwtService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      await this.createEmbeddedClaimRecords(jwtId, issuerDid, payloadClaim)
+      await this.createEmbeddedClaimRecords(jwtEntity.id, issuerDid, payloadClaim)
         .catch(err => {
           l.warn(err, `Failed to create embedded claim records.`)
         })
 
       // when adjusting this to an object with "success", include any failures from createEmbeddedClaimRecords
-      return jwtId
+      return jwtEntity.id
 
     } else {
       l.warn(`${this.constructor.name} JWT received without a claim.`)

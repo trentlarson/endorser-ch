@@ -167,15 +167,13 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
-      expect(r.body).that.equals(++claimId)
-      expect(r.body).to.be.a('number')
+      expect(r.body).to.be.a('string')
       expect(r.status).that.equals(201)
     }).catch((err) => {
       return Promise.reject(err)
     })
       }
 
-var claimId
 describe('Skills', () => {
 
   it('insert claim for 0 with carpentry skills by themself', () =>
@@ -185,8 +183,7 @@ describe('Skills', () => {
      .send({jwtEncoded: claim_Carpentry_For0_By0_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('number')
-       claimId = r.body
+       expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
      }).catch((err) => {
        return Promise.reject(err)
@@ -202,7 +199,6 @@ describe('Skills', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
-       console.log('r.body[0].subject',r.body[0].subject)
        expect(r.body[0].claim.identifier).to.equal(HIDDEN_TEXT)
        expect(r.body[0].claim.identifierVisibleToDids)
          .to.be.an('array')
@@ -245,8 +241,7 @@ describe('Skills', () => {
      .send({jwtEncoded: claim_Carpentry_For3_By4_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('number')
-       claimId = r.body
+       expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
      }).catch((err) => {
        return Promise.reject(err)
@@ -260,8 +255,7 @@ describe('Skills', () => {
      .send({jwtEncoded: claim_Carpentry_For7_By7_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('number')
-       claimId = r.body
+       expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
      }).catch((err) => {
        return Promise.reject(err)

@@ -1,6 +1,9 @@
 const sqlite3 = require('sqlite3').verbose()
+const ulidx = require('ulidx');
+
 const dbInfo = require('../../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
+import { hashedClaimWithHashedDids } from './util'
 import l from '../../common/logger'
 
 
@@ -111,7 +114,7 @@ class EndorserDatabase {
           reject(err)
         } else if (row) {
           row.eventStartTime = zonify(row.eventStartTime)
-          resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtRowId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime})
+          resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtId, eventId:row.eventRowId, eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime})
         } else {
           resolve(null)
         }
@@ -147,8 +150,6 @@ class EndorserDatabase {
         delete row.rowid
         row.eventId = row.eventRowId
         delete row.eventRowId
-        row.jwtId = row.jwtRowId
-        delete row.jwtRowId
         row.eventStartTime = zonify(row.eventStartTime)
 
         data.push(row)
@@ -232,7 +233,7 @@ class EndorserDatabase {
 
   actionClaimInsert(issuerDid, agentDid, jwtId, event) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action_claim (jwtRowId, issuerDid, agentDid, eventRowId, eventOrgName, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, ?, datetime('" + event.startTime + "'))");
+      var stmt = ("INSERT INTO action_claim (jwtId, issuerDid, agentDid, eventRowId, eventOrgName, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, ?, datetime('" + event.startTime + "'))");
       db.run(stmt, [jwtId, issuerDid, agentDid, event.id, event.orgName, event.name], function(err) {
         if (err) {
           reject(err)
@@ -273,7 +274,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtRowId, issuer:row.issuer, actionId:row.actionRowId})
+          resolve({id:row.rowid, jwtId:row.jwtId, issuer:row.issuer, actionId:row.actionRowId})
         } else {
           resolve(null)
         }
@@ -287,7 +288,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtRowId})
+          resolve({id:row.rowid, jwtId:row.jwtId})
         } else {
           resolve(null)
         }
@@ -302,7 +303,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, orgRoleId:row.orgRoleRowId})
+          resolve({id:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer, orgRoleId:row.orgRoleRowId})
         } else {
           resolve(null)
         }
@@ -317,7 +318,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtRowId, issuerDid:row.issuer, tenureId:row.tenureRowId})
+          resolve({id:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer, tenureId:row.tenureRowId})
         } else {
           resolve(null)
         }
@@ -375,10 +376,10 @@ class EndorserDatabase {
   }
   **/
 
-  confirmationInsert(issuer, jwtRowId, origClaim, actionRowId, tenureRowId, orgRoleRowId) {
+  confirmationInsert(issuer, jwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO confirmation (jwtRowId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId) VALUES (?, ?, ?, ?, ?, ?)")
-      db.run(stmt, [jwtRowId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
+      var stmt = ("INSERT INTO confirmation (jwtId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId) VALUES (?, ?, ?, ?, ?, ?)")
+      db.run(stmt, [jwtId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -452,12 +453,15 @@ class EndorserDatabase {
    **/
 
   buildJwtEntity(payload, claim, claimStr, claimEncoded, jwtEncoded) {
+    let id = ulidx.ulid()
     let issuedAt = new Date(payload.iat * 1000).toISOString()
     let issuer = payload.iss
     let subject = payload.sub
     let claimContext = claim['@context']
     let claimType = claim['@type']
+    let hashHex = hashedClaimWithHashedDids({id:id, claim:claimStr})
     return {
+      id: id,
       issuedAt: issuedAt,
       issuer: issuer,
       subject: subject,
@@ -465,16 +469,17 @@ class EndorserDatabase {
       claimType: claimType,
       claim: claimStr,
       claimEncoded: claimEncoded,
-      jwtEncoded: jwtEncoded
+      jwtEncoded: jwtEncoded,
+      hashHex: hashHex
     }
   }
 
   jwtById(id) {
     return new Promise((resolve, reject) => {
       var data = null
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE rowid = ?", [id], function(err, row) {
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE id = ?", [id], function(err, row) {
         row.issuedAt = zonify(row.issuedAt)
-        data = {id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim: row.claim, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
+        data = {id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim: row.claim, claimEncoded:row.claimEncoded, jwtEncoded:row.jwtEncoded, hashHex:row.hashHex, hashChainHex:row.hashChainHex}
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -500,9 +505,9 @@ class EndorserDatabase {
     let where = constructWhere(params, claimContents, excludeConfirmations)
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
         row.issuedAt = zonify(row.issuedAt)
-        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+        data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -519,9 +524,9 @@ class EndorserDatabase {
   jwtByClaim(claimStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT rowid, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
         row.issuedAt = zonify(row.issuedAt)
-        data.push({id:row.rowid, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+        data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -534,9 +539,9 @@ class EndorserDatabase {
 
   jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt (issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded) VALUES (datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?)");
       console.log("Inserted into DB JWT with entity.claim", entity.claim)
-      db.run(stmt, [entity.issuer, entity.subject, entity.claimContext, entity.claimType, entity.claim, entity.claimEncoded, entity.jwtEncoded], function(err) {
+      db.run(stmt, [entity.id, entity.issuer, entity.subject, entity.claimType, entity.claimContext, entity.claim, entity.claimEncoded, entity.jwtEncoded, entity.hashHex], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -549,7 +554,7 @@ class EndorserDatabase {
   jwtLastMerkleHash() {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT hashChainHex FROM jwt WHERE hashChainHex is not null ORDER BY rowid DESC LIMIT 1", [], function(err, row) {
+      db.each("SELECT hashChainHex FROM jwt WHERE hashChainHex is not null ORDER BY id DESC LIMIT 1", [], function(err, row) {
         data.push({hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
@@ -565,8 +570,8 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
-      db.each("SELECT rowid, claim, hashHex FROM jwt WHERE hashChainHex is null ORDER BY rowid", [], function(err, row) {
-        data.push({id:row.rowid, claim:row.claim, hashHex:row.hashHex})
+      db.each("SELECT id, claim, hashHex FROM jwt WHERE hashChainHex is null ORDER BY id", [], function(err, row) {
+        data.push({id:row.id, claim:row.claim, hashHex:row.hashHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -579,7 +584,7 @@ class EndorserDatabase {
 
   jwtSetHash(jwtId, hashHex) {
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET hashHex = ? WHERE rowid = ?");
+      var stmt = ("UPDATE jwt SET hashHex = ? WHERE id = ?");
       db.run(stmt, [hashHex, jwtId], function(err) {
         if (err) {
           reject(err)
@@ -594,11 +599,11 @@ class EndorserDatabase {
     })
   }
 
-  jwtSetMerkleHash(id, hashHex, hashChainHex) {
+  jwtSetMerkleHash(jwtId, hashHex, hashChainHex) {
     // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET hashHex = ?, hashChainHex = ? WHERE rowid = ?");
-      db.run(stmt, [hashHex, hashChainHex, id], function(err) {
+      var stmt = ("UPDATE jwt SET hashHex = ?, hashChainHex = ? WHERE id = ?");
+      db.run(stmt, [hashHex, hashChainHex, jwtId], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -621,7 +626,7 @@ class EndorserDatabase {
 
   async orgRoleInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO org_role_claim (jwtRowId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO org_role_claim (jwtId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
       db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.orgName, entity.roleName, entity.startDate, entity.endDate, entity.memberDid], function(err) {
         if (err) {
           reject(err)
@@ -683,7 +688,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtRowId, partyDid:row.partyDid, polygon:row.polygon})
+          resolve({id:row.rowid, jwtId:row.jwtId, partyDid:row.partyDid, polygon:row.polygon})
         } else {
           resolve(null)
         }
@@ -702,8 +707,6 @@ class EndorserDatabase {
 
         row.id = row.rowid
         delete row.rowid
-        row.jwtId = row.jwtRowId
-        delete row.jwtRowId
 
         data.push(row)
       }, function(err, num) {
@@ -720,7 +723,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       let data = []
       db.each("SELECT rowid, * FROM tenure_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [lon, lon, lat, lat], function(err, row) {
-        data.push({id:row.rowid, jwtRowId:row.jwtRowId, claimContext:row.claimContext, claimType:row.claimType, issuerDid:row.issuerDid, partyDid:row.partyDid, polygon:row.polygon, westlon:row.westlon, minlat:row.minlat, eastlon:row.eastlon, maxlat:row.maxlat})
+        data.push({id:row.rowid, jwtId:row.jwtId, claimContext:row.claimContext, claimType:row.claimType, issuerDid:row.issuerDid, partyDid:row.partyDid, polygon:row.polygon, westlon:row.westlon, minlat:row.minlat, eastlon:row.eastlon, maxlat:row.maxlat})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -748,8 +751,8 @@ class EndorserDatabase {
 
   async tenureInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO tenure_claim (jwtRowId, issuerDid, partyDid, polygon, westlon, minlat, eastlon, maxlat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-      db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.partyDid, entity.polygon, entity.westLon, entity.minLat, entity.eastLon, entity.maxLat], function(err) {
+      var stmt = ("INSERT INTO tenure_claim (jwtId, issuerDid, partyDid, polygon, westlon, minlat, eastlon, maxlat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.partyDid, entity.polygon, entity.westLon, entity.minLat, entity.eastLon, entity.maxLat], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -782,8 +785,8 @@ class EndorserDatabase {
 
   async voteInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO vote_claim (jwtRowId, issuerDid, actionOption, candidate, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, datetime(?))");
-      db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.actionOption, entity.candidate, entity.eventName, entity.eventStartTime], function(err) {
+      var stmt = ("INSERT INTO vote_claim (jwtId, issuerDid, actionOption, candidate, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, datetime(?))");
+      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.actionOption, entity.candidate, entity.eventName, entity.eventStartTime], function(err) {
         if (err) {
           reject(err)
         } else {

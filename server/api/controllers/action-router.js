@@ -13,14 +13,14 @@ export class Controller {
         else res.status(404).end();
       })
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
-        }
+  }
 
   getByQuery(req, res) {
     ActionService.byQuery(req.query)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
-        }
+  }
 
 }
 

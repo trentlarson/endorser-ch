@@ -1,20 +1,26 @@
 ---
-- next mobile release :
+- 04 use ulid instead of rowid (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
+  - test deploy with new baseline
+  - test totally new deploy (blank DB)
+  - migrate hashes (and test)
+  - merge to master
+
+- notify on new claim about myself
+
+- next endorser-mobile release :
+  - don't allow searches for DIDs
   - Change CSV export/import to Google headers
   - add contact picker to Offer claims
   - test for hundreds of contacts
-  - Show data for web login, sign with mobile & send, then store in session as logged in. id:login
 
-- Stand up new server that delivers documents based on web login. :
-  - ref:#login
-
-- 04 use UUIDs instead of rowids (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
 - 01 disallow search by DIDs
 - 04 create mobile app specifically for voluntaryists
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 fix IDCommunity links
-- next next mobile release :
+- next next endorser-mobile release :
+
+  - 20 Present web login, sign with mobile & send, then store in session as logged in.
 
   - .5 move confirm under search?
   - .5 consolidate code: Contacts.*allowtoseeme, Contacts modalView styles
@@ -74,7 +80,6 @@
 - 01 put functionality in uport mobile app -- currently veramo id:mobile-doc
   - add to the Veramo documents for migration
 - mobile app:
-  - 64 write requests/offers into mobile app id:mobile-privacy
   - 08 store claims & confirmations
     - allow to download
   - .5 remove modal confirmation for saving a contact

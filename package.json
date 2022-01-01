@@ -31,7 +31,8 @@
     "node-flywaydb": "^0.1.6",
     "pino": "^5.10.2",
     "ramda": "^0.26.1",
-    "sqlite3": "^5.0.1"
+    "sqlite3": "^5.0.1",
+    "ulidx": "^0.2.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",

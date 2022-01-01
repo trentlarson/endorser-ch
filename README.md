@@ -34,10 +34,8 @@ test/test.sh
 
 ## Next Deploy
 - backup DB (before new prod)
-- mv endorser-ch-dev.sqlite3 endorser-ch-prod.sqlite3
-- NODE_ENV=prod DBUSER=sa DBPASS=sasa npm run migrate
-- npm ci
-- ...and note the change to "npm run compile" and "npm start"
+- run the migration in sql-by-hand/V7...
+- NODE_ENV=prod DBUSER=sa DBPASS=... npm run migrate
 
 
 ## Install Dependencies
@@ -284,7 +282,7 @@ http://localhost:3001/reportBestAttendance
 User stories:
 
 - in endorser-ch
-  - run test/test.sh (can quit after first set of tests)
+  - run test/test.sh (can quit after first set of tests for a quick, non-network validation)
   - run: NODE_ENV=test-local npm run dev
 
 - in uport-demo

@@ -1,8 +1,0 @@
-CREATE TABLE vote_claim (
-       jwtRowId INTEGER,
-       issuerDid TEXT, -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
-       actionOption TEXT,
-       candidate TEXT,
-       eventName TEXT,
-       eventStartTime DATETIME
-);

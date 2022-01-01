@@ -1,0 +1,78 @@
+
+CREATE TABLE event (
+       orgName VARCHAR(120),
+       name VARCHAR(250),
+       startTime DATETIME
+);
+
+CREATE TABLE action_claim (
+       jwtId CHARACTER(26),
+       issuerDid VARCHAR(100),
+       agentDid VARCHAR(100), -- DID of the acting entity (in subject & claim); did:ethr are 52 chars
+       eventRowId BIGINT,
+       eventOrgName VARCHAR(120),
+       eventName VARCHAR(250),
+       eventStartTime DATETIME
+);
+
+CREATE TABLE confirmation (
+       jwtId CHARACTER(26),
+       issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
+       origClaim TEXT,
+       actionRowId BIGINT,
+       tenureRowId INTEGER,
+       orgRoleRowId INTEGER
+);
+
+CREATE TABLE jwt (
+       id CHARACTER(26) PRIMARY KEY,
+       issuedAt DATETIME,
+       issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
+       subject VARCHAR(100),
+       claimType VARCHAR(60),
+       claimContext VARCHAR(60),
+       claim, TEXT,
+       claimEncoded TEXT,
+       jwtEncoded TEXT,
+       hashHex VARCHAR(64),
+       hashChainHex VARCHAR(64)
+);
+
+CREATE TABLE network (
+       subject VARCHAR(100), -- DID of the entity who can see/reach the object
+       object VARCHAR(100), -- DID of the entity who can be seen/reached by the subject
+       url TEXT,
+       CONSTRAINT both_unique UNIQUE (subject, object)
+);
+
+CREATE TABLE org_role_claim (
+       jwtId CHARACTER(26),
+       issuerDid VARCHAR(100), -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
+       orgName TEXT,
+       roleName TEXT,
+       startDate DATE,
+       endDate DATE,
+       memberDid TEXT -- DID of the member with the role; did:ethr are 52 chars
+);
+
+CREATE TABLE tenure_claim (
+       jwtId CHARACTER(26),
+       issuerDid VARCHAR(100), -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
+       partyDid VARCHAR(100), -- DID of the owning agent; did:ethr are 52 chars
+       -- see https://schema.org/GeoShape basically contents of a WKT Polygon
+       polygon TEXT,
+       -- all WGS 84 (lat/long)
+       westLon REAL,
+       minLat REAL,
+       eastLon REAL,
+       maxLat REAL
+);
+
+CREATE TABLE vote_claim (
+       jwtId CHARACTER(26),
+       issuerDid VARCHAR(100), -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
+       actionOption TEXT,
+       candidate TEXT,
+       eventName TEXT,
+       eventStartTime DATETIME
+);

@@ -183,8 +183,7 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
-      expect(r.body).that.equals(++claimId)
-      expect(r.body).to.be.a('number')
+      expect(r.body).to.be.a('string')
       expect(r.status).that.equals(201)
     }).catch((err) => {
       return Promise.reject(err)
@@ -203,7 +202,7 @@ describe('Visibility', () => {
      .send({jwtEncoded: claimRecorderFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('number')
+       expect(r.body).to.be.a('string')
        claimId = r.body
        expect(r.status).that.equals(201)
      }).catch((err) => {
