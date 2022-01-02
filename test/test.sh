@@ -4,7 +4,7 @@ echo "First will run tests without JWT validation."
 
 rm -f ../endorser-ch-test-local.sqlite3
 
-NODE_ENV=test-local DBUSER=sa DBPASS=sasa npm run migrate
+NODE_ENV=test-local DBUSER=sa DBPASS=sasa npm run flyway migrate
 
 # funny... this works without setting the DBUSER & DBPASS
 NODE_ENV=test-local DBUSER=sa DBPASS=sasa PORT=3330 npm run test$1
@@ -28,7 +28,7 @@ echo "now."
 
 rm -f ../endorser-ch-test.sqlite3
 
-NODE_ENV=test DBUSER=sa DBPASS=sasa npm run migrate
+NODE_ENV=test DBUSER=sa DBPASS=sasa npm run flyway migrate
 
 # funny... this works without setting the DBUSER & DBPASS
 NODE_ENV=test DBUSER=sa DBPASS=sasa PORT=3330 npm run test$1

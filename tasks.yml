@@ -1,9 +1,11 @@
 ---
 - 04 use ulid instead of rowid (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
-  - test deploy with new baseline
   - test totally new deploy (blank DB)
   - migrate hashes (and test)
   - merge to master
+
+  - allow editing of claim without crashes
+  - test my df0 import
 
 - notify on new claim about myself
 

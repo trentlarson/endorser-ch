@@ -57,7 +57,7 @@ async function getDidsSeenByAll() {
 async function getAllDidsRequesterCanSee(requesterDid) {
   let didsCanSee = await getDidsRequesterCanSeeExplicitly(requesterDid)
   let result = didsCanSee.concat(await getDidsSeenByAll())
-  let result2 = result.concat([requesterDid]) // themself
+  let result2 = result.concat([requesterDid]) // themselves
   return R.uniq(result2)
 }
 

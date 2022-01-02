@@ -12,7 +12,7 @@
     "dev:debug": "nodemon server --exec babel-node --config .nodemonrc.json --inspect | pino-pretty",
     "lint": "eslint -c .eslintrc.json {server,test}/**",
     "lint:fix": "eslint --fix -c .eslintrc.json {server,test}/**",
-    "migrate": "flyway -c conf/flyway.js migrate",
+    "flyway": "flyway -c conf/flyway.js",
     "test": "mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"

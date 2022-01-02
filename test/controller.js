@@ -651,7 +651,19 @@ describe('Claim', () => {
       })
   }).timeout(7001)
 
-  it('should not see DID #1', () =>
+  it('#0 should see themselves', () =>
+     request(Server)
+     .get('/api/report/whichDidsICanSee')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body)
+         .to.be.an('array')
+         .to.include.members([creds[0].did])
+       expect(r.status).that.equals(200)
+     })).timeout(6002)
+
+  it('#0 should not see DID #1', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])

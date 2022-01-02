@@ -2,7 +2,9 @@
 
 Run from the endorser-ch directory after installing ulidx.
 
-First, run `sqlite3 ../endorser-ch-...sqlite3` and:
+First, backup the DB.
+
+Run `sqlite3 ../endorser-ch-...sqlite3` and:
 
 ```
 ALTER TABLE jwt ADD COLUMN id TEXT;
@@ -35,6 +37,14 @@ UPDATE confirmation   SET jwtId = (SELECT id FROM jwt j where j.rowid = jwtId);
 UPDATE org_role_claim SET jwtId = (SELECT id FROM jwt j where j.rowid = jwtId);
 UPDATE tenure_claim   SET jwtId = (SELECT id FROM jwt j where j.rowid = jwtId);
 UPDATE vote_claim     SET jwtId = (SELECT id FROM jwt j where j.rowid = jwtId);
+
+DELETE FROM schema_version;
+```
+
+... then exit and:
+
+```
+NODE_ENV=prod FLYWAY_BASELINE_VERSION=1 DBUSER=sa DBPASS=... npm run flyway baseline
 ```
 
 **/
