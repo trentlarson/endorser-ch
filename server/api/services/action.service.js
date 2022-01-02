@@ -8,12 +8,12 @@ import { buildConfirmationList } from './util'
 class ActionService {
 
   byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
+    l.trace(`${this.constructor.name}.byId(${id})`);
     return db.actionClaimById(id)
   }
 
   async byQuery(params) {
-    l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
+    l.trace(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     if (params.id) {
       params.rowid = params.id
       delete params.id

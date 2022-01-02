@@ -16,7 +16,7 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 class JwtService {
 
   async byId(id, requesterDid) {
-    l.info(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
+    l.trace(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
     let jwtRec = await db.jwtById(id)
     if (jwtRec) {
       let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject, claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim)}
@@ -27,7 +27,7 @@ class JwtService {
   }
 
   async byQuery(params, requesterDid) {
-    l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
+    l.trace(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     var resultData
     resultData = await db.jwtByParams(params)
     let result = resultData.map(j => {
@@ -41,7 +41,7 @@ class JwtService {
    * Dangerous: this includes encoded data that might include private DIDs.
    */
   async fullJwtById(id, requesterDid) {
-    l.info(`${this.constructor.name}.fullJwtById(${id}, ${requesterDid})`);
+    l.trace(`${this.constructor.name}.fullJwtById(${id}, ${requesterDid})`);
     let jwtRec = await db.jwtById(id)
     if (jwtRec) {
       return jwtRec
@@ -88,7 +88,7 @@ class JwtService {
 
   /**
   create(jwtEncoded) {
-    l.info(`${this.constructor.name}.create(ENCODED)`);
+    l.trace(`${this.constructor.name}.create(ENCODED)`);
     l.trace(jwtEncoded, "ENCODED")
 
     const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
@@ -220,7 +220,7 @@ class JwtService {
     if (claim['@context'] === 'http://schema.org'
         && claim['@type'] === 'AgreeAction') {
 
-      l.info('Adding AgreeAction confirmation', claim)
+      l.trace('Adding AgreeAction confirmation', claim)
       // note that 'Confirmation' does similar logic (but is deprecated)
 
       var recordings = []
@@ -366,7 +366,7 @@ class JwtService {
 
   async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
 
-    l.info(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
+    l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
 
     if (Array.isArray(claim)) {
@@ -432,7 +432,7 @@ class JwtService {
   }
 
   async createWithClaimRecord(jwtEncoded, authIssuerId) {
-    l.info(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
+    l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
     let {payload, header, signature, data, doc, authenticators, issuer} =
         await this.decodeAndVerifyJwt(jwtEncoded)

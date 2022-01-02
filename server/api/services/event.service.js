@@ -8,18 +8,18 @@ import { buildConfirmationList } from './util'
 class EventService {
 
   byId(id) {
-    l.info(`${this.constructor.name}.byId(${id})`);
+    l.trace(`${this.constructor.name}.byId(${id})`);
     return db.eventById(id);
   }
 
   async byQuery(params) {
-    l.info(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
+    l.trace(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     let resultData = await db.eventsByParams(params)
     return resultData;
   }
 
   async getActionClaimsAndConfirmationsByEventId(id) {
-    l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`)
+    l.trace(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventId(${id})`)
     let resultData = await db.retrieveActionClaimsAndConfirmationsByEventId(id)
     let acacListById = R.groupBy(acac => ""+acac.action.id)(resultData)
     let acacListByAction = R.map(R.curry(buildConfirmationList)('action'))(acacListById)
@@ -34,7 +34,7 @@ class EventService {
    ]
    */
   async getActionClaimsAndConfirmationsByEventData(event) {
-    l.info(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventData(${util.inspect(event)})`);
+    l.trace(`${this.constructor.name}.getActionClaimsAndConfirmationsByEventData(${util.inspect(event)})`);
     if (!event.organizer
         || !event.organizer.name
         || !event.name

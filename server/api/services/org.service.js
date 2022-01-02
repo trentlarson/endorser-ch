@@ -8,7 +8,7 @@ import { buildConfirmationList } from './util'
 class OrgService {
 
   async getClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr) {
-    l.info(`${this.constructor.name}.getClaimsAndConfirmationsOnDate(${orgName}, ${roleName}, ${onDateStr})`);
+    l.trace(`${this.constructor.name}.getClaimsAndConfirmationsOnDate(${orgName}, ${roleName}, ${onDateStr})`);
     // Note that this is very similar to ActionService.getActionClaimsAndConfirmationsForEventsSince & TenureService.getClaimsAndConfirmationsAtPoint
 
 

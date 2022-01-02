@@ -8,25 +8,25 @@ import { buildConfirmationList } from './util'
 class TenureService {
 
   async byId(tenureId) {
-    l.info(`${this.constructor.name}.byId(${tenureId})`);
+    l.trace(`${this.constructor.name}.byId(${tenureId})`);
     let resultData = await db.tenureClaimById(tenureId)
     return resultData;
   }
 
   async byQuery() {
-    l.info(`${this.constructor.name}.byQuery()`);
+    l.trace(`${this.constructor.name}.byQuery()`);
       let resultData = await db.tenureClaims()
       return resultData;
     }
 
   async atPoint(lat, lon) {
-    l.info(`${this.constructor.name}.atPoint(${lat}, ${lon})`);
+    l.trace(`${this.constructor.name}.atPoint(${lat}, ${lon})`);
     let resultData = await db.tenureByPoint(lat, lon)
     return resultData;
   }
 
   async getClaimsAndConfirmationsAtPoint(lat, lon) {
-    l.info(`${this.constructor.name}.getClaimsAndConfirmationsAtPoint(${lat}, ${lon})`);
+    l.trace(`${this.constructor.name}.getClaimsAndConfirmationsAtPoint(${lat}, ${lon})`);
     // Note that this is very similar to ActionService.getActionClaimsAndConfirmationsForEventsSince & OrgService.getActionClaimsAndConfirmationsForRoleOnDate
 
     // retrieve "cac" (claim and confirmations), eg [{ tenure: { TENURE DATA }, confirmation: { ISSUER & ROW DATA }|null }, ...]
