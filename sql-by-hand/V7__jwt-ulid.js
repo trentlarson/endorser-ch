@@ -44,7 +44,7 @@ DELETE FROM schema_version;
 ... then exit and:
 
 ```
-NODE_ENV=prod FLYWAY_BASELINE_VERSION=1 DBUSER=sa DBPASS=... npm run flyway baseline
+NODE_ENV=... FLYWAY_BASELINE_VERSION=1 DBUSER=sa DBPASS=... npm run flyway baseline
 ```
 
 **/
@@ -79,6 +79,6 @@ db.each("SELECT rowid, * FROM jwt", function(err, row) {
     })
   }
 }, function(err, num) {
-  console.log('Finished with ' + num + ' results. Errors:\n', allResult)
+  console.log('Finished with ' + num + ' results. Errors:', allResult)
 })
 
