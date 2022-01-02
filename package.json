@@ -1,9 +1,9 @@
 {
   "name": "endorser-ch",
-  "version": "1.1.17",
+  "version": "1.1.19",
   "description": "Server for recording assertions and reporting on signatures",
   "author": "Trent Larson <trent@trentlarson.com>",
-  "license": "Unlicense",
+  "license": "SQLite Blessing",
   "main": "index.js",
   "scripts": {
     "start": "node dist/index.js",
