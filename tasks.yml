@@ -1,14 +1,8 @@
 ---
-- 04 use ulid instead of rowid (in case we want to make it impractical to download all claims, even though all the DIDs will be hidden)
-  - merge to master
-
-  - allow editing of claim without crashes
-  - test my df0 import
-
-- notify on new claim about myself
-
 - next endorser-mobile release :
+
   - don't allow searches for DIDs
+  - notify on new claim about myself
   - Change CSV export/import to Google headers
   - add contact picker to Offer claims
   - test for hundreds of contacts
@@ -22,10 +16,11 @@
 
   - 20 Present web login, sign with mobile & send, then store in session as logged in.
 
+  - 5 Tie to phone contacts
+
   - .5 move confirm under search?
   - .5 consolidate code: Contacts.*allowtoseeme, Contacts modalView styles
   - .5 add a verify at the top level to scan (just like under search)
-  - 02 include
   - 02 create items for sale/trade awaits:encrypt-seed
 
   - 04 change default to did:peer

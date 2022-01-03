@@ -13,7 +13,7 @@ import { HIDDEN_TEXT, isDid } from './util'
       - if any values are HIDDEN_DID, add a key
         - name is a prefix of the same name plus suffix of "VisibleToDids"
         - value is an array of all DIDs who the requester can see & who can see the hidden DID
-      - if any DIDs are public, add a "publicUrls" key with value of a map from DID to URL
+      - if any DIDs are public, add a "publicUrls" key at the top level with value of a map from DID to URL
  **/
 
 async function hideDidsAndAddLinksToNetwork(requesterDid, input) {

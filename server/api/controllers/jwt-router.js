@@ -27,9 +27,9 @@ class Controller {
             hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, resultClaim)
               .then(scrubbedClaim => {
                 resolve({
-                  full: result,
+                  fullJwt: result,
                   fullClaim: resultClaim,
-                  scrubbed: R.omit(['publicUrls'], scrubbed),
+                  scrubbedJwt: R.omit(['publicUrls'], scrubbed),
                   scrubbedClaim: R.omit(['publicUrls'], scrubbedClaim)
                 })
               })
@@ -39,10 +39,10 @@ class Controller {
       }))
       .then(r => {
         if (r
-            && R.equals(r.full, r.scrubbed)
+            && R.equals(r.fullJwt, r.scrubbedJwt)
             && R.equals(r.fullClaim, r.scrubbedClaim)
            ) {
-          res.json(r.full);
+          res.json(r.fullJwt);
         } else {
           res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.tokenIssuer}.  Use a different endpoint to get scrubbed data.`).end();
         }

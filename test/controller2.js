@@ -292,6 +292,15 @@ describe('Visibility', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
+       expect(r.body)
+         .that.has.a.property('claim')
+         .that.equals(JSON.stringify(claimRecorderFor2By2JwtObj.claim))
+       expect(r.body)
+         .that.has.a.property('issuer')
+         .that.equals(creds[2].did)
+       expect(r.body)
+         .that.has.a.property('subject')
+         .that.equals(creds[2].did)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
