@@ -1,14 +1,19 @@
 ---
 - next endorser-mobile release :
 
-  - don't allow searches for DIDs
+  - change Give to Offer?
+  - verify the scanned contact or presentation JWT
+
+  - allow to present without sending to the server
   - notify on new claim about myself
+  - don't allow searches for DIDs
   - Change CSV export/import to Google headers
-  - add contact picker to Offer claims
   - test for hundreds of contacts
+  - YAML display format for new claims
 
 - 01 disallow search by DIDs
-- 04 create mobile app specifically for voluntaryists
+- 01 rate-limit some DIDs (or IPs)
+
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 fix IDCommunity links
@@ -83,7 +88,7 @@
     - 01 add a way from the mobile app to audit all the DIDs that can see me
   - 02 get review from professional - useEffect & useFocusEffect calls
   - 02 bulk import contacts (and export via JSON)
-  - 02 split out confirmations into multiple submissions, one for each subject
+  - 02 split out confirmations into multiple separate submissions, one for each subject
   - document (eg enhancements to key derivation)
   - publish F-Droid
   - 01 add Android 'release' build in the process
