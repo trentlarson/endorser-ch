@@ -1,13 +1,13 @@
 // from https://github.com/uport-project/did-jwt/blob/develop/src/JWT.js
 // ... unless we can find a way to access the code directly from the library
 //
-// Can I just say that it's ridiculous that this isn't eported by did-jwt?!
+// Can I just say that it's ridiculous that this isn't exported by did-jwt?!
 //
 import { isMNID } from 'mnid'
 import resolve from 'did-resolver'
 
 const SUPPORTED_PUBLIC_KEY_TYPES = {
-  ES256K: ['Secp256k1VerificationKey2018', 'Secp256k1SignatureVerificationKey2018', 'EcdsaPublicKeySecp256k1'],
+  ES256K:     ['Secp256k1VerificationKey2018', 'Secp256k1SignatureVerificationKey2018', 'EcdsaPublicKeySecp256k1'],
   'ES256K-R': ['Secp256k1VerificationKey2018', 'Secp256k1SignatureVerificationKey2018', 'EcdsaPublicKeySecp256k1']
 }
 
