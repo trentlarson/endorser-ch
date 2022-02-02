@@ -22,7 +22,7 @@ npm ci
 cp .env.local .env
 
 # setup/migrate DB
-NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
+NODE_ENV=dev DBUSER=sa DBPASS=... npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
 # run in development mode
@@ -33,8 +33,7 @@ test/test.sh
 ```
 
 ## Next Deploy
-- backup DB (before new prod)
-- run the migration in sql-by-hand/V7...
+- Nothing special yet.
 
 
 ## Install Dependencies
@@ -71,7 +70,7 @@ Tag the release version (after updating the package.json version).
 # SSH to the box and kill the "node dist/index.js".
 # ... and may have to kill nodemon & pino-pretty processes separately
 # On local:
-scripts/deploy.sh release-X ~/.ssh/id_rsa
+scripts/deploy.sh ubuntutest release-X ~/.ssh/id_rsa
 # On remote:
 cd endorser-ch
 NODE_ENV=prod nohup npm start >> ../endorser-ch.out 2>&1 &
@@ -174,7 +173,7 @@ curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-T
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
-NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
+NODE_ENV=dev DBUSER=sa DBPASS=... npm run flyway migrate
 ```
 
 

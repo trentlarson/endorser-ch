@@ -59,7 +59,7 @@ ssh -i $3 $USERNAME@endorser.ch << EOF
 
   # I've brought the server to its knees trying to do this with the app still running.
   echo "Killing any running processes. If it shows 'Usage' instructions then it wasn't running."
-  ps -u | grep "node dist/index.js" | grep -v "sh -c" | grep -v grep | awk "{print \$2}" | xargs kill
+  ps -ef | grep "node dist/index.js" | grep -v "sh -c" | grep -v grep | awk "{print \$2}" | xargs kill
 
   cd $DEPLOY_DIR
 
@@ -67,6 +67,8 @@ ssh -i $3 $USERNAME@endorser.ch << EOF
   # Don't we need to add --production on the end of "npm ci"?
   npm ci
   echo "... finished with npm ci"
+
+  npm run compile
 
   # There's a "deploy-production" script we should look into.
   #npm run deploy-production

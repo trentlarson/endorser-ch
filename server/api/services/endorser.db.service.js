@@ -18,11 +18,6 @@ function constructWhere(params, claimContents, excludeConfirmations) {
   var whereClause = ""
   var paramArray = []
 
-  if (params.id) {
-    params.rowid = params.id
-    delete params.id
-  }
-
   for (var param in params) {
     if (whereClause.length > 0) {
       whereClause += " AND"
@@ -539,7 +534,7 @@ class EndorserDatabase {
   jwtInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?)");
-      console.log("Inserted into DB JWT with entity.claim", entity.claim)
+      console.log("Inserted into DB JWT with id", entity.id, "and entity.claim", entity.claim)
       db.run(stmt, [entity.id, entity.issuer, entity.subject, entity.claimType, entity.claimContext, entity.claim, entity.claimEncoded, entity.jwtEncoded, entity.hashHex], function(err) {
         if (err) {
           reject(err)

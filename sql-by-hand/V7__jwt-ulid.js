@@ -10,11 +10,11 @@ Run `sqlite3 ../endorser-ch-...sqlite3` and:
 ALTER TABLE jwt ADD COLUMN id TEXT;
 UPDATE jwt SET hashHex = null;
 -- funny that the flyway migrations fail on any column rename command
-ALTER TABLE action_claim   RENAME COLUMN jwtRowId TO jwtId;
-ALTER TABLE confirmation   RENAME COLUMN jwtRowId TO jwtId;
-ALTER TABLE org_role_claim RENAME COLUMN jwtRowId TO jwtId;
-ALTER TABLE tenure_claim   RENAME COLUMN jwtRowId TO jwtId;
-ALTER TABLE vote_claim     RENAME COLUMN jwtRowId TO jwtId;
+ALTER TABLE action_claim   RENAME jwtRowId TO jwtId;
+ALTER TABLE confirmation   RENAME jwtRowId TO jwtId;
+ALTER TABLE org_role_claim RENAME jwtRowId TO jwtId;
+ALTER TABLE tenure_claim   RENAME jwtRowId TO jwtId;
+ALTER TABLE vote_claim     RENAME jwtRowId TO jwtId;
 ```
 
 ... then exit and `cp sql-by-hand/V7__jwt-ulid.js .` and:

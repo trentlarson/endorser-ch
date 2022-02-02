@@ -1,8 +1,32 @@
 ---
 - next endorser-mobile release :
 
-  - change Give to Offer?
-  - verify the scanned contact or presentation JWT
+  - change Donate/Lend/etc to PlanAction
+  - deploy iOS
+  - fix numeric IDs in search results
+  - fix https://endorser.ch/claim?claimId=01D25AVGQG1N8E9JNGK7C7DZRD
+
+- 01 add sensitive issues to a separate list (eg. payload size)
+
+- 01 disallow search by DIDs
+- 01 rate-limit some DIDs (or IPs)
+
+- 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
+- 01 show an error, eg. on a confirmation for a claim that doesn't exist
+- 02 fix IDCommunity links
+
+- next next endorser-mobile release :
+
+  - add mobile app to wallet list: https://github.com/Gimly-Blockchain/ssi-wallets
+
+  - allow contact deletion w/ confirmation
+  - refresh Apple cert
+  - remove the useState copies of all the appStore values
+  - put my own QR code at top of contacts screen
+
+  - feed #mobile-feed
+    - query for recent additions
+    - save last query time
 
   - allow to present without sending to the server
   - notify on new claim about myself
@@ -11,20 +35,12 @@
   - test for hundreds of contacts
   - YAML display format for new claims
 
-- 01 disallow search by DIDs
-- 01 rate-limit some DIDs (or IPs)
-
-- 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
-- 01 show an error, eg. on a confirmation for a claim that doesn't exist
-- 02 fix IDCommunity links
-- next next endorser-mobile release :
-
   - 20 Present web login, sign with mobile & send, then store in session as logged in.
 
   - 5 Tie to phone contacts
 
   - .5 move confirm under search?
-  - .5 consolidate code: Contacts.*allowtoseeme, Contacts modalView styles
+  - .5 consolidate code - Contacts.*allowtoseeme, Contacts modalView styles
   - .5 add a verify at the top level to scan (just like under search)
   - 02 create items for sale/trade awaits:encrypt-seed
 
@@ -35,6 +51,7 @@
 
   - .2 put "confirm" button on top of confirm page as well as on bottom
   - 01 upgrade data-store
+  - .2 show "blank" or something when value is {} (eg. recipient for 61 on test server shows blank under Search All see console.log in ReportFromEndorser)
   - .5 update from API level 29 to 30 (Android 11)
   - .2 catch errors on import (probably the seed, but look at contacts, too)
   - 01 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
@@ -103,9 +120,8 @@
   - log into website
   - verify contact signature from scanned JWT
   - type:CheckAction test that previous uPort QR codes work
-  - allow publication of public request/offer
+
   - allow publication of claim with private data
-  - allow search of public data
   - allow search of private
   - allow search via connected person
   - allow messaging
