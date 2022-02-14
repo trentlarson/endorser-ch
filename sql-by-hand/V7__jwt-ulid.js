@@ -57,7 +57,7 @@ const ulidx = require('ulidx')
 const util = require('./server/api/services/util')
 
 var allResult = []
-db.each("SELECT rowid, * FROM jwt", function(err, row) {
+db.each("SELECT rowid, * FROM jwt WHERE id IS null", function(err, row) {
 
   if (err) {
     console.log('Error in select:', err)

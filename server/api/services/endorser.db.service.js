@@ -534,7 +534,7 @@ class EndorserDatabase {
   jwtInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?)");
-      console.log("Inserted into DB JWT with id", entity.id, "and entity.claim", entity.claim)
+      //console.log("Inserted into DB JWT with id", entity.id, "and entity.claim", entity.claim)
       db.run(stmt, [entity.id, entity.issuer, entity.subject, entity.claimType, entity.claimContext, entity.claim, entity.claimEncoded, entity.jwtEncoded, entity.hashHex], function(err) {
         if (err) {
           reject(err)
@@ -543,6 +543,34 @@ class EndorserDatabase {
         }
       })
     })
+  }
+
+  async allIssuerClaimTypes(issuerDid, claimTypes, afterIdInput) {
+    let afterId = afterIdInput || '0'
+    let promises = []
+    for (const claimType of claimTypes) {
+      promises.push(
+        new Promise((resolve, reject) => {
+          let data = []
+          let error
+          db.each(
+            "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE id > ? AND issuer = ? AND claimType = ? ORDER BY id LIMIT 50",
+            [afterId, issuerDid, claimType],
+            function(err, row) {
+              if (err) {
+                error = err
+              } else {
+                row.issuedAt = zonify(row.issuedAt)
+                data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+              }
+            },
+            function(err, num) { if (err) { reject(err) } else { resolve(data) } }
+          )
+        })
+      )
+    }
+    return Promise.all(promises)
+    .then(arrays => arrays.flat())
   }
 
   jwtLastMerkleHash() {

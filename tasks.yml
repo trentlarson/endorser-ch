@@ -1,12 +1,24 @@
 ---
 - next endorser-mobile release :
 
-  - change Donate/Lend/etc to PlanAction
-  - deploy iOS
-  - fix numeric IDs in search results
-  - fix https://endorser.ch/claim?claimId=01D25AVGQG1N8E9JNGK7C7DZRD
+  - add paid w/ confirmations - scrolling query
+    - .5 create endpoint to retrieve all Offer & GiveAction
+    - .5 paginated
+    - 01 test - create 101 claims, paginate
+    - 01 mobile: query once
+    - .5 repeat until done
+    - .5 display totals
+    - investigate each one
+      - 01 show next
+      - 02 search
+  - .2 fix error when clicking on Total Paid (for 0x000 on test server)
+  - .2 show 'Agree/Confirm' on search results
+  - .5 add rejections
+  - .5 add TradeAction - BTC for food?
+  - 01 refresh Apple cert
+  - .5 don't show 'null' in confirmations
 
-- 01 add sensitive issues to a separate list (eg. payload size)
+- 01 add sensitive issues to a separate list (eg. size)
 
 - 01 disallow search by DIDs
 - 01 rate-limit some DIDs (or IPs)
@@ -17,20 +29,20 @@
 
 - next next endorser-mobile release :
 
-  - add mobile app to wallet list: https://github.com/Gimly-Blockchain/ssi-wallets
+  - 01 don't allow searches for DIDs
+  - .5 add mobile app to wallet list: https://github.com/Gimly-Blockchain/ssi-wallets
+  - 02 handle presentation QR codes that are too big
 
-  - allow contact deletion w/ confirmation
-  - refresh Apple cert
-  - remove the useState copies of all the appStore values
-  - put my own QR code at top of contacts screen
+  - .5 allow contact deletion w/ confirmation
+  - .5 remove the useState copies of all the appStore values
+  - .5 put my own QR code at top of contacts screen
 
-  - feed #mobile-feed
+  - 20 feed #mobile-feed
     - query for recent additions
     - save last query time
 
   - allow to present without sending to the server
   - notify on new claim about myself
-  - don't allow searches for DIDs
   - Change CSV export/import to Google headers
   - test for hundreds of contacts
   - YAML display format for new claims

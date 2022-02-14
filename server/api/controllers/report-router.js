@@ -1,3 +1,11 @@
+/**
+ *
+ * See report-all-router.js instead.
+ * Many of these are deprecated: they often have a limit on the number of DB records.
+ * The recommended versions return a payload with a "result" field, and potentially other fields like "error".
+ *
+ */
+
 import * as express from 'express'
 import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
