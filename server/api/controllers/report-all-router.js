@@ -15,7 +15,7 @@ class DbController {
       .then(jwts => jwts.map(jwt => R.set(R.lensProp('claim'), JSON.parse(jwt.claim), jwt)))
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => { req.resultJsonWrap = { result: r }; next(); })
-      .catch(err => { console.log(err); res.status(500).json(""+err).end() })
+      .catch(err => { res.status(500).json(""+err).end() })
   }
 }
 let dbController = new DbController();
