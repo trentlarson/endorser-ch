@@ -2,8 +2,6 @@
 - next endorser-mobile release :
 
   - add paid w/ confirmations - scrolling query
-    - .5 create endpoint to retrieve all Offer & GiveAction
-    - .5 paginated
     - 01 test - create 101 claims, paginate
     - 01 mobile: query once
     - .5 repeat until done

@@ -7,6 +7,7 @@ const util = require('./util')
 
 
 
+const DEFAULT_LIMIT = 50
 
 const GREATER_THAN = "_greaterThan"
 const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
@@ -545,32 +546,37 @@ class EndorserDatabase {
     })
   }
 
-  async allIssuerClaimTypes(issuerDid, claimTypes, afterIdInput) {
-    let afterId = afterIdInput || '0'
-    let promises = []
-    for (const claimType of claimTypes) {
-      promises.push(
-        new Promise((resolve, reject) => {
-          let data = []
-          let error
-          db.each(
-            "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE id > ? AND issuer = ? AND claimType = ? ORDER BY id LIMIT 50",
-            [afterId, issuerDid, claimType],
-            function(err, row) {
-              if (err) {
-                error = err
-              } else {
-                row.issuedAt = zonify(row.issuedAt)
-                data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
-              }
-            },
-            function(err, num) { if (err) { reject(err) } else { resolve(data) } }
-          )
-        })
+  allIssuerClaimTypes(issuerDid, claimTypes, afterIdInput) {
+    return new Promise((resolve, reject) => {
+      const afterId = afterIdInput || '0'
+      const inListStr = claimTypes.map(value => "?").join(',')
+      const params = [afterId, issuerDid].concat(claimTypes)
+      let data = []
+      let rowErr
+      db.each(
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE id > ? AND issuer = ? AND claimType in (" + inListStr + ") ORDER BY id LIMIT " + DEFAULT_LIMIT,
+        params,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = zonify(row.issuedAt)
+            data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result["maybeMoreAfter"] = data.at(-1).id;
+            }
+            resolve(result)
+          }
+        }
       )
-    }
-    return Promise.all(promises)
-    .then(arrays => arrays.flat())
+    })
   }
 
   jwtLastMerkleHash() {
