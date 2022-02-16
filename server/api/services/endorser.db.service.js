@@ -570,7 +570,7 @@ class EndorserDatabase {
           } else {
             const result = { data: data }
             if (num === DEFAULT_LIMIT) {
-              result["maybeMoreAfter"] = data.at(-1).id;
+              result["maybeMoreAfter"] = data[data.length - 1].id;
             }
             resolve(result)
           }
