@@ -2,17 +2,13 @@
 - next endorser-mobile release :
 
   - add paid w/ confirmations - scrolling query
-    - 01 test - create 101 claims, paginate
-    - 01 mobile: query once
-    - .5 repeat until done
-    - .5 display totals
     - investigate each one
       - 01 show next
       - 02 search
-  - .2 fix error when clicking on Total Paid (for 0x000 on test server)
   - .2 show 'Agree/Confirm' on search results
   - .5 add rejections
-  - .5 add TradeAction - BTC for food?
+  - .5 add TradeAction? - BTC for food?
+  - .5 look up a claim by ID
   - 01 refresh Apple cert
   - .5 don't show 'null' in confirmations
 
