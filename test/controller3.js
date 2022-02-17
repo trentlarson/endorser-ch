@@ -14,9 +14,13 @@ const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
-var creds = testUtil.creds
+const creds = testUtil.creds
 
-let claimCarpentry = {
+const credentials = R.map((c) => new Credentials(c), creds)
+
+const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+
+const claimCarpentry = {
   "@context": "http://schema.org",
   "@type": "Person",
   name: "Person",
@@ -24,99 +28,95 @@ let claimCarpentry = {
   knowsAbout: "carpentry"
 }
 
-var credentials = R.map((c) => new Credentials(c), creds)
-
-let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
-
-let claim_Carpentry_For0 = R.clone(claimCarpentry)
+const claim_Carpentry_For0 = R.clone(claimCarpentry)
 claim_Carpentry_For0.identifier = creds[0].did
 
-let claim_Carpentry_For0_By0_JwtObj = R.clone(testUtil.jwtTemplate)
+const claim_Carpentry_For0_By0_JwtObj = R.clone(testUtil.jwtTemplate)
 claim_Carpentry_For0_By0_JwtObj.claim = R.clone(claim_Carpentry_For0)
 claim_Carpentry_For0_By0_JwtObj.iss = creds[0].did
 claim_Carpentry_For0_By0_JwtObj.sub = creds[0].did
-let claim_Carpentry_For0_By0_JwtProm = credentials[0].createVerification(claim_Carpentry_For0_By0_JwtObj)
+const claim_Carpentry_For0_By0_JwtProm = credentials[0].createVerification(claim_Carpentry_For0_By0_JwtObj)
 
-let claim_Carpentry_For3 = R.clone(claimCarpentry)
+const claim_Carpentry_For3 = R.clone(claimCarpentry)
 claim_Carpentry_For3.identifier = creds[3].did
 
-let claim_Carpentry_For3_By4_JwtObj = R.clone(testUtil.jwtTemplate)
+const claim_Carpentry_For3_By4_JwtObj = R.clone(testUtil.jwtTemplate)
 claim_Carpentry_For3_By4_JwtObj.claim = R.clone(claim_Carpentry_For3)
 claim_Carpentry_For3_By4_JwtObj.iss = creds[4].did
 claim_Carpentry_For3_By4_JwtObj.sub = creds[3].did
-let claim_Carpentry_For3_By4_JwtProm = credentials[4].createVerification(claim_Carpentry_For3_By4_JwtObj)
+const claim_Carpentry_For3_By4_JwtProm = credentials[4].createVerification(claim_Carpentry_For3_By4_JwtObj)
 
-let confirm_Carpentry_For3_By4_JwtObj = R.clone(testUtil.jwtTemplate)
+const confirm_Carpentry_For3_By4_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For3_By4_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For3_By4_JwtObj.claim.object.push(R.clone(claim_Carpentry_For3))
 confirm_Carpentry_For3_By4_JwtObj.iss = creds[4].did
 confirm_Carpentry_For3_By4_JwtObj.sub = creds[3].did
-let confirm_Carpentry_For3_By4_JwtProm = credentials[4].createVerification(confirm_Carpentry_For3_By4_JwtObj)
+const confirm_Carpentry_For3_By4_JwtProm = credentials[4].createVerification(confirm_Carpentry_For3_By4_JwtObj)
 
-let confirm_Carpentry_For3_By5_JwtObj = R.clone(testUtil.jwtTemplate)
+const confirm_Carpentry_For3_By5_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For3_By5_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For3_By5_JwtObj.claim.object.push(R.clone(claim_Carpentry_For3))
 confirm_Carpentry_For3_By5_JwtObj.iss = creds[5].did
 confirm_Carpentry_For3_By5_JwtObj.sub = creds[3].did
-let confirm_Carpentry_For3_By5_JwtProm = credentials[5].createVerification(confirm_Carpentry_For3_By5_JwtObj)
+const confirm_Carpentry_For3_By5_JwtProm = credentials[5].createVerification(confirm_Carpentry_For3_By5_JwtObj)
 
-let confirm_Carpentry_For3_By6_JwtObj = R.clone(testUtil.jwtTemplate)
+const confirm_Carpentry_For3_By6_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For3_By6_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For3_By6_JwtObj.claim.object.push(R.clone(claim_Carpentry_For3))
 confirm_Carpentry_For3_By6_JwtObj.iss = creds[6].did
 confirm_Carpentry_For3_By6_JwtObj.sub = creds[3].did
-let confirm_Carpentry_For3_By6_JwtProm = credentials[6].createVerification(confirm_Carpentry_For3_By6_JwtObj)
+const confirm_Carpentry_For3_By6_JwtProm = credentials[6].createVerification(confirm_Carpentry_For3_By6_JwtObj)
 
 
 
 
-let claim_Carpentry_For4 = R.clone(claimCarpentry)
+const claim_Carpentry_For4 = R.clone(claimCarpentry)
 claim_Carpentry_For4.identifier = creds[4].did
 
-let claim_Carpentry_For4_By4_JwtObj = R.clone(testUtil.jwtTemplate)
+const claim_Carpentry_For4_By4_JwtObj = R.clone(testUtil.jwtTemplate)
 claim_Carpentry_For4_By4_JwtObj.claim = R.clone(claim_Carpentry_For4)
 claim_Carpentry_For4_By4_JwtObj.iss = creds[4].did
 claim_Carpentry_For4_By4_JwtObj.sub = creds[4].did
-let claim_Carpentry_For4_By4_JwtProm = credentials[4].createVerification(claim_Carpentry_For4_By4_JwtObj)
+const claim_Carpentry_For4_By4_JwtProm = credentials[4].createVerification(claim_Carpentry_For4_By4_JwtObj)
 
-let confirm_Carpentry_For4_By2_JwtObj = R.clone(testUtil.jwtTemplate)
+const confirm_Carpentry_For4_By2_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For4_By2_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For4_By2_JwtObj.claim.object.push(R.clone(claim_Carpentry_For4))
 confirm_Carpentry_For4_By2_JwtObj.iss = creds[2].did
 confirm_Carpentry_For4_By2_JwtObj.sub = creds[4].did
-let confirm_Carpentry_For4_By2_JwtProm = credentials[2].createVerification(confirm_Carpentry_For4_By2_JwtObj)
+const confirm_Carpentry_For4_By2_JwtProm = credentials[2].createVerification(confirm_Carpentry_For4_By2_JwtObj)
 
-let confirm_Carpentry_For4_By6_JwtObj = R.clone(testUtil.jwtTemplate)
+const confirm_Carpentry_For4_By6_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For4_By6_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For4_By6_JwtObj.claim.object.push(R.clone(claim_Carpentry_For4))
 confirm_Carpentry_For4_By6_JwtObj.iss = creds[6].did
 confirm_Carpentry_For4_By6_JwtObj.sub = creds[4].did
-let confirm_Carpentry_For4_By6_JwtProm = credentials[6].createVerification(confirm_Carpentry_For4_By6_JwtObj)
+const confirm_Carpentry_For4_By6_JwtProm = credentials[6].createVerification(confirm_Carpentry_For4_By6_JwtObj)
 
 
 
-let claim_Carpentry_For7 = R.clone(claimCarpentry)
+const claim_Carpentry_For7 = R.clone(claimCarpentry)
 claim_Carpentry_For7.identifier = creds[7].did
 
-let claim_Carpentry_For7_By7_JwtObj = R.clone(testUtil.jwtTemplate)
+const claim_Carpentry_For7_By7_JwtObj = R.clone(testUtil.jwtTemplate)
 claim_Carpentry_For7_By7_JwtObj.claim = R.clone(claim_Carpentry_For7)
 claim_Carpentry_For7_By7_JwtObj.iss = creds[7].did
 claim_Carpentry_For7_By7_JwtObj.sub = creds[7].did
-let claim_Carpentry_For7_By7_JwtProm = credentials[7].createVerification(claim_Carpentry_For7_By7_JwtObj)
+const claim_Carpentry_For7_By7_JwtProm = credentials[7].createVerification(claim_Carpentry_For7_By7_JwtObj)
 
-let confirm_Carpentry_For7_By4_JwtObj = R.clone(testUtil.jwtTemplate)
+const confirm_Carpentry_For7_By4_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For7_By4_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For7_By4_JwtObj.claim.object.push(R.clone(claim_Carpentry_For4))
 confirm_Carpentry_For7_By4_JwtObj.iss = creds[4].did
 confirm_Carpentry_For7_By4_JwtObj.sub = creds[7].did
-let confirm_Carpentry_For7_By4_JwtProm = credentials[4].createVerification(confirm_Carpentry_For7_By4_JwtObj)
+const confirm_Carpentry_For7_By4_JwtProm = credentials[4].createVerification(confirm_Carpentry_For7_By4_JwtObj)
 
 
 
 
 
 
-var pushTokens,
+let pushTokens,
     claim_Carpentry_For0_By0_JwtEnc,
     claim_Carpentry_For3_By4_JwtEnc,
     confirm_Carpentry_For3_By4_JwtEnc,
@@ -172,7 +172,7 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
     }).catch((err) => {
       return Promise.reject(err)
     })
-      }
+  }
 
 describe('Skills', () => {
 

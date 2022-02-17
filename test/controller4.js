@@ -54,8 +54,8 @@ let moreAfter
 
 describe('Load Claims Incrementally', () => {
 
-  it('insert offer claim', () => {
-    return request(Server)
+  it('insert offer claim', () =>
+    request(Server)
       .post('/api/claim')
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .send({jwtEncoded: manyClaimsJwtEnc[0]})
@@ -66,10 +66,10 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  })
+  )
 
-  it('retrieve single claim with no more after', () => {
-    return request(Server)
+  it('retrieve single claim with no more after', () =>
+    request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
@@ -81,10 +81,10 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  })
+  )
 
-  it('insert many, many claims claim', () => {
-    return Promise.all(
+  it('insert many, many claims', () =>
+    Promise.all(
       manyClaimsJwtEnc.map((jwtEnc) => {
         return request(Server)
           .post('/api/claim')
@@ -99,10 +99,10 @@ describe('Load Claims Incrementally', () => {
           })
       })
     )
-  })
+  )
 
-  it('retrieve many claims with many more to come', () => {
-    return request(Server)
+  it('retrieve many claims with many more to come', () =>
+    request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
@@ -117,10 +117,10 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  })
+  )
 
-  it('retrieve many claims with a few more to come', () => {
-    return request(Server)
+  it('retrieve many claims with a few more to come', () =>
+    request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfter)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
@@ -134,11 +134,11 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  })
+  )
 
 
-  it('retrieve many claims with a few more to come', () => {
-    return request(Server)
+  it('retrieve a few more claims', () =>
+    request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfter)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
@@ -151,6 +151,6 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  })
+  )
 
 })

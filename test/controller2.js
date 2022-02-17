@@ -14,9 +14,9 @@ const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
-var creds = testUtil.creds
+const creds = testUtil.creds
 
-let claimRecorder = {
+const claimRecorder = {
   "@context": "http://schema.org",
   "@type": "Organization",
   name: "US Utah Davis County Government",
@@ -32,7 +32,7 @@ let claimRecorder = {
   },
 }
 
-let claimSecretary = {
+const claimSecretary = {
   "@context": "http://schema.org",
   "@type": "Organization",
   name: "Cottonwood Cryptography Club",
@@ -48,7 +48,7 @@ let claimSecretary = {
   },
 }
 
-let claimPresident = {
+const claimPresident = {
   "@context": "http://schema.org",
   "@type": "Organization",
   name: "Cottonwood Cryptography Club",
@@ -64,82 +64,82 @@ let claimPresident = {
   },
 }
 
-var credentials = R.map((c) => new Credentials(c), creds)
+const credentials = R.map((c) => new Credentials(c), creds)
 
-let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
-let claimRecorderFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
+const claimRecorderFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
 claimRecorderFor2By2JwtObj.claim = R.clone(claimRecorder)
 claimRecorderFor2By2JwtObj.claim.member.member.identifier = creds[2].did
 claimRecorderFor2By2JwtObj.iss = creds[2].did
 claimRecorderFor2By2JwtObj.sub = creds[2].did
-let claimRecorderFor2By2JwtProm = credentials[2].createVerification(claimRecorderFor2By2JwtObj)
+const claimRecorderFor2By2JwtProm = credentials[2].createVerification(claimRecorderFor2By2JwtObj)
 
-let claimSecretaryFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
+const claimSecretaryFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
 claimSecretaryFor2By2JwtObj.claim = R.clone(claimSecretary)
 claimSecretaryFor2By2JwtObj.claim.member.member.identifier = creds[2].did
 claimSecretaryFor2By2JwtObj.iss = creds[2].did
 claimSecretaryFor2By2JwtObj.sub = creds[2].did
-let claimSecretaryFor2By2JwtProm = credentials[2].createVerification(claimSecretaryFor2By2JwtObj)
+const claimSecretaryFor2By2JwtProm = credentials[2].createVerification(claimSecretaryFor2By2JwtObj)
 
-let claimPresidentFor3 = R.clone(claimPresident)
+const claimPresidentFor3 = R.clone(claimPresident)
 claimPresidentFor3.member.member.identifier = creds[3].did
 
-let claimPresidentFor3By3JwtObj = R.clone(testUtil.jwtTemplate)
+const claimPresidentFor3By3JwtObj = R.clone(testUtil.jwtTemplate)
 claimPresidentFor3By3JwtObj.claim = R.clone(claimPresidentFor3)
 claimPresidentFor3By3JwtObj.iss = creds[3].did
 claimPresidentFor3By3JwtObj.sub = creds[3].did
-let claimPresidentFor3By3JwtProm = credentials[3].createVerification(claimPresidentFor3By3JwtObj)
+const claimPresidentFor3By3JwtProm = credentials[3].createVerification(claimPresidentFor3By3JwtObj)
 
-let confirmPresidentFor3By5JwtObj = R.clone(testUtil.jwtTemplate)
+const confirmPresidentFor3By5JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor3By5JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmPresidentFor3By5JwtObj.claim.object.push(R.clone(claimPresidentFor3))
 confirmPresidentFor3By5JwtObj.iss = creds[5].did
 confirmPresidentFor3By5JwtObj.sub = creds[3].did
-let confirmPresidentFor3By5JwtProm = credentials[5].createVerification(confirmPresidentFor3By5JwtObj)
+const confirmPresidentFor3By5JwtProm = credentials[5].createVerification(confirmPresidentFor3By5JwtObj)
 
-let confirmPresidentFor3By6JwtObj = R.clone(testUtil.jwtTemplate)
+const confirmPresidentFor3By6JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor3By6JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmPresidentFor3By6JwtObj.claim.object.push(R.clone(claimPresidentFor3))
 confirmPresidentFor3By6JwtObj.iss = creds[6].did
 confirmPresidentFor3By6JwtObj.sub = creds[3].did
-let confirmPresidentFor3By6JwtProm = credentials[6].createVerification(confirmPresidentFor3By6JwtObj)
+const confirmPresidentFor3By6JwtProm = credentials[6].createVerification(confirmPresidentFor3By6JwtObj)
 
 
 
-let claimPresidentFor4 = R.clone(claimPresident)
+const claimPresidentFor4 = R.clone(claimPresident)
 claimPresidentFor4.member.member.identifier = creds[4].did
 
-let claimPresidentFor4By4JwtObj = R.clone(testUtil.jwtTemplate)
+const claimPresidentFor4By4JwtObj = R.clone(testUtil.jwtTemplate)
 claimPresidentFor4By4JwtObj.claim = R.clone(claimPresidentFor4)
 claimPresidentFor4By4JwtObj.iss = creds[4].did
 claimPresidentFor4By4JwtObj.sub = creds[4].did
-let claimPresidentFor4By4JwtProm = credentials[4].createVerification(claimPresidentFor4By4JwtObj)
+const claimPresidentFor4By4JwtProm = credentials[4].createVerification(claimPresidentFor4By4JwtObj)
 
 
 
-let confirmPresidentFor4By7JwtObj = R.clone(testUtil.jwtTemplate)
+const confirmPresidentFor4By7JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor4By7JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmPresidentFor4By7JwtObj.claim.object.push(R.clone(claimPresidentFor4))
 confirmPresidentFor4By7JwtObj.iss = creds[7].did
 confirmPresidentFor4By7JwtObj.sub = creds[4].did
-let confirmPresidentFor4By7JwtProm = credentials[7].createVerification(confirmPresidentFor4By7JwtObj)
+const confirmPresidentFor4By7JwtProm = credentials[7].createVerification(confirmPresidentFor4By7JwtObj)
 
-let confirmPresidentFor4By8JwtObj = R.clone(testUtil.jwtTemplate)
+const confirmPresidentFor4By8JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor4By8JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmPresidentFor4By8JwtObj.claim.object.push(R.clone(claimPresidentFor4))
 confirmPresidentFor4By8JwtObj.iss = creds[8].did
 confirmPresidentFor4By8JwtObj.sub = creds[4].did
-let confirmPresidentFor4By8JwtProm = credentials[8].createVerification(confirmPresidentFor4By8JwtObj)
+const confirmPresidentFor4By8JwtProm = credentials[8].createVerification(confirmPresidentFor4By8JwtObj)
 
-let confirmPresidentFor4By9JwtObj = R.clone(testUtil.jwtTemplate)
+const confirmPresidentFor4By9JwtObj = R.clone(testUtil.jwtTemplate)
 confirmPresidentFor4By9JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmPresidentFor4By9JwtObj.claim.object.push(R.clone(claimPresidentFor4))
 confirmPresidentFor4By9JwtObj.iss = creds[9].did
 confirmPresidentFor4By9JwtObj.sub = creds[4].did
-let confirmPresidentFor4By9JwtProm = credentials[9].createVerification(confirmPresidentFor4By9JwtObj)
+const confirmPresidentFor4By9JwtProm = credentials[9].createVerification(confirmPresidentFor4By9JwtObj)
 
-var pushTokens, claimPresidentFor3By3JwtEnc, confirmPresidentFor3By5JwtEnc, confirmPresidentFor3By6JwtEnc,
+let pushTokens, claimPresidentFor3By3JwtEnc, confirmPresidentFor3By5JwtEnc, confirmPresidentFor3By6JwtEnc,
     claimPresidentFor4By4JwtEnc, confirmPresidentFor4By7JwtEnc, confirmPresidentFor4By8JwtEnc, confirmPresidentFor4By9JwtEnc,
     claimRecorderFor2By2JwtEnc, claimSecretaryFor2By2JwtEnc
 
@@ -174,7 +174,7 @@ before(async () => {
 
 })
 
-var claimId
+let claimId
 
 async function postClaim(pushTokenNum, claimJwtEnc) {
   return request(Server)
@@ -278,7 +278,7 @@ describe('Visibility', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(testUtil.allDidsAreHidden(r.body)).to.be.false
-       var publicUrl = {}
+       const publicUrl = {}
        publicUrl[creds[2].did] = 'https://ignitecommunity.org'
        expect(r.body)
          .that.has.a.property('publicUrls')
