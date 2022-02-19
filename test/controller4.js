@@ -31,7 +31,24 @@ const claimOffer_By0_JwtObj = R.clone(testUtil.jwtTemplate)
 claimOffer_By0_JwtObj.claim = R.clone(claimOffer)
 const claimOffer_By0_JwtProm = credentials[0].createVerification(claimOffer_By0_JwtObj)
 
-const manyClaims = R.times(() => credentials[0].createVerification(claimOffer_By0_JwtObj), 101)
+const manyClaims =
+  R.times(n =>
+    R.set(
+      R.lensProp('claim'),
+      R.set(
+        R.lensProp('identifier'),
+        'abcxyz' + String(n),
+        R.set(
+          R.lensProp('issuedAt'),
+          new Date().toISOString(),
+          claimOffer
+        )
+      ),
+      testUtil.jwtTemplate
+    ),
+    101
+  )
+const manyClaimsJwts = manyClaims.map(claim => credentials[0].createVerification(claim))
 
 let pushTokens, manyClaimsJwtEnc
 
@@ -43,7 +60,7 @@ before(async () => {
       console.log("Created controller push tokens", pushTokens)
     })
 
-  await Promise.all(manyClaims)
+  await Promise.all(manyClaimsJwts)
     .then((jwts) => {
       manyClaimsJwtEnc = jwts
       console.log("Created controller4 user tokens", jwts)
