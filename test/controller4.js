@@ -18,12 +18,13 @@ const credentials = R.map((c) => new Credentials(c), creds)
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
 const claimOffer = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "Offer",
   identifier: "abc",
   issuedAt: '2022-02-15 19:28:00Z',
   itemOffered: { amountOfThisGood: 2, unitCode: 'HUR' },
   offeredBy: { identifier: creds[0].did },
+  recipient: { identifier: creds[1].did },
 }
 
 const claimOffer_By0_JwtObj = R.clone(testUtil.jwtTemplate)
