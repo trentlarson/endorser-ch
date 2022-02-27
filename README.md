@@ -326,7 +326,7 @@ User stories:
     - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
-  - to do: show strong network; show networks with personal connection vs public DID; show fake network
+- to do: show strong network; show networks with personal connection vs public DID; show fake network
 
 
 ## Tasks

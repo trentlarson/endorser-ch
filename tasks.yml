@@ -1,16 +1,18 @@
 ---
 - next endorser-mobile release :
 
-  - add paid w/ confirmations - scrolling query
-    - investigate each one
-      - 01 show next
-      - 02 search
-  - .2 show 'Agree/Confirm' on search results
+  - .5 release video tutorial on endorser.ch
+
+  - .1 shrink the alert message for non-production servers (doesn't fit on Android)
+  - .2 type:bug name got erased after new install, entering name & saving, creating new ID, and going back to main screen and then settings
+
+  - .2 Distinguish issuer on confirmation list of new claims?
+
+  - 01 update Veramo to latest version and hopefully fix bug with JWT payload missing '"}'
+    - handle presentations of old JWTs with bad payloads
+
   - .5 add rejections
   - .5 add TradeAction? - BTC for food?
-  - .5 look up a claim by ID
-  - 01 refresh Apple cert
-  - .5 don't show 'null' in confirmations
 
 - 01 add sensitive issues to a separate list (eg. size)
 
@@ -25,9 +27,9 @@
 
   - 01 don't allow searches for DIDs
   - .5 add mobile app to wallet list: https://github.com/Gimly-Blockchain/ssi-wallets
-  - 02 handle presentation QR codes that are too big
+  - 02 real presentation (not just VC), fixing presentation QR codes that are too big
 
-  - .5 allow contact deletion w/ confirmation
+  - .5 reenable checkbox
   - .5 remove the useState copies of all the appStore values
   - .5 put my own QR code at top of contacts screen
 
@@ -117,7 +119,6 @@
   - 01 add Android 'release' build in the process
   - .2 change verbiage from "hide" & "not visible" to "blocked"?
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
-  - split up large QR presentation
   - fix icons (since they're pixelated and look fuzzy)
   - Android confirmation-loading spinner is invisible
   - load confirmations (on ID create, import, contact save... any await?)
