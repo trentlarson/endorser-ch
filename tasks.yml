@@ -205,3 +205,5 @@
 - 01 in confirmation, check whether it really is a JoinAction
 - 01 try-catch around jwt.service resolveAuthenticator when not connected to internet
 - 01 report page - who has the most activity for a time range
+- desktop app:
+  - get initial build on MacOS
