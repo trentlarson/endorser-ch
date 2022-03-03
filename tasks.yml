@@ -1,20 +1,6 @@
 ---
-- next endorser-mobile release :
 
-  - .5 release video tutorial on endorser.ch
-
-  - .1 shrink the alert message for non-production servers (doesn't fit on Android)
-  - .2 type:bug name got erased after new install, entering name & saving, creating new ID, and going back to main screen and then settings
-
-  - .2 Distinguish issuer on confirmation list of new claims?
-
-  - 01 update Veramo to latest version and hopefully fix bug with JWT payload missing '"}'
-    - handle presentations of old JWTs with bad payloads
-
-  - .5 add rejections
-  - .5 add TradeAction? - BTC for food?
-
-- 01 add sensitive issues to a separate list (eg. size)
+- 01 add sensitive issues to a separate list (eg. size, rate)
 
 - 01 disallow search by DIDs
 - 01 rate-limit some DIDs (or IPs)
@@ -23,17 +9,26 @@
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 fix IDCommunity links
 
-- next next endorser-mobile release :
+- next endorser-mobile release :
 
-  - 01 don't allow searches for DIDs
-  - .5 add mobile app to wallet list: https://github.com/Gimly-Blockchain/ssi-wallets
+  - 01 update Veramo to latest version and hopefully fix bug with JWT payload missing '"}'
+    - handle presentations of old JWTs with bad payloads
+
+  - .1 shrink the alert message for non-production servers (doesn't fit on Android)
+  - .2 type:bug name got erased after new install, entering name & saving, creating new ID, and going back to main screen and then settings
+
+  - .2 Distinguish issuer on confirmation list of new claims?
+
+  - .5 add rejections?
+  - .5 add TradeAction? - BTC for food?
+
   - 02 real presentation (not just VC), fixing presentation QR codes that are too big
 
-  - .5 reenable checkbox
+  - .5 restore checkbox in ConfirmOthers
   - .5 remove the useState copies of all the appStore values
   - .5 put my own QR code at top of contacts screen
 
-  - 20 feed #mobile-feed
+  - 20 feed id:mobile-feed :
     - query for recent additions
     - save last query time
 
