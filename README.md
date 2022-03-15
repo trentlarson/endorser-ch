@@ -22,7 +22,7 @@ npm ci
 cp .env.local .env
 
 # setup/migrate DB
-NODE_ENV=dev DBUSER=sa DBPASS=... npm run flyway migrate
+NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
 # run in development mode
@@ -173,7 +173,7 @@ curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-T
 
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
-NODE_ENV=dev DBUSER=sa DBPASS=... npm run flyway migrate
+NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 ```
 
 

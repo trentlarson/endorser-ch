@@ -1,9 +1,14 @@
 ---
 
+- 01 endorser-ch doesn't build for anyone else (mediciventures reference)
+
+- 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
+
 - 01 add sensitive issues to a separate list (eg. size, rate)
 
 - 01 disallow search by DIDs
-- 01 rate-limit some DIDs (or IPs)
+
+- .5 allow the issuer to see all the details of JWTs they've issued
 
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
@@ -11,8 +16,15 @@
 
 - next endorser-mobile release :
 
-  - 01 update Veramo to latest version and hopefully fix bug with JWT payload missing '"}'
-    - handle presentations of old JWTs with bad payloads
+  - .5 Add a way to give link to a Plan & Offer
+
+  - 01 Show the full VC for a result from a search (ie. from lookup in back-end)
+
+  - 90 20 notifications for new creds
+
+  - Add other options to PlanAction :
+    - Event - identifier, attendee, startDate, endDate(?), location
+    - GiveAction - identifier, object
 
   - .1 shrink the alert message for non-production servers (doesn't fit on Android)
   - .2 type:bug name got erased after new install, entering name & saving, creating new ID, and going back to main screen and then settings
@@ -33,7 +45,6 @@
     - save last query time
 
   - allow to present without sending to the server
-  - notify on new claim about myself
   - Change CSV export/import to Google headers
   - test for hundreds of contacts
   - YAML display format for new claims
