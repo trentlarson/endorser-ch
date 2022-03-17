@@ -325,6 +325,8 @@ before(async () => {
     ] = jwts
     console.log("Created controller user tokens", jwts)
   })
+
+  return Promise.resolve()
 })
 
 describe('Util', () => {

@@ -129,7 +129,7 @@ let pushTokens,
     confirm_Carpentry_For7_By4_JwtEnc
 before(async () => {
 
-  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller push tokens", pushTokens) })
+  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller3 push tokens", pushTokens) })
 
   await Promise.all([
     claim_Carpentry_For0_By0_JwtProm,
@@ -158,6 +158,7 @@ before(async () => {
     console.log("Created controller3 user tokens", jwts)
   })
 
+  return Promise.resolve()
 })
 
 async function postClaim(pushTokenNum, claimJwtEnc) {

@@ -57,7 +57,7 @@ before(async () => {
   await Promise.all(pushTokenProms)
     .then((jwts) => {
       pushTokens = jwts;
-      console.log("Created controller push tokens", pushTokens)
+      console.log("Created controller4 push tokens", pushTokens)
     })
 
   await Promise.all(manyClaimsJwts)
@@ -66,6 +66,7 @@ before(async () => {
       console.log("Created controller4 user tokens", jwts)
     })
 
+  return Promise.resolve()
 })
 
 let moreAfter

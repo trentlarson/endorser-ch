@@ -172,6 +172,7 @@ before(async () => {
     console.log("Created controller2 user tokens", jwts)
   })
 
+  return Promise.resolve()
 })
 
 let claimId
