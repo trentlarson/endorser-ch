@@ -1,6 +1,10 @@
 ---
 
-- 01 endorser-ch doesn't build for anyone else (mediciventures reference)
+- 01 show anyone in your network who has taken the pledge
+
+- 01 bump dependencies
+
+- 01 fix /api-docs for /api-explorer
 
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
 
@@ -16,7 +20,14 @@
 
 - next endorser-mobile release :
 
+  - .5 Create identifier on first click (not another click on Settings)
+  - .5 When adding a new contact (eg. by URL), add visibility (and maybe confirm).
+  - 02 Allow bulk add of credential from URL
+  - 01 Add Z4A onboarding
+
   - .5 Add a way to give link to a Plan & Offer
+
+  - .1 After adding by URL, erase text box
 
   - 01 Show the full VC for a result from a search (ie. from lookup in back-end)
 
