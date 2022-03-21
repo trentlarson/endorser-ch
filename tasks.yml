@@ -20,9 +20,6 @@
 
 - next endorser-mobile release :
 
-  - .5 Create identifier on first click (not another click on Settings)
-  - .5 When adding a new contact (eg. by URL), add visibility (and maybe confirm).
-  - 02 Allow bulk add of credential from URL
   - 01 Add Z4A onboarding
 
   - .5 Add a way to give link to a Plan & Offer
@@ -90,7 +87,6 @@
     - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
     - handle errors if server is inaccessible
   - .5 clear the contact TextInput boxes after hitting "Create"
-  - release for hardening
   - .5 remove didManagerFind call from ConfirmOthers without causing an error
 
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
@@ -129,6 +125,7 @@
   - 01 add a way to retrieve all DIDs that can see me
     - 01 add a way from the mobile app to audit all the DIDs that can see me
   - 02 get review from professional - useEffect & useFocusEffect calls
+    - See especially scannedDatum passed to Contacts.tsx, where I don't understand how to goBack without remembering the params and why other combinations didn't work (eg. useEffect, setting scannedImport in the useState). (Note that a code change causes a reload and then the useFocusEffect will run again. Not a problem, just indicates a suboptimal design.)
   - 02 bulk import contacts (and export via JSON)
   - 02 split out confirmations into multiple separate submissions, one for each subject
   - document (eg enhancements to key derivation)
@@ -138,6 +135,7 @@
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
   - fix icons (since they're pixelated and look fuzzy)
   - Android confirmation-loading spinner is invisible
+  - Figure out why "fetch" doesn't retrieve the most recent data.
   - load confirmations (on ID create, import, contact save... any await?)
   - report on confirmations
   - write advanced key manager
