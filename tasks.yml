@@ -2,9 +2,9 @@
 
 - 01 show anyone in your network who has taken the pledge
 
-- 01 bump dependencies
+- .5 test out the timezone (since "should get 4 claims today" and "should get enough past claims" fail in NZ)
 
-- 01 fix /api-docs for /api-explorer
+- 01 bump dependencies
 
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
 
@@ -12,27 +12,29 @@
 
 - 01 disallow search by DIDs
 
-- .5 allow the issuer to see all the details of JWTs they've issued
-
-- 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
-- 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 fix IDCommunity links
+
+- 01 fix /api-docs for /api-explorer
 
 - next endorser-mobile release :
 
-  - 01 Add Z4A onboarding
+  - 01 figure out confirmations for organizations
+
+  - .5 catch error for bad scan, or for bad format (eg. non-JSON claim) scan
+
+  - .5 type:bug click on identifier link on confirmation screen hung app on Android
+
+  - .1 put more spacing on the sign-success page (for Android - after signing it overlaps)
+  - .1 remove the "Something went wrong" that shows on "signed" page before payload is sent (on slow Android phone)
+  - .1 After adding by URL, erase text box
 
   - .5 Add a way to give link to a Plan & Offer
 
-  - .1 After adding by URL, erase text box
-
   - 01 Show the full VC for a result from a search (ie. from lookup in back-end)
 
-  - 90 20 notifications for new creds
-
   - Add other options to PlanAction :
-    - Event - identifier, attendee, startDate, endDate(?), location
-    - GiveAction - identifier, object
+    - 01 Event - identifier, attendee, startDate, endDate(?), location
+    - 01 GiveAction - identifier, object
 
   - .1 shrink the alert message for non-production servers (doesn't fit on Android)
   - .2 type:bug name got erased after new install, entering name & saving, creating new ID, and going back to main screen and then settings
@@ -51,8 +53,8 @@
   - 20 feed id:mobile-feed :
     - query for recent additions
     - save last query time
+    - notify user
 
-  - allow to present without sending to the server
   - Change CSV export/import to Google headers
   - test for hundreds of contacts
   - YAML display format for new claims
@@ -71,16 +73,12 @@
     - on server side, provide an auth mechanism for peer DIDs
     - create a table for the provider & derivation? (include DID doc?)
 
-  - .2 put "confirm" button on top of confirm page as well as on bottom
-  - 01 upgrade data-store
+  - 01 upgrade data-store library
   - .2 show "blank" or something when value is {} (eg. recipient for 61 on test server shows blank under Search All see console.log in ReportFromEndorser)
   - .5 update from API level 29 to 30 (Android 11)
   - .2 catch errors on import (probably the seed, but look at contacts, too)
   - 01 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
   - .2 change claim & issuer to not be blank when there is no verifiedResponse
-  - .2 add confirmation prompt when they delete contact
-    - if visible to them, add note about them still seeing you
-    - note that there may be claims that you have made about that person, but you'll no longer have a record of who it is
   - .5 move Search All results to separate page, and let us apply TakeAction or AgreeAction
   - 02 when there's a network error, the error message is delayed (so seems like nothing happened)
     - check all network & DB calls & then calls for error handlingp
@@ -96,15 +94,19 @@
   - .5 show credential contents (and allow browsing)
   - .5 test where cacList has a linked confirmation
   - .5 declare the type of cacList in VerifyCredential.tsx
-  - 02 edit contacts
-  - .5 make contact DIDs selectable
   - .5 make submission a real VC with proof inside
+  - .5 on verify screen, the date on the proof changes every time; show the original with unchanging date
+  - .5 Android confirmation-loading spinner is invisible
+  - 01 Figure out why "fetch" doesn't retrieve the most recent data. (Test by scanning a QR code to load contacts in bulk, and see that you don't get the new contents when you change something in that remote CSV.)
   - see other bugs below
 - 02 show signatures for proof of confirmations
 - 02 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
 - 04 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
   - may be due to SimpleSigner in controller.js and https://github.com/decentralized-identity/did-jwt/blob/937973e31d4bee3ee32dd1e077f11d31b6b868cb/README.md#1-create-a-did-jwt
+- .5 allow the issuer to see all the details of JWTs they've issued
+- 01 show an error, eg. on a confirmation for a claim that doesn't exist
+- 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 04 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 01 and fix subjects (eg. Jun 29 claims by me for others)
@@ -115,31 +117,25 @@
 - 01 remove the didVisibleToDids when listing possible confirmations
 - 02 change name of app from "uport demo" (when logging in)
 - 01 add .json(someErr) to all routers in the error path
-- 01 put functionality in uport mobile app -- currently veramo id:mobile-doc
-  - add to the Veramo documents for migration
 - mobile app:
   - 08 store claims & confirmations
     - allow to download
+  - 01 allow export of selected contacts
   - .5 remove modal confirmation for saving a contact
   - .5 warn about overwriting when saving a contact with existing DID
   - 01 add a way to retrieve all DIDs that can see me
     - 01 add a way from the mobile app to audit all the DIDs that can see me
   - 02 get review from professional - useEffect & useFocusEffect calls
     - See especially scannedDatum passed to Contacts.tsx, where I don't understand how to goBack without remembering the params and why other combinations didn't work (eg. useEffect, setting scannedImport in the useState). (Note that a code change causes a reload and then the useFocusEffect will run again. Not a problem, just indicates a suboptimal design.)
-  - 02 bulk import contacts (and export via JSON)
-  - 02 split out confirmations into multiple separate submissions, one for each subject
   - document (eg enhancements to key derivation)
-  - publish F-Droid
+  - publish on F-Droid
   - 01 add Android 'release' build in the process
   - .2 change verbiage from "hide" & "not visible" to "blocked"?
   - type:CorrectAction when multiple "Can ... see me?" or "double-check" buttons are hit, often at least one of the spinners never stops
-  - fix icons (since they're pixelated and look fuzzy)
-  - Android confirmation-loading spinner is invisible
-  - Figure out why "fetch" doesn't retrieve the most recent data.
+  - make icons look better (since they're pixelated and look fuzzy)
   - load confirmations (on ID create, import, contact save... any await?)
   - report on confirmations
   - write advanced key manager
-  - log into website
   - verify contact signature from scanned JWT
   - type:CheckAction test that previous uPort QR codes work
 
@@ -148,12 +144,12 @@
   - allow search via connected person
   - allow messaging
   - avoid multidex
-  - notify when there's an update
+  - notify user when there's an update to the app
   - memcache contact list
-  - based on KERI
+  - manage keys with KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
 
-- 01 disallow duplicate claims; good canonical JSON http://gibson042.github.io/canonicaljson-spec/
+- 01 disallow duplicate claims; good canonical JSON https://gibson042.github.io/canonicaljson-spec/
 - 01 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
 - 01 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 08 allow links into contacts for contacting via text
