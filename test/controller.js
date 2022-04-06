@@ -31,7 +31,7 @@ const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3
 const creds = testUtil.creds
 
 const claimBvc = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
     // did: "..."
@@ -44,7 +44,7 @@ const claimBvc = {
 }
 
 const claimMyNight = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
     // did: "..."
@@ -57,7 +57,7 @@ const claimMyNight = {
 }
 
 const claimDebug = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
     // did: "..."
@@ -70,7 +70,7 @@ const claimDebug = {
 }
 
 const claimIIW2019a = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "JoinAction",
   "agent": {
     // supply "did"
@@ -522,7 +522,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
-         .that.equals('http://schema.org')
+         .that.equals('https://schema.org')
        expect(r.body)
          .that.has.a.property('claimType')
          .that.equals('JoinAction')
@@ -541,7 +541,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
-         .that.equals('http://schema.org')
+         .that.equals('https://schema.org')
        expect(r.body)
          .that.has.a.property('claimType')
          .that.equals('JoinAction')

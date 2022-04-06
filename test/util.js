@@ -74,7 +74,7 @@ module.exports = {
   },
 
   confirmationTemplate: {
-    "@context": "http://schema.org",
+    "@context": "https://schema.org",
     "@type": "AgreeAction",
     "object": [
       // supply claims
@@ -82,7 +82,7 @@ module.exports = {
   },
 
   claimCornerBakery: {
-    "@context": "http://endorser.ch",
+    "@context": "https://endorser.ch",
     "@type": "Tenure",
     "spatialUnit": {
       "geo": {
@@ -96,7 +96,7 @@ module.exports = {
   },
 
   claimFoodPantry: {
-    "@context": "http://endorser.ch",
+    "@context": "https://endorser.ch",
     "@type": "Tenure",
     "spatialUnit": {
       "geo": {

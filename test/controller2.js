@@ -17,7 +17,7 @@ const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").to
 const creds = testUtil.creds
 
 const claimRecorder = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "Organization",
   name: "US Utah Davis County Government",
   member: {
@@ -33,7 +33,7 @@ const claimRecorder = {
 }
 
 const claimSecretary = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "Organization",
   name: "Cottonwood Cryptography Club",
   member: {
@@ -49,7 +49,7 @@ const claimSecretary = {
 }
 
 const claimPresident = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "Organization",
   name: "Cottonwood Cryptography Club",
   member: {
@@ -220,7 +220,7 @@ describe('Visibility', () => {
        expect(r.body)
          .to.be.an('object')
          .that.has.a.property('claimContext')
-         .that.equals('http://schema.org')
+         .that.equals('https://schema.org')
        expect(r.body)
          .that.has.a.property('claimType')
          .that.equals('Organization')

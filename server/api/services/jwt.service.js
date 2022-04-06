@@ -138,7 +138,7 @@ class JwtService {
 
     l.debug(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
 
-    if (origClaim['@context'] === 'http://schema.org'
+    if (origClaim['@context'] === 'https://schema.org'
         && origClaim['@type'] === 'JoinAction') {
 
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
@@ -157,7 +157,7 @@ class JwtService {
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
       return {confirmId:result, actionClaimId}
 
-    } else if (origClaim['@context'] === 'http://endorser.ch'
+    } else if (origClaim['@context'] === 'https://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
 
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
@@ -173,7 +173,7 @@ class JwtService {
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
       return {confirmId:result, tenureClaimId}
 
-    } else if (origClaim['@context'] === 'http://schema.org'
+    } else if (origClaim['@context'] === 'https://schema.org'
                && origClaim['@type'] === 'Organization'
                && origClaim['@type'] === 'Organization'
                && origClaim.member
@@ -217,7 +217,7 @@ class JwtService {
 
   async createEmbeddedClaimRecord(jwtId, issuerDid, claim) {
 
-    if (claim['@context'] === 'http://schema.org'
+    if (claim['@context'] === 'https://schema.org'
         && claim['@type'] === 'AgreeAction') {
 
       l.trace('Adding AgreeAction confirmation', claim)
@@ -242,7 +242,7 @@ class JwtService {
           return Promise.reject(err)
         })
 
-    } else if (claim['@context'] === 'http://schema.org'
+    } else if (claim['@context'] === 'https://schema.org'
         && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
@@ -279,7 +279,7 @@ class JwtService {
       let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
 
-    } else if (claim['@context'] === 'http://schema.org'
+    } else if (claim['@context'] === 'https://schema.org'
                && claim['@type'] === 'Organization'
                && claim.member
                && claim.member['@type'] === 'OrganizationRole'
@@ -297,7 +297,7 @@ class JwtService {
       let orgRoleId = await db.orgRoleInsert(entity)
 
 
-    } else if (claim['@context'] === 'http://endorser.ch'
+    } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {
 
       let bbox = calcBbox(claim.spatialUnit.geo.polygon)
@@ -315,7 +315,7 @@ class JwtService {
 
       let tenureId = await db.tenureInsert(entity)
 
-    } else if (claim['@context'] === 'http://endorser.ch'
+    } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 
       // this is for legacy Confirmation and can be deprecated; see AgreeAction
@@ -344,7 +344,7 @@ class JwtService {
           return Promise.reject(err)
         })
 
-    } else if (claim['@context'] === 'http://schema.org'
+    } else if (claim['@context'] === 'https://schema.org'
                && claim['@type'] === 'VoteAction') {
 
       let vote = {

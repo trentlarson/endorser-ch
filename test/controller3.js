@@ -21,7 +21,7 @@ const credentials = R.map((c) => new Credentials(c), creds)
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
 const claimCarpentry = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "Person",
   name: "Person",
   identifier: null, // change to "did:...:..."

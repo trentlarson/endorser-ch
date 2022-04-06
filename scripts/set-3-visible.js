@@ -11,7 +11,7 @@ let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowE
 
 
 let claimAttendance = {
-  "@context": "http://schema.org",
+  "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
     did: creds[4]
@@ -36,7 +36,7 @@ describe('Visibility setup', () => {
      serverRequest
      .post('/api/report/makeMeGloballyVisible')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
-     .send({url: "http://SomebodyTrustworthy.com"})
+     .send({url: "https://SomebodyTrustworthy.com"})
      .then(r => {
        if (r.status != 201) { throw "Got bad result of " + r.status }
        console.log("Made 3 visible.")
