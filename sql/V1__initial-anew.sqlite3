@@ -31,7 +31,7 @@ CREATE TABLE jwt (
        subject VARCHAR(100),
        claimType VARCHAR(60),
        claimContext VARCHAR(60),
-       claim, TEXT,
+       claim TEXT,
        claimEncoded TEXT,
        jwtEncoded TEXT,
        hashHex VARCHAR(64),

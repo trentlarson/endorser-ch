@@ -33,7 +33,9 @@ test/test.sh
 ```
 
 ## Next Deploy
-- Nothing special yet.
+- backup DB
+- `DROP TABLE schema_version;`
+- `NODE_ENV=... FLYWAY_BASELINE_VERSION=1 DBUSER=sa DBPASS=... npm run flyway baseline`
 
 
 ## Install Dependencies
