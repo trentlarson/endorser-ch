@@ -1,5 +1,9 @@
 ---
 
+- 01 fix DB records for all old confirmations
+
+- 01 add latest to bitcoin network
+
 - 01 show anyone in your network who has taken the pledge
 
 - .5 test out the timezone (since "should get 4 claims today" and "should get enough past claims" fail in NZ)
@@ -18,7 +22,12 @@
 
 - next endorser-mobile release :
 
-  - 01 figure out confirmations for organizations
+  - .5 my transactions show 1 strange claim
+  - .5 my paid transaction details show "undefined"
+
+  - .5 got an error after successful signature and submission to server
+
+  - 01 figure out confirmations for organizations(?)
 
   - .5 catch error for bad scan, or for bad format (eg. non-JSON claim) scan
 
@@ -116,6 +125,7 @@
 - 02 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
 - 01 remove the didVisibleToDids when listing possible confirmations
 - 02 change name of app from "uport demo" (when logging in)
+- 01 fix UI disallowing any calls for an expired token (see working-self on 2022.04.06) id:expired-uport-token
 - 01 add .json(someErr) to all routers in the error path
 - mobile app:
   - 08 store claims & confirmations
