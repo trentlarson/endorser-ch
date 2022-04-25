@@ -587,7 +587,7 @@ describe('Claim', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should get 1 comfirmation', () =>
+  it('should get 1 confirmation', () =>
      request(Server)
      .get('/api/claim?claimType=AgreeAction')
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
@@ -736,7 +736,7 @@ describe('Claim', () => {
 
   it('should get 4 claims today', () =>
      request(Server)
-     .get('/api/claim/?issuedAt_greaterThanOrEqualTo=' + TODAY_START_TIME_STRING + "&excludeConfirmations=true")
+     .get('/api/claim/?issuedAt_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING) + "&excludeConfirmations=true")
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
@@ -847,7 +847,7 @@ describe('Action', () => {
 
   it('should get enough past claims', () =>
      request(Server)
-     .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + DAY_START_TIME_STRING)
+     .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + encodeURIComponent(DAY_START_TIME_STRING))
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
@@ -875,7 +875,7 @@ describe('Action', () => {
 
   it('should get no actions today', () =>
      request(Server)
-     .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + TODAY_START_TIME_STRING)
+     .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING))
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1077,7 +1077,7 @@ describe('Report', () => {
 
   it('should get right aggregated info', () =>
      request(Server)
-     .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=' + START_TIME_STRING)
+     .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=' + encodeURIComponent(START_TIME_STRING))
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
