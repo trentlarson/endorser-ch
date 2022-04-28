@@ -51,7 +51,7 @@ class Controller {
   }
 
   getByQuery(req, res) {
-    JwtService.byQuery(req.query, res.locals.tokenIssuer)
+    JwtService.byQuery(req.query)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
@@ -108,11 +108,11 @@ export default express
  * Get many Claim JWTs
  * @group jwt - Claim JWT storage
  * @route GET /api/claim
- * @param {String} claimContents.query.optional This is exclusive and cannot be combined with other parameters.
- * @param {String} claimContext.query.optional
- * @param {String} claimType.query.optional
- * @param {String} issuedAt.query.optional
- * @param {String} subject.query.optional
+ * @param {string} claimContents.query.optional
+ * @param {string} claimContext.query.optional
+ * @param {string} claimType.query.optional
+ * @param {string} issuedAt.query.optional
+ * @param {string} subject.query.optional
  * @returns {Array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
  * @returns {Error}  default - Unexpected error
  */
@@ -122,7 +122,7 @@ export default express
  * Get a Claim JWT
  * @group jwt - Claim JWT storage
  * @route GET /api/claim/{id}
- * @param {number} id.path.required - the ID of the Claim JWT record to retrieve
+ * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
@@ -132,7 +132,7 @@ export default express
  * Get a Claim JWT with full encoding
  * @group jwt - Claim JWT storage
  * @route GET /api/claim/full/{id}
- * @param {number} id.path.required - the ID of the Claim JWT record to retrieve
+ * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
  * @returns {Error}  default - Unexpected error
  */

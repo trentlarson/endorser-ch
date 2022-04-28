@@ -486,13 +486,14 @@ class EndorserDatabase {
   }
 
   /**
-     @param object with a key-value for each column-value to filter, with some special keys:
-     - 'claimContents' for text to look for inside claims
-     - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
-     - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
-     - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
+     Similar to jwtsByParamsPaged, but:
+     - it returns an array of the results
+     - it works in reverse-chronological order
    **/
-  jwtByParams(params) {
+  jwtsByParams(params) {
+
+    // Note: this is very similar logic to jwtsByParamsPaged
+
     let claimContents = params.claimContents
     delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
     let excludeConfirmations = params.excludeConfirmations
@@ -500,7 +501,7 @@ class EndorserDatabase {
     let where = constructWhere(params, claimContents, excludeConfirmations)
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY issuedAt DESC LIMIT 50", where.params, function(err, row) {
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT, where.params, function(err, row) {
         row.issuedAt = zonify(row.issuedAt)
         data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
@@ -514,8 +515,69 @@ class EndorserDatabase {
   }
 
   /**
+     @param params is an object with a key-value for each column-value to filter, with some special keys:
+     - 'claimContents' for text to look for inside claims
+     - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
+     - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
+     - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
+     @param afterIdInput is the start of the search (excluding that item)
+
+     @return object with "data" as a list of results, and optional "maybeMoreAfter" with ID of last row if we hit the limit of this search
+   **/
+  jwtsByParamsPaged(params, afterIdInput) {
+
+    // Note: this is very similar logic to jwtsByParams
+
+    let claimContents = params.claimContents
+    delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
+    let excludeConfirmations = params.excludeConfirmations
+    delete params.excludeConfirmations
+    let where = constructWhere(params, claimContents, excludeConfirmations)
+
+    let allClause = where.clause
+    let allParams = where.params
+    if (afterIdInput) {
+      if (where.clause) {
+        allClause = where.clause + ' AND id > ?'
+        allParams = where.params.concat([afterIdInput])
+      } else {
+        allClause = ' WHERE id > ?'
+        allParams = [afterIdInput]
+      }
+    }
+
+    let rowErr
+    return new Promise((resolve, reject) => {
+      var data = []
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + allClause + " ORDER BY id LIMIT " + DEFAULT_LIMIT,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = zonify(row.issuedAt)
+            data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result["maybeMoreAfter"] = data[data.length - 1].id;
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
+  /**
      @param full claim text to find
   **/
+  /** unused, and very inefficient so not recommended until we have a good canonical comparison; see taskyaml:endorser.ch,2020/tasks#disallow-duplicate
   jwtByClaim(claimStr) {
     return new Promise((resolve, reject) => {
       var data = []
@@ -531,6 +593,7 @@ class EndorserDatabase {
       });
     })
   }
+  **/
 
   jwtInsert(entity) {
     return new Promise((resolve, reject) => {
@@ -546,7 +609,11 @@ class EndorserDatabase {
     })
   }
 
-  allIssuerClaimTypes(issuerDid, claimTypes, afterIdInput) {
+  /**
+     Start from afterIdInput (defaults to '0') and retrieve all claims by issuerDid with claimTypes.
+     Note that this works in chronological order.
+  **/
+  allIssuerClaimTypesPaged(issuerDid, claimTypes, afterIdInput) {
     return new Promise((resolve, reject) => {
       const afterId = afterIdInput || '0'
       const inListStr = claimTypes.map(value => "?").join(',')

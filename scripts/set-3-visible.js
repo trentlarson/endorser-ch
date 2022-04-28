@@ -1,3 +1,9 @@
+/**
+
+ Run at top level with: npm run set-3-visible
+
+**/
+
 import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')

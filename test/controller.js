@@ -1161,14 +1161,15 @@ describe('Visibility utils', () => {
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
-  it('should get claims and can see inside the most recent one', () =>
+  it('should get claims and can see inside the most recent but cannot see inside the oldest', () =>
      request(Server)
      .get('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array')
-       expect(testUtil.allDidsAreHidden(r.body[0])).to.be.false
+       expect(testUtil.allDidsAreHidden(r.body[0])).to.be.true
+       expect(testUtil.allDidsAreHidden(r.body[r.body.length-1])).to.be.false
        expect(r.status).that.equals(200)
      })).timeout(7001)
 

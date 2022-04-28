@@ -26,10 +26,10 @@ class JwtService {
     }
   }
 
-  async byQuery(params, requesterDid) {
+  async byQuery(params) {
     l.trace(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     var resultData
-    resultData = await db.jwtByParams(params)
+    resultData = await db.jwtsByParams(params)
     let result = resultData.map(j => {
       let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
       return thisOne
@@ -131,8 +131,8 @@ class JwtService {
   }
 
   /**
-     @return object with: {confirmId:NUMBER, actionClaimRowId:NUMBER}
-       ... where confirmId is -1 if something went wrong
+     @return object with: {confirmId: NUMBER, actionClaimId: NUMBER, orgRoleClaimId: NUMBER, tenureClaimId: NUMBER}
+       ... where confirmId is -1 if something went wrong, and all others are optional
    **/
   async createOneConfirmation(jwtId, issuerDid, origClaim) {
 
@@ -174,7 +174,6 @@ class JwtService {
       return {confirmId:result, tenureClaimId}
 
     } else if (origClaim['@context'] === 'https://schema.org'
-               && origClaim['@type'] === 'Organization'
                && origClaim['@type'] === 'Organization'
                && origClaim.member
                && origClaim.member['@type'] === 'OrganizationRole'

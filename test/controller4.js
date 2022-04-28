@@ -87,7 +87,7 @@ describe('Load Claims Incrementally', () => {
       })
   )
 
-  it('retrieve single claim with no more after', () =>
+  it('retrieve single Give/Offer claim with no more after', () =>
     request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -120,7 +120,7 @@ describe('Load Claims Incrementally', () => {
     )
   )
 
-  it('retrieve many claims with many more to come', () =>
+  it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -138,7 +138,7 @@ describe('Load Claims Incrementally', () => {
       })
   )
 
-  it('retrieve many claims with a few more to come', () =>
+  it('retrieve many Give/Offer claims with a few more to come', () =>
     request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfter)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -156,7 +156,7 @@ describe('Load Claims Incrementally', () => {
   )
 
 
-  it('retrieve a few more claims', () =>
+  it('retrieve a few more Give/Offer claims', () =>
     request(Server)
       .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfter)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -167,6 +167,63 @@ describe('Load Claims Incrementally', () => {
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body).that.does.not.have.property('maybeMoreAfter')
         expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+
+
+
+  //---------------- Now do the same with full JWT retrieval.
+
+  it('retrieve all claims with many more to come', () =>
+    request(Server)
+      .get('/api/reportAll/claims')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body).that.has.a.property('maybeMoreAfter')
+        expect(r.body.maybeMoreAfter).to.be.a('string')
+        moreAfter = r.body.maybeMoreAfter
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  it('retrieve all claims with a few more to come', () =>
+    request(Server)
+      .get('/api/reportAll/claims?afterId=' + moreAfter)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body).that.has.a.property('maybeMoreAfter')
+        moreAfter = r.body.maybeMoreAfter
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+
+  it('retrieve a few more claims', () =>
+    request(Server)
+      .get('/api/reportAll/claims?afterId=' + moreAfter)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(38)
+        expect(r.body).that.does.not.have.property('maybeMoreAfter')
       }).catch((err) => {
         return Promise.reject(err)
       })
