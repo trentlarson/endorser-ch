@@ -30,8 +30,8 @@ function constructWhere(params, claimContents, excludeConfirmations) {
       col = col.substring(0, col.length - GREATER_THAN.length)
       operator = ">"
     } else if (col.endsWith(GREATER_THAN_OR_EQUAL_TO)) {
-        col = col.substring(0, col.length - GREATER_THAN_OR_EQUAL_TO.length)
-        operator = ">="
+      col = col.substring(0, col.length - GREATER_THAN_OR_EQUAL_TO.length)
+      operator = ">="
     } else if (col.endsWith(LESS_THAN)) {
       col = col.substring(0, col.length - LESS_THAN.length)
       operator = "<"

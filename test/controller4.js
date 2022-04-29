@@ -212,7 +212,6 @@ describe('Load Claims Incrementally', () => {
       })
   )
 
-
   it('retrieve a few more claims', () =>
     request(Server)
       .get('/api/reportAll/claims?afterId=' + moreAfter)
