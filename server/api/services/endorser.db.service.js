@@ -664,7 +664,6 @@ class EndorserDatabase {
   jwtClaimsAndIdsUnmerkled() {
     return new Promise((resolve, reject) => {
       var data = []
-      // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
       db.each("SELECT id, claim, hashHex FROM jwt WHERE hashChainHex is null ORDER BY id", [], function(err, row) {
         data.push({id:row.id, claim:row.claim, hashHex:row.hashHex})
       }, function(err, num) {
@@ -695,7 +694,6 @@ class EndorserDatabase {
   }
 
   jwtSetMerkleHash(jwtId, hashHex, hashChainHex) {
-    // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE jwt SET hashHex = ?, hashChainHex = ? WHERE id = ?");
       db.run(stmt, [hashHex, hashChainHex, jwtId], function(err) {

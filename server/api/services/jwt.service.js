@@ -13,6 +13,12 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
+// This is because of a legacy schema.org issue: some JWTs at Endorser.ch are http instead of https.
+// So this is especially useful when we need to run scripts against that data.
+//const isContextSchemaOrg = (context) => context === 'https://schema.org' || context === 'http://schema.org'
+// ... however, we can use this one ongoing since we're now updating at each insertion.
+const isContextSchemaOrg = (context) => context === 'https://schema.org'
+
 class JwtService {
 
   async byId(id, requesterDid) {
@@ -111,8 +117,8 @@ class JwtService {
             var latestHashChainHex = seedHex
             for (let idAndClaim of idAndClaimArray) {
               latestHashChainHex = hashChain(latestHashChainHex, [idAndClaim])
-              // Note that we can remove the claim hashHex update once all historical hashes are updated. (... in multiple places)
               if (idAndClaim.hashHex === null) {
+                l.error("Found entries without a hashed claim, indicating some problem when inserting jwt records. Will create.")
                 idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
               }
               updates.push(db.jwtSetMerkleHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
@@ -138,7 +144,7 @@ class JwtService {
 
     l.debug(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
 
-    if (origClaim['@context'] === 'https://schema.org'
+    if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
@@ -175,7 +181,7 @@ class JwtService {
       return {confirmId:result, tenureClaimId}
 
 
-    } else if (origClaim['@context'] === 'https://schema.org'
+    } else if (isContextSchemaOrg(origClaim['@context'])
                && origClaim['@type'] === 'Organization'
                && origClaim.member
                && origClaim.member['@type'] === 'OrganizationRole'
@@ -218,7 +224,7 @@ class JwtService {
 
   async createEmbeddedClaimRecord(jwtId, issuerDid, claim) {
 
-    if (claim['@context'] === 'https://schema.org'
+    if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
 
       l.trace('Adding AgreeAction confirmation', claim)
@@ -244,8 +250,8 @@ class JwtService {
         })
 
 
-    } else if (claim['@context'] === 'https://schema.org'
-        && claim['@type'] === 'JoinAction') {
+    } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'JoinAction') {
 
       let agentDid = claim.agent.did
       if (!agentDid) {
@@ -270,11 +276,11 @@ class JwtService {
       } else {
         event = events[0]
         if (events.length > 1) {
-          l.warning(`${this.constructor.name} Multiple events exist with orgName ${orgName} name ${claim.event.name} startTime ${claim.event.startTime}`)
+          l.warn(`${this.constructor.name} Multiple events exist with orgName ${orgName} name ${claim.event.name} startTime ${claim.event.startTime}`)
         }
 
         let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
-        if (actionClaimId) return Promise.reject(new Error("Attempted to record an action claim that already exists with ID " + actionClaimId))
+        if (actionClaimId) return Promise.reject(new Error("Same user attempted to record an action claim that already exists with ID " + actionClaimId))
 
       }
 
@@ -282,7 +288,7 @@ class JwtService {
       l.trace(`${this.constructor.name} New action # ${actionId}`)
 
 
-    } else if (claim['@context'] === 'https://schema.org'
+    } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Organization'
                && claim.member
                && claim.member['@type'] === 'OrganizationRole'
@@ -319,7 +325,7 @@ class JwtService {
       let tenureId = await db.tenureInsert(entity)
 
 
-    } else if (claim['@context'] === 'https://endorser.ch'
+    } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Confirmation') {
 
       // this is for legacy Confirmation and can be deprecated; see AgreeAction
@@ -349,7 +355,7 @@ class JwtService {
         })
 
 
-    } else if (claim['@context'] === 'https://schema.org'
+    } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'VoteAction') {
 
       let vote = {
