@@ -17,8 +17,10 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 // We're keeping it for now because some have an old version of the app.
 // It is also useful when we need to run scripts against that data.
 const isContextSchemaOrg = (context) => context === 'https://schema.org' || context === 'http://schema.org'
-// Here is what to use for new deployments.
+//const isContextSchemaOrEndorser = (context) => isContextSchemaOrg(context) || context === 'http://endorser.ch' // latest was in 2020
+// Here is what to use for new deployments, and for endorser.ch when all users have updated their apps.
 //const isContextSchemaOrg = (context) => context === 'https://schema.org'
+const isContextSchemaOrEndorser = (context) => isContextSchemaOrg(context)
 
 class JwtService {
 
@@ -326,7 +328,7 @@ class JwtService {
       let tenureId = await db.tenureInsert(entity)
 
 
-    } else if (isContextSchemaOrg(claim['@context'])
+    } else if (isContextSchemaOrEndorser(claim['@context'])
                && claim['@type'] === 'Confirmation') {
 
       // this is for legacy Confirmation and can be deprecated; see AgreeAction
