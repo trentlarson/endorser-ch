@@ -722,7 +722,7 @@ class EndorserDatabase {
   async orgRoleInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO org_role_claim (jwtId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
-      db.run(stmt, [entity.jwtRowId, entity.issuerDid, entity.orgName, entity.roleName, entity.startDate, entity.endDate, entity.memberDid], function(err) {
+      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.orgName, entity.roleName, entity.startDate, entity.endDate, entity.memberDid], function(err) {
         if (err) {
           reject(err)
         } else {
