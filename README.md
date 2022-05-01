@@ -239,13 +239,14 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 - Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)
 
-- "CORS problems": endorser-ch is running?
+- "CORS problems": is endorser-ch running?
 
 - "Unsupported DID method 'ethr'": dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
 
 - "Converting circular structure to JSON": network connected?
 
 - This:
+```
 ../fsevents.cc:85:58: error: expected ';' after top level declarator
 void FSEvents::Initialize(v8::Handle<v8::Object> exports) {
                                                          ^
@@ -261,7 +262,24 @@ node-pre-gyp ERR! stack Error: Failed to execute '/Users/tlarson/.nvm/versions/n
 npm ERR! sqlite3@4.0.4 install: `node-pre-gyp install --fallback-to-build`
 npm ERR! Exit status 1
 ...
+```
 ... probably means you're running a different version of node.  Prod is on node v10.15.0 and npm 6.4.1
+
+- This:
+```
+> endorser-ch@1.1.23 flyway /Users/tlarson/dev/home/endorser-ch
+> flyway -c conf/flyway.js "migrate"
+
+flyway-8.5.10/jre/lib/server/libjvm.dylib: truncated gzip input
+tar: Error exit delayed from previous errors.
+(node:12554) UnhandledPromiseRejectionWarning: Error: Error: Untaring file failed 1
+    at /Users/tlarson/dev/home/endorser-ch/node_modules/node-flywaydb/bin/flyway.js:76:19
+    at processTicksAndRejections (internal/process/task_queues.js:93:5)
+(node:12554) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). (rejection id: 1)
+(node:12554) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process with a non-zero exit code.
+```
+... may require removal of node_modules and reinstall.
+
 
 
 ## Tests
@@ -340,7 +358,7 @@ See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.
 
 
 
-Note that new deployments can remove the "legacy Confirmation" and "legacy schema.org" code.
+Note that new deployments can remove the "legacy Confirmation" and "legacy context" code.
 
 
 

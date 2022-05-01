@@ -18,7 +18,11 @@ echo ""
 echo "If you get this error: 'TypeError: Converting circular structure to JSON'"
 echo "... it indicates a network problem."
 echo ""
-echo "In 3..."
+echo "In 5..."
+sleep 1
+echo "4..."
+sleep 1
+echo "3..."
 sleep 1
 echo "2..."
 sleep 1

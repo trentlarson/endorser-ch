@@ -1,10 +1,14 @@
 ---
 
 - 01 fix DB records for all old confirmations
+  - test that text search still works
 
 - 01 determine why origClaim in confirmation #1 in test-local is different
 
+- 01 test that deselecting "can see me" when adding contact on app will disallow seeing
+
 - 01 run load test, especially for claimContents search
+
 
 
 
@@ -114,6 +118,7 @@
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 04 publish txid of merkle-tree of the transactions (then automate merkle-tree)
+  - 01 add test for rejection of duplicate claim submissions
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 01 and fix subjects (eg. Jun 29 claims by me for others)
 - 02 allow read of all data in claims/confirmations issued by requester
@@ -156,7 +161,7 @@
   - manage keys with KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
 
-- 01 disallow duplicate claims; good canonical JSON https://gibson042.github.io/canonicaljson-spec/ id:disallow-duplicate ; recommend storing hashes so for efficient claim indexing
+- 01 disallow duplicate claims by same issuer; good canonical JSON https://gibson042.github.io/canonicaljson-spec/ id:disallow-duplicate ; recommend storing hashes so for efficient claim indexing
 - 01 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
 - 01 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 08 allow links into contacts for contacting via text
@@ -207,9 +212,7 @@
 - 01 usability - add a "waiting" spinner when remote method is called
 - 01 bug - if there's already a response JWT & message then a new one might not show
 - 01 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
-- 01 bug when a claim is duplicated (huh?)
 - 01 remove duplicate decode in JWT service
-- 01 add test for rejection of duplicate claim submissions
 - 01 handle "access_denied" when person rejects claim on phone
 - 01 usability - fade out the confirmation button when pushed
 - 08 have someone audit use of uport.pushToken

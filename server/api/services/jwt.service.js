@@ -13,14 +13,19 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
-// This is because of a legacy schema.org issue: some JWTs at Endorser.ch are http instead of https.
-// We're keeping it for now because some have an old version of the app.
-// It is also useful when we need to run scripts against that data.
+// This is because of "legacy context" issues.
+//
+// We still use this "http" since some have an old version of the app, but we expect to turn it off in late 2022.
+// (It is also useful when we need to run scripts against that data.)
+// Check with: select max(issuedAt) from jwt where claimContext = 'http://schema.org'
 const isContextSchemaOrg = (context) => context === 'https://schema.org' || context === 'http://schema.org'
-//const isContextSchemaOrEndorser = (context) => isContextSchemaOrg(context) || context === 'http://endorser.ch' // latest was in 2020
-// Here is what to use for new deployments, and for endorser.ch when all users have updated their apps.
+// ... and we only use the following for scripts.
+// Check with: select max(issuedAt) from jwt where claimContext = 'http://endorser.ch'
+//const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context) || context === 'http://endorser.ch' // latest was in 2020
+//
+// Here is what to use for new deployments, and for endorser.ch after all users have updated their apps.
 //const isContextSchemaOrg = (context) => context === 'https://schema.org'
-const isContextSchemaOrEndorser = (context) => isContextSchemaOrg(context)
+const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
 class JwtService {
 
@@ -239,15 +244,20 @@ class JwtService {
         let origClaim = claim['object']
         if (Array.isArray(origClaim)) {
           for (var claim of origClaim) {
+            //await this.createOneConfirmation(jwtId, issuerDid, claim) // for scripting for deterministic results
             recordings.push(this.createOneConfirmation(jwtId, issuerDid, claim))
           }
         } else if (origClaim) {
+          //await this.createOneConfirmation(jwtId, issuerDid, origClaim) // for scripting for deterministic results
           recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
         }
       }
       l.debug(`${this.constructor.name} Created ${recordings.length} agreed claims & network records.`)
 
       await Promise.all(recordings)
+        .then(recResults => {
+          l.debug(`Created ${recResults.length} embedded objects`, JSON.stringify(recResults))
+        })
         .catch(err => {
           return Promise.reject(err)
         })
@@ -328,16 +338,17 @@ class JwtService {
       let tenureId = await db.tenureInsert(entity)
 
 
-    } else if (isContextSchemaOrEndorser(claim['@context'])
+    } else if (isContextSchemaForConfirmation(claim['@context'])
                && claim['@type'] === 'Confirmation') {
 
-      // this is for legacy Confirmation and can be deprecated; see AgreeAction
+      // this is for "legacy Confirmation" and can be deprecated; see AgreeAction
 
       var recordings = []
 
       { // handle a single claim
         let origClaim = claim['originalClaim']
         if (origClaim) {
+          //await this.createOneConfirmation(jwtId, issuerDid, origClaim) // for scripting for deterministic results
           recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
         }
       }
@@ -346,6 +357,7 @@ class JwtService {
         let origClaims = claim['originalClaims']
         if (origClaims) {
           for (var origClaim of origClaims) {
+            //await this.createOneConfirmation(jwtId, issuerDid, origClaim) // for scripting for deterministic results
             recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
           }
         }
@@ -389,6 +401,7 @@ class JwtService {
       var recordings = []
       { // handle multiple claims
         for (var subClaim of claim) {
+          //await this.createEmbeddedClaimRecord(jwtId, issuerDid, subClaim) // for scripting for deterministic results
           recordings.push(this.createEmbeddedClaimRecord(jwtId, issuerDid, subClaim))
         }
       }
