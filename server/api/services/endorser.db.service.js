@@ -53,7 +53,7 @@ function constructWhere(params, claimContents, excludeConfirmations) {
     if (whereClause.length > 0) {
       whereClause += " AND"
     }
-    whereClause += " INSTR(lower(claim), lower(?)) > 0"
+    whereClause += " INSTR(lower(claim), lower(?))"
     paramArray.push(claimContents)
   }
 
