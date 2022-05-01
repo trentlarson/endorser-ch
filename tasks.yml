@@ -1,9 +1,10 @@
 ---
 
-- 01 debug why I'm not seeing 4/27 items on a search
-
 - 01 fix DB records for all old confirmations
 
+- 01 determine why origClaim in confirmation #1 in test-local is different
+
+- 01 run load test, especially for claimContents search
 
 
 
@@ -13,11 +14,9 @@
 
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
 
-- 01 add sensitive issues to a separate list (eg. size, rate)
+- 01 add sensitive issues to a separate list (eg. rate)
 
-- 01 disallow search by DIDs
-
-- 02 fix IDCommunity links
+- 01 disallow results containing DIDs (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
 - 01 fix /api-docs for /api-explorer
 
