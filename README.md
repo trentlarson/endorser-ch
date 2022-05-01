@@ -340,7 +340,10 @@ See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.
 
 
 
-Note that new deployments can remove the "legacy Confirmation" code.
+Note that new deployments can remove the "legacy Confirmation" and "legacy schema.org" code.
+
+
+
 
 Here's a way to verify a JWT signature.
 - Go to an empty directory (where you'll install and run code)

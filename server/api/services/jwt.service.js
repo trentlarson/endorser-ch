@@ -14,10 +14,11 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 // This is because of a legacy schema.org issue: some JWTs at Endorser.ch are http instead of https.
-// So this is especially useful when we need to run scripts against that data.
-//const isContextSchemaOrg = (context) => context === 'https://schema.org' || context === 'http://schema.org'
-// ... however, we can use this one ongoing since we're now updating at each insertion.
-const isContextSchemaOrg = (context) => context === 'https://schema.org'
+// We're keeping it for now because some have an old version of the app.
+// It is also useful when we need to run scripts against that data.
+const isContextSchemaOrg = (context) => context === 'https://schema.org' || context === 'http://schema.org'
+// Here is what to use for new deployments.
+//const isContextSchemaOrg = (context) => context === 'https://schema.org'
 
 class JwtService {
 
@@ -371,7 +372,7 @@ class JwtService {
 
 
     } else {
-      l.trace("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
+      l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
     }
 
   }
