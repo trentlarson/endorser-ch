@@ -147,7 +147,7 @@ async function addCanSee(subject, object, url) {
       l.error('Failed to set SeesNetworkCache for key', subject, 'and value', newList)
     }
   }
-  l.info("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
+  l.trace("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
 
   let seenByDids = await getDidsWhoCanSeeExplicitly(object)
   if (!seenByDids) {
@@ -160,7 +160,7 @@ async function addCanSee(subject, object, url) {
       l.error('Failed to set WhoCanSeeNetworkCache for key', object, 'and value', newList)
     }
   }
-  l.info("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
+  l.trace("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
 }
 
 /**
@@ -209,7 +209,7 @@ async function removeCanSee(subject, object) {
       l.error('Failed to set SeesNetworkCache for key', subject, 'and value', newList)
     }
   }
-  l.info("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
+  l.trace("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
 
   let seenByDids = await getDidsWhoCanSeeExplicitly(object)
   if (!seenByDids) {
@@ -223,7 +223,7 @@ async function removeCanSee(subject, object) {
       l.error('Failed to set WhoCanSeeNetworkCache for key', object, 'and value', newList)
     }
   }
-  l.info("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
+  l.trace("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
 }
 
 /**

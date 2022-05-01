@@ -157,6 +157,7 @@ class JwtService {
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
       return {confirmId:result, actionClaimId}
 
+
     } else if (origClaim['@context'] === 'https://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
 
@@ -172,6 +173,7 @@ class JwtService {
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
       return {confirmId:result, tenureClaimId}
+
 
     } else if (origClaim['@context'] === 'https://schema.org'
                && origClaim['@type'] === 'Organization'
@@ -193,8 +195,8 @@ class JwtService {
       l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
       return {confirmId:result, orgRoleClaimId}
 
-    } else {
 
+    } else {
 
       let confirmation = await db.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
@@ -241,6 +243,7 @@ class JwtService {
           return Promise.reject(err)
         })
 
+
     } else if (claim['@context'] === 'https://schema.org'
         && claim['@type'] === 'JoinAction') {
 
@@ -278,6 +281,7 @@ class JwtService {
       let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
 
+
     } else if (claim['@context'] === 'https://schema.org'
                && claim['@type'] === 'Organization'
                && claim.member
@@ -314,6 +318,7 @@ class JwtService {
 
       let tenureId = await db.tenureInsert(entity)
 
+
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Confirmation') {
 
@@ -343,6 +348,7 @@ class JwtService {
           return Promise.reject(err)
         })
 
+
     } else if (claim['@context'] === 'https://schema.org'
                && claim['@type'] === 'VoteAction') {
 
@@ -357,8 +363,9 @@ class JwtService {
 
       let eventId = await db.voteInsert(vote)
 
+
     } else {
-      l.warn("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
+      l.trace("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
     }
 
   }
