@@ -2,6 +2,7 @@
 
  This walks through all JWTs to recreate records in the 'confirmation' table.
  So delete all from that table first.
+ Also: change the 'legacy context' checks at the top of jwt.service.js (to handle old data).
 
  Run at top level with: npm run reset-confirms
 
@@ -15,6 +16,7 @@ describe('Running Script', () => {
   it('reset confirms', async () => {
     let nextId = '0'
     const params = {}
+    let repeatConfirms = 0
     do {
       let thisPage = await DBService.jwtsByParamsPaged(params, nextId)
         .then(async results => {
@@ -25,12 +27,17 @@ describe('Running Script', () => {
             try {
               await JwtService.createEmbeddedClaimRecords(thisDatum.id, thisDatum.issuer, JSON.parse(thisDatum.claim))
             } catch (err) {
-              console.log('Got this error on', thisDatum.id, ':', err)
+              if (err.message.indexOf('Attempted to confirm') > -1 && err.message.indexOf('already confirmed') > -1) {
+                repeatConfirms++
+              } else {
+                console.log('Got this error on', thisDatum.id, ':', err)
+              }
             }
           }
           nextId = results.maybeMoreAfter
         })
     } while (nextId)
-  })
+    console.log('Got', repeatConfirms, 'repeat confirms.')
+  }).timeout(10000)
 
 })
