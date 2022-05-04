@@ -150,7 +150,7 @@ class JwtService {
    **/
   async createOneConfirmation(jwtId, issuerDid, origClaim) {
 
-    l.debug(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
+    l.trace(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
 
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
@@ -168,7 +168,7 @@ class JwtService {
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
       return {confirmId:result, actionClaimId}
 
 
@@ -185,7 +185,7 @@ class JwtService {
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
       return {confirmId:result, tenureClaimId}
 
 
@@ -206,7 +206,7 @@ class JwtService {
       let origClaimStr = JSON.stringify(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
       return {confirmId:result, orgRoleClaimId}
 
 
@@ -224,7 +224,7 @@ class JwtService {
       //   claim.identifier
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
-      l.debug(`${this.constructor.name}.createOneConfirmation # ${result} added for a generic confirmation`);
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for a generic confirmation`);
       return {confirmId:result}
 
     }
@@ -238,30 +238,19 @@ class JwtService {
       l.trace('Adding AgreeAction confirmation', claim)
       // note that 'Confirmation' does similar logic (but is deprecated)
 
-      var recordings = []
-
+      let recordings = []
       {
         let origClaim = claim['object']
         if (Array.isArray(origClaim)) {
+          // if we run these in parallel then there can be duplicates (when we haven't inserted previous ones in time for the duplicate check)
           for (var claim of origClaim) {
-            //await this.createOneConfirmation(jwtId, issuerDid, claim) // for scripting for deterministic results
-            recordings.push(this.createOneConfirmation(jwtId, issuerDid, claim))
+            recordings.push(await this.createOneConfirmation(jwtId, issuerDid, claim).catch(console.log))
           }
         } else if (origClaim) {
-          //await this.createOneConfirmation(jwtId, issuerDid, origClaim) // for scripting for deterministic results
-          recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
+          recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
         }
       }
-      l.debug(`${this.constructor.name} Created ${recordings.length} agreed claims & network records.`)
-
-      await Promise.all(recordings)
-        .then(recResults => {
-          l.debug(`Created ${recResults.length} embedded objects`, JSON.stringify(recResults))
-        })
-        .catch(err => {
-          return Promise.reject(err)
-        })
-
+      l.trace('Added confirmations', recordings)
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
@@ -348,21 +337,20 @@ class JwtService {
       { // handle a single claim
         let origClaim = claim['originalClaim']
         if (origClaim) {
-          //await this.createOneConfirmation(jwtId, issuerDid, origClaim) // for scripting for deterministic results
-          recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
+          recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
         }
       }
 
       { // handle multiple claims
         let origClaims = claim['originalClaims']
         if (origClaims) {
+          // if we run these in parallel then there can be duplicates (when we haven't inserted previous ones in time for the duplicate check)
           for (var origClaim of origClaims) {
-            //await this.createOneConfirmation(jwtId, issuerDid, origClaim) // for scripting for deterministic results
-            recordings.push(this.createOneConfirmation(jwtId, issuerDid, origClaim))
+            recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
           }
         }
       }
-      l.debug(`${this.constructor.name} Created ${recordings.length} confirmations & network records.`)
+      l.trace(`${this.constructor.name} Created ${recordings.length} confirmations & network records.`, recordings)
 
       await Promise.all(recordings)
         .catch(err => {
@@ -401,11 +389,10 @@ class JwtService {
       var recordings = []
       { // handle multiple claims
         for (var subClaim of claim) {
-          //await this.createEmbeddedClaimRecord(jwtId, issuerDid, subClaim) // for scripting for deterministic results
           recordings.push(this.createEmbeddedClaimRecord(jwtId, issuerDid, subClaim))
         }
       }
-      l.debug(`${this.constructor.name} creating ${recordings.length} claim records.`)
+      l.trace(`${this.constructor.name} creating ${recordings.length} claim records.`)
 
       await Promise.all(recordings)
         .catch(err => {
@@ -413,6 +400,7 @@ class JwtService {
         })
     } else {
       await this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
+      l.trace(`${this.constructor.name} created a claim record.`)
     }
 
     // now record all the "sees" relationships to the issuer
@@ -483,7 +471,7 @@ class JwtService {
             return Promise.reject(err)
           })
 
-      //l.debug(doc, `${this.constructor.name} resolved doc`)
+      //l.trace(doc, `${this.constructor.name} resolved doc`)
       //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
       //l.trace(issuer, `${this.constructor.name} resolved issuer`)
 

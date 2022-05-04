@@ -40,7 +40,7 @@ function constructWhere(params, claimContents, excludeConfirmations) {
       operator = "<="
     }
 
-    if (params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
+    if (params[param] && params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
       // treat dates differently for SQLite
       whereClause += " " + col + " " + operator + " datetime('" + params[param] + "')"
     } else {
