@@ -1,10 +1,10 @@
 /**
 
- This walks through all JWTs to recreate records in the 'confirmation' table.
- So delete all from that table first.
- Also: change the 'legacy context' checks at the top of jwt.service.js (to handle old data).
+ This walks through all JWTs to recreate records in the ancillary tables.
+ So delete all from those tables first. As of now, these tables need erasing: action_claim, confirmation, event, and org_role_claim
+ Also: change the 'legacy context' checks at the top of jwt.service.js.
 
- Run at top level with: npm run reset-confirms
+ Run at top level with: NODE_ENV=... npm run reset-confirms
 
 **/
 
