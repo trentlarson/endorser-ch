@@ -236,15 +236,15 @@ claimFoodPantryFor4By4JwtObj.iss = creds[4].did
 claimFoodPantryFor4By4JwtObj.sub = creds[4].did
 const claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoodPantryFor4By4JwtObj)
 
-/**
 const confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
 confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmFoodPantryFor4By1JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
+// This is different: the embedded claim won't duplicate '@context'.
+const embeddedClaimFoodPantryFor4 = R.clone(claimFoodPantryFor4)
+delete embeddedClaimFoodPantryFor4['@context']
+confirmFoodPantryFor4By1JwtObj.claim.object.push(embeddedClaimFoodPantryFor4)
 confirmFoodPantryFor4By1JwtObj.iss = creds[1].did
 const confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
-**/
-
 
 
 
@@ -263,7 +263,7 @@ let pushTokens,
     claimIIW2019aFor2By2JwtEnc,
     // claims for 4
     claimFoodPantryFor4By4JwtEnc,
-    //confirmFoodPantryFor4By1JwtEnc,
+    confirmFoodPantryFor4By1JwtEnc,
     // claims for 11
     claimCornerBakeryTenureFor11By11JwtEnc,
     claimCornerBakeryTenureFor12By12JwtEnc,
@@ -298,7 +298,7 @@ before(async () => {
     claimCornerBakeryTenureFor12By12JwtProm,
     confirmCornerBakeryTenureFor11By10JwtProm,
     claimFoodPantryFor4By4JwtProm,
-    //confirmFoodPantryFor4By1JwtProm,
+    confirmFoodPantryFor4By1JwtProm,
     claimIIW2019aFor1By1JwtProm,
     confirmIIW2019aFor1By0JwtProm,
     claimIIW2019aFor2By2JwtProm,
@@ -317,7 +317,7 @@ before(async () => {
       claimCornerBakeryTenureFor12By12JwtEnc,
       confirmCornerBakeryTenureFor11By10JwtEnc,
       claimFoodPantryFor4By4JwtEnc,
-      //confirmFoodPantryFor4By1JwtEnc,
+      confirmFoodPantryFor4By1JwtEnc,
       claimIIW2019aFor1By1JwtEnc,
       confirmIIW2019aFor1By0JwtEnc,
       claimIIW2019aFor2By2JwtEnc,
@@ -551,7 +551,7 @@ describe('Claim', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should add a confirmation for that action', () =>
+  it('should add a confirmation for that action (even though it is their own))', () =>
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -594,6 +594,18 @@ describe('Claim', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
+         .to.be.an('array')
+         .of.length(1)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
+  it('should get one issuer (original claimant) who claimed or confirmed this', () =>
+     request(Server)
+     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body.result)
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
@@ -908,7 +920,7 @@ describe('Event', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should get 1 event', () =>
+  it('should get 1 BVC event', () =>
      request(Server)
      .get('/api/event?orgName=Bountiful%20Voluntaryist%20Community')
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
@@ -1008,7 +1020,7 @@ describe('Event', () => {
       })
   }).timeout(7001)
 
-  it('should get two issuers for this claim ID', () =>
+  it('should now get two issuers for this claim ID', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -1208,6 +1220,8 @@ describe('Visibility utils', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
+  let foodPantryClaimId
+
   it('should create a tenure for the Food Pantry', () =>
      request(Server)
      .post('/api/claim')
@@ -1216,10 +1230,10 @@ describe('Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
+       foodPantryClaimId = r.body
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
-  /**
   it('should confirm that tenure for the Food Pantry', () =>
      request(Server)
      .post('/api/claim')
@@ -1227,10 +1241,22 @@ describe('Visibility utils', () => {
      .send({ "jwtEncoded": confirmFoodPantryFor4By1JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('number')
+       expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
      })).timeout(7001)
-  **/
+
+  it('should get issuer and confirmer (even though confirmed claim format is different)', () =>
+     request(Server)
+     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + foodPantryClaimId)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body.result)
+         .to.be.an('array')
+         .of.length(2)
+       expect(r.status).that.equals(200)
+     })).timeout(7001)
+
 
   //// Now #4 will toggle visibility from #5.
 

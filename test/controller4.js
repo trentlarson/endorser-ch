@@ -221,7 +221,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(38)
+        expect(r.body.data).to.be.an('array').of.length(39)
         expect(r.body).that.does.not.have.property('maybeMoreAfter')
       }).catch((err) => {
         return Promise.reject(err)
