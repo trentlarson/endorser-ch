@@ -113,6 +113,16 @@ confirmBvcFor0By1JwtObj.iss = creds[1].did
 confirmBvcFor0By1JwtObj.sub = creds[0].did
 const confirmBvcFor0By1JwtProm = credentials[1].createVerification(confirmBvcFor0By1JwtObj)
 
+const confirmBvcFor0By3JwtObj = R.clone(testUtil.jwtTemplate)
+confirmBvcFor0By3JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+// This is different: the embedded claim won't duplicate '@context'.
+const embeddedClaimBvcFor0 = R.clone(claimBvcFor0)
+delete embeddedClaimBvcFor0['@context']
+confirmBvcFor0By3JwtObj.claim.object.push(embeddedClaimBvcFor0)
+confirmBvcFor0By3JwtObj.iss = creds[3].did
+confirmBvcFor0By3JwtObj.sub = creds[0].did
+const confirmBvcFor0By3JwtProm = credentials[3].createVerification(confirmBvcFor0By3JwtObj)
+
 const confirmBvcForConfirm0By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcForConfirm0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcForConfirm0By1JwtObj.claim.object.push(R.clone(confirmBvcFor0By0JwtObj))
@@ -239,10 +249,7 @@ const claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoo
 const confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
 confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-// This is different: the embedded claim won't duplicate '@context'.
-const embeddedClaimFoodPantryFor4 = R.clone(claimFoodPantryFor4)
-delete embeddedClaimFoodPantryFor4['@context']
-confirmFoodPantryFor4By1JwtObj.claim.object.push(embeddedClaimFoodPantryFor4)
+confirmFoodPantryFor4By1JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
 confirmFoodPantryFor4By1JwtObj.iss = creds[1].did
 const confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
 
@@ -251,7 +258,8 @@ const confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confir
 
 let pushTokens,
     // claims for 0
-    claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, claimMyNightFor0By0JwtEnc,
+    claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, confirmBvcFor0By3JwtEnc,
+    claimMyNightFor0By0JwtEnc,
     claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc,
     confirmBvcForConfirm0By1JwtEnc,
     // claims for 1
@@ -289,6 +297,7 @@ before(async () => {
     claimBvcFor0By0JwtProm,
     confirmBvcFor0By0JwtProm,
     confirmBvcFor0By1JwtProm,
+    confirmBvcFor0By3JwtProm,
     claimMyNightFor0By0JwtProm,
     claimBvcFor1By1JwtProm,
     claimDebugFor0By0JwtProm,
@@ -308,6 +317,7 @@ before(async () => {
       claimBvcFor0By0JwtEnc,
       confirmBvcFor0By0JwtEnc,
       confirmBvcFor0By1JwtEnc,
+      confirmBvcFor0By3JwtEnc,
       claimMyNightFor0By0JwtEnc,
       claimBvcFor1By1JwtEnc,
       claimDebugFor0By0JwtEnc,
@@ -701,6 +711,17 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
      })).timeout(6002)
 
+  it('should add a second confirmation by someone else', () =>
+     request(Server)
+     .post('/api/claim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .send({"jwtEncoded": confirmBvcFor0By3JwtEnc})
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.body).to.be.a('string')
+       expect(r.status).that.equals(201)
+     })).timeout(6002)
+
   it('should see DID #1', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
@@ -932,7 +953,7 @@ describe('Event', () => {
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
-  it('should get a set of action claims & two confirmations', () =>
+  it('should get a set of action claims & three confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -950,7 +971,7 @@ describe('Event', () => {
          .to.be.an('object')
          .that.has.property('confirmations')
          .to.be.an('array')
-         .of.length(2)
+         .of.length(3)
        expect(r.body[0])
          .to.be.an('object')
          .that.has.property('confirmations')
@@ -990,7 +1011,7 @@ describe('Event', () => {
        expect(r.status).that.equals(201)
      })).timeout(7001)
 
-  it('should get multiple action claims & still two confirmations', () =>
+  it('should get multiple action claims & still three confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -1000,7 +1021,7 @@ describe('Event', () => {
          .to.be.an('object')
          .that.has.property('confirmations')
          .to.be.an('array')
-         .of.length(2)
+         .of.length(3)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -1015,20 +1036,21 @@ describe('Event', () => {
           .to.be.an('object')
           .that.has.property('confirmations')
           .to.be.an('array')
-          .of.length(2)
+          .of.length(3)
         expect(r.status).that.equals(200)
       })
   }).timeout(7001)
 
-  it('should now get two issuers for this claim ID', () =>
+  it('should now get three issuers/confirmers for this claim ID', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
+console.log('firstId & result', firstId, r.body.result)
        expect(r.body.result)
          .to.be.an('array')
-         .of.length(2)
+         .of.length(3)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -1110,7 +1132,7 @@ describe('Report', () => {
          .of.length(3)
        expect(dddClaims[0].confirmations)
          .to.be.an('array')
-         .of.length(2)
+         .of.length(3)
        expect(r.body[1].did)
          .to.be.an('string')
          .that.is.equal(creds[1].did)
@@ -1251,6 +1273,7 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
+console.log('foodPantryClaimId & result', foodPantryClaimId, r.body.result)
        expect(r.body.result)
          .to.be.an('array')
          .of.length(2)

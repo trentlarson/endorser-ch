@@ -1,5 +1,6 @@
 import l from '../../common/logger'
 import base64url from 'base64url'
+import canonicalize from 'canonicalize'
 import util from 'util'
 import didJwt from 'did-jwt'
 import R from 'ramda'
@@ -13,7 +14,9 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
-// This is because of "legacy context" issues.
+// Determine if a claim has the right context, eg schema.org
+//
+// Different versions are because of "legacy context" issues.
 //
 // We still use this "http" since some have an old version of the app, but we expect to turn it off in late 2022.
 // (It is also useful when we need to run scripts against that data.)
@@ -24,7 +27,9 @@ const isContextSchemaOrg = (context) => context === 'https://schema.org' || cont
 //const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context) || context === 'http://endorser.ch' // latest was in 2020
 //
 // Here is what to use for new deployments, and for endorser.ch after all users have updated their apps.
-//const isContextSchemaOrg = (context) => context === 'https://schema.org'
+//const isContextSchemaOrg = (context) => context === 'https://schema.org' || context == null
+// Claims inside AgreeAction may not have a context if they're also in schema.org
+const isContextSchemaOrgOrMissing = (context) => isContextSchemaOrg(context) || context == null
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
 class JwtService {
@@ -69,6 +74,7 @@ class JwtService {
     if (!jwtClaim) {
       return []
     } else {
+console.log('search on canonClaim for claimId', claimId, jwtClaim.claim)
       let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
       let allDids = R.append(
         jwtClaim.issuer,
@@ -152,6 +158,11 @@ class JwtService {
 
     l.trace(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
 
+    // since AgreeAction is from schema.org, the embedded claim is the same by default
+    if (origClaim['@context'] == null) {
+      origClaim['@context'] = 'https://schema.org'
+    }
+
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
@@ -165,7 +176,8 @@ class JwtService {
       let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
 
-      let origClaimStr = JSON.stringify(origClaim)
+      let origClaimStr = canonicalize(origClaim)
+console.log('inserting origClaimStr',origClaimStr)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
@@ -182,7 +194,7 @@ class JwtService {
       let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
 
-      let origClaimStr = JSON.stringify(origClaim)
+      let origClaimStr = canonicalize(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
@@ -203,7 +215,7 @@ class JwtService {
       let confirmation = await db.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
 
-      let origClaimStr = JSON.stringify(origClaim)
+      let origClaimStr = canonicalize(origClaim)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
@@ -215,7 +227,7 @@ class JwtService {
       let confirmation = await db.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
 
-      let origClaimStr = JSON.stringify(origClaim)
+      let origClaimStr = canonicalize(origClaim)
 
       // If we choose to add the subject, it's found in these places (as of today):
       //   claim.agent.did
@@ -462,7 +474,7 @@ class JwtService {
 
     let payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
-      let claimStr = JSON.stringify(payloadClaim)
+      let claimStr = canonicalize(payloadClaim)
       let claimEncoded = base64url.encode(claimStr)
       let jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)
       let jwtRowId =

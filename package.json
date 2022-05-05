@@ -15,12 +15,12 @@
     "flyway": "flyway -c conf/flyway.js",
     "test": "mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
-
     "reset-confirms": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-confirms.js --exit",
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
   },
   "dependencies": {
     "body-parser": "^1.18.2",
+    "canonicalize": "^1.0.8",
     "cookie-parser": "^1.4.3",
     "cors": "^2.8.5",
     "did-jwt": "0.1.3",

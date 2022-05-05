@@ -1,3 +1,4 @@
+import canonicalize from 'canonicalize'
 import chai from 'chai'
 import request from 'supertest'
 import { DateTime } from 'luxon'
@@ -295,7 +296,7 @@ describe('Visibility', () => {
      .then(r => {
        expect(r.body)
          .that.has.a.property('claim')
-         .that.equals(JSON.stringify(claimRecorderFor2By2JwtObj.claim))
+         .that.equals(canonicalize(claimRecorderFor2By2JwtObj.claim))
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(creds[2].did)

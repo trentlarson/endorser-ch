@@ -1,7 +1,8 @@
 ---
 
-- 01 fix DB records for all old confirmations
-  - test that text search still works
+- .5 make tests for new structure
+- 01 fix confirmation detection & rerun data cleanup
+- 02 fix "endorser.ch" references in tests
 
 - 01 determine why origClaim in confirmation #1 in test-local is different
 
