@@ -38,6 +38,6 @@ describe('Running Script', () => {
         })
     } while (nextId)
     console.log('Got', repeatConfirms, 'repeat confirms.')
-  }).timeout(10000)
+  }).timeout(30000)
 
 })
