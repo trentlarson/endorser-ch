@@ -74,7 +74,6 @@ class JwtService {
     if (!jwtClaim) {
       return []
     } else {
-console.log('search on canonClaim for claimId', claimId, jwtClaim.claim)
       let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
       let allDids = R.append(
         jwtClaim.issuer,
@@ -177,7 +176,6 @@ console.log('search on canonClaim for claimId', claimId, jwtClaim.claim)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
 
       let origClaimStr = canonicalize(origClaim)
-console.log('inserting origClaimStr',origClaimStr)
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);

@@ -1047,7 +1047,6 @@ describe('Event', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
-console.log('firstId & result', firstId, r.body.result)
        expect(r.body.result)
          .to.be.an('array')
          .of.length(3)
@@ -1273,7 +1272,6 @@ describe('Visibility utils', () => {
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
-console.log('foodPantryClaimId & result', foodPantryClaimId, r.body.result)
        expect(r.body.result)
          .to.be.an('array')
          .of.length(2)
