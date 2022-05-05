@@ -29,7 +29,6 @@ const isContextSchemaOrg = (context) => context === 'https://schema.org' || cont
 // Here is what to use for new deployments, and for endorser.ch after all users have updated their apps.
 //const isContextSchemaOrg = (context) => context === 'https://schema.org' || context == null
 // Claims inside AgreeAction may not have a context if they're also in schema.org
-const isContextSchemaOrgOrMissing = (context) => isContextSchemaOrg(context) || context == null
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
 class JwtService {
