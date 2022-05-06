@@ -749,7 +749,9 @@ class EndorserDatabase {
 
   orgRoleClaimIdByOrgAndDates(orgName, roleName, startDate, endDate, memberDid) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT rowid FROM org_role_claim WHERE orgName = ? AND roleName = ? AND startDate = date('" + startDate + "') AND endDate = date('" + endDate + "') AND memberDid = ?", [orgName, roleName, memberDid], function(err, row) {
+      const startDateSql = startDate ? " AND startDate = date('" + startDate + "')" : ""
+      const endDateSql = endDate ? " AND endDate = date('" + endDate + "')" : ""
+      db.get("SELECT rowid FROM org_role_claim WHERE orgName = ? AND roleName = ?" + startDateSql + endDateSql + " AND memberDid = ?", [orgName, roleName, memberDid], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
