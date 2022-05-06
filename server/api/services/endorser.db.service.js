@@ -609,6 +609,23 @@ class EndorserDatabase {
     })
   }
 
+  jwtUpdateClaimFields(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE jwt SET claimType = ?, claimContext = ?, claim = ?, claimEncoded = ? WHERE id = ?")
+      db.run(stmt, [entity.claimType, entity.claimContext, entity.claim, entity.claimEncoded, entity.id], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          if (this.changes === 1) {
+            resolve()
+          } else {
+            reject("Expected to update 1 row but updated " + this.changes)
+          }
+        }
+      })
+    })
+  }
+
   /**
      Start from afterIdInput (defaults to '0') and retrieve all claims by issuerDid with claimTypes.
      Note that this works in chronological order.

@@ -15,6 +15,8 @@
     "flyway": "flyway -c conf/flyway.js",
     "test": "mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
+
+    "reset-claim-fields": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-claim-fields.js --exit",
     "reset-confirms": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-confirms.js --exit",
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
   },
