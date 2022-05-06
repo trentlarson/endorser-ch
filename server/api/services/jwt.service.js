@@ -27,7 +27,7 @@ const isContextSchemaOrg = (context) => context === 'https://schema.org' || cont
 //const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context) || context === 'http://endorser.ch' // latest was in 2020
 //
 // Here is what to use for new deployments, and for endorser.ch after all users have updated their apps.
-//const isContextSchemaOrg = (context) => context === 'https://schema.org' || context == null
+//const isContextSchemaOrg = (context) => context === 'https://schema.org'
 // Claims inside AgreeAction may not have a context if they're also in schema.org
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
