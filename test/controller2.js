@@ -61,7 +61,7 @@ const claimPresident = {
     },
     roleName: "President",
     startDate: "2019-04-01",
-    endDate: "2020-03-31",
+    // removed endDate to allow testing with endorser-access project
   },
 }
 

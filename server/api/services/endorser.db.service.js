@@ -772,7 +772,7 @@ class EndorserDatabase {
   retrieveOrgRoleClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      let sql = "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate, r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId FROM org_role_claim r LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid WHERE r.orgName = ? AND r.roleName = ? AND r.startDate <= date('" + onDateStr + "') AND date('" +  onDateStr + "') <= r.endDate"
+      let sql = "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate, r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId FROM org_role_claim r LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid WHERE r.orgName = ? AND r.roleName = ? AND (r.startDate IS NULL OR r.startDate <= date('" + onDateStr + "')) AND (r.endDate IS NULL OR date('" +  onDateStr + "') <= r.endDate)"
       db.each(sql, [orgName, roleName], function(err, row) {
         let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, orgRoleRowId:row.orgRoleRowId} : null
         let both = {orgRole:{id:row.rid, memberDid:row.memberDid, orgName:row.orgName, roleName:row.roleName, startDate:row.startDate, endDate:row.endDate}, confirmation:confirmation}
