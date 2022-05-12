@@ -51,7 +51,7 @@ let options = {
 function requesterInfo(req, res, next) {
   let jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
-    if (req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince")
+    if (req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince?")
         || req.originalUrl.startsWith("/api/claim?")
         || req.originalUrl.startsWith("/api/claim/")
         || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")
