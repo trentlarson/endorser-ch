@@ -1,15 +1,17 @@
 ---
 
-- .5 make tests for new structure
-- 01 fix confirmation detection & rerun data cleanup
-- 02 fix "endorser.ch" references in tests
-- .5 allow all confirmations, even if they fit a category but then fail a check
+- 08 set up agent to determine access (eg. site docs) - web3?
 
-- 01 determine why origClaim in confirmation #1 in test-local is different
+- 02 test JWT authentication
+
+
+
+- 04 figure out revocation
 
 - 01 test that deselecting "can see me" when adding contact on app will disallow seeing
 
-- 01 run load test, especially for claimContents search
+- 01 run load test, especially for: claimContents search, confirmations-by-claim retrieval
+
 
 
 
@@ -111,6 +113,8 @@
   - .5 Android confirmation-loading spinner is invisible
   - 01 Figure out why "fetch" doesn't retrieve the most recent data. (Test by scanning a QR code to load contacts in bulk, and see that you don't get the new contents when you change something in that remote CSV.)
   - see other bugs below
+- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
+- 01 fix subjects (eg. Jun 29 2019 claims by me for others)
 - 02 show signatures for proof of confirmations
 - 02 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
@@ -122,10 +126,9 @@
 - 04 publish txid of merkle-tree of the transactions (then automate merkle-tree)
   - 01 add test for rejection of duplicate claim submissions
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
-- 01 and fix subjects (eg. Jun 29 claims by me for others)
+- 01 allow all confirmations, even if they fit a category but then fail a check
 - 02 allow read of all data in claims/confirmations issued by requester
 - 02 in text search - show claim contents instead of DB records
-- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
 - 02 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
 - 01 remove the didVisibleToDids when listing possible confirmations
 - 02 change name of app from "uport demo" (when logging in)
@@ -134,6 +137,7 @@
 - mobile app:
   - 08 store claims & confirmations
     - allow to download
+  - 01 check that contact JWT was recently created, even in bulk (because they may be sending you a different contact)
   - 01 allow export of selected contacts
   - .5 remove modal confirmation for saving a contact
   - .5 warn about overwriting when saving a contact with existing DID
@@ -163,8 +167,7 @@
   - manage keys with KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
 
-- 01 disallow duplicate claims by same issuer; good canonical JSON https://gibson042.github.io/canonicaljson-spec/ id:disallow-duplicate ; recommend storing hashes so for efficient claim indexing
-- 01 remove the @context of schema.org for AgreeAction claims since they're already in schema.org
+- 01 disallow duplicate claims by same issuer; id:disallow-duplicate ; recommend storing hashes so for efficient claim indexing
 - 01 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 08 allow links into contacts for contacting via text
 - 02 if we see someone in between 2 hops away, give a search URL for that person to replicate
