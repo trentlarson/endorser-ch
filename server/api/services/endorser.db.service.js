@@ -324,7 +324,7 @@ class EndorserDatabase {
   confirmationsByClaim(claimStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      const sql = "SELECT rowid, * FROM confirmation WHERE origClaim = ?"
+      const sql = "SELECT issuer FROM confirmation WHERE origClaim = ?"
       db.each(sql, [claimStr], function(err, row) {
         data.push({issuer: row.issuer})
       }, function(err, num) {
