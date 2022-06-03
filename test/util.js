@@ -1,12 +1,16 @@
-// Load and run this file with: npm install esm; LOG_LEVEL=info node -r esm
+/**
+   Load and run this file with: npm install esm; LOG_LEVEL=info node -r esm
+
+   Some of this is copied in the endorser-auth package (eg. test.js).
+**/
 
 import R from 'ramda'
 import { HIDDEN_TEXT, isDid } from '../server/api/services/util'
 
 const { Credentials } = require('uport-credentials')
 
-let NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
-let TOMORROW_EPOCH = NOW_EPOCH + (24 * 60 * 60)
+const NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
+const TOMORROW_EPOCH = NOW_EPOCH + (24 * 60 * 60)
 
 
 function allDidsAreHidden(result) {

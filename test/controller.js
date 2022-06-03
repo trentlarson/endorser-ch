@@ -807,7 +807,7 @@ describe('Action', () => {
          .that.equals('Saturday Morning Meeting')
        expect(r.body)
          .that.has.property('eventStartTime')
-         .that.equals('2018-12-29 15:00:00Z')
+         .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -834,7 +834,7 @@ describe('Action', () => {
          .that.equals(HIDDEN_TEXT)
        expect(r.body)
          .that.has.property('eventStartTime')
-         .that.equals('2018-12-29 15:00:00Z')
+         .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -874,7 +874,7 @@ describe('Action', () => {
          .that.equals('Saturday Morning Meeting')
        expect(action1)
          .that.has.property('eventStartTime')
-         .that.equals('2018-12-29 15:00:00Z')
+         .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -902,7 +902,7 @@ describe('Action', () => {
          .that.equals('Thurs night debug')
        expect(action1)
          .that.has.property('eventStartTime')
-         .that.equals('2019-02-01 02:00:00Z')
+         .that.equals('2019-02-01T02:00:00Z')
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -937,7 +937,7 @@ describe('Event', () => {
          .that.equals('Saturday Morning Meeting')
        expect(r.body)
          .that.has.property('startTime')
-         .that.equals('2018-12-29 15:00:00Z')
+         .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
