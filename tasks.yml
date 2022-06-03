@@ -1,10 +1,23 @@
 ---
 
-- 08 set up agent to determine access (eg. site docs) - web3?
 
-- 02 test JWT authentication
+- 08 set up agent to determine access (eg. site docs) - web3? :
+  - be able to send presentation :
+    - retrieve claim, create VP out of it, send VP to OpenID
+  - ensure presentation scans
+  - test scans at bottom
+
+- .5 update endorser-ch website (eg. for scenario links)
+
+- 01 fix individual who isn't able to access their seed
+
+- 02 test JWT signatures
 
 
+
+- .5 add offerId to GaveAction
+
+- .5 allow copy of final claim ID after successful server submission
 
 - 04 figure out revocation
 
