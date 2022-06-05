@@ -52,9 +52,9 @@ const CREDS = [
   { did: 'did:ethr:0xaaa808B42C3Cb12c6ca7110E327284028214657D', privateKey: 'e76b01b8af46082608753a907d926264e1700fc309fbef2f68380147be97ee7d' }, // grant stay suggest style antique upon scout evidence animal example live demand have erase congress hurry frequent network foot welcome struggle wave popular marble
   { did: 'did:ethr:0xbbbe0e5Af02D327d33C280855d478FFa57FBab70', privateKey: '86c72e586ceb818ab3e8bedab4a250e08dd9f0df2d483374c0c5f07452e8ba40' }, // claim brother drift deputy gaze emerge bunker vibrant game ski crucial myself attitude slush crew home crater guide second scout lonely earth chaos tunnel
   { did: 'did:ethr:0xccc0B0759Dbe2c49D3862f6F403Fae94dD905FC9', privateKey: '8a62b154e40a6a9839a8d0275d2886df05495dc2123ecabd0cb4719cd23630c4' }, // blue still absent awake casual always magnet item until undo release satoshi surface attract learn ridge security minimum grid clinic license lawn skate illness
-  { did: 'did:ethr:0xddd6c03f186c9e27bc150d3629d14d5dbea0effd', privateKey: 'aa7a540eb94f9a24682cb4ff9ee6918be7397b1f3349e4eda4493ab7e95c32c0' },
-  { did: 'did:ethr:0xeeed589b09a449ae6ccf89ad0e9effe74072f829', privateKey: 'bad6e7ab26eb2cc98ec39ccc6bb7b814b8bf08dcde184e7d0514a914d032b963' },
-  { did: 'did:ethr:0xfff9f93c0c7adb7213022c22b9eb99fcb409e734', privateKey: 'f2c27382d8ab785be1df575323d110181d2ea46207ffda52d76fb5f98db088fa' },
+  { did: 'did:ethr:0xddd3ef4cf2900f048b01713d50f61d232c2731ee', privateKey: '39482d2c39e9def860cf9f48facfe67a16c45209ecfba9c12bfc5bf831d80dc6' }, // wild fish nuclear scheme bamboo large solid express already rookie hire jump add announce thank spoon law pull bless cancel outside plate allow admit
+  { did: 'did:ethr:0xeeeb9589823e0baef3635726006e611da7a715b9', privateKey: 'cb4ad57b266a628eb0b7ff74754d661ce036420cd1335720f53c31b5e74c268d' }, // arrest claim way idea hat wrap execute girl noble task march web capital this thrive time small erupt public tortoise violin one forest abandon
+  { did: 'did:ethr:0xffff7def6267bedac4bd8bb2fa9128e8698b3d2f', privateKey: '741cc1ad98494afd4a9b9219b678e213fd5a27f6dd7822350d011430b0018e6d' }, // history loyal voice arm upper energy night interest vacuum swap siren economy siren tomorrow kick gain possible disorder scan same move wheat artefact notice
   ]
 
 const CREDENTIALS = R.map((c) => new Credentials(c), CREDS)
