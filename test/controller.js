@@ -674,7 +674,7 @@ describe('Claim', () => {
           .of.length(0)
         expect(r.status).that.equals(200)
       })
-  }).timeout(7001)
+     }).timeout(7001)
 
   it('#0 should see themselves', () =>
      request(Server)
@@ -1039,7 +1039,7 @@ describe('Event', () => {
           .of.length(3)
         expect(r.status).that.equals(200)
       })
-  }).timeout(7001)
+     }).timeout(7001)
 
   it('should now get three issuers/confirmers for this claim ID', () =>
      request(Server)
