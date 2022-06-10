@@ -349,9 +349,58 @@ User stories:
 - to do: show strong network; show networks with personal connection vs public DID; show fake network
 
 
+
+
+## Metrics
+
+```
+mkdir metrics
+cd metrics
+yarn add @veramo/did-jwt bent
+node
+
+const OWNER_DID = 'OWNER_DID'
+const OWNER_PRIVATE_KEY_HEX = 'OWNER_PRIVATE_KEY_HEX'
+const SERVER = 'http://localhost:3000'
+const bent = require('bent')
+const didJwt = require('did-jwt')
+// return { data: [...], maybeMoreAfter: 'ID' }
+const count = async (moreAfter) => {
+  const nowEpoch = Math.floor(Date.now() / 1000)
+  const endEpoch = nowEpoch + 60
+  const tokenPayload = { exp: endEpoch, iat: nowEpoch, iss: OWNER_DID }
+  const signer = didJwt.SimpleSigner(OWNER_PRIVATE_KEY_HEX)
+  const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: OWNER_DID, signer })
+  const options = {
+    "Content-Type": "application/json",
+    "Uport-Push-Token": accessJwt
+  }
+  const getJson = bent('json', options)
+  return getJson(SERVER + '/api/reportAll/claims?afterId=' + moreAfter)
+}
+const all = async () => {
+  let total = 0
+  let moreAfter = '0'
+  do {
+    const result = await count(moreAfter)
+    total += result.data.length
+    moreAfter = result.maybeMoreAfter
+    console.log(total, '...')
+  } while (moreAfter)
+  console.log('Grand total:', total)
+  return total
+}
+all()
+```
+
+
+
+
 ## Tasks
 
-See [tasks.yml](tasks.yml), also found on our [front-end server](https://github.com/trentlarson/uport-demo) under /tasks.
+See [tasks.yml](tasks.yml).
+
+
 
 
 ## Misc
