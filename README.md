@@ -356,7 +356,7 @@ User stories:
 ```
 mkdir metrics
 cd metrics
-yarn add @veramo/did-jwt bent
+yarn add @veramo/did-jwt bent ramda
 node
 
 const OWNER_DID = 'OWNER_DID'
@@ -378,16 +378,21 @@ const count = async (moreAfter) => {
   const getJson = bent('json', options)
   return getJson(SERVER + '/api/reportAll/claims?afterId=' + moreAfter)
 }
+const R = require('ramda')
 const all = async () => {
-  let total = 0
+  let total = []
   let moreAfter = '0'
   do {
     const result = await count(moreAfter)
-    total += result.data.length
+    total = R.concat(total, result.data)
     moreAfter = result.maybeMoreAfter
-    console.log(total, '...')
+    console.log(total.length, '...')
   } while (moreAfter)
-  console.log('Grand total:', total)
+  console.log('Grand total:', total.length)
+  const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), total)
+  const grouped = R.groupBy(i => i.month, totalSum)
+  const table = R.map(i => i.length, grouped)
+  console.log('Grouped:', JSON.stringify(table, null, 2))
   return total
 }
 all()
