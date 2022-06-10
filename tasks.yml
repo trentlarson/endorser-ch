@@ -1,17 +1,10 @@
 ---
 
-
-- 08 set up agent to determine access (eg. site docs) - web3? :
-  - be able to send presentation :
-    - retrieve claim, create VP out of it, send VP to OpenID
-  - ensure presentation scans
-  - test scans at bottom
-
-- .5 update endorser-ch website (eg. for scenario links)
-
 - 01 fix individual who isn't able to access their seed
 
 - 02 test JWT signatures
+
+- .5 update endorser-ch website (eg. for scenario links)
 
 
 
@@ -28,6 +21,9 @@
 
 
 
+
+
+- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
 
 - 01 show anyone in your network who has taken the pledge
 
@@ -126,7 +122,8 @@
   - .5 Android confirmation-loading spinner is invisible
   - 01 Figure out why "fetch" doesn't retrieve the most recent data. (Test by scanning a QR code to load contacts in bulk, and see that you don't get the new contents when you change something in that remote CSV.)
   - see other bugs below
-- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
+
+- 01 endorser-auth - automatedly test issuance date, expiration; may have to generate VP dynamically
 - 01 fix subjects (eg. Jun 29 2019 claims by me for others)
 - 02 show signatures for proof of confirmations
 - 02 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
