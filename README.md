@@ -412,7 +412,7 @@ See [tasks.yml](tasks.yml).
 
 
 
-Note that new deployments can remove the "legacy Confirmation" and "legacy context" code.
+Note that new deployments can remove the code for: "legacy API", "legacy Confirmation", "legacy context"
 
 
 

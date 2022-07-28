@@ -16,8 +16,7 @@ class DbController {
     DbService.jwtsByParamsPaged(query, afterId, beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
-        maybeMoreAfter: results.maybeMoreAfter,
-        maybeMoreBefore: results.maybeMoreBefore,
+        hitLimit: results.hitLimit,
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { req.resultJsonWrap = results; next(); })
@@ -32,7 +31,8 @@ class DbController {
     DbService.allIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
-        maybeMoreAfter: results.maybeMoreAfter
+        maybeMoreAfter: results.hitLimit && results.data[results.data.length - 1].id, // legacy API; can be removed when people are on mobile v 6.3.100+
+        hitLimit: results.hitLimit,
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { req.resultJsonWrap = results; next(); })

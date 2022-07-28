@@ -70,7 +70,7 @@ before(async () => {
 })
 
 const RESULT_COUNT_LIMIT = 50, NTH_IN_MIDDLE = 6
-let moreAfter, moreBefore, firstInList, startOfMiddleInList, nthInListInMiddle
+let moreAfterId, moreBeforeId, firstInList, startOfMiddleInList, nthInListInMiddle
 
 describe('Load Claims Incrementally', () => {
 
@@ -96,7 +96,7 @@ describe('Load Claims Incrementally', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        expect(r.body).that.does.not.have.property('hitLimit')
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -130,9 +130,9 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.has.a.property('maybeMoreAfter')
-        expect(r.body.maybeMoreAfter).to.be.a('string')
-        moreAfter = r.body.maybeMoreAfter
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
+        moreAfterId = r.body.data[r.body.data.length - 1].id
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -141,15 +141,16 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve many Give/Offer claims with a few more to come', () =>
     request(Server)
-      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfter)
+      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfterId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.has.a.property('maybeMoreAfter')
-        moreAfter = r.body.maybeMoreAfter
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
+        moreAfterId = r.body.data[r.body.data.length - 1].id
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -159,14 +160,14 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve a few more Give/Offer claims', () =>
     request(Server)
-      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfter)
+      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&afterId=' + moreAfterId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(2)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        expect(r.body).that.does.not.have.property('hitLimit')
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -188,11 +189,11 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.has.a.property('maybeMoreAfter')
-        expect(r.body.maybeMoreAfter).to.be.a('string')
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
         firstInList = r.body.data[0]
-        moreAfter = r.body.maybeMoreAfter
-        startOfMiddleInList = r.body.maybeMoreAfter
+        moreAfterId = r.body.data[r.body.data.length - 1].id
+        startOfMiddleInList = moreAfterId
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -200,7 +201,7 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve all claims with a few more to come', () =>
     request(Server)
-      .get('/api/reportAll/claims?afterId=' + moreAfter)
+      .get('/api/reportAll/claims?afterId=' + moreAfterId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -208,8 +209,9 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.has.a.property('maybeMoreAfter')
-        moreAfter = r.body.maybeMoreAfter
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
+        moreAfterId = r.body.data[r.body.data.length - 1].id
         nthInListInMiddle = r.body.data[NTH_IN_MIDDLE]
       }).catch((err) => {
         return Promise.reject(err)
@@ -218,7 +220,7 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve a few more claims', () =>
     request(Server)
-      .get('/api/reportAll/claims?afterId=' + moreAfter)
+      .get('/api/reportAll/claims?afterId=' + moreAfterId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -226,8 +228,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(40)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
-        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+        expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -245,8 +246,9 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
-        moreBefore = r.body.maybeMoreBefore
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
+        moreBeforeId = r.body.data[r.body.data.length - 1].id
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -254,7 +256,7 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve rest of the earlier claims, reverse chronologically', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + moreBefore)
+      .get('/api/reportAll/claims?beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -262,7 +264,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE)
-        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+        expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -280,8 +282,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
-        expect(r.body).that.does.have.property('maybeMoreBefore')
+        expect(r.body).that.does.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -299,8 +300,8 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
-        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+        expect(r.body).that.does.not.have.property('hitLimit')
+        expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -318,8 +319,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
-        moreBefore = r.body.maybeMoreBefore
+        moreBeforeId = r.body.data[r.body.data.length - 1].id
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -327,7 +327,7 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve rest of items via after & before', () =>
     request(Server)
-      .get('/api/reportAll/claims?afterId=' + firstInList.id + '&beforeId=' + moreBefore)
+      .get('/api/reportAll/claims?afterId=' + firstInList.id + '&beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -335,8 +335,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE - 1)
-        expect(r.body).that.does.not.have.property('maybeMoreAfter')
-        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+        expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
       })

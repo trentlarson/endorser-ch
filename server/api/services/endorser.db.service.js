@@ -523,7 +523,7 @@ class EndorserDatabase {
      @param afterIdInput is the start of the search (excluding that item)
      @param afterIdInput is the end of the search (excluding that item), and reverses the ordering
 
-     @return object with "data" as a list of results, and optional "maybeMoreAfter" with ID of last row if we hit the limit of this search
+     @return object with "data" as a list of results, and optional "hitlimit" boolean telling if we hit the limit count for this query
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
 
@@ -575,11 +575,7 @@ class EndorserDatabase {
           } else {
             const result = { data: data }
             if (num === DEFAULT_LIMIT) {
-              if (beforeIdInput) {
-                result["maybeMoreBefore"] = data[data.length - 1].id;
-              } else {
-                result["maybeMoreAfter"] = data[data.length - 1].id;
-              }
+              result['hitLimit'] = true
             }
             resolve(result)
           }
@@ -668,7 +664,7 @@ class EndorserDatabase {
           } else {
             const result = { data: data }
             if (num === DEFAULT_LIMIT) {
-              result["maybeMoreAfter"] = data[data.length - 1].id;
+              result["hitLimit"] = true
             }
             resolve(result)
           }
