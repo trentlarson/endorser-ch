@@ -70,7 +70,7 @@ before(async () => {
 })
 
 const RESULT_COUNT_LIMIT = 50, NTH_IN_MIDDLE = 6
-let moreAfter, moreBefore, startOfMiddleInList, nthInListInMiddle
+let moreAfter, moreBefore, firstInList, startOfMiddleInList, nthInListInMiddle
 
 describe('Load Claims Incrementally', () => {
 
@@ -190,6 +190,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
         expect(r.body).that.has.a.property('maybeMoreAfter')
         expect(r.body.maybeMoreAfter).to.be.a('string')
+        firstInList = r.body.data[0]
         moreAfter = r.body.maybeMoreAfter
         startOfMiddleInList = r.body.maybeMoreAfter
       }).catch((err) => {
@@ -269,7 +270,7 @@ describe('Load Claims Incrementally', () => {
 
   //---------------- Now do subset with both before & after params.
 
-  it('retrieve rest of the earlier claims, reverse chronologically', () =>
+  it('retrieve small set of items via after & before', () =>
     request(Server)
       .get('/api/reportAll/claims?afterId=' + startOfMiddleInList + '&beforeId=' + nthInListInMiddle.id)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -279,6 +280,42 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE)
+        expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  //---------------- Now do subset with both before & after params, more than the limit.
+
+  it('retrieve bigger set of items via after & before', () =>
+    request(Server)
+      .get('/api/reportAll/claims?afterId=' + firstInList.id + '&beforeId=' + nthInListInMiddle.id)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
+        expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        moreBefore = r.body.maybeMoreBefore
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  it('retrieve rest of items via after & before', () =>
+    request(Server)
+      .get('/api/reportAll/claims?afterId=' + firstInList.id + '&beforeId=' + moreBefore)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE - 1)
         expect(r.body).that.does.not.have.property('maybeMoreAfter')
         expect(r.body).that.does.not.have.property('maybeMoreBefore')
       }).catch((err) => {
