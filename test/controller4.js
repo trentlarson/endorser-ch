@@ -268,6 +268,25 @@ describe('Load Claims Incrementally', () => {
       })
   )
 
+  //---------------- Now use "before" with a maximum ID.
+
+  it('retrieve items at end with a maximum "beforeId" value', () =>
+    request(Server)
+      .get('/api/reportAll/claims?beforeId=ZZZZZZZZZZZZZZZZZZZZZZZZZZ')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
+        expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        expect(r.body).that.does.have.property('maybeMoreBefore')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
   //---------------- Now do subset with both before & after params.
 
   it('retrieve small set of items via after & before', () =>
