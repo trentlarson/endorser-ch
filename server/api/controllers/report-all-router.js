@@ -81,7 +81,7 @@ export default express
  * @group reportAll - Reports With Paging
  * @route GET /api/reportAll/claims
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive), for pagination
- * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive), for pagination (will order results reverse chronologically)
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive), for pagination; will order results reverse chronologically; start at end with value of 'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
  * @param {string} claimType.query.optional
