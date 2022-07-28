@@ -521,7 +521,7 @@ class EndorserDatabase {
      - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
      - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
      @param afterIdInput is the start of the search (excluding that item)
-     @param afterIdInput is the end of the search (excluding that item)
+     @param afterIdInput is the end of the search (excluding that item), and reverses the ordering
 
      @return object with "data" as a list of results, and optional "maybeMoreAfter" with ID of last row if we hit the limit of this search
    **/
@@ -538,23 +538,21 @@ class EndorserDatabase {
     let allClause = where.clause
     let allParams = where.params
     if (afterIdInput) {
-      if (where.clause) {
-        allClause = where.clause + ' AND id > ?'
-        allParams = where.params.concat([afterIdInput])
+      if (allClause) {
+        allClause = allClause + ' AND id > ?'
       } else {
         allClause = ' WHERE id > ?'
-        allParams = [afterIdInput]
       }
+      allParams = allParams.concat([afterIdInput])
     }
     let ordering = ''
     if (beforeIdInput) {
-      if (where.clause) {
-        allClause = where.clause + ' AND id < ?'
-        allParams = where.params.concat([beforeIdInput])
+      if (allClause) {
+        allClause = allClause + ' AND id < ?'
       } else {
         allClause = ' WHERE id < ?'
-        allParams = [beforeIdInput]
       }
+      allParams = allParams.concat([beforeIdInput])
       ordering = ' DESC'
     }
 

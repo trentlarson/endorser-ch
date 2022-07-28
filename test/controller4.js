@@ -69,8 +69,8 @@ before(async () => {
   return Promise.resolve()
 })
 
-const RESULT_COUNT_LIMIT = 50, NTH_AFTER_LIMIT = 6
-let moreAfter, moreBefore, nthInListAfterLimit
+const RESULT_COUNT_LIMIT = 50, NTH_IN_MIDDLE = 6
+let moreAfter, moreBefore, startOfMiddleInList, nthInListInMiddle
 
 describe('Load Claims Incrementally', () => {
 
@@ -191,6 +191,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).that.has.a.property('maybeMoreAfter')
         expect(r.body.maybeMoreAfter).to.be.a('string')
         moreAfter = r.body.maybeMoreAfter
+        startOfMiddleInList = r.body.maybeMoreAfter
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -208,7 +209,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
         expect(r.body).that.has.a.property('maybeMoreAfter')
         moreAfter = r.body.maybeMoreAfter
-        nthInListAfterLimit = r.body.data[NTH_AFTER_LIMIT]
+        nthInListInMiddle = r.body.data[NTH_IN_MIDDLE]
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -235,7 +236,7 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve some earlier claims, reverse chronologically', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + nthInListAfterLimit.id)
+      .get('/api/reportAll/claims?beforeId=' + nthInListInMiddle.id)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -259,7 +260,26 @@ describe('Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(NTH_AFTER_LIMIT)
+        expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE)
+        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  //---------------- Now do subset with both before & after params.
+
+  it('retrieve rest of the earlier claims, reverse chronologically', () =>
+    request(Server)
+      .get('/api/reportAll/claims?afterId=' + startOfMiddleInList + '&beforeId=' + nthInListInMiddle.id)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(NTH_IN_MIDDLE)
+        expect(r.body).that.does.not.have.property('maybeMoreAfter')
         expect(r.body).that.does.not.have.property('maybeMoreBefore')
       }).catch((err) => {
         return Promise.reject(err)
