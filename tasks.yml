@@ -1,17 +1,27 @@
 ---
 
-
-- 08 set up agent to determine access (eg. site docs) - web3? :
-  - be able to send presentation :
-    - retrieve claim, create VP out of it, send VP to OpenID
-  - ensure presentation scans
-  - test scans at bottom
-
-- .5 update endorser-ch website (eg. for scenario links)
+- 08 notify user of new content:
+  - .5 test on my phone - fix build error, uninstall
+  - .5 check server for new claims
+    - remove duplicate events
+  - 01 don't restart WorkManager if already running id:mobile-android-workmanager-status
+    - ... and any other WorkManager status that the user should know
+  - .5 allow test API URL
+  - .5 show date last run
+  - 01 report failure to https://www.npmjs.com/package/react-native-headless-work-manager
+  - reports: check running, restart, beware of workers that might be still running
+  - check the "Please provide SecretBox", which I first noticed in 6.2.93
+  - check that the work interval is 1 day
+  - can we eliminate manual instructions for react-native-headless-work-manager?
+  - test combinations
+    - no account: Does it crash on daily alert check? Can we scan? Can we import?
+    - with account: no claims, some claims, some new claims
 
 - 01 fix individual who isn't able to access their seed
 
 - 02 test JWT signatures
+
+- .5 update endorser-ch website (eg. for scenario links)
 
 
 
@@ -29,6 +39,9 @@
 
 
 
+
+- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
+
 - 01 show anyone in your network who has taken the pledge
 
 - 01 bump dependencies
@@ -43,7 +56,11 @@
 
 - next endorser-mobile release :
 
+  - 01 change 'bundle exec fastlane' to a production command epic:public-release
+
   - .5 got an error after successful signature and submission to server
+
+  - 01 fix complaint with background notification on android (even though it appears that the notification works) '[notifee] no background event handler has been set. Set a handler via the "onBackgroundEvent" method.'
 
   - 01 figure out confirmations for organizations(?)
 
@@ -126,7 +143,8 @@
   - .5 Android confirmation-loading spinner is invisible
   - 01 Figure out why "fetch" doesn't retrieve the most recent data. (Test by scanning a QR code to load contacts in bulk, and see that you don't get the new contents when you change something in that remote CSV.)
   - see other bugs below
-- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
+
+- 01 endorser-auth - automatedly test issuance date, expiration; may have to generate VP dynamically
 - 01 fix subjects (eg. Jun 29 2019 claims by me for others)
 - 02 show signatures for proof of confirmations
 - 02 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)

@@ -119,7 +119,7 @@ describe('Load Claims Incrementally', () => {
           })
       })
     )
-  )
+  ).timeout(6001)
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
