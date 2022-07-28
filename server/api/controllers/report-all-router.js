@@ -11,10 +11,13 @@ class DbController {
     const query = req.query
     const afterId = req.query.afterId
     delete query.afterId
-    DbService.jwtsByParamsPaged(query, afterId)
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    DbService.jwtsByParamsPaged(query, afterId, beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
-        maybeMoreAfter: results.maybeMoreAfter
+        maybeMoreAfter: results.maybeMoreAfter,
+        maybeMoreBefore: results.maybeMoreBefore,
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { req.resultJsonWrap = results; next(); })
@@ -68,6 +71,7 @@ export default express
 /**
  * @typedef JwtArrayMaybeMoreBody
  * @property {Array.Jwt} data (as many as allowed by our limit)
+ * @property {string} maybeMoreBefore is the string before which to start searching on next request
  * @property {string} maybeMoreAfter is the string after which to start searching on next request
  */
 
@@ -76,12 +80,13 @@ export default express
  *
  * @group reportAll - Reports With Paging
  * @route GET /api/reportAll/claims
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive), for pagination
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive), for pagination (will order results reverse chronologically)
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
  * @param {string} claimType.query.optional
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
- * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive), for pagination
  * @returns {JwtArrayMaybeMoreBody} 200 - matching claims
  * @returns {Error}  default - Unexpected error
  */

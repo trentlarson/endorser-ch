@@ -521,10 +521,11 @@ class EndorserDatabase {
      - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
      - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
      @param afterIdInput is the start of the search (excluding that item)
+     @param afterIdInput is the end of the search (excluding that item)
 
      @return object with "data" as a list of results, and optional "maybeMoreAfter" with ID of last row if we hit the limit of this search
    **/
-  jwtsByParamsPaged(params, afterIdInput) {
+  jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
 
     // Note: this is very similar logic to jwtsByParams
 
@@ -545,11 +546,22 @@ class EndorserDatabase {
         allParams = [afterIdInput]
       }
     }
+    let ordering = ''
+    if (beforeIdInput) {
+      if (where.clause) {
+        allClause = where.clause + ' AND id < ?'
+        allParams = where.params.concat([beforeIdInput])
+      } else {
+        allClause = ' WHERE id < ?'
+        allParams = [beforeIdInput]
+      }
+      ordering = ' DESC'
+    }
 
     let rowErr
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + allClause + " ORDER BY id LIMIT " + DEFAULT_LIMIT,
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + allClause + " ORDER BY id" + ordering + " LIMIT " + DEFAULT_LIMIT,
         allParams,
         function(err, row) {
           if (err) {
@@ -565,7 +577,11 @@ class EndorserDatabase {
           } else {
             const result = { data: data }
             if (num === DEFAULT_LIMIT) {
-              result["maybeMoreAfter"] = data[data.length - 1].id;
+              if (beforeIdInput) {
+                result["maybeMoreBefore"] = data[data.length - 1].id;
+              } else {
+                result["maybeMoreAfter"] = data[data.length - 1].id;
+              }
             }
             resolve(result)
           }

@@ -69,7 +69,8 @@ before(async () => {
   return Promise.resolve()
 })
 
-let moreAfter
+const RESULT_COUNT_LIMIT = 50, NTH_AFTER_LIMIT = 6
+let moreAfter, moreBefore, nthInListAfterLimit
 
 describe('Load Claims Incrementally', () => {
 
@@ -128,7 +129,7 @@ describe('Load Claims Incrementally', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
         expect(r.body).that.has.a.property('maybeMoreAfter')
         expect(r.body.maybeMoreAfter).to.be.a('string')
         moreAfter = r.body.maybeMoreAfter
@@ -146,7 +147,7 @@ describe('Load Claims Incrementally', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
         expect(r.body).that.has.a.property('maybeMoreAfter')
         moreAfter = r.body.maybeMoreAfter
         expect(r.status).that.equals(200)
@@ -186,7 +187,7 @@ describe('Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
         expect(r.body).that.has.a.property('maybeMoreAfter')
         expect(r.body.maybeMoreAfter).to.be.a('string')
         moreAfter = r.body.maybeMoreAfter
@@ -204,9 +205,10 @@ describe('Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
         expect(r.body).that.has.a.property('maybeMoreAfter')
         moreAfter = r.body.maybeMoreAfter
+        nthInListAfterLimit = r.body.data[NTH_AFTER_LIMIT]
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -223,6 +225,42 @@ describe('Load Claims Incrementally', () => {
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(40)
         expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        expect(r.body).that.does.not.have.property('maybeMoreBefore')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  //---------------- Now do the same reverse chronologically, with a subset.
+
+  it('retrieve some earlier claims, reverse chronologically', () =>
+    request(Server)
+      .get('/api/reportAll/claims?beforeId=' + nthInListAfterLimit.id)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
+        expect(r.body).that.does.not.have.property('maybeMoreAfter')
+        moreBefore = r.body.maybeMoreBefore
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  it('retrieve rest of the earlier claims, reverse chronologically', () =>
+    request(Server)
+      .get('/api/reportAll/claims?beforeId=' + moreBefore)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(NTH_AFTER_LIMIT)
+        expect(r.body).that.does.not.have.property('maybeMoreBefore')
       }).catch((err) => {
         return Promise.reject(err)
       })
