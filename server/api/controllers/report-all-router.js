@@ -31,7 +31,7 @@ class DbController {
     DbService.allIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
-        maybeMoreAfter: results.hitLimit ? results.data[results.data.length - 1].id : undefined, // legacy API; can be removed when people are on mobile v 6.3.100+
+        maybeMoreAfter: results.hitLimit ? results.data[results.data.length - 1].id : undefined, // legacy API; can be removed when everyone is on mobile v 6.3.100+
         hitLimit: results.hitLimit,
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
@@ -71,8 +71,8 @@ export default express
 /**
  * @typedef JwtArrayMaybeMoreBody
  * @property {Array.Jwt} data (as many as allowed by our limit)
- * @property {string} maybeMoreBefore is the string before which to start searching on next request
- * @property {string} maybeMoreAfter is the string after which to start searching on next request
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ * @property {string} maybeMoreAfter is the string after which to start searching on next request -- don't use this legacy API, which will be removed when everyone is on mobile v 6.3.100+
  */
 
 /**
