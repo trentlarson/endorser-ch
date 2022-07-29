@@ -28,7 +28,7 @@ class DbController {
     if (!Array.isArray(claimTypes)) {
       return res.status(400).json({error: "Parameter 'claimTypes' should be an array but got: " + req.query.claimTypes}).end()
     }
-    DbService.allIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId)
+    DbService.allIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         maybeMoreAfter: results.hitLimit ? results.data[results.data.length - 1].id : undefined, // legacy API; can be removed when everyone is on mobile v 6.3.100+
@@ -72,22 +72,22 @@ export default express
  * @typedef JwtArrayMaybeMoreBody
  * @property {Array.Jwt} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
- * @property {string} maybeMoreAfter is the string after which to start searching on next request -- don't use this legacy API, which will be removed when everyone is on mobile v 6.3.100+
+ * @property {string} maybeMoreAfter deprecated: the string after which to start searching on next request -- use hitLimit instead of this legacy API, which will be removed (possibly when everyone is on mobile v 6.3.100+)
  */
 
 /**
- * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string)
+ * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string), paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
  * @route GET /api/reportAll/claims
- * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive), for pagination
- * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive), for pagination; will order results reverse chronologically; start at end with value of 'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of 'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
  * @param {string} claimType.query.optional
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
- * @returns {JwtArrayMaybeMoreBody} 200 - matching claims
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching claims, reverse-chronologically
  * @returns {Error}  default - Unexpected error
  */
   .get('/claims', dbController.getAllJwtsPaged)
@@ -98,8 +98,9 @@ export default express
  * @group reportAll - Reports With Paging
  * @route GET /api/reportAll/claimsForIssuerWithTypes
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
- * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive), for pagination
- * @returns {JwtArrayMaybeMoreBody} 200 - claims issued by this user with any of those claim types
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of 'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @returns {JwtArrayMaybeMoreBody} 200 - claims issued by this user with any of those claim types, reverse-chronologically
  * @returns {Error} default - Unexpected error
  */
   .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)

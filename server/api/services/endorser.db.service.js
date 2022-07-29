@@ -488,7 +488,6 @@ class EndorserDatabase {
   /**
      Similar to jwtsByParamsPaged, but:
      - it returns an array of the results
-     - it works in reverse-chronological order
    **/
   jwtsByParams(params) {
 
@@ -520,10 +519,10 @@ class EndorserDatabase {
      - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
      - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
      - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
-     @param afterIdInput is the start of the search (excluding that item)
-     @param afterIdInput is the end of the search (excluding that item), and reverses the ordering
+     @param afterIdInput (optional) is the start of the search (excluding that item)
+     @param beforeIdInput (optional) is the end of the search (excluding that item)
 
-     @return object with "data" as a list of results, and optional "hitlimit" boolean telling if we hit the limit count for this query
+     @return object with "data" as a list of results, reverse-chronologically, with optional "hitlimit" boolean telling if we hit the limit count for this query
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
 
@@ -545,7 +544,6 @@ class EndorserDatabase {
       }
       allParams = allParams.concat([afterIdInput])
     }
-    let ordering = ''
     if (beforeIdInput) {
       if (allClause) {
         allClause = allClause + ' AND id < ?'
@@ -553,13 +551,12 @@ class EndorserDatabase {
         allClause = ' WHERE id < ?'
       }
       allParams = allParams.concat([beforeIdInput])
-      ordering = ' DESC'
     }
 
     let rowErr
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + allClause + " ORDER BY id" + ordering + " LIMIT " + DEFAULT_LIMIT,
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + allClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
         allParams,
         function(err, row) {
           if (err) {
@@ -637,19 +634,28 @@ class EndorserDatabase {
   }
 
   /**
-     Start from afterIdInput (defaults to '0') and retrieve all claims by issuerDid with claimTypes.
-     Note that this works in chronological order.
+     Start after afterIdInput (optional) and before beforeIdinput (optional) and retrieve all claims by issuerDid with claimTypes, in reverse chronological order.
   **/
-  allIssuerClaimTypesPaged(issuerDid, claimTypes, afterIdInput) {
+  allIssuerClaimTypesPaged(issuerDid, claimTypes, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
-      const afterId = afterIdInput || '0'
       const inListStr = claimTypes.map(value => "?").join(',')
-      const params = [afterId, issuerDid].concat(claimTypes)
+      let allParams = [issuerDid].concat(claimTypes)
+
+      let moreClause = ''
+      if (afterIdInput) {
+        moreClause = ' id > ? AND'
+        allParams = [afterIdInput].concat(allParams)
+      }
+      if (beforeIdInput) {
+        moreClause = ' id < ? AND' + moreClause
+        allParams = [beforeIdInput].concat(allParams)
+      }
+
       let data = []
       let rowErr
       db.each(
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE id > ? AND issuer = ? AND claimType in (" + inListStr + ") ORDER BY id LIMIT " + DEFAULT_LIMIT,
-        params,
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE" + moreClause + " issuer = ? AND claimType in (" + inListStr + ") ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
+        allParams,
         function(err, row) {
           if (err) {
             rowErr = err
