@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose()
-const ulidx = require('ulidx');
+const ulidx = require('ulidx')
+const ulid = ulidx.monotonicFactory()
 
 const dbInfo = require('../../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
@@ -448,7 +449,7 @@ class EndorserDatabase {
    **/
 
   buildJwtEntity(payload, claim, claimStr, claimEncoded, jwtEncoded) {
-    let id = ulidx.ulid()
+    let id = ulid()
     let issuedAt = new Date(payload.iat * 1000).toISOString()
     let issuer = payload.iss
     let subject = payload.sub
