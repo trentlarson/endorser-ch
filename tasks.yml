@@ -1,6 +1,9 @@
 ---
 
-- 08 notify user of new content:
+- 08 on mobile, notify user of new content:
+  - test when there is a last-viewed claim ID
+  - test when there is a last-notified claim ID
+  - remove state apiServer and only use the one from the embedded settings
   - .5 test on my phone - fix build error, uninstall
   - .5 check server for new claims
     - remove duplicate events
@@ -16,6 +19,7 @@
   - test combinations
     - no account: Does it crash on daily alert check? Can we scan? Can we import?
     - with account: no claims, some claims, some new claims
+  - optimize feed: "VirtualizedList: You have a large list that is slow to update - make sure your renderItem function renders components that follow React performance best practices like PureComponent, shouldComponentUpdate, etc."
 
 - 01 fix individual who isn't able to access their seed
 
