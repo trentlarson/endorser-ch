@@ -488,7 +488,7 @@ class EndorserDatabase {
 
   /**
      Similar to jwtsByParamsPaged, but:
-     - it returns an array of the results
+     - returns Promise of array of the results
    **/
   jwtsByParams(params) {
 
@@ -523,7 +523,7 @@ class EndorserDatabase {
      @param afterIdInput (optional) is the start of the search (excluding that item)
      @param beforeIdInput (optional) is the end of the search (excluding that item)
 
-     @return object with "data" as a list of results, reverse-chronologically, with optional "hitlimit" boolean telling if we hit the limit count for this query
+     @return Promise of object with "data" as a list of results, reverse-chronologically, with optional "hitlimit" boolean telling if we hit the limit count for this query
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
 

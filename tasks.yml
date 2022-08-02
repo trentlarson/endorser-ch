@@ -7,19 +7,27 @@
   - .5 test on my phone - fix build error, uninstall
   - .5 check server for new claims
     - remove duplicate events
+  - ensure migration of existing installations to store the API server
+  - remove duplicate background triggers (shows 2 notifications on android)
   - 01 don't restart WorkManager if already running id:mobile-android-workmanager-status
     - ... and any other WorkManager status that the user should know
-  - .5 allow test API URL
   - .5 show date last run
   - 01 report failure to https://www.npmjs.com/package/react-native-headless-work-manager
   - reports: check running, restart, beware of workers that might be still running
   - check the "Please provide SecretBox", which I first noticed in 6.2.93
-  - check that the work interval is 1 day
-  - can we eliminate manual instructions for react-native-headless-work-manager?
+  - icon for the notification
   - test combinations
     - no account: Does it crash on daily alert check? Can we scan? Can we import?
     - with account: no claims, some claims, some new claims
   - optimize feed: "VirtualizedList: You have a large list that is slow to update - make sure your renderItem function renders components that follow React performance best practices like PureComponent, shouldComponentUpdate, etc."
+  - check that the work interval is 1 day (15 in index.js (multiple) and in MainApplication.java)
+  - remove RCTBackgroundProcessor if not used
+  - Don't retrieve full content.
+  - Add help for users
+    - if iOS: if you want notifications, don't close the app
+    - if Android: if you want notifications, close the app
+
+- .5 fix (i) info icon on Search -> Search Yours next to Filter
 
 - 01 fix individual who isn't able to access their seed
 
