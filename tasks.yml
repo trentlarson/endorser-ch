@@ -1,31 +1,19 @@
 ---
 
+- https://www.radicalxchange.org/2022-conference/
+
 - 08 on mobile, notify user of new content:
-  - test when there is a last-viewed claim ID
-  - test when there is a last-notified claim ID
-  - remove state apiServer and only use the one from the embedded settings
-  - .5 test on my phone - fix build error, uninstall
-  - .5 check server for new claims
-    - remove duplicate events
-  - ensure migration of existing installations to store the API server
-  - remove duplicate background triggers (shows 2 notifications on android)
-  - 01 don't restart WorkManager if already running id:mobile-android-workmanager-status
-    - ... and any other WorkManager status that the user should know
-  - .5 show date last run
-  - 01 report failure to https://www.npmjs.com/package/react-native-headless-work-manager
-  - reports: check running, restart, beware of workers that might be still running
-  - check the "Please provide SecretBox", which I first noticed in 6.2.93
-  - icon for the notification
+  - .5 android icon
   - test combinations
     - no account: Does it crash on daily alert check? Can we scan? Can we import?
     - with account: no claims, some claims, some new claims
-  - optimize feed: "VirtualizedList: You have a large list that is slow to update - make sure your renderItem function renders components that follow React performance best practices like PureComponent, shouldComponentUpdate, etc."
-  - check that the work interval is 1 day (15 in index.js (multiple) and in MainApplication.java)
-  - remove RCTBackgroundProcessor if not used
-  - Don't retrieve full content.
-  - Add help for users
-    - if iOS: if you want notifications, don't close the app
-    - if Android: if you want notifications, close the app
+    - notifications:
+      - android - terminated yes, background, foreground
+      - ios - terminated, background, foreground
+  - check the "Please provide SecretBox", which I first noticed in 6.2.93 (went away, now seen on Android 101ce)
+
+  - android - get background to revive and show feed after clicking on notification; id:android-feed-screen-from-background maybe https://github.com/invertase/notifee/issues/132#issuecomment-1038821680
+
 
 - .5 fix (i) info icon on Search -> Search Yours next to Filter
 
@@ -66,27 +54,21 @@
 
 - 01 fix /api-docs for /api-explorer
 
-- next endorser-mobile release :
+- endorser-mobile :
 
+  - 01 fix "Got unknown error verifying JWT" (eg. verifying a newly created Plan)
   - 01 change 'bundle exec fastlane' to a production command epic:public-release
-
-  - .5 got an error after successful signature and submission to server
-
-  - 01 fix complaint with background notification on android (even though it appears that the notification works) '[notifee] no background event handler has been set. Set a handler via the "onBackgroundEvent" method.'
-
   - 01 figure out confirmations for organizations(?)
-
+  - .5 on verify screen, the date on the proof changes every time; show the original with unchanging date
+  - .5 Android confirmation-loading spinner is invisible
   - .5 catch error for bad scan, or for bad format (eg. non-JSON claim) scan
-
   - .5 type:bug click on identifier link on confirmation screen hung app on Android
-
   - .1 put more spacing on the sign-success page (for Android - after signing it overlaps)
   - .1 remove the "Something went wrong" that shows on "signed" page before payload is sent (on slow Android phone)
   - .1 After adding by URL, erase text box
-
   - .5 Add a way to give link to a Plan & Offer
-
   - 01 Show the full VC for a result from a search (ie. from lookup in back-end)
+  - optimize feed: "VirtualizedList: You have a large list that is slow to update - make sure your renderItem function renders components that follow React performance best practices like PureComponent, shouldComponentUpdate, etc."
 
   - Add other options to PlanAction :
     - 01 Event - identifier, attendee, startDate, endDate(?), location
@@ -131,7 +113,6 @@
 
   - 01 upgrade data-store library
   - .2 show "blank" or something when value is {} (eg. recipient for 61 on test server shows blank under Search All see console.log in ReportFromEndorser)
-  - .5 update from API level 29 to 30 (Android 11)
   - .2 catch errors on import (probably the seed, but look at contacts, too)
   - 01 clarify (separate?) that "search your credentials" are for ones you created vs ones about you
   - .2 change claim & issuer to not be blank when there is no verifiedResponse
@@ -151,8 +132,6 @@
   - .5 test where cacList has a linked confirmation
   - .5 declare the type of cacList in VerifyCredential.tsx
   - .5 make submission a real VC with proof inside
-  - .5 on verify screen, the date on the proof changes every time; show the original with unchanging date
-  - .5 Android confirmation-loading spinner is invisible
   - 01 Figure out why "fetch" doesn't retrieve the most recent data. (Test by scanning a QR code to load contacts in bulk, and see that you don't get the new contents when you change something in that remote CSV.)
   - see other bugs below
 
@@ -177,7 +156,9 @@
 - 02 change name of app from "uport demo" (when logging in)
 - 01 fix UI disallowing any calls for an expired token (see working-self on 2022.04.06) id:expired-uport-token
 - 01 add .json(someErr) to all routers in the error path
-- mobile app:
+- lesser endorser-mobile app issues:
+  - fix android so click on feed notification when app is in background will jump to feed screen
+  - fix iOS to wake app to check new claims when app is terminated
   - 08 store claims & confirmations
     - allow to download
   - 01 check that contact JWT was recently created, even in bulk (because they may be sending you a different contact)
