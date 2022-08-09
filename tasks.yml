@@ -4,9 +4,9 @@
 
 - 08 on mobile, notify user of new content:
   - .5 android icon
-  - test combinations
-    - no account: Does it crash on daily alert check? Can we scan? Can we import?
-    - with account: no claims, some claims, some new claims
+  - test combinations:
+    - no account - Does it crash on daily alert check? Can we scan? Can we import?
+    - with account = no claims, some claims, some new claims
     - notifications:
       - android - terminated yes, background, foreground
       - ios - terminated, background, foreground
@@ -14,6 +14,11 @@
 
   - android - get background to revive and show feed after clicking on notification; id:android-feed-screen-from-background maybe https://github.com/invertase/notifee/issues/132#issuecomment-1038821680
 
+- 02 rate limit by addresses (eg. 1000/day)
+
+- 01 add endpoint for license
+
+- 02 add hash for claims by participants in a 'chain'
 
 - .5 fix (i) info icon on Search -> Search Yours next to Filter
 
