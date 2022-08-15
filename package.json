@@ -15,7 +15,6 @@
     "flyway": "flyway -c conf/flyway.js",
     "test": "mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
-
     "reset-claim-fields": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-claim-fields.js --exit",
     "reset-confirms": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-confirms.js --exit",
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
@@ -36,7 +35,7 @@
     "pino": "^5.10.2",
     "ramda": "^0.26.1",
     "sqlite3": "^5.0.1",
-    "ulidx": "^0.2.0"
+    "ulidx": "^0.3.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",

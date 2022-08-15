@@ -12,7 +12,9 @@ This repo is an API for creating and querying claims.  For a full system, use th
 
 ## Get Started
 
-Get started developing...
+Get started developing.
+
+Works with node v14
 
 ```shell
 # install dependencies
