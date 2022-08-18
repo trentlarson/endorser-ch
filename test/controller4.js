@@ -271,7 +271,7 @@ describe('Load Claims Incrementally', () => {
 
   it('retrieve items at end with a maximum "beforeId" value', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=ZZZZZZZZZZZZZZZZZZZZZZZZZZ')
+      .get('/api/reportAll/claims?beforeId=7ZZZZZZZZZZZZZZZZZZZZZZZZZ')
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
