@@ -148,8 +148,33 @@ Now for a confirmation of that activity:
 ```
 
 
-
 ```shell
+
+
+#### Generate JWTs
+
+# Set up REPL
+npx yarn-add-no-save esm typescript ts-node tslib @types/node
+#set isolatedModules to false & strict in tsconfig.json
+npx ts-node
+import * as utility from './src/utility/utility' // require does not work
+const testUtil = require('../endorser-ch/test/util') // import does not work
+
+# One approach:
+testUtil.credentials[0].signJWT({a:1})
+
+# Another approach:
+import didJwt from 'did-jwt'
+const cred = testUtil.creds[0]
+const signer = didJwt.SimpleSigner(cred.privateKey)
+const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
+const jwt = await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
+
+# Another approach (untried): create identifier and use utility.accessToken method
+
+
+
+#### Extensive, old tests
 
 # These JWTs are old so they'll require running in "test-local" mode.
 export UPORT_PUSH_TOKEN=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NjAyMTI0MTMsImV4cCI6MTU2MDI5ODgxMywiaXNzIjoiZGlkOmV0aHI6MHgwMGM5YzIzMjZjNzNmNzMzODBlODQwMmIwMWRlOWRlZmNmZjJiMDY0In0.mUydq67R-gzz7c6iQBd06uKu2OEO32vqFbMWTxK3k5VUcDwFQR9XEj28KflBMmohm72nlITd_0kK0zIYSGaDwgA
@@ -183,45 +208,6 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 
 
 
-
-## Debug It (... a section left over from original uPort project)
-
-#### Debug the server:
-
-```
-npm run dev:debug
-```
-
-#### Debug Tests
-
-```
-npm run test:debug
-```
-
-#### Debug with VSCode
-
-Add these [contents](https://github.com/cdimascio/generator-express-no-stress/blob/next/assets/.vscode/launch.json) to your `.vscode/launch.json` file
-## Lint It
-
-View airbnb linter output
-
-```
-npm run lint
-```
-
-Fix all airbnb linter errors
-
-```
-npm run lint
-```
-
-## Deploy It (... a section left over from original uPort project)
-
-Deploy to CloudFoundry
-
-```shell
-cf push endorser-ch
-```
 
 ## Kudos
 
