@@ -400,6 +400,12 @@ See [tasks.yml](tasks.yml).
 
 
 
+
+This is licensed as public domain software, but I sure would enjoy a note if you get people using it.
+
+
+
+
 Note that new deployments can remove the code for: "legacy Confirmation", "legacy context"
 
 

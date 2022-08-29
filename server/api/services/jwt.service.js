@@ -317,6 +317,19 @@ class JwtService {
       let orgRoleId = await db.orgRoleInsert(entity)
 
 
+    } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'RegisterAction') {
+
+      let registration = {
+        did: claim.object,
+        from: claim.agent,
+        epoch: new Date().valueOf(),
+        jwtId: jwtId,
+      }
+
+      let eventId = await db.registrationInsert(registration).catch(console.log)
+      // currently assuming the only error is due to the unique constraint and we're OK if it's already there
+
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {
 
@@ -334,6 +347,21 @@ class JwtService {
           }
 
       let tenureId = await db.tenureInsert(entity)
+
+
+    } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'VoteAction') {
+
+      let vote = {
+        jwtId: jwtId,
+        issuerDid: issuerDid,
+        actionOption: claim.actionOption,
+        candidate: claim.candidate,
+        eventName: claim.object.event.name,
+        eventStartTime: claim.object.event.startDate,
+      }
+
+      let eventId = await db.voteInsert(vote)
 
 
     } else if (isContextSchemaForConfirmation(claim['@context'])
@@ -365,21 +393,6 @@ class JwtService {
         .catch(err => {
           return Promise.reject(err)
         })
-
-
-    } else if (isContextSchemaOrg(claim['@context'])
-               && claim['@type'] === 'VoteAction') {
-
-      let vote = {
-        jwtId: jwtId,
-        issuerDid: issuerDid,
-        actionOption: claim.actionOption,
-        candidate: claim.candidate,
-        eventName: claim.object.event.name,
-        eventStartTime: claim.object.event.startDate,
-      }
-
-      let eventId = await db.voteInsert(vote)
 
 
     } else {

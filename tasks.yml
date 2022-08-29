@@ -1,53 +1,23 @@
 ---
 
-- https://www.radicalxchange.org/2022-conference/
+- 02 rate limit total number of claims :
+  - rate limit specific addresses
 
-- 08 on mobile, notify user of new content:
-  - .5 android icon
-  - test combinations:
-    - no account - Does it crash on daily alert check? Can we scan? Can we import?
-    - with account = no claims, some claims, some new claims
-    - notifications:
-      - android - terminated yes, background, foreground
-      - ios - terminated, background, foreground
-  - check the "Please provide SecretBox", which I first noticed in 6.2.93 (went away, now seen on Android 101ce)
+- 10 rate limit invited addresses
 
-  - android - get background to revive and show feed after clicking on notification; id:android-feed-screen-from-background maybe https://github.com/invertase/notifee/issues/132#issuecomment-1038821680
-
-- 02 rate limit by addresses (eg. 1000/day)
+- .5 disable open-ended JWT search endpoint
 
 - 01 add endpoint for license
 
 - 02 add hash for claims by participants in a 'chain'
 
-- .5 fix (i) info icon on Search -> Search Yours next to Filter
-
-- 01 fix individual who isn't able to access their seed
-
 - 02 test JWT signatures
 
 - .5 update endorser-ch website (eg. for scenario links)
 
-
-
-- .5 add offerId to GaveAction
-
-- .5 allow copy of final claim ID after successful server submission
-
-- 04 figure out revocation
-
-- 01 test that deselecting "can see me" when adding contact on app will disallow seeing
+- 04 revocation
 
 - 01 run load test, especially for: claimContents search, confirmations-by-claim retrieval
-
-
-
-
-
-
-- 02 in text search -  remove any results without text after DIDs are hidden (because that means the matching data was a DID that the user shouldn't see)
-
-- 01 show anyone in your network who has taken the pledge
 
 - 01 bump dependencies
 
@@ -55,11 +25,23 @@
 
 - 01 add sensitive issues to a separate list (eg. rate)
 
-- 01 disallow results containing DIDs (ie. don't return results that don't contain the search criteria after DIDs are hidden)
+- 01 disallow results containing DIDs? (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
 - 01 fix /api-docs for /api-explorer
 
 - endorser-mobile :
+
+  - 01 create some user testing questions; try usabilityhub.com
+
+  - check the "Please provide SecretBox", which I first noticed in 6.2.93 (went away, now seen on Android 101ce)
+
+  - 01 allow choosing notification filter (eg. only ones with DIDs, none)... pause for a month?
+  - .5 fix (i) info icon on Search -> Search Yours next to Filter
+  - 01 fix individual who isn't able to access their seed
+  - .5 add offerId to GaveAction
+  - .5 allow copy of final claim ID after successful server submission
+  - 01 test that deselecting "can see me" when adding contact on app will disallow seeing
+  - 01 show anyone in your network who has taken the pledge
 
   - 01 fix "Got unknown error verifying JWT" (eg. verifying a newly created Plan)
   - 01 change 'bundle exec fastlane' to a production command epic:public-release
@@ -92,11 +74,6 @@
   - .5 restore checkbox in ConfirmOthers
   - .5 remove the useState copies of all the appStore values
   - .5 put my own QR code at top of contacts screen
-
-  - 20 feed id:mobile-feed :
-    - query for recent additions
-    - save last query time
-    - notify user
 
   - Change CSV export/import to Google headers
   - test for hundreds of contacts
@@ -162,10 +139,15 @@
 - 01 fix UI disallowing any calls for an expired token (see working-self on 2022.04.06) id:expired-uport-token
 - 01 add .json(someErr) to all routers in the error path
 - lesser endorser-mobile app issues:
-  - fix android so click on feed notification when app is in background will jump to feed screen
-  - fix iOS to wake app to check new claims when app is terminated
-  - 08 store claims & confirmations
+  - on android, get background to revive and show feed screen after clicking on notification when app is in background; id:android-feed-screen-from-background maybe https://github.com/invertase/notifee/issues/132#issuecomment-1038821680
+  - on iOS, wake app to check & notify of new claims when app is terminated
+
+  - 08 store claims & confirmations :
     - allow to download
+    - conform to DWN https://identity.foundation/decentralized-web-node/spec/
+    - conform to EDV https://identity.foundation/edv-spec/
+  - 04 publish feed in RSS and/or Atom format
+  - 04 replace android background registerHeadlessTask & DailyTaskWorker with react-native-background-fetch (for consistency)
   - 01 check that contact JWT was recently created, even in bulk (because they may be sending you a different contact)
   - 01 allow export of selected contacts
   - .5 remove modal confirmation for saving a contact

@@ -79,7 +79,7 @@ export default express
  * @group reportAll - Reports With Paging
  * @route GET /api/reportAll/claims
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of 'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
  * @param {string} claimType.query.optional
@@ -97,7 +97,7 @@ export default express
  * @route GET /api/reportAll/claimsForIssuerWithTypes
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of 'ZZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @returns {JwtArrayMaybeMoreBody} 200 - claims issued by this user with any of those claim types, reverse-chronologically
  * @returns {Error} default - Unexpected error
  */
