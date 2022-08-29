@@ -55,7 +55,40 @@ describe('Registration', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
+       expect(r.body.length).to.equal(26)
        expect(r.status).that.equals(201)
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+  )
+
+  it('check that user 8 can claim', () =>
+     request(Server)
+     .get('/api/reportAll/canClaim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[8])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body).to.be.an('object')
+       expect(r.body).that.has.a.property('data')
+       expect(r.body.data).to.be.a('boolean')
+       expect(r.body.data).to.be.true
+     }).catch((err) => {
+       return Promise.reject(err)
+     })
+  )
+
+  it('check that user 9 cannot claim', () =>
+     request(Server)
+     .get('/api/reportAll/canClaim')
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[9])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body).to.be.an('object')
+       expect(r.body).that.has.a.property('data')
+       expect(r.body.data).to.be.a('boolean')
+       expect(r.body.data).to.be.false
      }).catch((err) => {
        return Promise.reject(err)
      })

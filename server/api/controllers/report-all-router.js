@@ -20,7 +20,7 @@ class DbController {
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { req.resultJsonWrap = results; next(); })
-      .catch(err => { res.status(500).json(""+err).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
   getAllIssuerClaimTypesPaged(req, res, next) {
@@ -35,7 +35,19 @@ class DbController {
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { req.resultJsonWrap = results; next(); })
-      .catch(err => { res.status(500).json(""+err).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getCanClaim(req, res) {
+    DbService.registrationByDid(res.locals.tokenIssuer)
+      .then(r => {
+        const dataResult = { data: !!r }
+        if (!r) {
+          dataResult.error = "The person who referred you can register you."
+        }
+        return res.json(dataResult).end()
+      })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
 
 }
@@ -72,6 +84,14 @@ export default express
  * @property {Array.Jwt} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
+
+/**
+ * Check if current user can create a claim.
+ *
+ * @route GET /api/report/canClaim
+ * @returns {Object} data boolean property tells whether this user is allowed to create a claim
+ */
+  .get('/canClaim', dbController.getCanClaim)
 
 /**
  * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string), paginated, reverse-chronologically
