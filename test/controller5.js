@@ -15,7 +15,7 @@ const credentials = R.map((c) => new Credentials(c), creds)
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
-const claimOffer = {
+const claimRegister = {
   "@context": "https://schema.org",
   "@type": "RegisterAction",
   agent: creds[2].did,
@@ -23,7 +23,7 @@ const claimOffer = {
 }
 
 const registrationJwtObj = R.clone(testUtil.jwtTemplate)
-registrationJwtObj.claim = R.clone(claimOffer)
+registrationJwtObj.claim = R.clone(claimRegister)
 const registrationJwtProm = credentials[2].createVerification(registrationJwtObj)
 
 let pushTokens, registrationJwtEnc

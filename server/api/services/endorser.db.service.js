@@ -486,6 +486,21 @@ class EndorserDatabase {
     })
   }
 
+  jwtCountByAfter(issuer, time) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT count(*) as numJwts FROM jwt WHERE issuer = ? AND datetime(?) < issuedAt", [issuer, time], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve(row.numJwts)
+        } else {
+          // should never happen
+          reject('Got no result from JWT count query.')
+        }
+      })
+    })
+  }
+
   /**
      Similar to jwtsByParamsPaged, but:
      - returns Promise of array of the results

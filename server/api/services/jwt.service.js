@@ -170,6 +170,7 @@ class JwtService {
       let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
       if (actionClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
 
+      // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
@@ -187,6 +188,7 @@ class JwtService {
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
 
+      // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
@@ -208,6 +210,7 @@ class JwtService {
       let orgRoleClaimId = await db.orgRoleClaimIdByOrgAndDates(origClaim.name, origClaim.member.roleName, origClaim.member.startDate, origClaim.member.endDate, origClaim.member.member.identifier)
       if (orgRoleClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
 
+      // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
@@ -221,6 +224,7 @@ class JwtService {
 
     } else {
 
+      // check for duplicate
       let confirmation = await db.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
 
@@ -472,22 +476,34 @@ class JwtService {
   async createWithClaimRecord(jwtEncoded, authIssuerId) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
-    let {payload, header, signature, data, doc, authenticators, issuer} =
+    const {payload, header, signature, data, doc, authenticators, issuer} =
         await this.decodeAndVerifyJwt(jwtEncoded)
         .catch((err) => {
           return Promise.reject(err)
         })
 
     if (payload.iss !== authIssuerId) {
-      return Promise.reject(`JWT issuer ${authIssuerId} does not match claim iss ${payload.iss}`)
+      return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss}`)
     }
 
-    let payloadClaim = this.extractClaim(payload)
+    const registered = await db.registrationByDid(payload.iss)
+    if (!registered) {
+      return Promise.reject(`Issuer ${payload.iss} is not registered. Contact an existing user for help.`)
+    }
+
+    const MAX_CLAIMS_PER_WEEK = 100
+    const startOfWeek = DateTime.utc().startOf('week').toISODate()
+    const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeek)
+    if (claimedCount >= MAX_CLAIMS_PER_WEEK) {
+      return Promise.reject(`Issuer ${payload.iss} has already claimed ${MAX_CLAIMS_PER_WEEK} this week. Contact an administrator for a higher limit`)
+    }
+
+    const payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
-      let claimStr = canonicalize(payloadClaim)
-      let claimEncoded = base64url.encode(claimStr)
-      let jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)
-      let jwtRowId =
+      const claimStr = canonicalize(payloadClaim)
+      const claimEncoded = base64url.encode(claimStr)
+      const jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)
+      const jwtRowId =
           await db.jwtInsert(jwtEntity)
           .catch((err) => {
             return Promise.reject(err)
@@ -497,7 +513,7 @@ class JwtService {
       //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
       //l.trace(issuer, `${this.constructor.name} resolved issuer`)
 
-      let issuerDid = payload.iss
+      const issuerDid = payload.iss
 
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
