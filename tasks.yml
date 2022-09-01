@@ -1,9 +1,15 @@
 ---
 
 - 02 rate limit total number of claims :
-  - rate limit specific addresses
+  - 05 rate limit invited addresses :
+    - fix tests
+    - change response code from 500 to 400
+  - allow registration when in contact list
 
-- 10 rate limit invited addresses
+
+- 05 rate limit specific addresses
+
+- 02 store claim column as canonical (possibly migrating), remove claimEncoded, add claimHash, add claimObfuHash
 
 - .5 disable open-ended JWT search endpoint
 
@@ -228,7 +234,6 @@
 - 01 usability - add a "waiting" spinner when remote method is called
 - 01 bug - if there's already a response JWT & message then a new one might not show
 - 01 retrieve dates in full ISO-format dates (eg for confirmations), not dates without timestamp
-- 01 remove duplicate decode in JWT service
 - 01 handle "access_denied" when person rejects claim on phone
 - 01 usability - fade out the confirmation button when pushed
 - 08 have someone audit use of uport.pushToken
