@@ -84,7 +84,7 @@ const claimIIW2019a = {
   }
 }
 
-var credentials = testUtil.credentials
+const credentials = testUtil.credentials
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 

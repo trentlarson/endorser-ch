@@ -1,13 +1,15 @@
-import l from '../../common/logger'
 import base64url from 'base64url'
 import canonicalize from 'canonicalize'
-import util from 'util'
 import didJwt from 'did-jwt'
+import { DateTime } from 'luxon'
 import R from 'ramda'
-import db from './endorser.db.service'
-import { allDidsInside, calcBbox, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
+import util from 'util'
+
 // I wish this was exposed in the did-jwt module!
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
+import l from '../../common/logger'
+import db from './endorser.db.service'
+import { allDidsInside, calcBbox, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
 import { addCanSee } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator

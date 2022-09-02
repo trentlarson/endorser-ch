@@ -27,6 +27,9 @@ cp .env.local .env
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
+# add initial DID, used to register other DIDs via VCs -- replace YOUR_DID
+echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser-ch-dev.sqlite3
+
 # run in development mode
 NODE_ENV=dev npm run dev
 
