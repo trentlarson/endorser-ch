@@ -828,7 +828,7 @@ class EndorserDatabase {
 
   async registrationInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO registration (did, agent, epoch, jwtId) VALUES (?, ?, ?, ?)");
+      var stmt = ("INSERT OR IGNORE INTO registration (did, agent, epoch, jwtId) VALUES (?, ?, ?, ?)");
       db.run(stmt, [entity.did, entity.agent, entity.epoch, entity.jwtId], function(err) {
         if (err) {
           reject(err)

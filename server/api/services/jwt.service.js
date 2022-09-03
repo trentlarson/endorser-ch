@@ -100,9 +100,9 @@ class JwtService {
     let claim = payload.claim
       || (payload.vc && payload.vc.credentialSubject)
     if (claim) {
-      return claim;
+      return claim
     } else {
-      throw Error("JWT payload must contain a 'claim' property or a 'vc' property with a 'credentialSubject'");
+      return null
     }
   }
 
@@ -327,14 +327,13 @@ class JwtService {
                && claim['@type'] === 'RegisterAction') {
 
       let registration = {
-        did: claim.object,
-        from: claim.agent,
-        epoch: new Date().valueOf(),
+        did: claim.object.did,
+        from: claim.agent.did,
+        epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
       }
 
-      let eventId = await db.registrationInsert(registration).catch(console.log)
-      // currently assuming the only error is due to the unique constraint and we're OK if it's already there
+      let eventId = await db.registrationInsert(registration)
 
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {

@@ -130,6 +130,42 @@ confirmBvcForConfirm0By1JwtObj.iss = creds[1].did
 confirmBvcForConfirm0By1JwtObj.sub = creds[0].did
 const confirmBvcForConfirm0By1JwtProm = credentials[0].createVerification(confirmBvcForConfirm0By1JwtObj)
 
+const register1By0JwtObj = R.clone(testUtil.jwtTemplate)
+register1By0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register1By0JwtObj.claim.agent.did = creds[0].did
+register1By0JwtObj.claim.object.did = creds[1].did
+const register1By0JwtProm = credentials[0].createVerification(register1By0JwtObj)
+
+const register2By0JwtObj = R.clone(testUtil.jwtTemplate)
+register2By0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register2By0JwtObj.claim.agent.did = creds[0].did
+register2By0JwtObj.claim.object.did = creds[2].did
+const register2By0JwtProm = credentials[0].createVerification(register2By0JwtObj)
+
+const register4By0JwtObj = R.clone(testUtil.jwtTemplate)
+register4By0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register4By0JwtObj.claim.agent.did = creds[0].did
+register4By0JwtObj.claim.object.did = creds[3].did
+const register4By0JwtProm = credentials[0].createVerification(register4By0JwtObj)
+
+const register10By0JwtObj = R.clone(testUtil.jwtTemplate)
+register10By0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register10By0JwtObj.claim.agent.did = creds[0].did
+register10By0JwtObj.claim.object.did = creds[3].did
+const register10By0JwtProm = credentials[0].createVerification(register10By0JwtObj)
+
+const register11By0JwtObj = R.clone(testUtil.jwtTemplate)
+register11By0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register11By0JwtObj.claim.agent.did = creds[0].did
+register11By0JwtObj.claim.object.did = creds[3].did
+const register11By0JwtProm = credentials[0].createVerification(register11By0JwtObj)
+
+const register12By0JwtObj = R.clone(testUtil.jwtTemplate)
+register12By0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register12By0JwtObj.claim.agent.did = creds[0].did
+register12By0JwtObj.claim.object.did = creds[12].did
+const register12By0JwtProm = credentials[0].createVerification(register12By0JwtObj)
+
 
 
 
@@ -142,6 +178,15 @@ claimBvcFor1By1JwtObj.claim = R.clone(claimBvcFor1)
 claimBvcFor1By1JwtObj.iss = creds[1].did
 claimBvcFor1By1JwtObj.sub = creds[1].did
 const claimBvcFor1By1JwtProm = credentials[0].createVerification(claimBvcFor1By1JwtObj)
+
+const register3By1JwtObj = R.clone(testUtil.jwtTemplate)
+register3By1JwtObj.claim = R.clone(testUtil.registrationTemplate)
+register3By1JwtObj.claim.agent.did = creds[0].did
+register3By1JwtObj.claim.object.did = creds[3].did
+register3By1JwtObj.iss = creds[2].did
+register3By1JwtObj.sub = creds[1].did
+const register3By1JwtProm = credentials[0].createVerification(register3By1JwtObj)
+
 
 
 
@@ -263,19 +308,28 @@ let pushTokens,
     claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc,
     confirmBvcForConfirm0By1JwtEnc,
     // claims for 1
+    register1By0JwtEnc,
     claimBvcFor1By1JwtEnc,
     confirmIIW2019aFor1By0JwtEnc,
     claimIIW2019aFor1By1JwtEnc,
     // claims for 2
+    register2By0JwtEnc,
     confirmIIW2019aFor2By1JwtEnc,
     claimIIW2019aFor2By2JwtEnc,
+    // claims for 3,
+    register3By1JwtEnc,
     // claims for 4
+    register4By0JwtEnc,
     claimFoodPantryFor4By4JwtEnc,
     confirmFoodPantryFor4By1JwtEnc,
     // claims for 11
+    register10By0JwtEnc,
+    register11By0JwtEnc,
     claimCornerBakeryTenureFor11By11JwtEnc,
-    claimCornerBakeryTenureFor12By12JwtEnc,
-    confirmCornerBakeryTenureFor11By10JwtEnc
+    confirmCornerBakeryTenureFor11By10JwtEnc,
+    // claims for 12
+    register12By0JwtEnc,
+    claimCornerBakeryTenureFor12By12JwtEnc
 
 before(async () => {
 
@@ -296,40 +350,54 @@ before(async () => {
   await Promise.all([
     claimBvcFor0By0JwtProm,
     confirmBvcFor0By0JwtProm,
+    register1By0JwtProm,
     confirmBvcFor0By1JwtProm,
+    register3By1JwtProm,
     confirmBvcFor0By3JwtProm,
     claimMyNightFor0By0JwtProm,
     claimBvcFor1By1JwtProm,
     claimDebugFor0By0JwtProm,
     confirmMultipleFor0By0JwtProm,
     confirmBvcForConfirm0By1JwtProm,
+    register11By0JwtProm,
     claimCornerBakeryTenureFor11By11JwtProm,
-    claimCornerBakeryTenureFor12By12JwtProm,
+    register10By0JwtProm,
     confirmCornerBakeryTenureFor11By10JwtProm,
+    register12By0JwtProm,
+    claimCornerBakeryTenureFor12By12JwtProm,
+    register4By0JwtEnc,
     claimFoodPantryFor4By4JwtProm,
     confirmFoodPantryFor4By1JwtProm,
     claimIIW2019aFor1By1JwtProm,
     confirmIIW2019aFor1By0JwtProm,
+    register2By0JwtProm,
     claimIIW2019aFor2By2JwtProm,
     confirmIIW2019aFor2By1JwtProm,
   ]).then((jwts) => {
     [
       claimBvcFor0By0JwtEnc,
       confirmBvcFor0By0JwtEnc,
+      register1By0JwtEnc,
       confirmBvcFor0By1JwtEnc,
+      register3By1JwtEnc,
       confirmBvcFor0By3JwtEnc,
       claimMyNightFor0By0JwtEnc,
       claimBvcFor1By1JwtEnc,
       claimDebugFor0By0JwtEnc,
       confirmMultipleFor0By0JwtEnc,
       confirmBvcForConfirm0By1JwtEnc,
+      register11By0JwtEnc,
       claimCornerBakeryTenureFor11By11JwtEnc,
-      claimCornerBakeryTenureFor12By12JwtEnc,
+      register10By0JwtEnc,
       confirmCornerBakeryTenureFor11By10JwtEnc,
+      register12By0JwtEnc,
+      claimCornerBakeryTenureFor12By12JwtEnc,
+      register4By0JwtEnc,
       claimFoodPantryFor4By4JwtEnc,
       confirmFoodPantryFor4By1JwtEnc,
       claimIIW2019aFor1By1JwtEnc,
       confirmIIW2019aFor1By0JwtEnc,
+      register2By0JwtEnc,
       claimIIW2019aFor2By2JwtEnc,
       confirmIIW2019aFor2By1JwtEnc,
     ] = jwts
@@ -700,16 +768,38 @@ describe('Claim', () => {
        expect(r.status).that.equals(200)
      })).timeout(6002)
 
-  it('should add another new confirmation', () =>
+  it('should register user 1', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
-     .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .send({"jwtEncoded": register1By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
      })).timeout(6002)
+
+  it('should add another new confirmation', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+      .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
+
+  it('should register user 3', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({"jwtEncoded": register3By1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
 
   it('should add a second confirmation by someone else', () =>
      request(Server)
@@ -767,7 +857,7 @@ describe('Claim', () => {
        expect(r.status).that.equals(201)
      })).timeout(6002)
 
-  it('should get 4 claims today', () =>
+  it('should get the right number of claims today', () =>
      request(Server)
      .get('/api/claim/?issuedAt_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING) + "&excludeConfirmations=true")
      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
@@ -775,7 +865,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('array')
-         .of.length(4)
+         .of.length(6)
        expect(r.status).that.equals(200)
      })).timeout(7001)
 
@@ -1081,10 +1171,21 @@ describe('Event', () => {
 
 describe('Tenure', () => {
 
+  it('should register user 12', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({"jwtEncoded": register12By0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
+
   it ('should create a tenure', () =>
       request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
       .send({"jwtEncoded": claimCornerBakeryTenureFor12By12JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1170,6 +1271,27 @@ describe('Report', () => {
 
 describe('Visibility utils', () => {
 
+  it('should register user 2', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({"jwtEncoded": register2By0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
+
+  it('#0 should set invisible to #2', () =>
+    request(Server)
+      .post('/api/report/cannotSeeMe')
+      .send({ "did": creds[2].did })
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+      })).timeout(6002)
+
   it('should get claims from other tests but cannot see inside any', () =>
      request(Server)
      .get('/api/claim')
@@ -1177,11 +1299,23 @@ describe('Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array')
+console.log('r.body',JSON.stringify(r.body),creds[2].did)
        for (let i = 0; i < r.body.length; i++) {
-         expect(testUtil.allDidsAreHidden(r.body[i])).to.be.true
+         expect(testUtil.allDidsAreHidden(r.body[i], creds[2].did)).to.be.true
        }
        expect(r.status).that.equals(200)
      })).timeout(7001)
+
+  it('should register user 11', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({"jwtEncoded": register11By0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
 
   it('should create a new tenure', () =>
      request(Server)
@@ -1205,6 +1339,17 @@ describe('Visibility utils', () => {
        expect(testUtil.allDidsAreHidden(r.body[r.body.length-1])).to.be.false
        expect(r.status).that.equals(200)
      })).timeout(7001)
+
+  it('should register user 10', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({"jwtEncoded": register10By0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
 
   it('should confirm that competing tenure', () =>
      request(Server)
@@ -1280,6 +1425,17 @@ describe('Visibility utils', () => {
 
 
   //// Now #4 will toggle visibility from #5.
+
+  it('should register user 5', () =>
+    request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({"jwtEncoded": register5By0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      })).timeout(6002)
 
   it('#5 should not see #4', () =>
      request(Server)

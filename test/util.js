@@ -13,9 +13,14 @@ const NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
 const TOMORROW_EPOCH = NOW_EPOCH + (24 * 60 * 60)
 
 
-function allDidsAreHidden(result) {
+/**
+ @return true if all DIDs are either hidden or exceptDid
+ @exceptDid is optional
+ **/
+function allDidsAreHidden(result, exceptDid) {
   if (Object.prototype.toString.call(result) === "[object String]") {
-    if (isDid(result) && result !== HIDDEN_TEXT) {
+    if (isDid(result) && result !== HIDDEN_TEXT && result !== exceptDid) {
+console.log('result and exceptDid', result, exceptDid)
       return false
     } else {
       return true
@@ -29,11 +34,13 @@ function allDidsAreHidden(result) {
       // (Hmmmm... this is inconsistent with other methods where the keys aren't checked.)
       values = R.keys(result).concat(R.values(result))
     }
-    return R.reduce((a,b) => a && b, true, R.map(allDidsAreHidden, values))
+    return R.reduce((a,b) => a && b, true, R.map(allDidsAreHiddenFor(exceptDid), values))
   } else {
     return true
   }
 }
+
+const allDidsAreHiddenFor = (exceptDid) => (result) => allDidsAreHidden(result, exceptDid)
 
 const CREDS = [
   // those with mnemonic created by @ethersproject/hdnode: HDNode.fromMnemonic(bip39.entropyToMnemonic(crypto.randomBytes(32))).derivePath("m/7696500'/0'/0'/0'")
@@ -75,6 +82,13 @@ module.exports = {
     // supply "sub"
     // supply "claim", usually including same DID of "sub"
     // supply "iss"
+  },
+
+  registrationTemplate: {
+    "@context": "https://schema.org",
+    "@type": "RegisterAction",
+    "agent": { "did": null }, // supply DID
+    "object": { "did": null }, // supply DID
   },
 
   confirmationTemplate: {
