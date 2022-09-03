@@ -839,6 +839,23 @@ class EndorserDatabase {
     })
   }
 
+  async registrationUpdateMaxClaims(issuer, maxClaims) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE registration set maxClaims = ? where did = ?");
+      db.run(stmt, [maxClaims, issuer], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          if (this.changes === 1) {
+            resolve()
+          } else {
+            reject("Expected to update 1 row but updated " + this.changes)
+          }
+        }
+      })
+    })
+  }
+
   async registrationByDid(did) {
     return new Promise((resolve, reject) => {
       db.get("SELECT * FROM registration WHERE did = ?", [did], function(err, row) {

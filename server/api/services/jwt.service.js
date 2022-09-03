@@ -501,8 +501,9 @@ class JwtService {
     const startOfWeekDate = DateTime.utc().startOf('week')
     const startOfWeekString = startOfWeekDate.toISO()
     const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
-    if (claimedCount >= (registered.maxClaims || MAX_CLAIMS_PER_WEEK)) {
-      return Promise.reject(`Issuer ${payload.iss} has already claimed ${registered.maxClaims} this week. Contact an administrator for a higher limit.`)
+    const theirMaxClaims = registered.maxClaims || MAX_CLAIMS_PER_WEEK
+    if (claimedCount >= theirMaxClaims) {
+      return Promise.reject({ clientError: `Issuer ${payload.iss} has already claimed ${theirMaxClaims} this week. Contact an administrator for a higher limit.` })
     }
 
     const payloadClaim = this.extractClaim(payload)
@@ -510,8 +511,9 @@ class JwtService {
       if (isRegistrationClaim(payloadClaim)) {
         const startOfWeekEpoch = startOfWeekDate.valueOf()
         const claimedCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
-        if (claimedCount >= (registered.maxRegs || MAX_REGISTRATIONS_PER_WEEK)) {
-          return Promise.reject(`Issuer ${payload.iss} has already registered ${registered.maxRegs} this week. Contact an administrator for a higher limit.`)
+        const theirMaxRegs = registered.maxRegs || MAX_REGISTRATIONS_PER_WEEK
+        if (claimedCount >= theirMaxRegs) {
+          return Promise.reject({ clientError: `Issuer ${payload.iss} has already registered ${theirMaxRegs} this week. Contact an administrator for a higher limit.` })
         }
       }
 

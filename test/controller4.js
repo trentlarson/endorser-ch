@@ -6,6 +6,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
+import dbService from '../server/api/services/endorser.db.service'
 import { HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
@@ -48,9 +49,12 @@ const manyClaims =
     ),
     101
   )
-const manyClaimsJwts = manyClaims.map(claim => credentials[0].createVerification(claim))
+const manyClaimsJwts = manyClaims.map(claim => credentials[0].createVerification(claim)) // adds iss & exp
 
-let pushTokens, manyClaimsJwtEnc
+const claimAnotherBy0JwtObj = R.clone(claimOffer_By0_JwtObj)
+const claimAnotherBy0JwtProm = credentials[0].createVerification(claimAnotherBy0JwtObj)
+
+let pushTokens, manyClaimsJwtEnc, claimAnotherBy0JwtEnc
 
 before(async () => {
 
@@ -65,6 +69,8 @@ before(async () => {
       manyClaimsJwtEnc = jwts
       console.log("Created controller4 user tokens", jwts)
     })
+
+  await Promise.all([claimAnotherBy0JwtProm]).then((jwts) => { [claimAnotherBy0JwtEnc] = jwts })
 
   return Promise.resolve()
 })
@@ -103,8 +109,9 @@ describe('Load Claims Incrementally', () => {
       })
   )
 
-  it('insert many, many claims', () =>
-    Promise.all(
+  it('insert many, many claims', async () => {
+    await dbService.registrationUpdateMaxClaims(creds[0].did, 124)
+    return Promise.all(
       manyClaimsJwtEnc.map((jwtEnc) => {
         return request(Server)
           .post('/api/claim')
@@ -118,8 +125,22 @@ describe('Load Claims Incrementally', () => {
             return Promise.reject(err)
           })
       })
-    )
+    )}
   ).timeout(6001)
+
+  it('fail to insert one too many claims', async() => {
+    //await new Promise(resolve => setTimeout(resolve, 100));
+    return request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({jwtEncoded: claimAnotherBy0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  })
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
