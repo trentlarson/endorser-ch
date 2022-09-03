@@ -69,6 +69,23 @@ const credentials = R.map((c) => new Credentials(c), creds)
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
+const registerBy0Proms =
+      R.times(
+        num => {
+          const registerBy0JwtObj = R.clone(testUtil.jwtTemplate)
+          registerBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+          registerBy0JwtObj.claim.agent.did = creds[0].did
+          registerBy0JwtObj.claim.object.did = creds[num].did
+          registerBy0JwtObj.iss = creds[0].did
+          registerBy0JwtObj.sub = creds[num].did
+          return credentials[0].createVerification(registerBy0JwtObj)
+        },
+        16
+      )
+
+
+
+
 const claimRecorderFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
 claimRecorderFor2By2JwtObj.claim = R.clone(claimRecorder)
 claimRecorderFor2By2JwtObj.claim.member.member.identifier = creds[2].did
@@ -140,13 +157,20 @@ confirmPresidentFor4By9JwtObj.iss = creds[9].did
 confirmPresidentFor4By9JwtObj.sub = creds[4].did
 const confirmPresidentFor4By9JwtProm = credentials[9].createVerification(confirmPresidentFor4By9JwtObj)
 
-let pushTokens, claimPresidentFor3By3JwtEnc, confirmPresidentFor3By5JwtEnc, confirmPresidentFor3By6JwtEnc,
-    claimPresidentFor4By4JwtEnc, confirmPresidentFor4By7JwtEnc, confirmPresidentFor4By8JwtEnc, confirmPresidentFor4By9JwtEnc,
+let pushTokens, registerBy0JwtEncs, claimPresidentFor3By3JwtEnc,
+    confirmPresidentFor3By5JwtEnc,
+    confirmPresidentFor3By6JwtEnc,
+    claimPresidentFor4By4JwtEnc,
+    confirmPresidentFor4By7JwtEnc,
+    confirmPresidentFor4By8JwtEnc,
+    confirmPresidentFor4By9JwtEnc,
     claimRecorderFor2By2JwtEnc, claimSecretaryFor2By2JwtEnc
 
 before(async () => {
 
   await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller2 push tokens", pushTokens) })
+
+  await Promise.all(registerBy0Proms).then((jwts) => { registerBy0JwtEncs = jwts; console.log("Created register JWTs", registerBy0JwtEncs) })
 
   await Promise.all([
     claimPresidentFor3By3JwtProm,
@@ -312,6 +336,23 @@ describe('Visibility', () => {
 
 
 describe('Role Claims on Date', () => {
+
+  R.times(
+    num => {
+      const thisNum = num + 5
+      it('should register user ' + thisNum, () =>
+        request(Server)
+          .post('/api/claim')
+          .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+          .send({"jwtEncoded": registerBy0JwtEncs[thisNum]})
+          .expect('Content-Type', /json/)
+          .then(r => {
+            expect(r.body).to.be.a('string')
+            expect(r.status).that.equals(201)
+          })).timeout(6002)
+    },
+    5
+  )
 
   it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(7001)
   it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(7001)
