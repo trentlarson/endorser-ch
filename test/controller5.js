@@ -15,18 +15,7 @@ const credentials = R.map((c) => new Credentials(c), creds)
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
-const claimRegister = {
-  "@context": "https://schema.org",
-  "@type": "RegisterAction",
-  agent: creds[2].did,
-  object: creds[8].did,
-}
-
-const registrationJwtObj = R.clone(testUtil.jwtTemplate)
-registrationJwtObj.claim = R.clone(claimRegister)
-const registrationJwtProm = credentials[2].createVerification(registrationJwtObj)
-
-let pushTokens, registrationJwtEnc
+let pushTokens
 
 before(async () => {
 
@@ -36,36 +25,15 @@ before(async () => {
       console.log("Created controller5 push tokens", pushTokens)
     })
 
-  await Promise.all([ registrationJwtProm ])
-    .then((jwts) => {
-      [ registrationJwtEnc ] = jwts
-      console.log("Created controller5 claim tokens", jwts)
-    })
-
   return Promise.resolve()
 })
 
 describe('Registration', () => {
 
-  it('register a user', () =>
-     request(Server)
-     .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
-     .send({jwtEncoded: registrationJwtEnc})
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body).to.be.a('string')
-       expect(r.body.length).to.equal(26)
-       expect(r.status).that.equals(201)
-     }).catch((err) => {
-       return Promise.reject(err)
-     })
-  )
-
-  it('check that user 8 can claim', () =>
+  it('check that user 12 can claim', () =>
      request(Server)
      .get('/api/reportAll/canClaim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[8])
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)
@@ -78,10 +46,10 @@ describe('Registration', () => {
      })
   )
 
-  it('check that user 9 cannot claim', () =>
+  it('check that user 13 cannot claim', () =>
      request(Server)
      .get('/api/reportAll/canClaim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[9])
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[13])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)

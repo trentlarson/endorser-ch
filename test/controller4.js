@@ -69,7 +69,7 @@ before(async () => {
   return Promise.resolve()
 })
 
-const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 140, NTH_IN_SECOND_BATCH = 7
+const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 152, NTH_IN_SECOND_BATCH = 7
 let moreBeforeId, firstInList, startOfSecondBatchInList, nthInListInSecondBatch
 
 describe('Load Claims Incrementally', () => {
@@ -224,7 +224,25 @@ describe('Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(40)
+        expect(r.body.data).to.be.an('array').of.length(50)
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
+        moreBeforeId = r.body.data[r.body.data.length - 1].id
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  it('retrieve a very few more claims', () =>
+    request(Server)
+      .get('/api/reportAll/claims?beforeId=' + moreBeforeId)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
