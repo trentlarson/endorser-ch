@@ -16,8 +16,8 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
-const MAX_REGISTRATIONS_PER_WEEK = 20
-const MAX_CLAIMS_PER_WEEK = 100
+const DEFAULT_MAX_REGISTRATIONS_PER_WEEK = process.env.DEFAULT_MAX_REGISTRATIONS_PER_WEEK || 20
+const DEFAULT_MAX_CLAIMS_PER_WEEK = process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 200
 
 // Determine if a claim has the right context, eg schema.org
 //
@@ -332,11 +332,11 @@ class JwtService {
 
       let registration = {
         did: claim.object.did,
-        from: claim.agent.did,
+        agent: claim.agent.did,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
-        maxRegs: MAX_REGISTRATIONS_PER_WEEK,
-        maxClaims: MAX_CLAIMS_PER_WEEK,
+        maxRegs: DEFAULT_MAX_REGISTRATIONS_PER_WEEK,
+        maxClaims: DEFAULT_MAX_CLAIMS_PER_WEEK,
       }
 
       let eventId = await db.registrationInsert(registration)
@@ -501,19 +501,19 @@ class JwtService {
     const startOfWeekDate = DateTime.utc().startOf('week')
     const startOfWeekString = startOfWeekDate.toISO()
     const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
-    const theirMaxClaims = registered.maxClaims || MAX_CLAIMS_PER_WEEK
-    if (claimedCount >= theirMaxClaims) {
-      return Promise.reject({ clientError: `Issuer ${payload.iss} has already claimed ${theirMaxClaims} this week. Contact an administrator for a higher limit.` })
+    const maxAllowedClaims = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
+    if (claimedCount >= maxAllowedClaims) {
+      return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already claimed ${maxAllowedClaims} this week. Contact an administrator for a higher limit.`, code: 1 } })
     }
 
     const payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
       if (isRegistrationClaim(payloadClaim)) {
-        const startOfWeekEpoch = startOfWeekDate.valueOf()
-        const claimedCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
-        const theirMaxRegs = registered.maxRegs || MAX_REGISTRATIONS_PER_WEEK
-        if (claimedCount >= theirMaxRegs) {
-          return Promise.reject({ clientError: `Issuer ${payload.iss} has already registered ${theirMaxRegs} this week. Contact an administrator for a higher limit.` })
+        const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
+        const regCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
+        const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_WEEK
+        if (regCount >= maxAllowedRegs) {
+          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this week. Contact an administrator for a higher limit.`, code: 2 } })
         }
       }
 

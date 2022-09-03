@@ -51,10 +51,7 @@ const manyClaims =
   )
 const manyClaimsJwts = manyClaims.map(claim => credentials[0].createVerification(claim)) // adds iss & exp
 
-const claimAnotherBy0JwtObj = R.clone(claimOffer_By0_JwtObj)
-const claimAnotherBy0JwtProm = credentials[0].createVerification(claimAnotherBy0JwtObj)
-
-let pushTokens, manyClaimsJwtEnc, claimAnotherBy0JwtEnc
+let pushTokens, manyClaimsJwtEnc
 
 before(async () => {
 
@@ -69,8 +66,6 @@ before(async () => {
       manyClaimsJwtEnc = jwts
       console.log("Created controller4 user tokens", jwts)
     })
-
-  await Promise.all([claimAnotherBy0JwtProm]).then((jwts) => { [claimAnotherBy0JwtEnc] = jwts })
 
   return Promise.resolve()
 })
@@ -111,6 +106,7 @@ describe('Load Claims Incrementally', () => {
 
   it('insert many, many claims', async () => {
     await dbService.registrationUpdateMaxClaims(creds[0].did, 124)
+
     return Promise.all(
       manyClaimsJwtEnc.map((jwtEnc) => {
         return request(Server)
@@ -127,20 +123,6 @@ describe('Load Claims Incrementally', () => {
       })
     )}
   ).timeout(6001)
-
-  it('fail to insert one too many claims', async() => {
-    //await new Promise(resolve => setTimeout(resolve, 100));
-    return request(Server)
-      .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-      .send({jwtEncoded: claimAnotherBy0JwtEnc})
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.status).that.equals(400)
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
-  })
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)

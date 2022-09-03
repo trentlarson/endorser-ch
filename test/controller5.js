@@ -1,12 +1,15 @@
 import chai from 'chai'
+import chaiAsPromised from "chai-as-promised"
 import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
+import dbService from '../server/api/services/endorser.db.service'
 import { UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
+chai.use(chaiAsPromised);
 const expect = chai.expect
 
 const creds = testUtil.creds
@@ -15,7 +18,20 @@ const credentials = R.map((c) => new Credentials(c), creds)
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
-let pushTokens
+const registerAnotherBy0JwtObj = R.clone(testUtil.jwtTemplate)
+registerAnotherBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+registerAnotherBy0JwtObj.claim.agent.did = creds[0].did
+registerAnotherBy0JwtObj.claim.object.did = creds[13].did
+registerAnotherBy0JwtObj.iss = creds[0].did
+registerAnotherBy0JwtObj.sub = creds[13].did
+const registerAnotherBy0JwtProm = credentials[0].createVerification(registerAnotherBy0JwtObj)
+console.log('registerAnotherBy0JwtProm',registerAnotherBy0JwtProm)
+
+const claimAnotherBy0JwtObj = R.clone(testUtil.jwtTemplate)
+claimAnotherBy0JwtObj.claim = R.clone(testUtil.claimCornerBakery)
+const claimAnotherBy0JwtProm = credentials[0].createVerification(claimAnotherBy0JwtObj)
+
+let pushTokens, registerAnotherBy0JwtEnc, claimAnotherBy0JwtEnc
 
 before(async () => {
 
@@ -25,10 +41,43 @@ before(async () => {
       console.log("Created controller5 push tokens", pushTokens)
     })
 
+  await Promise.all([registerAnotherBy0JwtProm, claimAnotherBy0JwtProm])
+    .then((jwts) => { [registerAnotherBy0JwtEnc, claimAnotherBy0JwtEnc] = jwts })
+
   return Promise.resolve()
+
 })
 
 describe('Registration', () => {
+
+  it('check that cannot insert too many registrations', async () => {
+    await dbService.registrationUpdateMaxClaims(creds[0].did, 125)
+    await dbService.registrationUpdateMaxRegs(creds[0].did, 12)
+    await request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({jwtEncoded: registerAnotherBy0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+    await dbService.registrationUpdateMaxClaims(creds[0].did, 124)
+  })
+
+  it('check that cannot insert too many claims', async() => {
+    return request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .send({jwtEncoded: claimAnotherBy0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  })
 
   it('check that user 12 can claim', () =>
      request(Server)

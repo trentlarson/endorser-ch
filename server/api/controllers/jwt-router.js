@@ -69,7 +69,13 @@ class Controller {
             .status(201)
             .location(`<%= apiRoot %>/claim/${r.id}`)
             .json(r))
-      .catch(err => { if (err.clientError) { res.status(400).json(err.clientError) } else { console.log(err); res.status(500).json(""+err).end(); }})
+      .catch(err => {
+        if (err.clientError) {
+          res.status(400).json({ error: { message: err.clientError.message, code: err.clientErrorCode } })
+        } else {
+          console.log(err)
+          res.status(500).json(""+err).end()
+        }})
   }
 
 }
