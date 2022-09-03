@@ -828,8 +828,8 @@ class EndorserDatabase {
 
   async registrationInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO registration (did, agent, epoch, jwtId) VALUES (?, ?, ?, ?)");
-      db.run(stmt, [entity.did, entity.agent, entity.epoch, entity.jwtId], function(err) {
+      var stmt = ("INSERT OR IGNORE INTO registration (did, agent, epoch, jwtId, maxRegs, maxClaims) VALUES (?, ?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.did, entity.agent, entity.epoch, entity.jwtId, entity.maxRegs, entity.maxClaims], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -845,9 +845,24 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, did:row.did, agent:row.agent, epoch:row.epoch, jwtId:row.jwtId})
+          resolve({id:row.rowid, did:row.did, agent:row.agent, epoch:row.epoch, jwtId:row.jwtId, maxRegs: row.maxRegs, maxClaims: row.maxClaims})
         } else {
           resolve(null)
+        }
+      })
+    })
+  }
+
+  registrationCountByAfter(issuer, seconds) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT count(*) as numRegs FROM registration WHERE agent = ? AND ? < epoch", [issuer, seconds], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve(row.numRegs)
+        } else {
+          // should never happen
+          reject('Got no result from registration count query.')
         }
       })
     })

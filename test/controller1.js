@@ -197,25 +197,25 @@ const claimCornerBakeryTenureFor11 = R.clone(testUtil.claimCornerBakery)
 claimCornerBakeryTenureFor11.party.did = creds[11].did
 
 const claimCornerBakeryTenureFor11By11JwtObj = R.clone(testUtil.jwtTemplate)
-claimCornerBakeryTenureFor11By11JwtObj.sub = creds[11].did
 claimCornerBakeryTenureFor11By11JwtObj.claim = R.clone(claimCornerBakeryTenureFor11)
 claimCornerBakeryTenureFor11By11JwtObj.iss = creds[11].did
+claimCornerBakeryTenureFor11By11JwtObj.sub = creds[11].did
 const claimCornerBakeryTenureFor11By11JwtProm = credentials[11].createVerification(claimCornerBakeryTenureFor11By11JwtObj)
 
 const claimCornerBakeryTenureFor12 = R.clone(testUtil.claimCornerBakery)
 claimCornerBakeryTenureFor12.party.did = creds[12].did
 
 const claimCornerBakeryTenureFor12By12JwtObj = R.clone(testUtil.jwtTemplate)
-claimCornerBakeryTenureFor12By12JwtObj.sub = creds[12].did
 claimCornerBakeryTenureFor12By12JwtObj.claim = R.clone(claimCornerBakeryTenureFor12)
 claimCornerBakeryTenureFor12By12JwtObj.iss = creds[12].did
+claimCornerBakeryTenureFor12By12JwtObj.sub = creds[12].did
 const claimCornerBakeryTenureFor12By12JwtProm = credentials[12].createVerification(claimCornerBakeryTenureFor12By12JwtObj)
 
 const confirmCornerBakeryTenureFor11By10JwtObj = R.clone(testUtil.jwtTemplate)
-confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
 confirmCornerBakeryTenureFor11By10JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmCornerBakeryTenureFor11By10JwtObj.claim.object.push(R.clone(claimCornerBakeryTenureFor11))
 confirmCornerBakeryTenureFor11By10JwtObj.iss = creds[10].did
+confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
 const confirmCornerBakeryTenureFor11By10JwtProm = credentials[10].createVerification(confirmCornerBakeryTenureFor11By10JwtObj)
 
 const claimIIW2019aFor1 = R.clone(claimIIW2019a)
@@ -225,29 +225,29 @@ const claimIIW2019aFor2 = R.clone(claimIIW2019a)
 claimIIW2019aFor2.agent.did = creds[2].did
 
 const claimIIW2019aFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
-claimIIW2019aFor1By1JwtObj.sub = creds[1].did
 claimIIW2019aFor1By1JwtObj.claim = R.clone(claimIIW2019aFor1)
 claimIIW2019aFor1By1JwtObj.iss = creds[1].did
+claimIIW2019aFor1By1JwtObj.sub = creds[1].did
 const claimIIW2019aFor1By1JwtProm = credentials[1].createVerification(claimIIW2019aFor1By1JwtObj)
 
 const claimIIW2019aFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
-claimIIW2019aFor2By2JwtObj.sub = creds[2].did
 claimIIW2019aFor2By2JwtObj.claim = R.clone(claimIIW2019aFor2)
 claimIIW2019aFor2By2JwtObj.iss = creds[2].did
+claimIIW2019aFor2By2JwtObj.sub = creds[2].did
 const claimIIW2019aFor2By2JwtProm = credentials[2].createVerification(claimIIW2019aFor2By2JwtObj)
 
 const confirmIIW2019aFor1By0JwtObj = R.clone(testUtil.jwtTemplate)
-confirmIIW2019aFor1By0JwtObj.sub = creds[1].did
 confirmIIW2019aFor1By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor1By0JwtObj.claim.object.push(R.clone(claimIIW2019aFor1))
 confirmIIW2019aFor1By0JwtObj.iss = creds[0].did
+confirmIIW2019aFor1By0JwtObj.sub = creds[1].did
 const confirmIIW2019aFor1By0JwtProm = credentials[0].createVerification(confirmIIW2019aFor1By0JwtObj)
 
 const confirmIIW2019aFor2By1JwtObj = R.clone(testUtil.jwtTemplate)
-confirmIIW2019aFor2By1JwtObj.sub = creds[2].did
 confirmIIW2019aFor2By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor2By1JwtObj.claim.object.push(R.clone(claimIIW2019aFor2))
 confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
+confirmIIW2019aFor2By1JwtObj.sub = creds[2].did
 const confirmIIW2019aFor2By1JwtProm = credentials[1].createVerification(confirmIIW2019aFor2By1JwtObj)
 
 
@@ -263,10 +263,10 @@ claimFoodPantryFor4By4JwtObj.sub = creds[4].did
 const claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoodPantryFor4By4JwtObj)
 
 const confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
-confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
 confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmFoodPantryFor4By1JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
 confirmFoodPantryFor4By1JwtObj.iss = creds[1].did
+confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
 const confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
 
 

@@ -4,7 +4,8 @@ CREATE TABLE registration (
        agent CHARACTER(100), -- DID of the confirming entity; did:peer are 58 chars
        epoch INTEGER,
        jwtId CHARACTER(26),
-       disabled INTEGER
+       maxRegs INTEGER, -- allowed registrations per time period
+       maxClaims INTEGER -- allowed claims per time period
 );
 
 CREATE INDEX registered_agent ON registration(agent);

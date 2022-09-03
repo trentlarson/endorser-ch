@@ -16,6 +16,9 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
+const MAX_REGISTRATIONS_PER_WEEK = 20
+const MAX_CLAIMS_PER_WEEK = 100
+
 // Determine if a claim has the right context, eg schema.org
 //
 // Different versions are because of "legacy context" issues.
@@ -32,6 +35,8 @@ const isContextSchemaOrg = (context) => context === 'https://schema.org' || cont
 //const isContextSchemaOrg = (context) => context === 'https://schema.org'
 // Claims inside AgreeAction may not have a context if they're also in schema.org
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
+
+const isRegistrationClaim = (claim) => isContextSchemaOrg(claim['@context']) && claim['@type'] === 'RegisterAction'
 
 class JwtService {
 
@@ -323,14 +328,15 @@ class JwtService {
       let orgRoleId = await db.orgRoleInsert(entity)
 
 
-    } else if (isContextSchemaOrg(claim['@context'])
-               && claim['@type'] === 'RegisterAction') {
+    } else if (isRegistrationClaim(claim)) {
 
       let registration = {
         did: claim.object.did,
         from: claim.agent.did,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
+        maxRegs: MAX_REGISTRATIONS_PER_WEEK,
+        maxClaims: MAX_CLAIMS_PER_WEEK,
       }
 
       let eventId = await db.registrationInsert(registration)
@@ -488,19 +494,27 @@ class JwtService {
     }
 
     const registered = await db.registrationByDid(payload.iss)
-    if (!registered || registered.disabled) {
+    if (!registered) {
       return Promise.reject(`Issuer ${payload.iss} is not registered to make claims. Contact an existing user for help.`)
     }
 
-    const MAX_CLAIMS_PER_WEEK = 100
-    const startOfWeek = DateTime.utc().startOf('week').toISODate()
-    const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeek)
-    if (claimedCount >= MAX_CLAIMS_PER_WEEK) {
-      return Promise.reject(`Issuer ${payload.iss} has already claimed ${MAX_CLAIMS_PER_WEEK} this week. Contact an administrator for a higher limit`)
+    const startOfWeekDate = DateTime.utc().startOf('week')
+    const startOfWeekString = startOfWeekDate.toISO()
+    const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
+    if (claimedCount >= (registered.maxClaims || MAX_CLAIMS_PER_WEEK)) {
+      return Promise.reject(`Issuer ${payload.iss} has already claimed ${registered.maxClaims} this week. Contact an administrator for a higher limit.`)
     }
 
     const payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
+      if (isRegistrationClaim(payloadClaim)) {
+        const startOfWeekEpoch = startOfWeekDate.valueOf()
+        const claimedCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
+        if (claimedCount >= (registered.maxRegs || MAX_REGISTRATIONS_PER_WEEK)) {
+          return Promise.reject(`Issuer ${payload.iss} has already registered ${registered.maxRegs} this week. Contact an administrator for a higher limit.`)
+        }
+      }
+
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)
       const jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)

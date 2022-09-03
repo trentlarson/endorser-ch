@@ -29,7 +29,7 @@ const claimOffer = {
 
 const claimOffer_By0_JwtObj = R.clone(testUtil.jwtTemplate)
 claimOffer_By0_JwtObj.claim = R.clone(claimOffer)
-const claimOffer_By0_JwtProm = credentials[0].createVerification(claimOffer_By0_JwtObj)
+claimOffer_By0_JwtObj.sub = creds[1].did
 
 const manyClaims =
   R.times(n =>
@@ -44,7 +44,7 @@ const manyClaims =
           claimOffer
         )
       ),
-      testUtil.jwtTemplate
+      claimOffer_By0_JwtObj
     ),
     101
   )
