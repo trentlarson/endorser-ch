@@ -95,7 +95,6 @@ const registerBy0Proms =
       registerBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
       registerBy0JwtObj.claim.agent.did = creds[0].did
       registerBy0JwtObj.claim.object.did = creds[num].did
-      registerBy0JwtObj.iss = creds[0].did
       registerBy0JwtObj.sub = creds[num].did
       return credentials[0].createVerification(registerBy0JwtObj)
     },
@@ -110,21 +109,18 @@ claimBvcFor0.agent.did = creds[0].did
 
 const claimBvcFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimBvcFor0By0JwtObj.claim = R.clone(claimBvcFor0)
-claimBvcFor0By0JwtObj.iss = creds[0].did
 claimBvcFor0By0JwtObj.sub = creds[0].did
-const claimBvcFor0By0JwtProm = credentials[0].createVerification(claimBvcFor0By0JwtObj)
+const claimBvcFor0By0JwtProm = credentials[0].createVerification(claimBvcFor0By0JwtObj) // adds iss & exp
 
 const confirmBvcFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcFor0By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcFor0By0JwtObj.claim.object.push(R.clone(claimBvcFor0))
-confirmBvcFor0By0JwtObj.iss = creds[1].did
 confirmBvcFor0By0JwtObj.sub = creds[0].did
 const confirmBvcFor0By0JwtProm = credentials[0].createVerification(confirmBvcFor0By0JwtObj)
 
 const confirmBvcFor0By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcFor0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcFor0By1JwtObj.claim.object.push(R.clone(claimBvcFor0))
-confirmBvcFor0By1JwtObj.iss = creds[1].did
 confirmBvcFor0By1JwtObj.sub = creds[0].did
 const confirmBvcFor0By1JwtProm = credentials[1].createVerification(confirmBvcFor0By1JwtObj)
 
@@ -134,14 +130,12 @@ confirmBvcFor0By3JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 const embeddedClaimBvcFor0 = R.clone(claimBvcFor0)
 delete embeddedClaimBvcFor0['@context']
 confirmBvcFor0By3JwtObj.claim.object.push(embeddedClaimBvcFor0)
-confirmBvcFor0By3JwtObj.iss = creds[3].did
 confirmBvcFor0By3JwtObj.sub = creds[0].did
 const confirmBvcFor0By3JwtProm = credentials[3].createVerification(confirmBvcFor0By3JwtObj)
 
 const confirmBvcForConfirm0By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcForConfirm0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcForConfirm0By1JwtObj.claim.object.push(R.clone(confirmBvcFor0By0JwtObj))
-confirmBvcForConfirm0By1JwtObj.iss = creds[1].did
 confirmBvcForConfirm0By1JwtObj.sub = creds[0].did
 const confirmBvcForConfirm0By1JwtProm = credentials[0].createVerification(confirmBvcForConfirm0By1JwtObj)
 
@@ -154,7 +148,6 @@ claimBvcFor1.event.startTime = "2019-01-13T08:00:00.000-07:00"
 
 const claimBvcFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
 claimBvcFor1By1JwtObj.claim = R.clone(claimBvcFor1)
-claimBvcFor1By1JwtObj.iss = creds[1].did
 claimBvcFor1By1JwtObj.sub = creds[1].did
 const claimBvcFor1By1JwtProm = credentials[0].createVerification(claimBvcFor1By1JwtObj)
 
@@ -166,7 +159,6 @@ claimMyNightFor0.agent.did = creds[0].did
 
 const claimMyNightFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimMyNightFor0By0JwtObj.claim = R.clone(claimMyNightFor0)
-claimMyNightFor0By0JwtObj.iss = creds[0].did
 claimMyNightFor0By0JwtObj.sub = creds[0].did
 const claimMyNightFor0By0JwtProm = credentials[0].createVerification(claimMyNightFor0By0JwtObj)
 
@@ -177,7 +169,6 @@ claimDebugFor0.agent.did = creds[0].did
 
 const claimDebugFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimDebugFor0By0JwtObj.claim = R.clone(claimDebugFor0)
-claimDebugFor0By0JwtObj.iss = creds[0].did
 claimDebugFor0By0JwtObj.sub = creds[0].did
 const claimDebugFor0By0JwtProm = credentials[0].createVerification(claimDebugFor0By0JwtObj)
 
@@ -187,7 +178,6 @@ const confirmMultipleFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmMultipleFor0By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmMultipleFor0By0JwtObj.claim.object.push(R.clone(claimMyNightFor0))
 confirmMultipleFor0By0JwtObj.claim.object.push(R.clone(claimDebugFor0))
-confirmMultipleFor0By0JwtObj.iss = creds[0].did
 confirmMultipleFor0By0JwtObj.sub = creds[0].did
 const confirmMultipleFor0By0JwtProm = credentials[0].createVerification(confirmMultipleFor0By0JwtObj)
 
@@ -198,7 +188,6 @@ claimCornerBakeryTenureFor11.party.did = creds[11].did
 
 const claimCornerBakeryTenureFor11By11JwtObj = R.clone(testUtil.jwtTemplate)
 claimCornerBakeryTenureFor11By11JwtObj.claim = R.clone(claimCornerBakeryTenureFor11)
-claimCornerBakeryTenureFor11By11JwtObj.iss = creds[11].did
 claimCornerBakeryTenureFor11By11JwtObj.sub = creds[11].did
 const claimCornerBakeryTenureFor11By11JwtProm = credentials[11].createVerification(claimCornerBakeryTenureFor11By11JwtObj)
 
@@ -207,14 +196,12 @@ claimCornerBakeryTenureFor12.party.did = creds[12].did
 
 const claimCornerBakeryTenureFor12By12JwtObj = R.clone(testUtil.jwtTemplate)
 claimCornerBakeryTenureFor12By12JwtObj.claim = R.clone(claimCornerBakeryTenureFor12)
-claimCornerBakeryTenureFor12By12JwtObj.iss = creds[12].did
 claimCornerBakeryTenureFor12By12JwtObj.sub = creds[12].did
 const claimCornerBakeryTenureFor12By12JwtProm = credentials[12].createVerification(claimCornerBakeryTenureFor12By12JwtObj)
 
 const confirmCornerBakeryTenureFor11By10JwtObj = R.clone(testUtil.jwtTemplate)
 confirmCornerBakeryTenureFor11By10JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmCornerBakeryTenureFor11By10JwtObj.claim.object.push(R.clone(claimCornerBakeryTenureFor11))
-confirmCornerBakeryTenureFor11By10JwtObj.iss = creds[10].did
 confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
 const confirmCornerBakeryTenureFor11By10JwtProm = credentials[10].createVerification(confirmCornerBakeryTenureFor11By10JwtObj)
 
@@ -226,27 +213,23 @@ claimIIW2019aFor2.agent.did = creds[2].did
 
 const claimIIW2019aFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor1By1JwtObj.claim = R.clone(claimIIW2019aFor1)
-claimIIW2019aFor1By1JwtObj.iss = creds[1].did
 claimIIW2019aFor1By1JwtObj.sub = creds[1].did
 const claimIIW2019aFor1By1JwtProm = credentials[1].createVerification(claimIIW2019aFor1By1JwtObj)
 
 const claimIIW2019aFor2By2JwtObj = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor2By2JwtObj.claim = R.clone(claimIIW2019aFor2)
-claimIIW2019aFor2By2JwtObj.iss = creds[2].did
 claimIIW2019aFor2By2JwtObj.sub = creds[2].did
 const claimIIW2019aFor2By2JwtProm = credentials[2].createVerification(claimIIW2019aFor2By2JwtObj)
 
 const confirmIIW2019aFor1By0JwtObj = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor1By0JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor1By0JwtObj.claim.object.push(R.clone(claimIIW2019aFor1))
-confirmIIW2019aFor1By0JwtObj.iss = creds[0].did
 confirmIIW2019aFor1By0JwtObj.sub = creds[1].did
 const confirmIIW2019aFor1By0JwtProm = credentials[0].createVerification(confirmIIW2019aFor1By0JwtObj)
 
 const confirmIIW2019aFor2By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmIIW2019aFor2By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmIIW2019aFor2By1JwtObj.claim.object.push(R.clone(claimIIW2019aFor2))
-confirmIIW2019aFor2By1JwtObj.iss = creds[1].did
 confirmIIW2019aFor2By1JwtObj.sub = creds[2].did
 const confirmIIW2019aFor2By1JwtProm = credentials[1].createVerification(confirmIIW2019aFor2By1JwtObj)
 
@@ -258,14 +241,12 @@ claimFoodPantryFor4.party.did = creds[4].did
 
 const claimFoodPantryFor4By4JwtObj = R.clone(testUtil.jwtTemplate)
 claimFoodPantryFor4By4JwtObj.claim = R.clone(claimFoodPantryFor4)
-claimFoodPantryFor4By4JwtObj.iss = creds[4].did
 claimFoodPantryFor4By4JwtObj.sub = creds[4].did
 const claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoodPantryFor4By4JwtObj)
 
 const confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmFoodPantryFor4By1JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
-confirmFoodPantryFor4By1JwtObj.iss = creds[1].did
 confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
 const confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
 
