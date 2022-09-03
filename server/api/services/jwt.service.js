@@ -16,6 +16,8 @@ const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
 require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
+const SERVICE_ID = process.env.SERVICE_ID
+
 const DEFAULT_MAX_REGISTRATIONS_PER_WEEK = process.env.DEFAULT_MAX_REGISTRATIONS_PER_WEEK || 20
 const DEFAULT_MAX_CLAIMS_PER_WEEK = process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 200
 
@@ -36,7 +38,10 @@ const isContextSchemaOrg = (context) => context === 'https://schema.org' || cont
 // Claims inside AgreeAction may not have a context if they're also in schema.org
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
-const isRegistrationClaim = (claim) => isContextSchemaOrg(claim['@context']) && claim['@type'] === 'RegisterAction'
+const isEndorserRegistrationClaim = (claim) =>
+      isContextSchemaOrg(claim['@context'])
+      && claim['@type'] === 'RegisterAction'
+      && claim['object'] === SERVICE_ID
 
 class JwtService {
 
@@ -328,10 +333,10 @@ class JwtService {
       let orgRoleId = await db.orgRoleInsert(entity)
 
 
-    } else if (isRegistrationClaim(claim)) {
+    } else if (isEndorserRegistrationClaim(claim)) {
 
       let registration = {
-        did: claim.object.did,
+        did: claim.participant.did,
         agent: claim.agent.did,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
@@ -508,7 +513,7 @@ class JwtService {
 
     const payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
-      if (isRegistrationClaim(payloadClaim)) {
+      if (isEndorserRegistrationClaim(payloadClaim)) {
         const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
         const regCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
         const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_WEEK

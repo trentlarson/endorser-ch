@@ -75,7 +75,7 @@ const registerBy0Proms =
           const registerBy0JwtObj = R.clone(testUtil.jwtTemplate)
           registerBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
           registerBy0JwtObj.claim.agent.did = creds[0].did
-          registerBy0JwtObj.claim.object.did = creds[num].did
+          registerBy0JwtObj.claim.participant.did = creds[num].did
           registerBy0JwtObj.iss = creds[0].did
           registerBy0JwtObj.sub = creds[num].did
           return credentials[0].createVerification(registerBy0JwtObj)

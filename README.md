@@ -23,6 +23,8 @@ npm ci
 # set up the environment
 cp .env.local .env
 
+# ... and edit the SERVICE_ID with the value people should supply in the object field of RegisterAction
+
 # setup/migrate DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)

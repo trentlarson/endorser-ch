@@ -21,7 +21,7 @@ const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorro
 const registerAnotherBy0JwtObj = R.clone(testUtil.jwtTemplate)
 registerAnotherBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
 registerAnotherBy0JwtObj.claim.agent.did = creds[0].did
-registerAnotherBy0JwtObj.claim.object.did = creds[13].did
+registerAnotherBy0JwtObj.claim.participant.did = creds[13].did
 registerAnotherBy0JwtObj.iss = creds[0].did
 registerAnotherBy0JwtObj.sub = creds[13].did
 const registerAnotherBy0JwtProm = credentials[0].createVerification(registerAnotherBy0JwtObj)
