@@ -488,8 +488,8 @@ class JwtService {
     }
 
     const registered = await db.registrationByDid(payload.iss)
-    if (!registered) {
-      return Promise.reject(`Issuer ${payload.iss} is not registered. Contact an existing user for help.`)
+    if (!registered || registered.disabled) {
+      return Promise.reject(`Issuer ${payload.iss} is not registered to make claims. Contact an existing user for help.`)
     }
 
     const MAX_CLAIMS_PER_WEEK = 100
