@@ -20,7 +20,6 @@ const TOMORROW_EPOCH = NOW_EPOCH + (24 * 60 * 60)
 function allDidsAreHidden(result, exceptDid) {
   if (Object.prototype.toString.call(result) === "[object String]") {
     if (isDid(result) && result !== HIDDEN_TEXT && result !== exceptDid) {
-console.log('result and exceptDid', result, exceptDid)
       return false
     } else {
       return true
