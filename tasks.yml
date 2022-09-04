@@ -1,11 +1,8 @@
 ---
 
-- 02 rate limit total number of claims :
-  - 05 rate limit invited addresses :
-    - fix tests
-    - change response code from 500 to 400
-  - allow registration when in contact list
-
+- 01 next go-live
+  - endorser.ch first, with migration, then assigning 0 limits to unknown entities
+  - mobile
 
 - 05 rate limit specific addresses
 
