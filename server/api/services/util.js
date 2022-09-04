@@ -6,6 +6,11 @@ const util = require('util')
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token'
 
+const ERROR_CODES = {
+  OVER_CLAIM_LIMIT: 'OVER_CLAIM_LIMIT',
+  OVER_REGISTRATION_LIMIT: 'OVER_REGISTRATION_LIMIT',
+}
+
 /**
    Take KEY and a list of claims-and-confirmations for the same claim
    and return an object with properties of:
@@ -164,4 +169,4 @@ function hashChain(seed, idAndClaimList) {
   return R.reduce((prev, idAndClaim) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(idAndClaim)), seed, idAndClaimList)
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

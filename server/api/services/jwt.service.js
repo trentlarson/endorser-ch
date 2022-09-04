@@ -9,7 +9,7 @@ import util from 'util'
 import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 import l from '../../common/logger'
 import db from './endorser.db.service'
-import { allDidsInside, calcBbox, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
+import { allDidsInside, calcBbox, ERROR_CODES, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
 import { addCanSee } from './network-cache.service'
 // I couldn't figure out how to import this directly from the module.  Sheesh.
 const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
@@ -508,7 +508,7 @@ class JwtService {
     const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
     const maxAllowedClaims = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
     if (claimedCount >= maxAllowedClaims) {
-      return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already claimed ${maxAllowedClaims} this week. Contact an administrator for a higher limit.`, code: 1 } })
+      return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already claimed ${maxAllowedClaims} this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_CLAIM_LIMIT } })
     }
 
     const payloadClaim = this.extractClaim(payload)
@@ -518,7 +518,7 @@ class JwtService {
         const regCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
         const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_WEEK
         if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this week. Contact an administrator for a higher limit.`, code: 2 } })
+          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
         }
       }
 
