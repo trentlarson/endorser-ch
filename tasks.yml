@@ -3,6 +3,34 @@
 - 01 next go-live
   - endorser.ch first, with migration, then assigning 0 limits to unknown entities
   - mobile
+  - do limiting based on ULID and not timestamp (and change timestamp from int to string)
+
+- 05 handy contract app in endorser-mobile
+  - consolidate mobile code (rather than branching it)
+  - store private data internally (for proof by hash)
+  - add contracts to app
+    - 3 pledges https://initial3.paperform.co/
+    - large contract https://zstaffamp.paperform.co/
+    - MNDA https://zmenda.paperform.co/
+    - MSA
+    - Common Paper contract https://commonpaper.com/standards/mutual-nda/
+  - scan to sign - submit contract, then Agreement
+  - report
+  - export to Zapier: unavailable on chain, data must be sent otherwise (eg. Paperform)
+    - allow sending private data directly to other endpoints
+  - mobile find contract / pledge - mine, by ID, by template (w/ count & text)
+  - sender can create new JWT with full fields
+    - have to pass full contents (on-chain + fields), then correlate with online JWT
+  - receiver must pull full contract for verification
+    - reference original on-ledger
+    - include full JWT, which may only be stored in my phone
+    - include IPFS CID in mobile app
+    - ... and make sure to check the hash of inputs, with the right ordering
+    - store a self-contained legal.md hash
+    - before signing, must validate JWT contents
+  - instructions: permission for Z4A rep (for import into Zapier)
+
+- 01 switch time check to work off JWT ID in registration & claim
 
 - 05 rate limit specific addresses
 
