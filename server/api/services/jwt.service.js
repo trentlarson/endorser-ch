@@ -18,8 +18,8 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 const SERVICE_ID = process.env.SERVICE_ID
 
-const DEFAULT_MAX_REGISTRATIONS_PER_WEEK = process.env.DEFAULT_MAX_REGISTRATIONS_PER_WEEK || 20
-const DEFAULT_MAX_CLAIMS_PER_WEEK = process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 200
+const DEFAULT_MAX_REGISTRATIONS_PER_WEEK = process.env.DEFAULT_MAX_REGISTRATIONS_PER_WEEK || 10
+const DEFAULT_MAX_CLAIMS_PER_WEEK = process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 100
 
 // Determine if a claim has the right context, eg schema.org
 //
@@ -344,7 +344,7 @@ class JwtService {
         maxClaims: DEFAULT_MAX_CLAIMS_PER_WEEK,
       }
 
-      let eventId = await db.registrationInsert(registration)
+      let registrationId = await db.registrationInsert(registration)
 
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {

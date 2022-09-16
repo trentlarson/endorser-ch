@@ -1,12 +1,11 @@
 ---
 
 - 01 next go-live
-  - endorser.ch first, with migration, then assigning 0 limits to unknown entities
+  - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
   - mobile
   - do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
 - 05 handy contract app in endorser-mobile
-  - consolidate mobile code (rather than branching it)
   - store private data internally (for proof by hash)
   - add contracts to app
     - 3 pledges https://initial3.paperform.co/
@@ -29,8 +28,11 @@
     - store a self-contained legal.md hash
     - before signing, must validate JWT contents
   - instructions: permission for Z4A rep (for import into Zapier)
+  - api.endorser.ch
 
 - 01 switch time check to work off JWT ID in registration & claim
+
+- 01 limit registrations to only register the next week
 
 - 05 rate limit specific addresses
 
@@ -45,6 +47,8 @@
 - 02 test JWT signatures
 
 - .5 update endorser-ch website (eg. for scenario links)
+
+- 02 add password hash algorithm to settings (and make task to allow update) id:migrate-pass-from-sha1
 
 - 04 revocation
 
