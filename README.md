@@ -224,6 +224,8 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 ## Troubleshooting
 
+- When the API disallows and says a user "has already claimed" or "has already registered" their maximum for the week, you can up their limit in the database registration table (or increase the DEFAULT_MAX settings at the top of jwt.service.js if they haven't been set explicitly).
+
 - Runs on node v12 & v14, at least as of Feb 2022. (We recommend using nvm to manage node versions.)
 
 - Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)

@@ -340,8 +340,6 @@ class JwtService {
         agent: claim.agent.did,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
-        maxRegs: DEFAULT_MAX_REGISTRATIONS_PER_WEEK,
-        maxClaims: DEFAULT_MAX_CLAIMS_PER_WEEK,
       }
 
       let registrationId = await db.registrationInsert(registration)
