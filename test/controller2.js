@@ -6,6 +6,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
+import dbService from '../server/api/services/endorser.db.service'
 import { UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
@@ -335,13 +336,14 @@ describe('Visibility', () => {
 
 
 
-describe('Role Claims on Date', () => {
+describe('Role Claims on Date', async () => {
 
   R.times(
     num => {
       const thisNum = num + 5
-      it('should register user ' + thisNum, () =>
-        request(Server)
+      it('should register user ' + thisNum, async () => {
+        if (thisNum === 8) await dbService.registrationUpdateMaxRegs(creds[0].did, 12)
+        await request(Server)
           .post('/api/claim')
           .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
           .send({"jwtEncoded": registerBy0JwtEncs[thisNum]})
@@ -349,7 +351,9 @@ describe('Role Claims on Date', () => {
           .then(r => {
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
-          })).timeout(6002)
+          })
+        if (thisNum === 9) await dbService.registrationUpdateMaxRegs(creds[0].did, 10)
+      }).timeout(6002)
     },
     5
   )

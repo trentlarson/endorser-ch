@@ -18,7 +18,7 @@ require("ethr-did-resolver").default() // loads resolver for "did:ethr"
 
 const SERVICE_ID = process.env.SERVICE_ID
 
-const DEFAULT_MAX_REGISTRATIONS_PER_WEEK = process.env.DEFAULT_MAX_REGISTRATIONS_PER_WEEK || 10
+const DEFAULT_MAX_REGISTRATIONS_PER_MONTH = process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 10
 const DEFAULT_MAX_CLAIMS_PER_WEEK = process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 100
 
 // Determine if a claim has the right context, eg schema.org
@@ -512,11 +512,12 @@ class JwtService {
     const payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
       if (isEndorserRegistrationClaim(payloadClaim)) {
-        const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
-        const regCount = await db.registrationCountByAfter(payload.iss, startOfWeekEpoch)
-        const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_WEEK
+        const startOfMonthDate = DateTime.utc().startOf('month')
+        const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
+        const regCount = await db.registrationCountByAfter(payload.iss, startOfMonthEpoch)
+        const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
         if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
+          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this month. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
         }
       }
 

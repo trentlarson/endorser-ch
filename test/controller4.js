@@ -121,8 +121,8 @@ describe('Load Claims Incrementally', () => {
             return Promise.reject(err)
           })
       })
-    )}
-  ).timeout(6001)
+    )
+  }).timeout(6001)
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
