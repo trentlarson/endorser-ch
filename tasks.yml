@@ -1,11 +1,53 @@
 ---
 
-- 02 rate limit total number of claims :
-  - 05 rate limit invited addresses :
-    - fix tests
-    - change response code from 500 to 400
-  - allow registration when in contact list
+- 01 next go-live :
+  - fix tests
+  - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
+  - fix test web server
+  - mobile
+  - do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
+- 05 handy contract app in endorser-mobile :
+  - add contracts to app :
+    - 3 pledges https://initial3.paperform.co/
+    - large contract https://zstaffamp.paperform.co/
+    - MNDA https://zmenda.paperform.co/
+    - MSA
+    - Common Paper contract https://commonpaper.com/standards/mutual-nda/
+    - UruleU p 13 :
+      - I'll take responsibility for my own promises and stake my honor on keeping them.
+      - I'll disclose my promises to everyone for whom I intend them. My secret promises will carry no weight.
+      - "I'll demand no burden greater than I have promised to carry. I'll accept whichever fulfillment is least burdensome: of the other's promise, or mine."
+  - scan to sign - submit contract, then Agreement
+  - report
+  - export to Zapier - unavailable on chain, data must be sent otherwise (eg. Paperform) :
+    - allow sending private data directly to other endpoints
+  - mobile find contract / pledge - mine, by ID, by template (w/ count & text) =
+  - sender can create new JWT with full fields :
+    - have to pass full contents (on-chain + fields), then correlate with online JWT
+  - receiver must pull full contract for verification :
+    - reference original on-ledger
+    - include full JWT, which may only be stored in my phone
+    - include IPFS CID in mobile app
+    - ... and make sure to check the hash of inputs, with the right ordering
+    - store a self-contained legal.md hash
+    - before signing, must validate JWT contents
+  - store contracts in separate table on server for quick retrieval
+  - instructions - permission for Z4A rep (for import into Zapier)
+  - api.endorser.ch
+
+- .5 backup all data
+
+- .2 add search for all my issued claims
+
+- 01 give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
+  - .5 server should give 4xx error and not 500 on hitting registration/claim limit
+
+- 01 bug - contact entered with name & ID doesn't show immediately (sometimes?)
+
+- 01 switch time check to work off JWT ID in registration & claim
+
+- 01 limit registrations to only register the next week
 
 - 05 rate limit specific addresses
 
@@ -21,9 +63,11 @@
 
 - .5 update endorser-ch website (eg. for scenario links)
 
+- 02 add password hash algorithm to settings (and make task to allow update) id:migrate-pass-from-sha1
+
 - 04 revocation
 
-- 01 run load test, especially for: claimContents search, confirmations-by-claim retrieval
+- 01 run load test, especially for - claimContents search, confirmations-by-claim retrieval
 
 - 01 bump dependencies
 
