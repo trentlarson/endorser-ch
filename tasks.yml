@@ -3,6 +3,7 @@
 - 01 next go-live :
   - fix tests
   - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
+  - fix test web server
   - mobile
   - do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
