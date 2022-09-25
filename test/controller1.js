@@ -484,7 +484,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     })).timeout(7001) // these 7001 waits were added after JWT verify was added
+     }))
 
   it('should get a 404 for an invalid claim number', () =>
      request(Server)
@@ -493,7 +493,7 @@ describe('Claim', () => {
      .then(r => {
        expect(400)
        expect(r.status).that.equals(404)
-     })).timeout(7001)
+     }))
 
   it('should add a new action claim', () =>
      request(Server)
@@ -505,7 +505,9 @@ describe('Claim', () => {
        expect(r.body).to.be.a('string')
        firstId = r.body
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
+  // All these 3000 waits were added after JWT verify was added.
+  // Most tests take about .7 seconds, and verification adds about .7 seconds.
 
   it('should get our claim #1', () =>
      request(Server)
@@ -524,7 +526,7 @@ describe('Claim', () => {
          .that.has.a.property('issuer')
          .that.equals(creds[0].did)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get a claim with the DID hidden', () =>
      request(Server)
@@ -543,7 +545,7 @@ describe('Claim', () => {
          .that.has.a.property('issuer')
          .that.equals(HIDDEN_TEXT)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should add a confirmation for that action (even though it is their own))', () =>
      request(Server)
@@ -555,7 +557,7 @@ describe('Claim', () => {
        expect(r.body).to.be.a('string')
        firstConfirmationClaimId = r.body
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should get 3 claims', () =>
      request(Server)
@@ -567,7 +569,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get 1 JoinAction claim', () =>
      request(Server)
@@ -579,7 +581,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get 1 confirmation', () =>
      request(Server)
@@ -591,7 +593,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get one issuer (original claimant) who claimed or confirmed this', () =>
      request(Server)
@@ -603,7 +605,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should add another new claim', () =>
      request(Server)
@@ -614,7 +616,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(6002)
+     })).timeout(3000)
 
   it('should add yet another new claim', () =>
      request(Server)
@@ -625,7 +627,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should get a set of action claims & one confirmation', () =>
      request(Server)
@@ -639,7 +641,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get claims and confirmations for this event data', () => {
     const claimEncoded = encodeURIComponent(JSON.stringify(claimBvcFor1.event))
@@ -658,7 +660,7 @@ describe('Claim', () => {
           .of.length(0)
         expect(r.status).that.equals(200)
       })
-     }).timeout(7001)
+     })
 
   it('#0 should see themselves', () =>
      request(Server)
@@ -670,7 +672,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .to.include.members([creds[0].did])
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('#0 should not see DID #1', () =>
      request(Server)
@@ -682,7 +684,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .to.not.include.members([creds[1].did])
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('should register user 1', () =>
      request(Server)
@@ -693,7 +695,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(6002)
+     })).timeout(3000)
 
   it('should add another new confirmation', () =>
     request(Server)
@@ -704,7 +706,7 @@ describe('Claim', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   it('should register user 3', () =>
     request(Server)
@@ -715,7 +717,7 @@ describe('Claim', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   it('should fail to confirm with bad JWT 1', () => {
     const headerPayload = confirmBvcFor0By3JwtEnc.substring(0, confirmBvcFor0By3JwtEnc.lastIndexOf('.') + 1)
@@ -732,7 +734,7 @@ describe('Claim', () => {
           expect(r.status).that.equals(400)
         })
     }
-  }).timeout(7001)
+  }).timeout(3000)
 
   it('should fail to confirm with bad JWT 2', () => {
     const lastChar = confirmBvcFor0By3JwtEnc.charAt(confirmBvcFor0By3JwtEnc.length - 1)
@@ -750,7 +752,7 @@ describe('Claim', () => {
           expect(r.status).that.equals(400)
         })
     }
-  }).timeout(7001)
+  }).timeout(3000)
 
   it('should finally successfully add a second confirmation by someone else', () =>
      request(Server)
@@ -761,7 +763,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(6002)
+     })).timeout(3000)
 
   it('should see DID #1', () =>
      request(Server)
@@ -773,7 +775,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .to.include.members([creds[1].did])
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
@@ -784,7 +786,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(6002)
+     })).timeout(3000)
 
   it('should retrieve the debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
@@ -795,7 +797,7 @@ describe('Claim', () => {
        expect(r.body[0].orgName).that.equals('Trent @ home')
        someEventId = r.body[0].id
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('should add yet another new confirmation of two claims', () =>
      request(Server)
@@ -806,7 +808,7 @@ describe('Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(6002)
+     })).timeout(3000)
 
   it('should get the right number of claims today', () =>
      request(Server)
@@ -818,7 +820,7 @@ describe('Claim', () => {
          .to.be.an('array')
          .of.length(6)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
 
@@ -850,7 +852,7 @@ describe('Action', () => {
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get complaint about a missing JWT', () =>
      request(Server)
@@ -877,7 +879,7 @@ describe('Action', () => {
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get no actions that match query', () =>
      request(Server)
@@ -889,7 +891,7 @@ describe('Action', () => {
          .to.be.an('array')
          .of.length(0)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get one action that matched query', () =>
      request(Server)
@@ -917,7 +919,7 @@ describe('Action', () => {
          .that.has.property('eventStartTime')
          .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get enough past claims', () =>
      request(Server)
@@ -945,7 +947,7 @@ describe('Action', () => {
          .that.has.property('eventStartTime')
          .that.equals('2019-02-01T02:00:00Z')
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get no actions today', () =>
      request(Server)
@@ -957,7 +959,7 @@ describe('Action', () => {
          .to.be.an('array')
          .of.length(0)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
 
@@ -980,7 +982,7 @@ describe('Event', () => {
          .that.has.property('startTime')
          .that.equals('2018-12-29T15:00:00Z')
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get 1 BVC event', () =>
      request(Server)
@@ -992,7 +994,7 @@ describe('Event', () => {
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get a set of action claims & three confirmations', () =>
      request(Server)
@@ -1026,7 +1028,7 @@ describe('Event', () => {
          .that.has.property('issuer')
          .that.equals(creds[1].did)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should not add a duplicate confirmation for this action', () =>
      request(Server)
@@ -1038,7 +1040,7 @@ describe('Event', () => {
        // It creates a JWT record but not a new confirmation.
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should not add a confirmation of a confirmation', () =>
      request(Server)
@@ -1050,7 +1052,7 @@ describe('Event', () => {
        // It creates a JWT record but not a new confirmation.
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should get multiple action claims & still three confirmations', () =>
      request(Server)
@@ -1064,7 +1066,7 @@ describe('Event', () => {
          .to.be.an('array')
          .of.length(3)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get multiple action claims and confirmations for this event data', () => {
     const claimEncoded = encodeURIComponent(JSON.stringify(claimBvcFor0.event))
@@ -1080,7 +1082,7 @@ describe('Event', () => {
           .of.length(3)
         expect(r.status).that.equals(200)
       })
-     }).timeout(7001)
+     })
 
   it('should now get three issuers/confirmers for this claim ID', () =>
      request(Server)
@@ -1092,7 +1094,7 @@ describe('Event', () => {
          .to.be.an('array')
          .of.length(3)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get no issuers for an unknown claim', () =>
      request(Server)
@@ -1104,7 +1106,7 @@ describe('Event', () => {
          .to.be.an('array')
          .of.length(0)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get an issuer for confirming a valid claim', () =>
      request(Server)
@@ -1116,7 +1118,7 @@ describe('Event', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
 
@@ -1131,7 +1133,7 @@ describe('Tenure', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   it ('should create a tenure', () =>
       request(Server)
@@ -1142,7 +1144,7 @@ describe('Tenure', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6000)
+      })).timeout(3000)
 
   it('should get 1 claim', () =>
      request(Server)
@@ -1154,7 +1156,7 @@ describe('Tenure', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
 
@@ -1191,7 +1193,7 @@ describe('Report', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get 1 tenure', () =>
      request(Server)
@@ -1203,7 +1205,7 @@ describe('Report', () => {
          .to.be.an('array')
          .of.length(1)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get no tenures', () =>
      request(Server)
@@ -1215,7 +1217,7 @@ describe('Report', () => {
          .to.be.an('array')
          .of.length(0)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
 
@@ -1231,7 +1233,7 @@ describe('Visibility utils', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   it('#0 should set invisible to #2', () =>
     request(Server)
@@ -1241,7 +1243,7 @@ describe('Visibility utils', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
-      })).timeout(6002)
+      }))
 
   it('should get claims from other tests but cannot see inside any', () =>
      request(Server)
@@ -1254,7 +1256,7 @@ describe('Visibility utils', () => {
          expect(testUtil.allDidsAreHidden(r.body[i], creds[2].did)).to.be.true
        }
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should register user 11', () =>
     request(Server)
@@ -1265,7 +1267,7 @@ describe('Visibility utils', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   it('should create a new tenure', () =>
      request(Server)
@@ -1276,7 +1278,7 @@ describe('Visibility utils', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should get claims and can see inside the most recent but cannot see inside the oldest', () =>
      request(Server)
@@ -1288,7 +1290,7 @@ describe('Visibility utils', () => {
        expect(testUtil.allDidsAreHidden(r.body[0])).to.be.true
        expect(testUtil.allDidsAreHidden(r.body[r.body.length-1])).to.be.false
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should register user 10', () =>
     request(Server)
@@ -1299,7 +1301,7 @@ describe('Visibility utils', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   it('should confirm that competing tenure', () =>
      request(Server)
@@ -1310,7 +1312,7 @@ describe('Visibility utils', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should get 2 tenure claims', () =>
      request(Server)
@@ -1322,7 +1324,7 @@ describe('Visibility utils', () => {
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should get 2 competing tenures and confirmations', () =>
      request(Server)
@@ -1334,7 +1336,7 @@ describe('Visibility utils', () => {
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('should register user 4', () =>
     request(Server)
@@ -1345,7 +1347,7 @@ describe('Visibility utils', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(6002)
+      })).timeout(3000)
 
   let foodPantryClaimId
 
@@ -1359,7 +1361,7 @@ describe('Visibility utils', () => {
        expect(r.body).to.be.a('string')
        foodPantryClaimId = r.body
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should confirm that tenure for the Food Pantry', () =>
      request(Server)
@@ -1370,7 +1372,7 @@ describe('Visibility utils', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should get issuer and confirmer (even though confirmed claim format is different)', () =>
      request(Server)
@@ -1382,7 +1384,7 @@ describe('Visibility utils', () => {
          .to.be.an('array')
          .of.length(2)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 
   //// Now #4 will toggle visibility from #5.
@@ -1397,7 +1399,7 @@ describe('Visibility utils', () => {
          .to.be.an('array')
          .to.not.include.members([creds[4].did])
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('#4 should set visible to #5', () =>
      request(Server)
@@ -1407,7 +1409,7 @@ describe('Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('#5 should see #4', () =>
      request(Server)
@@ -1419,7 +1421,7 @@ describe('Visibility utils', () => {
          .to.be.an('array')
          .to.include.members([creds[4].did])
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('#4 can tell that #5 can see them', () =>
      request(Server)
@@ -1429,7 +1431,7 @@ describe('Visibility utils', () => {
      .then(r => {
        expect(r.body).to.be.true
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('#4 should set invisible to #5', () =>
      request(Server)
@@ -1439,7 +1441,7 @@ describe('Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
   it('#5 should not see #4 again', () =>
      request(Server)
@@ -1451,7 +1453,7 @@ describe('Visibility utils', () => {
          .to.be.an('array')
          .to.not.include.members([creds[4].did])
        expect(r.status).that.equals(200)
-     })).timeout(6002)
+     }))
 
 })
 
@@ -1466,7 +1468,7 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should claim attendance for 2', () =>
      request(Server)
@@ -1477,7 +1479,7 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should confirm attendance for 1 by 0', () =>
      request(Server)
@@ -1488,7 +1490,7 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
   it('should confirm attendance for 2 by 1', () =>
      request(Server)
@@ -1499,6 +1501,6 @@ describe('Transitive Connections', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(7001)
+     })).timeout(3000)
 
 })

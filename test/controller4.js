@@ -122,7 +122,7 @@ describe('Load Claims Incrementally', () => {
           })
       })
     )
-  }).timeout(6001) // took 3.6 seconds in recent clean test
+  }).timeout(6000) // took 3.6 seconds in recent clean test
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)

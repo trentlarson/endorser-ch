@@ -235,7 +235,7 @@ describe('Visibility', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-    ).timeout(7001)
+    ).timeout(3000)
 
   it('user 3 should get that claim with all DIDs hidden', () =>
      request(Server)
@@ -254,7 +254,7 @@ describe('Visibility', () => {
          .that.does.not.have.property('publicUrls')
        expect(testUtil.allDidsAreHidden(r.body)).to.be.true
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('user 3 should not see that full land claim JWT', () =>
      request(Server)
@@ -263,7 +263,7 @@ describe('Visibility', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(403)
-     })).timeout(7001)
+     }))
 
   it('user 5 should see one DID', () =>
      request(Server)
@@ -311,7 +311,7 @@ describe('Visibility', () => {
          .that.has.a.property('publicUrls')
          .that.deep.equals(publicUrl)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
   it('user 3 should now see that full land claim JWT', () =>
      request(Server)
@@ -329,7 +329,7 @@ describe('Visibility', () => {
          .that.has.a.property('subject')
          .that.equals(creds[2].did)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
 
@@ -353,19 +353,19 @@ describe('Role Claims on Date', async () => {
             expect(r.status).that.equals(201)
           })
         if (thisNum === 9) await dbService.registrationUpdateMaxRegs(creds[0].did, 10)
-      }).timeout(6002)
+      }).timeout(3000)
     },
     5
   )
 
-  it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(7001)
-  it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(7001)
-  it('should add another new President role claim', () => postClaim(4, claimPresidentFor4By4JwtEnc)).timeout(7001)
-  it('should confirm 3 as President role claim by 5', () => postClaim(5, confirmPresidentFor3By5JwtEnc)).timeout(7001)
-  it('should confirm 3 as President role claim by 6', () => postClaim(6, confirmPresidentFor3By6JwtEnc)).timeout(7001)
-  it('should confirm 4 as President role claim by 7', () => postClaim(7, confirmPresidentFor4By7JwtEnc)).timeout(7001)
-  it('should confirm 4 as President role claim by 8', () => postClaim(8, confirmPresidentFor4By8JwtEnc)).timeout(7001)
-  it('should confirm 4 as President role claim by 9', () => postClaim(9, confirmPresidentFor4By9JwtEnc)).timeout(7001)
+  it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(3000)
+  it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(3000)
+  it('should add another new President role claim', () => postClaim(4, claimPresidentFor4By4JwtEnc)).timeout(3000)
+  it('should confirm 3 as President role claim by 5', () => postClaim(5, confirmPresidentFor3By5JwtEnc)).timeout(3000)
+  it('should confirm 3 as President role claim by 6', () => postClaim(6, confirmPresidentFor3By6JwtEnc)).timeout(3000)
+  it('should confirm 4 as President role claim by 7', () => postClaim(7, confirmPresidentFor4By7JwtEnc)).timeout(3000)
+  it('should confirm 4 as President role claim by 8', () => postClaim(8, confirmPresidentFor4By8JwtEnc)).timeout(3000)
+  it('should confirm 4 as President role claim by 9', () => postClaim(9, confirmPresidentFor4By9JwtEnc)).timeout(3000)
 
   it('should get org role claims & confirmations', () =>
      request(Server)
@@ -380,6 +380,6 @@ describe('Role Claims on Date', async () => {
        expect(testUtil.allDidsAreHidden(r.body[1])).to.be.true
        expect(r.body[1].orgRoles[0].confirmations).to.be.an('array').of.length(3)
        expect(r.status).that.equals(200)
-     })).timeout(7001)
+     }))
 
 })
