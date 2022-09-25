@@ -64,7 +64,7 @@ describe('Registration', () => {
         return Promise.reject(err)
       })
     await dbService.registrationUpdateMaxClaims(creds[0].did, 122)
-  })
+  }).timeout(3001)
 
   it('check that cannot insert too many claims', async() => {
     return request(Server)
@@ -77,7 +77,7 @@ describe('Registration', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  })
+  }).timeout(3001)
 
   it('check that user 12 can claim', () =>
      request(Server)

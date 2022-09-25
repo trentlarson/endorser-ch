@@ -4,8 +4,8 @@ import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll
 import { HIDDEN_TEXT, isDid } from './util'
 
 /**
-  Accept the original result and the resultHidden with hidden DIDs
-  and return the appropriate result:
+  Accept the original result and return the result for the given user
+  where, if a DID is not visible to this user, it is hidden but connected DIDs are shown.
     - if a non-map object, replace any non-visible DIDs with HIDDEN_DID value
       ... but non-map usage is _DISCOURAGED_ because then the "publicUrls" can't be added
     - if a map object
@@ -58,11 +58,9 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
         result[key] = await nestedValues[key] // await since each of these is a Promise
       }
       // now look for links to any hidden DIDs
-      for (let key of R.keys(input)) {
-        if (isDid(key)) {
-          // We could get around this by generating suffixes or something, but I don't like that.
-          return Promise.reject("Do not use DIDs for keys (because you'll get conflicts in hideDidsAndAddLinksToNetwork).")
-        }
+      const keys = R.keys(input)
+      for (let i = 0; i < keys.length; i++) {
+        let key = keys[i]
         let canSee = []
         if (result[key] === HIDDEN_TEXT) {
           // add to list of anyone else who can see them
@@ -75,6 +73,13 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
               canSee = R.uniq(R.concat(canSee, newCanSee))
             }
           }
+        }
+        // Using DIDs as keys doesn't make much sense in VCs. Oh, well.
+        if (isDid(key)) {
+          const newKey = HIDDEN_TEXT + '_' + i
+          result[newKey] = result[key]
+          delete result[key]
+          key = newKey
         }
         if (canSee.length > 0) {
           result[key + "VisibleToDids"] = canSee

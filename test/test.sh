@@ -15,8 +15,11 @@ NODE_ENV=test-local DBUSER=sa DBPASS=sasa PORT=3330 npm run test$1
 
 echo "Now will run tests with JWT validation, which are much slower, which require internet, and which sometimes fail due to rate-limiting at Infura."
 echo ""
-echo "If you get this error: 'TypeError: Converting circular structure to JSON'"
+echo "If you get this error: 'Converting circular structure to JSON'"
 echo "... it indicates a network problem."
+echo ""
+echo "If you get this error: 'Timeout of 2000ms exceeded.'"
+echo "... it indicates some restriction going on (at Infura, I believe). Waiting a few hours usually helps; you could also add a timeout length."
 echo ""
 echo "In 5..."
 sleep 1

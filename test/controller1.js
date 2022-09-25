@@ -19,13 +19,14 @@ const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
 
+/**
 // Set up some JWTs for calls.
-let globalJwt1, globalJwt2
 // from https://github.com/uport-project/did-jwt#1-create-a-did-jwt
+// ... but now disabled because this no longer passes JWT verification.
 import didJWT from 'did-jwt'
 // This "signer" variable must be named "signer" or you get an error: No Signer functionality has been configured
 const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3550199346bdfa6f53245');
-
+**/
 
 
 const creds = testUtil.creds
@@ -278,18 +279,6 @@ let pushTokens, registerBy0JwtEncs,
 
 before(async () => {
 
-  await didJWT.createJWT(
-    {aud: creds[12].did, exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
-    {issuer: creds[12].did, signer}
-  )
-    .then( response => { globalJwt1 = response; console.log("Created global JWT 1", globalJwt1) });
-
-  await didJWT.createJWT(
-    {aud: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', exp: testUtil.tomorrowEpoch, name: 'uPort Developer'},
-    {issuer: 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761', signer}
-  )
-    .then( response => { globalJwt2 = response; console.log("Created global JWT 2", globalJwt2) });
-
   await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller push tokens", pushTokens) })
 
   await Promise.all(registerBy0Proms).then((jwts) => { registerBy0JwtEncs = jwts; console.log("Created register JWTs", registerBy0JwtEncs) })
@@ -341,14 +330,6 @@ before(async () => {
 })
 
 describe('Util', () => {
-
-  it('should already have a JWT', () => {
-    if (!globalJwt1) {
-      console.log("Never got the initial JWT created in time, so will stop.")
-      console.log("If we can't get past this, we'll have to try a real approach, eg. controller2.js or https://mochajs.org/#delayed-root-suite")
-      process.exit(1)
-    }
-  })
 
   it('should return the right bbox', () =>
      expect(calcBbox("40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"))
@@ -420,8 +401,10 @@ describe('Util', () => {
     const someObj1 = {a: 1, b: addr0,       c: {d: addr6,       e: [], f: [9, {g: addru}]}}
     const repObj11 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
     const repObj12 = {a: 1, b: addr0,       c: {d: HIDDEN_TEXT, e: [], f: [9, {g: addru}]}}
+
     const someObj2 = {a: 1, b: 2}
     someObj2[addr0] = 9
+    const repObj21 = {a: 1, b: 2, 'did:none:HIDDEN_2': 9}
 
     const allowedDids0 = []
     const allowedDids1 = [addrd]
@@ -436,7 +419,7 @@ describe('Util', () => {
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, someObj1)).to.eventually.deep.equal(repObj11),
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, [])).to.eventually.deep.equal([]),
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, [someObj1])).to.eventually.deep.equal([repObj11]),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, someObj2)).to.eventually.be.rejected,
+      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, someObj2)).to.eventually.deep.equal(repObj21),
 
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids1, addr0, addrd)).to.eventually.deep.equal(addrd),
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids1, addr0, addru)).to.eventually.deep.equal(HIDDEN_TEXT),
@@ -444,7 +427,7 @@ describe('Util', () => {
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, addr0)).to.eventually.deep.equal(addr0),
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, addra)).to.eventually.deep.equal(HIDDEN_TEXT),
       expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, someObj1)).to.eventually.deep.equal(repObj12),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, someObj2)).to.eventually.be.rejected,
+      expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, someObj2)).to.eventually.deep.equal(repObj21),
     ])
   })
 
@@ -501,7 +484,7 @@ describe('Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     })).timeout(7001) // these 7001 & 6001 waits were added after JWT verify was added
+     })).timeout(7001) // these 7001 waits were added after JWT verify was added
 
   it('should get a 404 for an invalid claim number', () =>
      request(Server)
@@ -546,7 +529,7 @@ describe('Claim', () => {
   it('should get a claim with the DID hidden', () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -577,7 +560,7 @@ describe('Claim', () => {
   it('should get 3 claims', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -589,7 +572,7 @@ describe('Claim', () => {
   it('should get 1 JoinAction claim', () =>
      request(Server)
      .get('/api/claim?claimType=JoinAction')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -601,7 +584,7 @@ describe('Claim', () => {
   it('should get 1 confirmation', () =>
      request(Server)
      .get('/api/claim?claimType=AgreeAction')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -734,11 +717,46 @@ describe('Claim', () => {
         expect(r.status).that.equals(201)
       })).timeout(6002)
 
-  it('should add a second confirmation by someone else', () =>
+  it('should fail to confirm with bad JWT 1', () => {
+    const headerPayload = confirmBvcFor0By3JwtEnc.substring(0, confirmBvcFor0By3JwtEnc.lastIndexOf('.') + 1)
+    const badlySignedJwt = headerPayload + '_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_'
+    if (process.env.NODE_ENV === 'test-local') {
+      console.log('Skipping JWT verification test that requires online verification.')
+    } else {
+      return request(Server)
+        .post('/api/claim')
+        .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+        .send({"jwtEncoded": badlySignedJwt})
+        .expect('Content-Type', /json/)
+        .then(r => {
+          expect(r.status).that.equals(400)
+        })
+    }
+  }).timeout(7001)
+
+  it('should fail to confirm with bad JWT 2', () => {
+    const lastChar = confirmBvcFor0By3JwtEnc.charAt(confirmBvcFor0By3JwtEnc.length - 1)
+    const newChar = lastChar === '_' ? '-' : '_'
+    const badlySignedJwt = confirmBvcFor0By3JwtEnc.substring(0, confirmBvcFor0By3JwtEnc.length - 1) + newChar
+    if (process.env.NODE_ENV === 'test-local') {
+      console.log('Skipping JWT verification test that requires online verification.')
+    } else {
+      return request(Server)
+        .post('/api/claim')
+        .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+        .send({"jwtEncoded": badlySignedJwt})
+        .expect('Content-Type', /json/)
+        .then(r => {
+          expect(r.status).that.equals(400)
+        })
+    }
+  }).timeout(7001)
+
+  it('should finally successfully add a second confirmation by someone else', () =>
      request(Server)
      .post('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
-     .send({"jwtEncoded": confirmBvcFor0By3JwtEnc})
+      .send({"jwtEncoded": confirmBvcFor0By3JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
@@ -793,7 +811,7 @@ describe('Claim', () => {
   it('should get the right number of claims today', () =>
      request(Server)
      .get('/api/claim/?issuedAt_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING) + "&excludeConfirmations=true")
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -848,7 +866,7 @@ describe('Action', () => {
   it('should get action with the DID hidden', () =>
      request(Server)
      .get('/api/action/1')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt2)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -864,7 +882,7 @@ describe('Action', () => {
   it('should get no actions that match query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T14:59:59Z')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -932,7 +950,7 @@ describe('Action', () => {
   it('should get no actions today', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING))
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -948,7 +966,7 @@ describe('Event', () => {
   it('should get event with the right properties', () =>
      request(Server)
      .get('/api/event/1')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -967,7 +985,7 @@ describe('Event', () => {
   it('should get 1 BVC event', () =>
      request(Server)
      .get('/api/event?orgName=Bountiful%20Voluntaryist%20Community')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1129,7 +1147,7 @@ describe('Tenure', () => {
   it('should get 1 claim', () =>
      request(Server)
      .get('/api/claim?claimType=Tenure')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1178,7 +1196,7 @@ describe('Report', () => {
   it('should get 1 tenure', () =>
      request(Server)
      .get('/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1190,7 +1208,7 @@ describe('Report', () => {
   it('should get no tenures', () =>
      request(Server)
      .get('/api/report/tenureClaimsAtPoint?lat=40.883943&lon=-111.884787')
-     .set(UPORT_PUSH_TOKEN_HEADER, globalJwt1)
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)

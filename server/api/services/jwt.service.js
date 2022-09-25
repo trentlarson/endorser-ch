@@ -94,18 +94,6 @@ class JwtService {
     }
   }
 
-  jwtDecoded(encoded) {
-
-    // this line is lifted from didJwt.verifyJWT
-    const {payload, header, signature, data} = didJwt.decodeJWT(encoded)
-    l.trace(payload, `${this.constructor.name} decoded payload`)
-    l.trace(header, `${this.constructor.name} decoded header`)
-    l.trace(signature, `${this.constructor.name} decoded signature`)
-    l.trace(data, `${this.constructor.name} decoded data`)
-
-    return {payload, header, signature, data}
-  }
-
   extractClaim(payload) {
     let claim = payload.claim
       || (payload.vc && payload.vc.credentialSubject)
@@ -115,18 +103,6 @@ class JwtService {
       return null
     }
   }
-
-  /**
-  create(jwtEncoded) {
-    l.trace(`${this.constructor.name}.create(ENCODED)`);
-    l.trace(jwtEncoded, "ENCODED")
-
-    const {payload, header, signature, data} = this.jwtDecoded(jwtEncoded)
-    let claimEncoded = base64url.encode(this.extractClaim(payload))
-    let jwtEntity = db.buildJwtEntity(payload, ?, ?, claimEncoded, jwtEncoded)
-    return db.jwtInsert(jwtEntity)
-  }
-  **/
 
   async merkleUnmerkled() {
     return db.jwtClaimsAndIdsUnmerkled()
@@ -451,11 +427,11 @@ class JwtService {
 
   }
 
-  // return Promise of { payload, issuer, header }
-  // ... and also if successful: signature, data, doc, authenticators
+  // return Promise of at least { payload, header, issuer }
+  // ... and also if successfully verified: data, doc, signature, signer
   async decodeAndVerifyJwt(jwt) {
     if (process.env.NODE_ENV === 'test-local') {
-      // This often yields the following error message if the JWT is malformed: "TypeError: Cannot read property 'toString' of undefined"
+      // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed, eg. no "." separators.
       let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
       if (payload.exp < nowEpoch) {
@@ -464,10 +440,32 @@ class JwtService {
       }
       return {payload, issuer: payload.iss, header: {typ: "test"}} // all the other elements will be undefined, obviously
     } else {
-      const {payload, header, signature, data} = this.jwtDecoded(jwt)
+
+      try {
+
+        // yields: { data, header, payload, signature }
+        const decoded = didJwt.decodeJWT(jwt)
+
+        // yields: { doc, issuer, jwt, payload, signer }
+        const verified = await didJwt.verifyJWT(jwt)
+        verified.header = decoded.header
+        verified.signature = decoded.signature
+        verified.data = decoded.data
+
+        return verified
+
+      } catch (e) {
+        return Promise.reject({
+          clientError: { message: `JWT failed verification.`,
+                         code: ERROR_CODES.JWT_VERIFY_FAILED }
+        })
+      }
+
+      /** unused now that verifyJWT works
       // this line is lifted from didJwt.verifyJWT
       const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
       return {payload, header, signature, data, doc, authenticators, issuer}
+      **/
 
       /**
       // This is an alternate, attempted when we got the following error
@@ -486,7 +484,9 @@ class JwtService {
   async createWithClaimRecord(jwtEncoded, authIssuerId) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
-    const {payload, header, signature, data, doc, authenticators, issuer} =
+
+    // available: { data, doc, header, issuer, payload, signature, signer }
+    const { payload } =
         await this.decodeAndVerifyJwt(jwtEncoded)
         .catch((err) => {
           return Promise.reject(err)

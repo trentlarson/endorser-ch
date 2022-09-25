@@ -122,7 +122,7 @@ describe('Load Claims Incrementally', () => {
           })
       })
     )
-  }).timeout(6001)
+  }).timeout(6001) // took 3.6 seconds in recent clean test
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
@@ -281,7 +281,9 @@ describe('Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(TOTAL_CLAIMS - (RESULT_COUNT_LIMIT + NTH_IN_SECOND_BATCH + RESULT_COUNT_LIMIT))
+        let expectedCount =
+            TOTAL_CLAIMS - (RESULT_COUNT_LIMIT + NTH_IN_SECOND_BATCH + RESULT_COUNT_LIMIT)
+        expect(r.body.data).to.be.an('array').of.length(expectedCount)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
