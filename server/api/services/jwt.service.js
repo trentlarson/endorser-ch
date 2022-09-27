@@ -1,20 +1,19 @@
 import base64url from 'base64url'
 import canonicalize from 'canonicalize'
 import didJwt from 'did-jwt'
+import { Resolver } from 'did-resolver'
 import { DateTime } from 'luxon'
 import R from 'ramda'
 import util from 'util'
+import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 
-// I wish this was exposed in the did-jwt module!
-import VerifierAlgorithm from '../../../node_modules/did-jwt/lib/VerifierAlgorithm'
 import l from '../../common/logger'
 import db from './endorser.db.service'
 import { allDidsInside, calcBbox, ERROR_CODES, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
 import { addCanSee } from './network-cache.service'
-// I couldn't figure out how to import this directly from the module.  Sheesh.
-const resolveAuthenticator = require('./crypto/JWT').resolveAuthenticator
 
-require("ethr-did-resolver").default() // loads resolver for "did:ethr"
+// for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
+const resolver = new Resolver({...ethrDidResolver({infuraProjectId: process.env.INFURA_PROJECT_ID})})
 
 const SERVICE_ID = process.env.SERVICE_ID
 
@@ -442,42 +441,15 @@ class JwtService {
     } else {
 
       try {
-
-        // yields: { data, header, payload, signature }
-        const decoded = didJwt.decodeJWT(jwt)
-
-        // yields: { doc, issuer, jwt, payload, signer }
-        const verified = await didJwt.verifyJWT(jwt)
-        verified.header = decoded.header
-        verified.signature = decoded.signature
-        verified.data = decoded.data
-
+        let verified = await didJwt.verifyJWT(jwt, { resolver })
         return verified
 
       } catch (e) {
         return Promise.reject({
-          clientError: { message: `JWT failed verification.`,
+          clientError: { message: `JWT failed verification: ` + e.toString(),
                          code: ERROR_CODES.JWT_VERIFY_FAILED }
         })
       }
-
-      /** unused now that verifyJWT works
-      // this line is lifted from didJwt.verifyJWT
-      const {doc, authenticators, issuer} = await resolveAuthenticator(header.alg, payload.iss, undefined)
-      return {payload, header, signature, data, doc, authenticators, issuer}
-      **/
-
-      /**
-      // This is an alternate, attempted when we got the following error
-      // which I believe was due to lack of a network connection.
-      // "TypeError: Converting circular structure to JSON" (XMLHttpRequest)
-      return resolveAuthenticator(header.alg, payload.iss, undefined).then(resolved => {
-        const {doc, authenticators, issuer} = resolved
-        return {payload, header, signature, data, doc, authenticators, issuer}
-      }).catch((err) => {
-        return Promise.reject('Error resolving JWT authenticator ' + err)
-      })
-      **/
     }
   }
 
@@ -492,7 +464,7 @@ class JwtService {
           return Promise.reject(err)
         })
 
-    if (payload.iss !== authIssuerId) {
+    if (authIssuerId && payload.iss !== authIssuerId) {
       return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss}`)
     }
 

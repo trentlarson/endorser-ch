@@ -175,7 +175,7 @@ async function postClaim(pushTokenNum, claimJwtEnc) {
     })
   }
 
-describe('Skills', () => {
+describe('3 - Skills', () => {
 
   it('insert claim for 0 with carpentry skills by themself', () =>
      request(Server)
@@ -189,7 +189,7 @@ describe('Skills', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-  ).timeout(3000)
+  ).timeout(5000)
 
   it('search reveals no direct connection with "carpentry"', () =>
      request(Server)
@@ -247,7 +247,7 @@ describe('Skills', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-  ).timeout(3000)
+  ).timeout(5000)
 
   it('claim 7 with carpentry skills by themself', () =>
      request(Server)
@@ -261,14 +261,14 @@ describe('Skills', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-  ).timeout(3000)
+  ).timeout(5000)
 
-  it('confirm 3 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For3_By4_JwtEnc)).timeout(3000)
-  it('confirm 3 with carpentry skills by 5', () => postClaim(5, confirm_Carpentry_For3_By5_JwtEnc)).timeout(3000)
-  it('confirm 3 with carpentry skills by 6', () => postClaim(6, confirm_Carpentry_For3_By6_JwtEnc)).timeout(3000)
-  it('claim 4 with carpentry skills by 4', () => postClaim(4, claim_Carpentry_For4_By4_JwtEnc)).timeout(3000)
-  it('confirm 4 with carpentry skills by 2', () => postClaim(2, confirm_Carpentry_For4_By2_JwtEnc)).timeout(3000)
-  it('confirm 4 with carpentry skills by 6', () => postClaim(6, confirm_Carpentry_For4_By6_JwtEnc)).timeout(3000)
-  it('confirm 7 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For7_By4_JwtEnc)).timeout(3000)
+  it('confirm 3 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For3_By4_JwtEnc)).timeout(5000)
+  it('confirm 3 with carpentry skills by 5', () => postClaim(5, confirm_Carpentry_For3_By5_JwtEnc)).timeout(5000)
+  it('confirm 3 with carpentry skills by 6', () => postClaim(6, confirm_Carpentry_For3_By6_JwtEnc)).timeout(5000)
+  it('claim 4 with carpentry skills by 4', () => postClaim(4, claim_Carpentry_For4_By4_JwtEnc)).timeout(5000)
+  it('confirm 4 with carpentry skills by 2', () => postClaim(2, confirm_Carpentry_For4_By2_JwtEnc)).timeout(5000)
+  it('confirm 4 with carpentry skills by 6', () => postClaim(6, confirm_Carpentry_For4_By6_JwtEnc)).timeout(5000)
+  it('confirm 7 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For7_By4_JwtEnc)).timeout(5000)
 
 })

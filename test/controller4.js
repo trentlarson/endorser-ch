@@ -73,7 +73,7 @@ before(async () => {
 const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 152, NTH_IN_SECOND_BATCH = 7
 let moreBeforeId, firstInList, startOfSecondBatchInList, nthInListInSecondBatch
 
-describe('Load Claims Incrementally', () => {
+describe('4 - Load Claims Incrementally', () => {
 
   it('insert offer claim', () =>
     request(Server)
@@ -87,7 +87,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(5000)
 
   it('retrieve single Give/Offer claim with no more after', () =>
     request(Server)
@@ -102,7 +102,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('insert many, many claims', async () => {
     await dbService.registrationUpdateMaxClaims(creds[0].did, 124)
@@ -113,8 +113,11 @@ describe('Load Claims Incrementally', () => {
           .post('/api/claim')
           .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
           .send({jwtEncoded: jwtEnc})
-          .expect('Content-Type', /json/)
           .then(r => {
+            if (r.body.error) {
+              console.log('Something went wrong. Here is the response body: ', r.body)
+            }
+            expect(r.headers['content-type'], /json/)
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
           }).catch((err) => {
@@ -122,7 +125,7 @@ describe('Load Claims Incrementally', () => {
           })
       })
     )
-  }).timeout(6000) // took 3.6 seconds in recent clean test
+  }).timeout(9000)
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
@@ -140,7 +143,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('retrieve many Give/Offer claims with a few more to come', () =>
     request(Server)
@@ -158,7 +161,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('retrieve a few more Give/Offer claims', () =>
     request(Server)
@@ -174,7 +177,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   //---------------- Now do the same with full JWT retrieval.
 
@@ -197,7 +200,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('retrieve all claims with a few more to come', () =>
     request(Server)
@@ -216,7 +219,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('retrieve a few more claims', () =>
     request(Server)
@@ -234,7 +237,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('retrieve a very few more claims', () =>
     request(Server)
@@ -250,7 +253,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   //---------------- Now do the same reverse chronologically, with a subset.
 
@@ -270,7 +273,7 @@ describe('Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   it('retrieve rest of the earlier claims, reverse chronologically', () =>
     request(Server)

@@ -4,7 +4,7 @@ A server for recording assertions and then querying about them in privacy-preser
 
 
 
-This repo is an API for creating and querying claims.  For a full system, use the mobile app linked at [the public endorser-ch server](https://endorser.ch); there's [a test server](https://test.endorser.ch:8000) which includes [API docs](https://test.endorser.ch:8000/api-docs).  (The old approach is with the uPort app and [this web app repo](https://github.com/trentlarson/uport-demo).)
+This repo is an API for creating and querying claims.  For a full system, use the mobile app linked at [the public endorser-ch server](https://endorser.ch); there's [a test server](https://test.endorser.ch:8000). (The old approach is with the uPort app and [this web app repo](https://github.com/trentlarson/uport-demo).)
 
 
 
@@ -106,8 +106,6 @@ server/api/services/jwt.service.js
 ## Try It
 
 For the full experience, use [the mobile app](https://github.com/trentlarson/endorser-mobile) or [this customized uPort demo](https://github.com/trentlarson/uport-demo) to connect to it.
-
-API docs are here: http://localhost:3000/api-docs
 
 Settings:
 
@@ -420,7 +418,7 @@ Here's a way to verify a JWT signature.
 yarn add did-jwt@4.0.0 ethr-did-resolver@3.0.0
 node
 
-const infuraProjectId = '0f439b3b9237480ea8eb9da7b1f3965a' // my ID... which you can use for a bit but it'd be nice if you got your own at infura.io
+const infuraProjectId = '...' // get one at infura.io
 const didJWT = require('did-jwt')
 const Resolver = require('did-resolver').Resolver
 const ethrDid = require('ethr-did-resolver').getResolver({rpcUrl: 'https://mainnet.infura.io/v3/' + infuraProjectId})

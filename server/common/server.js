@@ -7,9 +7,9 @@ import * as os from 'os';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import l from './logger';
-import JwtService from '../api/services/jwt.service';
-import { UPORT_PUSH_TOKEN_HEADER } from '../api/services/util';
 
+import JwtService from '../api/services/jwt.service';
+import { ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util';
 const app = new Express();
 
 app.use(helmet())
@@ -51,15 +51,15 @@ let options = {
 function requesterInfo(req, res, next) {
   let jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
-    if (req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince?")
+    if (req.originalUrl.startsWith("/api/claim") // even for POST since that JWT payload will be verified
         || req.originalUrl.startsWith("/api/claim?")
         || req.originalUrl.startsWith("/api/claim/")
+        || req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince?")
         || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")
         || req.originalUrl.startsWith("/api/report/issuersWhoClaimedOrConfirmed?")
         || req.originalUrl.startsWith("/api/reportAll/claims?")
         || req.originalUrl.startsWith("/api/util/updateHashChain")) {
-      // these endcpoints are OK to hit without a token
-      res.locals.tokenIssuer = "ANONYMOUS"
+      // these endcpoints are OK to hit without a token... so won't even set tokenIssuer
       next()
     } else {
       res.status(401).json('Missing JWT In ' + UPORT_PUSH_TOKEN_HEADER).end()
@@ -71,20 +71,8 @@ function requesterInfo(req, res, next) {
         //console.log("... and the JWT doc publicKey", result.doc && result.doc.publicKey)
         //console.log("... and the JWT doc authentication", result.doc && result.doc.authentication)
         const {payload, header, issuer} = result
-        if (!payload || !header) {
-          res.status(401).json('Unverified JWT').end()
-        } else if (payload.exp < Math.floor(new Date().getTime() / 1000) ) {
-          res.status(401).json({code: 'JWT Expired', userMessage: 'Your session has expired.  Please logout and login again.'}).end()
-        } else if (header.typ === 'none') {
-          res.status(401).json('Insecure JWT type').end()
-        } else if (payload.iss !== issuer) {
-          // I think this is already checked (and I've never hit this case) but it pays to be careful.
-          res.status(401).json(`JWT issuer ${issuer} does not match auth payload iss ${payload.iss}`).end()
-        } else {
-          var requesterDid = payload.iss
-          res.locals.tokenIssuer = requesterDid
-          next()
-        }
+        res.locals.tokenIssuer = payload.iss
+        next()
       })
       .catch(e => {
         // You would think that the separate parameter of "e" in this l.error would give the most info, but you'd be wrong in some cases such as when infura.io complains about "legacy access request rate exceeded".
@@ -92,7 +80,11 @@ function requesterInfo(req, res, next) {
         // ... and you'd think that those would at least hint at stack info but you'd be wrong.
         l.error(e.stack)
         l.error("Here's the JWT:", jwt)
-        res.status(500).json("Low-level error while parsing JWT '" + jwt + "': " + e).end()
+        // There's a potential to get more fine-grained with a 'clientError'.
+        res.status(400).json({ error: {
+          message: "Low-level error while parsing JWT '" + jwt + "': " + e,
+          code: ERROR_CODES.JWT_VERIFY_FAILED
+        }}).end()
       })
   }
 }

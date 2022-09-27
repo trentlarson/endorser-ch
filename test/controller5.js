@@ -48,7 +48,7 @@ before(async () => {
 
 })
 
-describe('Registration', () => {
+describe('5 - Registration', () => {
 
   it('check that cannot insert too many registrations', async () => {
     // bump up claims so that it doesn't get caught by claims limit (only reg limit)
@@ -64,7 +64,7 @@ describe('Registration', () => {
         return Promise.reject(err)
       })
     await dbService.registrationUpdateMaxClaims(creds[0].did, 122)
-  }).timeout(3001)
+  }).timeout(5000)
 
   it('check that cannot insert too many claims', async() => {
     return request(Server)
@@ -77,7 +77,7 @@ describe('Registration', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3001)
+  }).timeout(5000)
 
   it('check that user 12 can claim', () =>
      request(Server)
@@ -93,7 +93,7 @@ describe('Registration', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-  )
+  ).timeout(3000)
 
   it('check that user 13 cannot claim', () =>
      request(Server)
@@ -109,6 +109,6 @@ describe('Registration', () => {
      }).catch((err) => {
        return Promise.reject(err)
      })
-  )
+  ).timeout(3000)
 
 })

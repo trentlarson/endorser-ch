@@ -4,7 +4,7 @@ import testUtil from './util'
 
 const credentials = testUtil.credentials
 
-describe('Setup', () => {
+describe('0 - Setup', () => {
 
   it('should register initial user', () =>
     db.registrationInsert({ did: testUtil.creds[0].did })

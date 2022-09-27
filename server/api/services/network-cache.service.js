@@ -24,6 +24,7 @@ function getPublicDidUrl(did) {
 const SeesNetworkCache = new NodeCache({ stdTTL: 60 * 60 })
 
 async function getDidsRequesterCanSeeExplicitly(requesterDid) {
+  if (!requesterDid) return []
   var allowedDids = SeesNetworkCache.get(requesterDid)
   if (!allowedDids) {
     allowedDids = await db.getSeenBy(requesterDid)
@@ -70,6 +71,7 @@ async function getAllDidsRequesterCanSee(requesterDid) {
 const WhoCanSeeNetworkCache = new NodeCache({ stdTTL: 60 * 60 })
 
 async function getDidsWhoCanSeeExplicitly(object) {
+  if (!object) return []
   var allowedDids = WhoCanSeeNetworkCache.get(object)
   if (!allowedDids) {
     allowedDids = await db.getWhoCanSee(object)
