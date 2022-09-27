@@ -1,10 +1,12 @@
 ---
 
+- 01 fix verify from mobile
+  - ensure old app with new server works
+
 - 01 release :
   - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
   - fix test web server
   - mobile
-  - do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
 - 05 handy contract app in endorser-mobile :
   - add contracts to app :
@@ -25,12 +27,15 @@
   - instructions - permission for Z4A rep (for import into Zapier)
   - api.endorser.ch
 
-- .5 backup all data
-
-- .2 add search for all my issued claims
+- 01 consolidate forked AppHandy screens
 
 - 01 give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
-  - .5 server should give 4xx error and not 500 on hitting registration/claim limit
+
+- .5 allow backup of all data
+
+- .5 do limiting based on ULID and not timestamp (and change timestamp from int to string)
+
+- .2 add search for all my issued claims
 
 - 01 bug - contact entered with name & ID doesn't show immediately (sometimes?)
 
@@ -46,7 +51,7 @@
 
 - 02 add hash for claims by participants in a 'chain'
 
-- 02 test JWT signatures
+- 02 create chain hex on each claim insertion, or run a regular process to create it
 
 - .5 update endorser-ch website (eg. for scenario links)
 
@@ -64,7 +69,9 @@
 
 - 01 disallow results containing DIDs? (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
-- 01 fix /api-docs for /api-explorer
+- 01 fix /api-docs for /api-explorer (and add pointer to test.endorser.ch version in README)
+
+- 01 add SAIDs for essential commitment schemas
 
 - endorser-mobile :
 
