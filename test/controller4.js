@@ -58,13 +58,13 @@ before(async () => {
   await Promise.all(pushTokenProms)
     .then((jwts) => {
       pushTokens = jwts;
-      console.log("Created controller4 push tokens", pushTokens)
+      //console.log("Created controller4 push tokens", pushTokens)
     })
 
   await Promise.all(manyClaimsJwts)
     .then((jwts) => {
       manyClaimsJwtEnc = jwts
-      console.log("Created controller4 user tokens", jwts)
+      //console.log("Created controller4 user tokens", jwts)
     })
 
   return Promise.resolve()
@@ -116,6 +116,7 @@ describe('4 - Load Claims Incrementally', () => {
           .then(r => {
             if (r.body.error) {
               console.log('Something went wrong. Here is the response body: ', r.body)
+              return Promise.reject(r.body.error)
             }
             expect(r.headers['content-type'], /json/)
             expect(r.body).to.be.a('string')

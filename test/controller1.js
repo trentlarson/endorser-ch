@@ -281,9 +281,15 @@ let pushTokens, registerBy0JwtEncs,
 
 before(async () => {
 
-  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller push tokens", pushTokens) })
+  await Promise.all(pushTokenProms).then((jwts) => {
+    pushTokens = jwts
+    //console.log("Created controller push tokens", pushTokens)
+  })
 
-  await Promise.all(registerBy0Proms).then((jwts) => { registerBy0JwtEncs = jwts; console.log("Created register JWTs", registerBy0JwtEncs) })
+  await Promise.all(registerBy0Proms).then((jwts) => {
+    registerBy0JwtEncs = jwts
+    //console.log("Created register JWTs", registerBy0JwtEncs)
+  })
 
   await Promise.all([
     claimBvcFor0By0JwtProm,
@@ -325,7 +331,7 @@ before(async () => {
       claimIIW2019aFor2By2JwtEnc,
       confirmIIW2019aFor2By1JwtEnc,
     ] = jwts
-    console.log("Created controller user tokens", jwts)
+    //console.log("Created controller user tokens", jwts)
   })
 
   return Promise.resolve()

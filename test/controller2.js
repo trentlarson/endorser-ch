@@ -169,9 +169,15 @@ let pushTokens, registerBy0JwtEncs, claimPresidentFor3By3JwtEnc,
 
 before(async () => {
 
-  await Promise.all(pushTokenProms).then((jwts) => { pushTokens = jwts; console.log("Created controller2 push tokens", pushTokens) })
+  await Promise.all(pushTokenProms).then((jwts) => {
+    pushTokens = jwts
+    //console.log("Created controller2 push tokens", pushTokens)
+  })
 
-  await Promise.all(registerBy0Proms).then((jwts) => { registerBy0JwtEncs = jwts; console.log("Created register JWTs", registerBy0JwtEncs) })
+  await Promise.all(registerBy0Proms).then((jwts) => {
+    registerBy0JwtEncs = jwts
+    //console.log("Created register JWTs", registerBy0JwtEncs)
+  })
 
   await Promise.all([
     claimPresidentFor3By3JwtProm,
@@ -195,7 +201,7 @@ before(async () => {
       claimRecorderFor2By2JwtEnc,
       claimSecretaryFor2By2JwtEnc,
     ] = jwts
-    console.log("Created controller2 user tokens", jwts)
+    //console.log("Created controller2 user tokens", jwts)
   })
 
   return Promise.resolve()
