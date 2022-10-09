@@ -491,6 +491,12 @@ class JwtService {
         if (regCount >= maxAllowedRegs) {
           return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this month. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
         }
+
+        // disallow registering others in the same week they got registered
+        const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
+        if (registered.epoch > startOfWeekEpoch) {
+          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} cannot register others the same week they got registered. Contact an administrator for special treatment.`, code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } })
+        }
       }
 
       const claimStr = canonicalize(payloadClaim)

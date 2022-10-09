@@ -25,24 +25,31 @@ registerAnotherBy0JwtObj.claim.participant.did = creds[13].did
 registerAnotherBy0JwtObj.iss = creds[0].did
 registerAnotherBy0JwtObj.sub = creds[13].did
 const registerAnotherBy0JwtProm = credentials[0].createVerification(registerAnotherBy0JwtObj)
-console.log('registerAnotherBy0JwtProm',registerAnotherBy0JwtProm)
+
+const registerAnotherBy1JwtObj = R.clone(testUtil.jwtTemplate)
+registerAnotherBy1JwtObj.claim = R.clone(testUtil.registrationTemplate)
+registerAnotherBy1JwtObj.claim.agent.did = creds[1].did
+registerAnotherBy1JwtObj.claim.participant.did = creds[13].did
+registerAnotherBy1JwtObj.iss = creds[1].did
+registerAnotherBy1JwtObj.sub = creds[13].did
+const registerAnotherBy1JwtProm = credentials[1].createVerification(registerAnotherBy1JwtObj)
 
 const claimAnotherBy0JwtObj = R.clone(testUtil.jwtTemplate)
 claimAnotherBy0JwtObj.claim = R.clone(testUtil.claimCornerBakery)
 const claimAnotherBy0JwtProm = credentials[0].createVerification(claimAnotherBy0JwtObj)
 
-let pushTokens, registerAnotherBy0JwtEnc, claimAnotherBy0JwtEnc
+let pushTokens, registerAnotherBy0JwtEnc, registerAnotherBy1JwtEnc, claimAnotherBy0JwtEnc
 
 before(async () => {
 
   await Promise.all(pushTokenProms)
     .then((jwts) => {
       pushTokens = jwts;
-      console.log("Created controller5 push tokens", pushTokens)
+      //console.log("Created controller5 push tokens", pushTokens)
     })
 
-  await Promise.all([registerAnotherBy0JwtProm, claimAnotherBy0JwtProm])
-    .then((jwts) => { [registerAnotherBy0JwtEnc, claimAnotherBy0JwtEnc] = jwts })
+  await Promise.all([registerAnotherBy0JwtProm, registerAnotherBy1JwtProm, claimAnotherBy0JwtProm])
+    .then((jwts) => { [registerAnotherBy0JwtEnc, registerAnotherBy1JwtEnc, claimAnotherBy0JwtEnc] = jwts })
 
   return Promise.resolve()
 
@@ -63,7 +70,21 @@ describe('5 - Registration', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-    await dbService.registrationUpdateMaxClaims(creds[0].did, 122)
+        await dbService.registrationUpdateMaxClaims(creds[0].did, 122)
+  }).timeout(5000)
+
+  it('check that cannot register too soon', async () => {
+    await request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+      .send({jwtEncoded: registerAnotherBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.code).that.equals(testUtil.ERROR_CODES.CANNOT_REGISTER_TOO_SOON)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
   }).timeout(5000)
 
   it('check that cannot insert too many claims', async() => {

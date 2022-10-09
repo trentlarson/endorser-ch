@@ -5,7 +5,7 @@
 **/
 
 import R from 'ramda'
-import { HIDDEN_TEXT, isDid } from '../server/api/services/util'
+import { ERROR_CODES, HIDDEN_TEXT, isDid } from '../server/api/services/util'
 
 const { Credentials } = require('uport-credentials')
 
@@ -70,6 +70,8 @@ module.exports = {
   creds: CREDS,
 
   credentials: CREDENTIALS,
+
+  ERROR_CODES: ERROR_CODES,
 
   nowEpoch: NOW_EPOCH,
 
