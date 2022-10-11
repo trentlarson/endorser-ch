@@ -1,8 +1,7 @@
 ---
 
 - 01 fix verify from mobile
-  - when private fields show as null when signing, do they get saved locally?
-  - Add contact by name but didn't refresh screen (when had other contacts)
+  - Contact entered by name didn't show until clicking elsewhere (with or without other contacts)
   - check test for claim scan
 
 - 01 release :
@@ -27,10 +26,7 @@
   - receiver must pull full contract for verification :
     - before signing, must validate JWT contents
   - store contracts in separate table on server for quick retrieval
-  - instructions - permission for Z4A rep (for import into Zapier)
   - api.endorser.ch
-
-- 01 consolidate forked AppHandy screens
 
 - 01 give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
 
@@ -39,8 +35,6 @@
 - .5 do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
 - .2 add search for all my issued claims
-
-- 01 bug - contact entered with name & ID doesn't show immediately (sometimes?)
 
 - 01 switch time check to work off JWT ID in registration & claim
 
@@ -68,7 +62,7 @@
 
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
 
-- 01 add sensitive issues to a separate list (eg. rate)
+- 01 add sensitive issues to a separate list
 
 - 01 disallow results containing DIDs? (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
