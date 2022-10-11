@@ -1,10 +1,13 @@
 ---
 
 - 01 fix verify from mobile
-  - ensure old app with new server works
+  - when private fields show as null when signing, do they get saved locally?
+  - Add contact by name but didn't refresh screen (when had other contacts)
+  - check test for claim scan
 
 - 01 release :
   - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
+  - update uport: must contact someone for registration to make claims
   - fix test web server
   - mobile
 
