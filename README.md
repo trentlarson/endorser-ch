@@ -23,31 +23,26 @@ npm ci
 # set up the environment
 cp .env.local .env
 
-# ... and edit the SERVICE_ID with the value people should supply in the object field of RegisterAction
-
 # setup/migrate DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
-# add initial DID, used to register other DIDs via VCs -- replace YOUR_DID
-echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser-ch-dev.sqlite3
-
 # run in development mode
 NODE_ENV=dev npm run dev
 
-# run tests
-test/test.sh
+# to add claims: add initial DID, used to register other DIDs via VCs -- replace YOUR_DID
+echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser-ch-dev.sqlite3
+
 ```
 
 
 
-## Install Dependencies
+## Sample Data
 
-Install all package dependencies (one time operation)
+See 'Test It' below, then after running it: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3`
+... and you'll have a set of data in the DB which you can query.
 
-```shell
-npm ci
-```
+
 
 ## Run It
 #### Run in *development* mode:
@@ -80,6 +75,12 @@ scripts/deploy.sh ubuntutest release-X ~/.ssh/id_rsa
 cd endorser-ch
 NODE_ENV=prod nohup npm start >> ../endorser-ch.out 2>&1 &
 ```
+
+When installing on a different server, you may want to edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
+
+
+
+
 
 ## Test It
 
@@ -229,6 +230,8 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 - Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)
 
 - "CORS problems": is endorser-ch running?
+
+- "Please make sure to have at least one network": check that your .env has set a value for INFURA_PROJECT_ID (see .env setup above)
 
 - "Unsupported DID method 'ethr'": dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
 
