@@ -2,6 +2,7 @@
 
 - 01 fix verify from mobile
   - Contact entered by name didn't show until clicking elsewhere (with or without other contacts)
+  - Check Android crashes: setting Advanced Mode, reviewing contract
   - check test for claim scan
 
 - 01 release :
