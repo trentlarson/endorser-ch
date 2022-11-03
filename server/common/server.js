@@ -21,9 +21,9 @@ let options = {
     info: {
       title: 'endorser-ch',
       description: 'Endorser recording & search',
-      version: '1.0.2',
+      version: process.env.VERSION,
     },
-    host: 'localhost:' + process.env.port,
+    host: 'localhost:' + process.env.PORT,
     basePath: '',
     produces: [
       "application/json",
@@ -104,6 +104,8 @@ export default class ExpressServer {
 
   router(routes) {
 
+    expressSwagger(options)
+
     // Error handler to display the validation error as HTML
     // eslint-disable-next-line no-unused-vars, no-shadow
     app.use((err, req, res, next) => {
@@ -113,8 +115,6 @@ export default class ExpressServer {
           `<pre>${err.message}</pre>`);
     });
     routes(app);
-
-    expressSwagger(options)
 
     return this;
   }
