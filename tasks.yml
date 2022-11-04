@@ -8,6 +8,7 @@
 - 01 release :
   - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
   - update uport: must contact someone for registration to make claims
+  - mobile: give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
   - fix test web server
   - mobile
 
@@ -29,8 +30,6 @@
   - store contracts in separate table on server for quick retrieval
   - api.endorser.ch
 
-- 01 give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
-
 - .5 allow backup of all data
 
 - .5 do limiting based on ULID and not timestamp (and change timestamp from int to string)
@@ -38,8 +37,6 @@
 - .2 add search for all my issued claims
 
 - 01 switch time check to work off JWT ID in registration & claim
-
-- 01 limit registrations to only register starting the next week (not immediately)
 
 - 02 store claim column as canonical (possibly migrating), remove claimEncoded, add claimHash, add claimObfuHash
 
@@ -66,8 +63,6 @@
 - 01 add sensitive issues to a separate list
 
 - 01 disallow results containing DIDs? (ie. don't return results that don't contain the search criteria after DIDs are hidden)
-
-- 01 fix /api-docs for /api-explorer (and add pointer to test.endorser.ch version in README)
 
 - 01 add SAIDs for essential commitment schemas
 
@@ -252,7 +247,6 @@
 - 04 export to Neo4J
 - 32 switch/add format to verifiable credentials?
 - 32 uport - inside JSON payload, show a name if DID matches a contact
-- 01 fix or eliminate swagger API docs public/api-explorer http://localhost:3000/api-explorer/ (/api-docs works)
 - 02 db:
   - add action_claim.startDateCanonical
     - and fill it

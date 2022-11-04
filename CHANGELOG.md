@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.31] - 2022-11-03
 
 ### Added
-- Allow limiting of claims.
-- Allow registration of DIDs.
+- Can limit number of claims.
+- Can limit registration by DIDs.
 
 ### Fixed
 - Accurately validate JWTs.
+- Fix Swagger API docs page.

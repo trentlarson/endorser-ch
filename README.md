@@ -84,6 +84,8 @@ When installing on a different server, you may want to edit the .env SERVICE_ID 
 
 ## Test It
 
+You can use the test server at: [https://test.endorser.ch:8000/api-explorer](https://test.endorser.ch:8000/api-explorer)
+
 Run the Mocha unit tests
 
 ```shell
@@ -116,10 +118,7 @@ Settings:
 Steps:
 
 * Open your browser to [http://localhost:3000](http://localhost:3000)
-* Invoke the `/examples` endpoint
-  ```shell
-  curl http://localhost:3000/api/examples
-  ```
+* That includes a link to API docs at [http://localhost:3000/api-explorer](http://localhost:3000/api-explorer)
 
 Let's create some claims.  First, a claim of attendance.  Here's the object structure:
 
@@ -276,6 +275,7 @@ tar: Error exit delayed from previous errors.
 
 ## Tests
 
+- Make sure API works: http://localhost:3000/api-explorer
 - test/test.sh
 - test URLs
 http://localhost:3001/reportClaim?claimId=1
