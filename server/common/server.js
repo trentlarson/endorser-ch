@@ -16,6 +16,12 @@ app.use(helmet())
 
 const expressSwagger = require('express-swagger-generator')(app);
 
+const DEFAULT_PORT = process.env.PORT || '80'
+
+let schemes = ['http', 'https']
+if (process.env.SWAGGER_HTTPS_DEFAULT) {
+  schemes = ['https', 'http']
+}
 let options = {
   swaggerDefinition: {
     info: {
@@ -23,13 +29,13 @@ let options = {
       description: 'Endorser recording & search',
       version: process.env.VERSION,
     },
-    host: 'localhost:' + process.env.PORT,
+    host: (process.env.EXT_DOMAIN || 'localhost') + ':' + (process.env.EXT_PORT || DEFAULT_PORT),
     basePath: '',
     produces: [
       "application/json",
       "application/xml"
     ],
-    schemes: ['http', 'https'],
+    schemes: schemes,
     /**
     securityDefinitions: {
       JWT: {
@@ -119,7 +125,7 @@ export default class ExpressServer {
     return this;
   }
 
-  listen(port = process.env.PORT) {
+  listen(port = DEFAULT_PORT) {
     const welcome = p => () => l.info(`up and running in ${process.env.NODE_ENV || 'development'} @: ${os.hostname()} on port: ${p}}`);
     http.createServer(app).listen(port, welcome(port));
     return app;
