@@ -1,16 +1,18 @@
 ---
 
+- 02 backup & restore all data (incl private data, contacts)
+
+- 04 fix local - 'yarn run ios' (compile error, Xcode works)
+
 - 01 fix verify from mobile
-  - Contact entered by name didn't show until clicking elsewhere (with or without other contacts)
-  - Check Android crashes: setting Advanced Mode, reviewing contract
+  - Check Android crashes - setting Advanced Mode, reviewing contract
   - check test for claim scan
 
 - 01 release :
-  - endorser.ch first, with migration & .env additions, then assigning 0 limits to unknown entities
-  - update uport: must contact someone for registration to make claims
-  - mobile: give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
+  - mobile - give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
+  - update uport - must contact someone for registration to make claims
+  - endorser.ch first, with migration after removing sql & .env additions, then assigning 0 limits to unknown entities
   - fix test web server
-  - mobile
 
 - 05 handy contract app in endorser-mobile :
   - add contracts to app :
@@ -29,8 +31,6 @@
     - before signing, must validate JWT contents
   - store contracts in separate table on server for quick retrieval
   - api.endorser.ch
-
-- .5 allow backup of all data
 
 - .5 do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
@@ -62,13 +62,21 @@
 
 - 01 add sensitive issues to a separate list
 
-- 01 disallow results containing DIDs? (ie. don't return results that don't contain the search criteria after DIDs are hidden)
+- 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
 - 01 add SAIDs for essential commitment schemas
 
 - endorser-mobile :
 
   - 01 create some user testing questions; try usabilityhub.com
+
+  - .5 on search results, show helpful messages like "No results" vs "No results with visible DIDs"
+
+  - .5 on contact screen, "Import Bulk from URL" and Save without any URL, then do either "Import Bulk" button and see the the app hang with a spinner. (Can't do anything.)
+
+  - .5 don't call for accessToken etc in Contacts if there is no id0, & don't hide 'delete' button if fetch errors out
+
+  - upgrade libraries... and when you do react-native see https://github.com/facebook/react-native/issues/35210
 
   - check the "Please provide SecretBox", which I first noticed in 6.2.93 (went away, now seen on Android 101ce)
 
@@ -110,15 +118,14 @@
 
   - .5 restore checkbox in ConfirmOthers
   - .5 remove the useState copies of all the appStore values
-  - .5 put my own QR code at top of contacts screen
 
-  - Change CSV export/import to Google headers
+  - change CSV export/import to Google headers
   - test for hundreds of contacts
   - YAML display format for new claims
 
   - 20 Present web login, sign with mobile & send, then store in session as logged in.
 
-  - 5 Tie to phone contacts
+  - 5 tie to phone contacts
 
   - .5 move confirm under search?
   - .5 consolidate code - Contacts.*allowtoseeme, Contacts modalView styles

@@ -216,7 +216,7 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 - [Sovrin AKA Hyperledger Indy](https://sovrin.org)
   - [Verifiable Organizations Network](https://vonx.io) who showed [a mobile demo at IIW 28](https://iiw.vonx.io).
-- [Accredible](https://www.accredible.com/) (... and their verification system)[https://verify.accredible.com] (uses Tierion)[https://help.accredible.com/hc/en-us/articles/115005058985-Manually-Verifying-Blockchain-Records]
+- [Accredible](https://www.accredible.com/) and their [verification system](https://verify.accredible.com) which [uses Tierion](https://help.accredible.com/hc/en-us/articles/115005058985-Manually-Verifying-Blockchain-Records)
 - [Blockcerts for blockchain credentials](https://www.blockcerts.org)
 - [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
 
@@ -277,7 +277,7 @@ tar: Error exit delayed from previous errors.
 
 - Make sure API works: http://localhost:3000/api-explorer
 - test/test.sh
-- test URLs
+- test these :3001 URLs by running [the web app](https://github.com/trentlarson/uport-demo)
 http://localhost:3001/reportClaim?claimId=1
 ... and see confirmations eventually (even if they're HIDDEN which causes console errors)
 http://localhost:3001/reportClaims
