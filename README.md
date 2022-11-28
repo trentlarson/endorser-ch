@@ -152,15 +152,16 @@ Now for a confirmation of that activity:
 
 #### Generate JWTs
 
-# Set up REPL
+# Run from inside endorser-mobile directory.
 npx yarn-add-no-save esm typescript ts-node tslib @types/node
-#set isolatedModules to false & strict in tsconfig.json
+# set isolatedModules to false in tsconfig.json
 npx ts-node
+# ... so the following will be run in the node repl:
 import * as utility from './src/utility/utility' // require does not work
 const testUtil = require('../endorser-ch/test/util') // import does not work
 
 # One approach:
-testUtil.credentials[0].signJWT({a:1})
+var jwt = testUtil.credentials[0].signJWT({a:1})
 
 # Another approach:
 import didJwt from 'did-jwt'
@@ -170,6 +171,9 @@ const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
 const jwt = await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
 
 # Another approach (untried): create identifier and use utility.accessToken method
+
+# Now you can put that jwt value into a JWT env var make a call as user #0.
+curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://test.endorser.ch:8000/api/claims
 
 
 
