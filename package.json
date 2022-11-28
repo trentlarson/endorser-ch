@@ -53,7 +53,7 @@
     "eslint-plugin-import": "^2.14.0",
     "express-swagger-generator": "^1.1.11",
     "mocha": "^7.2.0",
-    "nodemon": "^1.18.4",
+    "nodemon": "^2.0.20",
     "pino-pretty": "^2.2.2",
     "supertest": "^3.0.0",
     "uport-credentials": "1.1.7"
