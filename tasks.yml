@@ -75,13 +75,13 @@
   - .5 on search results, show helpful messages like "No results" vs "No results with visible DIDs"
 
   - .5 on contact screen, "Import Bulk from URL" and Save without any URL, then do either "Import Bulk" button and see the the app hang with a spinner. (Can't do anything.)
-
   - .5 don't call for accessToken etc in Contacts if there is no id0, & don't hide 'delete' button if fetch errors out
 
   - upgrade libraries... and when you do react-native see https://github.com/facebook/react-native/issues/35210
-
+  - .5 When someone pulls up search results where some DIDs are hidden, the first time it shows a blank value but then an immediate search will show the did:none:HIDDEN. (On Android, at least, emulator and device.)
   - check the "Please provide SecretBox", which I first noticed in 6.2.93 (went away, now seen on Android 101ce)
 
+  - .5 allow edit of a claim (currently allowed in contracts)
   - 01 allow choosing notification filter (eg. only ones with DIDs, none)... pause for a month?
   - .5 fix (i) info icon on Search -> Search Yours next to Filter
   - 01 fix individual who isn't able to access their seed
