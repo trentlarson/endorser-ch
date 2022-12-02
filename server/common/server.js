@@ -82,13 +82,13 @@ function requesterInfo(req, res, next) {
       })
       .catch(e => {
         // You would think that the separate parameter of "e" in this l.error would give the most info, but you'd be wrong in some cases such as when infura.io complains about "legacy access request rate exceeded".
-        l.error("Low-level error while parsing JWT:", e, " ... with toString(): " + e)
+        l.error("Low-level error while parsing JWT:", e, " ... which has JSON.stringify thus: " + JSON.stringify(e)
         // ... and you'd think that those would at least hint at stack info but you'd be wrong.
         l.error(e.stack)
         l.error("Here's the JWT:", jwt)
         // There's a potential to get more fine-grained with a 'clientError'.
         res.status(400).json({ error: {
-          message: "Low-level error while parsing JWT '" + jwt + "': " + e,
+          message: "Low-level error while parsing JWT '" + jwt + "': " + JSON.stringify(e),
           code: ERROR_CODES.JWT_VERIFY_FAILED
         }}).end()
       })
