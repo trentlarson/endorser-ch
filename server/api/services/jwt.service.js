@@ -93,6 +93,34 @@ class JwtService {
     }
   }
 
+  async getRateLimits(requestorDid) {
+    const registered = await db.registrationByDid(requestorDid)
+    if (registered) {
+      const startOfMonthDate = DateTime.utc().startOf('month')
+      const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
+      const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
+      const startOfWeekString = startOfWeekDate.toISO()
+      const result = {
+        nextMonthBeginDateTime: startOfMonthDate.plus({months: 1}).toISO(),
+        nextWeekBeginDateTime: startOfWeekDate.plus({weeks: 1}).toISO(),
+      }
+
+      const claimedCount = await db.jwtCountByAfter(requestorDid, startOfWeekString)
+      result.doneClaimsThisWeek = claimedCount
+
+      const regCount = await db.registrationCountByAfter(requestorDid, startOfMonthEpoch)
+      result.doneRegistrationsThisMonth = regCount
+      result.maxClaimsPerWeek = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
+      result.maxRegistrationsPerMonth = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+      return result
+    } else {
+      return Promise.reject({
+        clientError: { message: 'Rate limits are only available to existing users.',
+                       code: ERROR_CODES.UNREGISTERED_USER }
+      })
+    }
+  }
+
   extractClaim(payload) {
     let claim = payload.claim
       || (payload.vc && payload.vc.credentialSubject)
@@ -470,15 +498,15 @@ class JwtService {
 
     const registered = await db.registrationByDid(payload.iss)
     if (!registered) {
-      return Promise.reject(`Issuer ${payload.iss} is not registered to make claims. Contact an existing user for help.`)
+      return Promise.reject({ clientError: { message: `You are not registered to make claims. Contact an existing user for help.`, code: ERROR_CODES.UNREGISTERED_USER }})
     }
 
-    const startOfWeekDate = DateTime.utc().startOf('week')
+    const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
     const startOfWeekString = startOfWeekDate.toISO()
     const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
     const maxAllowedClaims = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
     if (claimedCount >= maxAllowedClaims) {
-      return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already claimed ${maxAllowedClaims} this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_CLAIM_LIMIT } })
+      return Promise.reject({ clientError: { message: `You have already made ${maxAllowedClaims} claims this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_CLAIM_LIMIT } })
     }
 
     const payloadClaim = this.extractClaim(payload)
@@ -489,13 +517,13 @@ class JwtService {
         const regCount = await db.registrationCountByAfter(payload.iss, startOfMonthEpoch)
         const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
         if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} has already registered ${maxAllowedRegs} this month. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
+          return Promise.reject({ clientError: { message: `You have already registered ${maxAllowedRegs} this month. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
         }
 
         // disallow registering others in the same week they got registered
         const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
         if (registered.epoch > startOfWeekEpoch) {
-          return Promise.reject({ clientError: { message: `Issuer ${payload.iss} cannot register others the same week they got registered. Contact an administrator for special treatment.`, code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } })
+          return Promise.reject({ clientError: { message: `You cannot register others the same week you got registered.`, code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } })
         }
       }
 

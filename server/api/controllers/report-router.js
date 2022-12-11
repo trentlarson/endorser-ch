@@ -20,6 +20,18 @@ class JwtController {
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
+  getRateLimits(req, res) {
+    JwtService.getRateLimits(res.locals.tokenIssuer)
+      .then(r => res.json(r))
+      .catch(err => {
+        if (err.clientError) {
+          res.status(400).json({ error: { message: err.clientError.message, code: err.clientError.code } })
+        } else {
+          console.log(err)
+          res.status(500).json(""+err).end()
+        }
+      })
+  }
 }
 let jwtController = new JwtController();
 
@@ -100,7 +112,7 @@ class DbController {
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
-  getCanSeeMeExplicitlyDids(req, res) {
+  getCanSeeMeExplicitly(req, res) {
     canSeeExplicitly(req.query.did, res.locals.tokenIssuer)
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
@@ -233,7 +245,7 @@ export default express
  * @group report - Reports
  * @route GET /api/report/whichDidsICanSee
  * @returns {Array.object} 200 - list of DIDs user can see
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} default - Unexpected error
  */
   .get('/whichDidsICanSee', dbController.getCanSeeDids)
 
@@ -244,7 +256,27 @@ export default express
  * @group report - Reports
  * @route GET /api/report/whichDidsCanSeeMe
  * @param {string} did.query.required
- * @returns {Array.object} 200 - list of DIDs that can see this user
- * @returns {Error}  default - Unexpected error
+ * @returns boolean 200 - true if the DID can see the caller
+ * @returns {Error} default - Unexpected error
  */
-  .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitlyDids)
+  .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitly)
+
+/**
+ * @typedef RateLimits
+ * @property {string} doneClaimsThisWeek
+ * @property {string} doneRegistrationsThisMonth
+ * @property {string} maxClaimsPerWeek
+ * @property {string} maxRegistrationsPerMonth
+ * @property {string} nextMonthBeginDateTime
+ * @property {string} nextWeekBeginDateTime
+ */
+
+/**
+ * Get this DID's registration and claim limits.
+ *
+ * @group report - Reports
+ * @route GET /api/report/rateLimits
+ * @returns {RateLimits} 200 - the count & limits of claims & registrations
+ * @returns {Error} default - Unexpected error
+ */
+  .get('/rateLimits', jwtController.getRateLimits)
