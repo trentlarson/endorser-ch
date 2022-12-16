@@ -70,6 +70,9 @@ Tag the release version (after updating the package.json version).
 # SSH to the box and kill the "node dist/index.js".
 # ... and may have to kill nodemon & pino-pretty processes separately
 # On local:
+# - update package.json
+# - tag in GitHub
+git pull
 scripts/deploy.sh ubuntutest release-X ~/.ssh/id_rsa
 # On remote:
 cd endorser-ch

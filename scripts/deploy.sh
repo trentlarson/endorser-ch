@@ -63,6 +63,8 @@ ssh -i $3 $USERNAME@endorser.ch << EOF
 
   cd $DEPLOY_DIR
 
+  rm -rf node_modules
+
   echo "Running npm ci..."
   # Don't we need to add --production on the end of "npm ci"?
   npm ci
