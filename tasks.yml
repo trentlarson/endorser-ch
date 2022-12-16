@@ -1,18 +1,19 @@
 ---
 
-- 02 backup & restore all data (incl private data, contacts)
-
-- 04 fix local - 'yarn run ios' (compile error, Xcode works)
-
 - 01 fix verify from mobile
   - Check Android crashes - setting Advanced Mode, reviewing contract
   - check test for claim scan
+  - changing to a local server resulted in undefined server, plus the error messages only showed in the console and not the mobile log
 
 - 01 release :
   - mobile - give user good info on all server POSTs when they've exceeded their limit (eg. claim, registration)
   - update uport - must contact someone for registration to make claims
   - endorser.ch first, with migration after removing sql & .env additions, then assigning 0 limits to unknown entities
   - fix test web server
+
+- 02 backup & restore all data (incl private data, contacts)
+
+- 04 fix local - 'yarn run ios' (compile error, Xcode works)
 
 - 05 handy contract app in endorser-mobile :
   - add contracts to app :

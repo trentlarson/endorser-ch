@@ -504,7 +504,8 @@ class JwtService {
     const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
     const startOfWeekString = startOfWeekDate.toISO()
     const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
-    const maxAllowedClaims = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
+    // 0 shouldn't mean DEFAULT
+    const maxAllowedClaims = registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
     if (claimedCount >= maxAllowedClaims) {
       return Promise.reject({ clientError: { message: `You have already made ${maxAllowedClaims} claims this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_CLAIM_LIMIT } })
     }
@@ -515,7 +516,8 @@ class JwtService {
         const startOfMonthDate = DateTime.utc().startOf('month')
         const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
         const regCount = await db.registrationCountByAfter(payload.iss, startOfMonthEpoch)
-        const maxAllowedRegs = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+        // 0 shouldn't mean DEFAULT
+        const maxAllowedRegs = registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
         if (regCount >= maxAllowedRegs) {
           return Promise.reject({ clientError: { message: `You have already registered ${maxAllowedRegs} this month. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
         }
