@@ -2,6 +2,8 @@
 
 - 01 release :
   - endorser.ch first, with migration after removing sql & .env additions, then assigning 0 limits to unknown entities
+  - fix ubuntu version (since it's currently running on ubuntutest)
+  - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
   - stop resubmission when going back to signed screen
 
@@ -13,7 +15,7 @@
   - add contracts to app :
     - 3 pledges https://initial3.paperform.co/
     - MSA?
-    - UruleU p 13 :
+    - UruleU p 13 (& page 475) :
       - I'll take responsibility for my own promises and stake my honor on keeping them.
       - I'll disclose my promises to everyone for whom I intend them. My secret promises will carry no weight.
       - "I'll demand no burden greater than I have promised to carry. I'll accept whichever fulfillment is least burdensome: of the other's promise, or mine."
