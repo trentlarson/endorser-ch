@@ -50,6 +50,13 @@ fi
 USERNAME=$1
 DEPLOY_DIR=endorser-ch
 
+ssh -i $3 $USERNAME@endorser.ch << EOF
+
+  rm -rf $DEPLOY_DIR.bak
+  cp -rP $DEPLOY_DIR $DEPLOY_DIR.bak
+
+EOF
+
 rsync -azv --exclude .git --exclude-from .gitignore -e "ssh -i $3" . $USERNAME@endorser.ch:$DEPLOY_DIR
 
 ssh -i $3 $USERNAME@endorser.ch << EOF
@@ -69,6 +76,8 @@ ssh -i $3 $USERNAME@endorser.ch << EOF
   # Don't we need to add --production on the end of "npm ci"?
   npm ci
   echo "... finished with npm ci"
+  echo "But if it failed, you may need to 'npm install' instead."
+  echo "... and, if so, 'npm run compile will probably fail, too."
 
   npm run compile
 
