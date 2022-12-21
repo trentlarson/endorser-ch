@@ -485,7 +485,7 @@ class JwtService {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
-    // available: { data, doc, header, issuer, payload, signature, signer }
+    // available: { didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified }
     const { payload } =
         await this.decodeAndVerifyJwt(jwtEncoded)
         .catch((err) => {

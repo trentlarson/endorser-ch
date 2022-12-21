@@ -41,6 +41,31 @@ function allDidsAreHidden(result, exceptDid) {
 
 const allDidsAreHiddenFor = (exceptDid) => (result) => allDidsAreHidden(result, exceptDid)
 
+/**
+// Here's the DID Document for CREDS #0:
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/secp256k1recovery-2020/v2"
+  ],
+  "id": "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51",
+  "verificationMethod": [
+    {
+      "id": "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51#controller",
+      "type": "EcdsaSecp256k1RecoveryMethod2020",
+      "controller": "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51",
+      "blockchainAccountId": "eip155:1:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51"
+    }
+  ],
+  "authentication": [
+    "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51#controller"
+  ],
+  "assertionMethod": [
+    "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51#controller"
+  ]
+}
+**/
+
 const CREDS = [
   // those with mnemonic created by @ethersproject/hdnode: HDNode.fromMnemonic(bip39.entropyToMnemonic(crypto.randomBytes(32))).derivePath("m/7696500'/0'/0'/0'")
   // ... and the rest created by Credentials.createIdentity()
