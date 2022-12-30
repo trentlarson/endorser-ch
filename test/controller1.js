@@ -565,10 +565,10 @@ describe('1 - Claim', () => {
   // All these 5000 waits are due to JWT verify, and the time doubled with ethr-did-resolver v6.
   // Each verification takes 1-1.8 seconds (sometimes over 2) and it verifies the push token and the claim.
 
-  it('should get our claim #1', () =>
+  it('should get our claim #1 with Authorization Bearer token', () =>
      request(Server)
      .get('/api/claim/' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -583,6 +583,29 @@ describe('1 - Claim', () => {
          .that.equals(creds[0].did)
        expect(r.status).that.equals(200)
      })
+     .catch(e => {
+       console.log('Got error:', e)
+     })
+  ).timeout(3000)
+
+  it('should get our claim #1 with uPort token', () =>
+    request(Server)
+      .get('/api/claim/' + firstId)
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body)
+          .to.be.an('object')
+          .that.has.a.property('claimContext')
+          .that.equals('https://schema.org')
+        expect(r.body)
+          .that.has.a.property('claimType')
+          .that.equals('JoinAction')
+        expect(r.body)
+          .that.has.a.property('issuer')
+          .that.equals(creds[0].did)
+        expect(r.status).that.equals(200)
+      })
   ).timeout(3000)
 
   it('should get a claim with the DID hidden', () =>
@@ -893,7 +916,7 @@ describe('1 - Action', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
-         .that.equals("Missing JWT In " + UPORT_PUSH_TOKEN_HEADER)
+         .that.equals("Missing Bearer JWT In Authorization header")
        expect(400)
        expect(r.status).that.equals(401)
      })

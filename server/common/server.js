@@ -55,7 +55,15 @@ let options = {
 };
 
 function requesterInfo(req, res, next) {
-  let jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
+  let jwt
+  const authBearer = req.headers['Authorization'.toLowerCase()]
+  const BEARER_PREFIX = 'Bearer '
+  if (authBearer != null
+      && authBearer.starsWith(BEARER_PREFIX)) {
+    jwt = authBearer.substring(BEARER_PREFIX.length)
+  } else {
+    jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
+  }
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
     if (req.originalUrl.startsWith("/api/claim") // even for POST since that JWT payload will be verified
         || req.originalUrl.startsWith("/api/claim?")
@@ -68,7 +76,7 @@ function requesterInfo(req, res, next) {
       // these endcpoints are OK to hit without a token... so won't even set tokenIssuer
       next()
     } else {
-      res.status(401).json('Missing JWT In ' + UPORT_PUSH_TOKEN_HEADER).end()
+      res.status(401).json('Missing Bearer JWT In Authorization header').end()
     }
   } else {
     JwtService.decodeAndVerifyJwt(jwt)
@@ -105,7 +113,7 @@ export default class ExpressServer {
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser(process.env.SESSION_SECRET));
     app.use(Express.static(`${root}/public`));
-    app.use(cors({"allowedHeaders":["Content-Type", UPORT_PUSH_TOKEN_HEADER]}))
+    app.use(cors({"allowedHeaders":["Authorization", "Content-Type", UPORT_PUSH_TOKEN_HEADER]}))
     app.use('/api', requesterInfo)
     app.use('/util/makeMeGloballyVisible', requesterInfo)
   }
