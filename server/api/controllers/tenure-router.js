@@ -1,5 +1,4 @@
 import * as express from 'express';
-import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 
 import TenureService from '../services/tenure.service';
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
@@ -24,7 +23,6 @@ export default express
   .all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, ' + UPORT_PUSH_TOKEN_HEADER);
     next();
   })
 

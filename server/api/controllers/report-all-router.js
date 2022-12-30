@@ -1,7 +1,6 @@
 import * as express from 'express'
 import * as R from 'ramda'
 
-import { UPORT_PUSH_TOKEN_HEADER } from '../services/util'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
 import DbService from '../services/endorser.db.service';
@@ -58,7 +57,6 @@ export default express
   .all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, ' + UPORT_PUSH_TOKEN_HEADER);
     next();
   })
 
