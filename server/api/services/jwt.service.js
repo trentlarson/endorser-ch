@@ -79,7 +79,7 @@ class JwtService {
     }
   }
 
-  async allClaimAndConfirmationIssuersMatchingClaimId(claimId) {
+  async thisClaimAndConfirmationsIssuersMatchingClaimId(claimId) {
     let jwtClaim = await db.jwtById(claimId)
     if (!jwtClaim) {
       return []
