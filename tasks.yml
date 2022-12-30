@@ -1,11 +1,14 @@
 ---
 
 - 01 release :
-  - endorser.ch first, with migration after removing sql & .env additions, then assigning 0 limits to unknown entities
   - fix ubuntu version (since it's currently running on ubuntutest)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
   - stop resubmission when going back to signed screen
+
+- 01 allow for "Authorization: Bearer" JWT
+
+- 02 endpoint & screen for most popular pledges
 
 - 02 backup & restore all data (incl private data, contacts)
 
