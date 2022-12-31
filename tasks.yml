@@ -1,6 +1,7 @@
 ---
 
 - 01 release :
+  - deploy test on AWS; maybe clean up Docker config (eg. NODE_ENV inside dotenv file)
   - fix ubuntu version (since it's currently running on ubuntutest)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
