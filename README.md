@@ -176,7 +176,7 @@ import * as utility from './src/utility/utility' // require does not work
 const testUtil = require('../endorser-ch/test/util') // import does not work
 
 # One approach:
-testUtil.credentials[0].signJWT({a:1})
+await testUtil.credentials[0].signJWT({a:1})
 
 # Another approach:
 import didJwt from 'did-jwt'
