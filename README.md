@@ -164,23 +164,26 @@ Now for a confirmation of that activity:
 
 #### Generate JWTs
 
-# Run from inside endorser-mobile directory.
+# Setup:
+# - Run `npm install` in this project.
+# - Get the endorser-mobile project, run `yarn` there, and run the following in a shell inside there.
+# Note that this command may fail with a `hunk` message, but it's worth continuing because the rest may work.
 npx yarn-add-no-save esm typescript ts-node tslib @types/node
-# set isolatedModules to false in tsconfig.json
+# Note that, if the following fails, you can try setting `isolatedModules` to false in tsconfig.json
 npx ts-node
-# ... so the following will be run in the node repl:
+# Then run the following in that node REPL:
 import * as utility from './src/utility/utility' // require does not work
 const testUtil = require('../endorser-ch/test/util') // import does not work
 
 # One approach:
-var jwt = testUtil.credentials[0].signJWT({a:1})
+testUtil.credentials[0].signJWT({a:1})
 
 # Another approach:
 import didJwt from 'did-jwt'
 const cred = testUtil.creds[0]
 const signer = didJwt.SimpleSigner(cred.privateKey)
 const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
-const jwt = await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
+await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
 
 # Another approach (untried): create identifier and use utility.accessToken method
 
