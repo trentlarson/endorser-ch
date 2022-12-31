@@ -583,9 +583,7 @@ describe('1 - Claim', () => {
          .that.equals(creds[0].did)
        expect(r.status).that.equals(200)
      })
-     .catch(e => {
-       console.log('Got error:', e)
-     })
+     .catch(e => {console.log(e); throw e}) // otherwise error results don't show
   ).timeout(3000)
 
   it('should get our claim #1 with uPort token', () =>

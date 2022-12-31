@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [1.1.35] - 2022-12-30
+
+### Added
+- Accept Authentication header with Bearer JWT.
+
+
+
+
 ## [1.1.31] - 2022-11-03
 
 ### Added

@@ -59,7 +59,7 @@ function requesterInfo(req, res, next) {
   const authBearer = req.headers['Authorization'.toLowerCase()]
   const BEARER_PREFIX = 'Bearer '
   if (authBearer != null
-      && authBearer.starsWith(BEARER_PREFIX)) {
+      && authBearer.startsWith(BEARER_PREFIX)) {
     jwt = authBearer.substring(BEARER_PREFIX.length)
   } else {
     jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
