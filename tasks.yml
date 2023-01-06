@@ -1,15 +1,16 @@
 ---
 
 - 01 release :
-  - deploy test on AWS; maybe clean up Docker config (eg. NODE_ENV inside dotenv file)
-  - fix ubuntu version (since it's currently running on ubuntutest)
+  - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
-  - stop resubmission when going back to signed screen
+  - test that duplicate registration fails
 
-- 01 allow for "Authorization: Bearer" JWT
+- 01 fix API docs
 
-- 02 endpoint & screen for most popular pledges
+- 01 mobile: stop resubmission when going back to signed screen
+
+- 04 mobile: link contacts to phone contacts
 
 - 02 backup & restore all data (incl private data, contacts)
 
