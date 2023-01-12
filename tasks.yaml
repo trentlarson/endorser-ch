@@ -1,6 +1,6 @@
 ---
 
-- allow offerings to a Plan in EndorserMobile
+- 01 allow offerings to a Plan in EndorserMobile
 
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
@@ -9,6 +9,8 @@
   - test that duplicate registration fails
 
 - 01 mobile: stop resubmission when going back to signed screen
+
+- 02 bring libs up-to-date
 
 - 04 mobile: link contacts to phone contacts
 
