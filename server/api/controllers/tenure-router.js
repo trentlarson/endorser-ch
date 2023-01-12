@@ -37,6 +37,7 @@ export default express
  * @returns {Array.object} 200 - many tenures (up to 50)
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', tenureController.getByQuery)
 
 /**
@@ -47,4 +48,5 @@ export default express
  * @returns {object} 200 - Tenure if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', tenureController.getById)

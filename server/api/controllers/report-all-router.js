@@ -89,6 +89,7 @@ export default express
  * @route GET /api/report/canClaim
  * @returns {Object} data boolean property tells whether this user is allowed to create a claim
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/canClaim', dbController.getCanClaim)
 
 /**
@@ -106,6 +107,7 @@ export default express
  * @returns {JwtArrayMaybeMoreBody} 200 - matching claims, reverse-chronologically
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/claims', dbController.getAllJwtsPaged)
 
 /**
@@ -119,4 +121,5 @@ export default express
  * @returns {JwtArrayMaybeMoreBody} 200 - claims issued by this user with any of those claim types, reverse-chronologically
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)

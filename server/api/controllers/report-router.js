@@ -150,6 +150,7 @@ export default express
  * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/issuersWhoClaimedOrConfirmed', jwtController.getIssuersMatchingClaim)
 
 /**
@@ -161,6 +162,7 @@ export default express
  * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/actionClaimsAndConfirmationsSince', actionController.getActionClaimsAndConfirmationsSince)
 
 /**
@@ -173,6 +175,7 @@ export default express
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/tenureClaimsAtPoint', tenureController.getAtPoint)
 
 /**
@@ -185,6 +188,7 @@ export default express
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsAtPoint)
 
 /**
@@ -198,9 +202,19 @@ export default express
  * @returns {Array.object} 200 - claimed tenures (up to 50)
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/orgRoleClaimsAndConfirmationsOnDate', orgRoleController.getClaimsAndConfirmationsOnDate)
 
-  .get('/voteCounts', dbController.getVoteCounts)
+/**
+ * Get all votes for all candidates.
+ *
+ * @group report - Reports
+ * @route GET /api/report/voteCounts
+ * @returns {Array.object} 200 - { speaker, title, count }
+ * @returns {Error} default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+//  .get('/voteCounts', dbController.getVoteCounts)
 
 /**
  * Retrieve all globally-visible DIDs
@@ -208,6 +222,7 @@ export default express
  * @group claim - Reports
  * @route GET /api/report/globallyVisibleDids
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/globallyVisibleDids', dbController.getSeenByAll)
 
 /**
@@ -217,6 +232,7 @@ export default express
  * @route POST /api/report/canSeeMe
  * @param {DidBody.model} body.body.required
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/canSeeMe', dbController.makeMeVisibleTo)
 
 /**
@@ -226,6 +242,7 @@ export default express
  * @route POST /api/report/cannotSeeMe
  * @param {DidBody.model} body.body.required
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
 
 /**
@@ -235,6 +252,7 @@ export default express
  * @route POST /api/report/makeMeGloballyVisible
  * @param {UrlBody.model} body.body.optional
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
 
 /**
@@ -245,6 +263,7 @@ export default express
  * @returns {Array.object} 200 - list of DIDs user can see
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/whichDidsICanSee', dbController.getCanSeeDids)
 
 /**
@@ -257,6 +276,7 @@ export default express
  * @returns boolean 200 - true if the DID can see the caller
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitly)
 
 /**
@@ -277,4 +297,5 @@ export default express
  * @returns {RateLimits} 200 - the count & limits of claims & registrations
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/rateLimits', jwtController.getRateLimits)

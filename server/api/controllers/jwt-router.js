@@ -107,6 +107,7 @@ export default express
  * @returns {object} 200 - internal ID of Claim JWT
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/', controller.importClaim)
 
 /**
@@ -121,6 +122,7 @@ export default express
  * @returns {Array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', controller.getByQuery)
 
 /**
@@ -131,6 +133,7 @@ export default express
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', controller.getById)
 
 /**
@@ -141,6 +144,7 @@ export default express
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/full/:id', controller.getFullJwtById)
 
  /**

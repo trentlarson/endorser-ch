@@ -23,6 +23,7 @@ export default express
  * @returns {Array.ActionClaimsConfirmations} 200 - object with the order of all keys sorted
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/objectWithKeysSorted', (req, res) => res.json(withKeysSorted(JSON.parse(req.query.object))))
 
 /**
@@ -32,4 +33,5 @@ export default express
  * @returns 200 - success
  * @returns {Error} default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/updateHashChain', (req, res) => JwtService.merkleUnmerkled().then(r => res.status(201).json({count:r.length, latest:R.last(r)}).end()).catch(err => { console.log(err); res.status(500).json(""+err).end(); }))

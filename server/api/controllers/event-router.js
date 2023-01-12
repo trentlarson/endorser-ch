@@ -65,6 +65,7 @@ export default express
  * @returns {Array.object} 200 - many events (up to 50)
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', controller.getByQuery)
 
 /**
@@ -106,6 +107,7 @@ export default express
  * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/actionClaimsAndConfirmations', controller.getActionClaimsAndConfirmationsByEventData)
 
 /**
@@ -116,6 +118,7 @@ export default express
  * @returns {object} 200 - event if it exists, otherwise 404
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', controller.getById)
 
 /**
@@ -126,4 +129,5 @@ export default express
  * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error}  default - Unexpected error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id/actionClaimsAndConfirmations', controller.getActionClaimsAndConfirmationsByEventId)
