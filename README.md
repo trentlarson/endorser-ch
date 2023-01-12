@@ -169,7 +169,7 @@ Now for a confirmation of that activity:
 # - Get the endorser-mobile project, run `yarn` there, and run the following in a shell inside there.
 # Note that this command may fail with a `hunk` message, but it's worth continuing because the rest may work.
 npx yarn-add-no-save esm typescript ts-node tslib @types/node
-# Note that, if the following fails, you can try setting `isolatedModules` to false in tsconfig.json
+# Edit tsconfig.json and set `isolatedModules` to false.
 npx ts-node
 # Then run the following in that node REPL:
 import * as utility from './src/utility/utility' // require does not work

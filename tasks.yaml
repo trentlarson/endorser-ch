@@ -1,12 +1,12 @@
 ---
 
+- allow offerings to a Plan in EndorserMobile
+
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
   - test that duplicate registration fails
-
-- 01 fix API docs
 
 - 01 mobile: stop resubmission when going back to signed screen
 
