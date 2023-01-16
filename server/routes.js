@@ -17,5 +17,5 @@ export default function routes(app) {
   app.use('/api/reportAll', reportAllRouter)
   app.use('/api/tenure', tenureRouter)
   app.use('/util', utilRouter)
-  app.all('*', (req, res, next) => { res.json(req.resultJsonWrap); })
+  app.use('*', (req, res) => { res.status(404).send({ error: 'Route not found' }) })
 }

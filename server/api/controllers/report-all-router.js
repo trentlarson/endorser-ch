@@ -18,7 +18,7 @@ class DbController {
         hitLimit: results.hitLimit,
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
-      .then(results => { req.resultJsonWrap = results; next(); })
+      .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
@@ -33,7 +33,7 @@ class DbController {
         hitLimit: results.hitLimit,
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
-      .then(results => { req.resultJsonWrap = results; next(); })
+      .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 

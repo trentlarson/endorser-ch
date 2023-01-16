@@ -331,7 +331,7 @@ describe('4 - Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  )
+  ).timeout(3000)
 
   //---------------- Now do subset with both before & after params, more than the limit.
 

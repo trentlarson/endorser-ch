@@ -1,11 +1,12 @@
 ---
 
 - 01 allow offerings to a Plan in EndorserMobile :
+
   - test https://endorser.ch/project/...
   - check any Offer logic to handle new structure (and possibly old structure) :
-    - switch agent & party & participant .did to .identifier
     - record these changes in old and new data for historical purposes
   - on deploy - add table data for existing projects or plans
+  - add & update essential project details to project_claim & plan_claim tables
 
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)

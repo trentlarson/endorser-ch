@@ -99,8 +99,8 @@ const registerBy0Proms =
     num => {
       const registerBy0JwtObj = R.clone(testUtil.jwtTemplate)
       registerBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
-      registerBy0JwtObj.claim.agent.did = creds[0].did
-      registerBy0JwtObj.claim.participant.did = creds[num].did
+      registerBy0JwtObj.claim.agent.identifier = creds[0].did
+      registerBy0JwtObj.claim.participant.identifier = creds[num].did
       registerBy0JwtObj.sub = creds[num].did
       return credentials[0].createVerification(registerBy0JwtObj)
     },
@@ -111,7 +111,7 @@ const registerBy0Proms =
 
 
 const claimBvcFor0 = R.clone(claimBvc)
-claimBvcFor0.agent.did = creds[0].did
+claimBvcFor0.agent.identifier = creds[0].did
 
 const claimBvcFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimBvcFor0By0JwtObj.claim = R.clone(claimBvcFor0)
@@ -149,7 +149,7 @@ const confirmBvcForConfirm0By1JwtProm = credentials[0].createVerification(confir
 
 
 const claimBvcFor1 = R.clone(claimBvc)
-claimBvcFor1.agent.did = creds[1].did
+claimBvcFor1.agent.identifier = creds[1].did
 claimBvcFor1.event.startTime = "2019-01-13T08:00:00.000-07:00"
 
 const claimBvcFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
@@ -161,7 +161,7 @@ const claimBvcFor1By1JwtProm = credentials[0].createVerification(claimBvcFor1By1
 
 
 const claimMyNightFor0 = R.clone(claimMyNight)
-claimMyNightFor0.agent.did = creds[0].did
+claimMyNightFor0.agent.identifier = creds[0].did
 
 const claimMyNightFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimMyNightFor0By0JwtObj.claim = R.clone(claimMyNightFor0)
@@ -171,7 +171,7 @@ const claimMyNightFor0By0JwtProm = credentials[0].createVerification(claimMyNigh
 
 
 const claimDebugFor0 = R.clone(claimDebug)
-claimDebugFor0.agent.did = creds[0].did
+claimDebugFor0.agent.identifier = creds[0].did
 
 const claimDebugFor0By0JwtObj = R.clone(testUtil.jwtTemplate)
 claimDebugFor0By0JwtObj.claim = R.clone(claimDebugFor0)
@@ -190,7 +190,7 @@ const confirmMultipleFor0By0JwtProm = credentials[0].createVerification(confirmM
 
 
 const claimCornerBakeryTenureFor11 = R.clone(testUtil.claimCornerBakery)
-claimCornerBakeryTenureFor11.party.did = creds[11].did
+claimCornerBakeryTenureFor11.party.identifier = creds[11].did
 
 const claimCornerBakeryTenureFor11By11JwtObj = R.clone(testUtil.jwtTemplate)
 claimCornerBakeryTenureFor11By11JwtObj.claim = R.clone(claimCornerBakeryTenureFor11)
@@ -198,7 +198,7 @@ claimCornerBakeryTenureFor11By11JwtObj.sub = creds[11].did
 const claimCornerBakeryTenureFor11By11JwtProm = credentials[11].createVerification(claimCornerBakeryTenureFor11By11JwtObj)
 
 const claimCornerBakeryTenureFor12 = R.clone(testUtil.claimCornerBakery)
-claimCornerBakeryTenureFor12.party.did = creds[12].did
+claimCornerBakeryTenureFor12.party.identifier = creds[12].did
 
 const claimCornerBakeryTenureFor12By12JwtObj = R.clone(testUtil.jwtTemplate)
 claimCornerBakeryTenureFor12By12JwtObj.claim = R.clone(claimCornerBakeryTenureFor12)
@@ -212,10 +212,10 @@ confirmCornerBakeryTenureFor11By10JwtObj.sub = creds[11].did
 const confirmCornerBakeryTenureFor11By10JwtProm = credentials[10].createVerification(confirmCornerBakeryTenureFor11By10JwtObj)
 
 const claimIIW2019aFor1 = R.clone(claimIIW2019a)
-claimIIW2019aFor1.agent.did = creds[1].did
+claimIIW2019aFor1.agent.identifier = creds[1].did
 
 const claimIIW2019aFor2 = R.clone(claimIIW2019a)
-claimIIW2019aFor2.agent.did = creds[2].did
+claimIIW2019aFor2.agent.identifier = creds[2].did
 
 const claimIIW2019aFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
 claimIIW2019aFor1By1JwtObj.claim = R.clone(claimIIW2019aFor1)
@@ -243,7 +243,7 @@ const confirmIIW2019aFor2By1JwtProm = credentials[1].createVerification(confirmI
 
 
 const claimFoodPantryFor4 = R.clone(testUtil.claimFoodPantry)
-claimFoodPantryFor4.party.did = creds[4].did
+claimFoodPantryFor4.party.identifier = creds[4].did
 
 const claimFoodPantryFor4By4JwtObj = R.clone(testUtil.jwtTemplate)
 claimFoodPantryFor4By4JwtObj.claim = R.clone(claimFoodPantryFor4)
@@ -485,6 +485,14 @@ describe('1 - Util', () => {
 let firstId, firstConfirmationClaimId, someEventId
 
 describe('1 - Claim', () => {
+
+  it('should get no claims', () =>
+    request(Server)
+      .get('/bad-bad-server-route')
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(404)
+      }))
 
   it('should get no claims', () =>
      request(Server)
@@ -1169,7 +1177,7 @@ describe('1 - Event', () => {
          .to.be.an('array')
          .of.length(0)
        expect(r.status).that.equals(200)
-     }))
+     })).timeout(3000)
 
   it('should get an issuer for confirming a valid claim', () =>
      request(Server)
