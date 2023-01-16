@@ -154,6 +154,18 @@ module.exports = {
     }
   },
 
+  claimProjectAction: {
+    "@context": "https://schema.org",
+    "@type": "ProjectAction",
+    "agent": { identifier: null }, // supply DID for intiator of this project
+    "identifier": null, // supply plan ID
+    "name": "KickStarter for Time",
+    "description": "Deliver an app that...",
+    "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
+    "startTime": "2022-07",
+    "endTime": "2023-03"
+  },
+
   allDidsAreHidden: allDidsAreHidden,
 
 }

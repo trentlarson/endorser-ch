@@ -1,3 +1,7 @@
+
+
+// Tests for Visiblity and Role Claims
+
 import canonicalize from 'canonicalize'
 import chai from 'chai'
 import request from 'supertest'

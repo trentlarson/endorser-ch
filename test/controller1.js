@@ -1,3 +1,6 @@
+
+// Tests for utils, initial claims, actions, events, tenures, other reports, and visibility in connections
+
 import chai from 'chai'
 import chaiAsPromised from "chai-as-promised"
 import chaiString from 'chai-string'

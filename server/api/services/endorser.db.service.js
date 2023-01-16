@@ -822,6 +822,85 @@ class EndorserDatabase {
 
 
 
+
+
+
+  /****************************************************************
+   * Plan
+   **/
+
+  async planInsert(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, , fullIri, internalId) VALUES (?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  async planInfoByExternalId(fullIri) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT * FROM plan_claim WHERE fullIri = ?", [fullIri], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullUri: row.fullIri, internalId: row.internalId })
+        } else {
+          reject("No plan found with ID " + fullIri)
+        }
+      })
+    })
+  }
+
+
+
+
+
+
+
+
+  /****************************************************************
+   * Project
+   **/
+
+  async projectInsert(entity) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri, internalId) VALUES (?, ?, ?, ?, ?)");
+      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  async projectInfoByExternalId(fullIri) {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT * FROM project_claim WHERE fullIri = ?", [fullIri], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullIri: row.fullIri, internalId: row.internalId })
+        } else {
+          reject("No project found with ID " + fullIri)
+        }
+      })
+    })
+  }
+
+
+
+
+
+
+
+
   /****************************************************************
    * Registration
    **/

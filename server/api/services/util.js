@@ -14,6 +14,10 @@ const ERROR_CODES = {
   UNREGISTERED_USER: 'UNREGISTERED_USER',
 }
 
+const GLOBAL_ID_IRI_PREFIX = process.env.GLOBAL_ID_IRI_PREFIX || 'https://endorser.ch'
+const GLOBAL_PLAN_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/plan/'
+const GLOBAL_PROJECT_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/project/'
+
 /**
    Take KEY and a list of claims-and-confirmations for the same claim
    and return an object with properties of:
@@ -72,6 +76,14 @@ function calcBbox(polygonStr) {
 
 function isDid(value) {
   return value && value.startsWith("did:")
+}
+
+/**
+ * from https://tools.ietf.org/html/rfc3986#section-3
+ * also useful is https://en.wikipedia.org/wiki/Uniform_Resource_Identifier#Definition
+ **/
+function isGlobalUri(uri) {
+  return uri && uri.match(new RegExp(/^[A-Za-z][A-Za-z0-9+.-]+:/));
 }
 
 /**
@@ -172,4 +184,4 @@ function hashChain(seed, idAndClaimList) {
   return R.reduce((prev, idAndClaim) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(idAndClaim)), seed, idAndClaimList)
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, GLOBAL_PLAN_ID_IRI_PREFIX, GLOBAL_PROJECT_ID_IRI_PREFIX, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, isGlobalUri, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

@@ -9,7 +9,7 @@ import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 
 import l from '../../common/logger'
 import db from './endorser.db.service'
-import { allDidsInside, calcBbox, ERROR_CODES, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
+import { allDidsInside, calcBbox, ERROR_CODES, GLOBAL_PROJECT_ID_IRI_PREFIX, hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
 import { addCanSee } from './network-cache.service'
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
@@ -176,13 +176,19 @@ class JwtService {
       origClaim['@context'] = 'https://schema.org'
     }
 
+
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
       if (events.length === 0) return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
 
-      let actionClaimId = await db.actionClaimIdByDidEventId(origClaim.agent.did, events[0].id)
+      let agentDid = origClaim.agent && origClaim.agent.identifier
+      if (!isDid(agentDid) && origClaim.agent.did) {
+        agentDid = origClaim.agent.did
+      }
+
+      let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
       if (actionClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
 
       // check for duplicate
@@ -200,7 +206,12 @@ class JwtService {
     } else if (origClaim['@context'] === 'https://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
 
-      let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(origClaim.party.did, origClaim.spatialUnit.geo.polygon)
+      let partyDid = origClaim.party && origClaim.party.identifier
+      if (!isDid(partyDid) && origClaim.party.did) {
+        partyDid = origClaim.party.did
+      }
+
+      let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
 
       // check for duplicate
@@ -246,9 +257,9 @@ class JwtService {
       let origClaimStr = canonicalize(origClaim)
 
       // If we choose to add the subject, it's found in these places (as of today):
-      //   claim.agent.did
+      //   claim.agent.identifier
       //   claim.member.member.identifier
-      //   claim.party.did
+      //   claim.party.identifier
       //   claim.identifier
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
@@ -283,7 +294,11 @@ class JwtService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
 
-      let agentDid = claim.agent.did
+      let agentDid = claim.agent && claim.agent.identifier
+      if (!isDid(agentDid) && claim.agent.did) {
+        agentDid = claim.agent.did
+      }
+
       if (!agentDid) {
         l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no agent DID.`)
         return Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
@@ -336,11 +351,47 @@ class JwtService {
       let orgRoleId = await db.orgRoleInsert(entity)
 
 
+    } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'ProjectAction') {
+
+      let agentDid = claim.agent && claim.agent.identifier
+      if (!isDid(agentDid) && claim.agent.did) {
+        agentDid = claim.agent.did
+      }
+
+      let internalId = null
+      let fullIri = claim.identifier
+      if (fullIri && !isGlobalUri(fullIri)) {
+        // assume they're creating an endorser.ch URI
+        internalId = fullIri
+        fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + fullIri
+      }
+
+      const entity = {
+        jwtId: jwtId,
+        agentDid: agentDid,
+        issuerDid: issuerDid,
+        fullIri: fullIri,
+        internalId: internalId
+      }
+      const planId = await db.projectInsert(entity)
+
+
     } else if (isEndorserRegistrationClaim(claim)) {
 
+      let agentDid = claim.agent && claim.agent.identifier
+      if (!isDid(agentDid) && claim.agent.did) {
+        agentDid = claim.agent.did
+      }
+
+      let participantDid = claim.participant && claim.participant.identifier
+      if (!isDid(participantDid) && claim.participant.did) {
+        participantDid = claim.participant.did
+      }
+
       let registration = {
-        did: claim.participant.did,
-        agent: claim.agent.did,
+        did: participantDid,
+        agent: agentDid,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
       }
@@ -350,12 +401,17 @@ class JwtService {
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {
 
+      let partyDid = claim.party && claim.party.identifier
+      if (!isDid(partyDid) && claim.party.did) {
+        partyDid = claim.party.did
+      }
+
       let bbox = calcBbox(claim.spatialUnit.geo.polygon)
       let entity =
           {
             jwtId: jwtId,
             issuerDid: issuerDid,
-            partyDid: claim.party && claim.party.did,
+            partyDid: partyDid,
             polygon: claim.spatialUnit.geo.polygon,
             westLon: bbox.westLon,
             minLat: bbox.minLat,

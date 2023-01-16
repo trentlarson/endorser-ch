@@ -1,4 +1,6 @@
 
+// Set Up Tests
+
 import db from '../server/api/services/endorser.db.service'
 import testUtil from './util'
 

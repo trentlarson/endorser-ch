@@ -1,6 +1,15 @@
 ---
 
-- 01 allow offerings to a Plan in EndorserMobile
+- 01 allow offerings to a Plan in EndorserMobile :
+  - project/ID: accept non-URI internal ID, full-URI internal ID, and external URI :
+    - test https://endorser.ch/project/...
+  - when creating project, generate full URL for ID
+  - check any Offer logic to handle new structure (and possibly old structure) :
+    - switch agent & party & participant .did to .identifier
+    - record these changes in old and new data for historical purposes
+  - tests :
+    - check that duplicates return the original
+    - add Plan tests
 
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)

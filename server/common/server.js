@@ -68,6 +68,8 @@ function requesterInfo(req, res, next) {
     if (req.originalUrl.startsWith("/api/claim") // even for POST since that JWT payload will be verified
         || req.originalUrl.startsWith("/api/claim?")
         || req.originalUrl.startsWith("/api/claim/")
+        || req.originalUrl.startsWith("/api/ext/plan/")
+        || req.originalUrl.startsWith("/api/ext/project/")
         || req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince?")
         || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")
         || req.originalUrl.startsWith("/api/report/issuersWhoClaimedOrConfirmed?")

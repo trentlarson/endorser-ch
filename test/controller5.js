@@ -1,3 +1,6 @@
+
+// Tests for Registration
+
 import chai from 'chai'
 import chaiAsPromised from "chai-as-promised"
 import R from 'ramda'

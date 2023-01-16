@@ -1,4 +1,3 @@
-import didJwt from 'did-jwt'
 import ActionService from '../services/action.service'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 

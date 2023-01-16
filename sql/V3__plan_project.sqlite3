@@ -1,0 +1,20 @@
+
+CREATE TABLE plan_claim (
+       jwtId CHARACTER(26),
+       issuerDid CHARACTER(100), -- DID of the entity who recorded this; did:peer are 58 chars
+       agentDid CHARACTER(100), -- DID of the plan owner/initiator; did:peer are 58 chars
+       fullIri CHARACTER(250),
+       internalId INTEGER -- short ID (without scheme:...), eg. if first generated on this server
+);
+
+CREATE INDEX plan_iri ON plan_claim(fullIri);
+
+CREATE TABLE project_claim (
+       jwtId CHARACTER(26),
+       issuerDid CHARACTER(100), -- DID of the entity who recorded this; did:peer are 58 chars
+       agentDid CHARACTER(100), -- DID of the plan owner/initiator; did:peer are 58 chars
+       fullIri CHARACTER(250),
+       internalId INTEGER -- short ID (without scheme:...), eg. if first generated on this server
+);
+
+CREATE INDEX project_iri ON project_claim(fullIri);
