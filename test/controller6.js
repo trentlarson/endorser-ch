@@ -167,6 +167,21 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
+  it('check access of same plan by first person, by full external ID, still getting initial plan', async () => {
+    await request(Server)
+      .get('/api/ext/plan/' + encodeURIComponent(PLAN_1_EXTERNAL_ID))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.agentDid).that.equals(creds[1].did)
+        expect(r.body.issuerDid).that.equals(creds[1].did)
+        expect(r.body.internalId).that.equals(PLAN_1_INTERNAL_ID)
+        expect(r.body.fullIri).that.equals(PLAN_1_EXTERNAL_ID)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
 })
 
 describe('6 - Projects', () => {
@@ -255,6 +270,21 @@ describe('6 - Projects', () => {
   it('check access of same project by first person, by external ID, still getting initial project', async () => {
     await request(Server)
       .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID)
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.agentDid).that.equals(creds[1].did)
+        expect(r.body.issuerDid).that.equals(creds[1].did)
+        expect(r.body.internalId).that.equals(PROJECT_1_INTERNAL_ID)
+        expect(r.body.fullIri).that.equals(PROJECT_1_EXTERNAL_ID)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('check access of same project by first person, by full external ID, still getting initial project', async () => {
+    await request(Server)
+      .get('/api/ext/project/' + encodeURIComponent(PROJECT_1_EXTERNAL_ID))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
