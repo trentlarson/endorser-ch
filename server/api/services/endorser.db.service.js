@@ -831,7 +831,7 @@ class EndorserDatabase {
 
   async planInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, , fullIri, internalId) VALUES (?, ?, ?, ?, ?)");
+      var stmt = ("INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri, internalId) VALUES (?, ?, ?, ?, ?)");
       db.run(stmt, [entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId], function(err) {
         if (err) {
           reject(err)
@@ -848,9 +848,9 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullUri: row.fullIri, internalId: row.internalId })
+          resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullIri: row.fullIri, internalId: row.internalId })
         } else {
-          reject("No plan found with ID " + fullIri)
+          resolve(null)
         }
       })
     })
@@ -888,7 +888,7 @@ class EndorserDatabase {
         } else if (row) {
           resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullIri: row.fullIri, internalId: row.internalId })
         } else {
-          reject("No project found with ID " + fullIri)
+          resolve(null)
         }
       })
     })

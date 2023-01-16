@@ -9,7 +9,11 @@ import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 
 import l from '../../common/logger'
 import db from './endorser.db.service'
-import { allDidsInside, calcBbox, ERROR_CODES, GLOBAL_PROJECT_ID_IRI_PREFIX, hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT } from './util';
+import {
+  allDidsInside, calcBbox, ERROR_CODES,
+  GLOBAL_PLAN_ID_IRI_PREFIX, GLOBAL_PROJECT_ID_IRI_PREFIX,
+  hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT,
+} from './util';
 import { addCanSee } from './network-cache.service'
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
@@ -352,7 +356,33 @@ class JwtService {
 
 
     } else if (isContextSchemaOrg(claim['@context'])
-               && claim['@type'] === 'ProjectAction') {
+               && claim['@type'] === 'PlanAction') {
+
+      let agentDid = claim.agent && claim.agent.identifier
+      if (!isDid(agentDid) && claim.agent.did) {
+        agentDid = claim.agent.did
+      }
+
+      let internalId = null
+      let fullIri = claim.identifier
+      if (fullIri && !isGlobalUri(fullIri)) {
+        // assume they're creating an endorser.ch URI
+        internalId = fullIri
+        fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + fullIri
+      }
+
+      const entity = {
+        jwtId: jwtId,
+        agentDid: agentDid,
+        issuerDid: issuerDid,
+        fullIri: fullIri,
+        internalId: internalId
+      }
+      const planId = await db.planInsert(entity)
+
+
+    } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'Project') {
 
       let agentDid = claim.agent && claim.agent.identifier
       if (!isDid(agentDid) && claim.agent.did) {
