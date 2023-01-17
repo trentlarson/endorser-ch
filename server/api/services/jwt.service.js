@@ -17,7 +17,7 @@ import {
 import { addCanSee } from './network-cache.service'
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
-const resolver = new Resolver({...ethrDidResolver({infuraProjectId: process.env.INFURA_PROJECT_ID})})
+const resolver = new Resolver({...ethrDidResolver({infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'})})
 
 const SERVICE_ID = process.env.SERVICE_ID
 

@@ -10,6 +10,5 @@ WORKDIR endorser-ch
 RUN git checkout $ENDORSER_VERSION
 RUN npm ci
 RUN npm run compile
-RUN cp .env.local .env
 
 CMD npm start

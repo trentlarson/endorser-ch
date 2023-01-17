@@ -20,7 +20,7 @@ Works with node v14
 # install dependencies
 npm ci
 
-# set up the environment
+# set up the environment (optional)
 cp .env.local .env
 
 # setup/migrate DB
