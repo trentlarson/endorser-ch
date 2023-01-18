@@ -358,6 +358,8 @@ class JwtService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'PlanAction') {
 
+      // note that this is similar to Project
+
       let agentDid = claim.agent && claim.agent.identifier
       if (!isDid(agentDid) && claim.agent.did) {
         agentDid = claim.agent.did
@@ -365,25 +367,59 @@ class JwtService {
 
       let internalId = null
       let fullIri = claim.identifier
-      if (fullIri && !isGlobalUri(fullIri)) {
-        // assume they're creating an endorser.ch URI
-        internalId = fullIri
-        fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + fullIri
+      if (fullIri != null) {
+        if (!isGlobalUri(fullIri)) {
+          // it's not an IRI, so assume they're creating an endorser.ch IRI
+          internalId = fullIri
+          fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + internalId
+        } else {
+          // it's a full IRI
+          if (fullIri.startsWith(GLOBAL_PLAN_ID_IRI_PREFIX)) {
+            internalId = fullIri.substring(GLOBAL_PLAN_ID_IRI_PREFIX.length)
+          }
+          // otherwise, the IRI is from a different system so internalId will be null
+        }
+      } else {
+        // there is no full IRI, so we'll choose one for our system
+        internalId = jwtId
+        fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + internalId
       }
+
+      // insert or edit
 
       const entity = {
         jwtId: jwtId,
         agentDid: agentDid,
         issuerDid: issuerDid,
         fullIri: fullIri,
-        internalId: internalId
+        internalId: internalId,
+        description: claim.description,
+        image: claim.image,
+        endTime: claim.endTime,
+        startTime: claim.startDate,
+        resultDescription: claim.resultDescription,
+        resultIdentifier: claim.resultIdentifier,
       }
-      const planId = await db.planInsert(entity)
 
+      const planRecord = await db.planInfoByExternalId(fullIri)
+      if (planRecord == null) {
+        // new record
+        const planId = await db.planInsert(entity)
+      } else {
+        // edit that record
+        if (issuerDid == planRecord.issuerDid
+            || issuerDid == planRecord.agentDid) {
+          const numUpdated = await db.planUpdate(entity)
+        } else {
+          // don't edit because they're not the issuer or agent
+        }
+      }
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Project') {
 
+      // note that this is similar to PlanAction
+
       let agentDid = claim.agent && claim.agent.identifier
       if (!isDid(agentDid) && claim.agent.did) {
         agentDid = claim.agent.did
@@ -391,21 +427,53 @@ class JwtService {
 
       let internalId = null
       let fullIri = claim.identifier
-      if (fullIri && !isGlobalUri(fullIri)) {
-        // assume they're creating an endorser.ch URI
-        internalId = fullIri
-        fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + fullIri
+      if (fullIri != null) {
+        if (!isGlobalUri(fullIri)) {
+          // it's not an IRI, so assume they're creating an endorser.ch IRI
+          internalId = fullIri
+          fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + internalId
+        } else {
+          // it's a full IRI
+          if (fullIri.startsWith(GLOBAL_PROJECT_ID_IRI_PREFIX)) {
+            internalId = fullIri.substring(GLOBAL_PROJECT_ID_IRI_PREFIX.length)
+          }
+          // otherwise, the IRI is from a different system so internalId will be null
+        }
+      } else {
+        // there is no full IRI, so we'll choose one for our system
+        internalId = jwtId
+        fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + internalId
       }
+
+      // insert or edit
 
       const entity = {
         jwtId: jwtId,
         agentDid: agentDid,
         issuerDid: issuerDid,
         fullIri: fullIri,
-        internalId: internalId
+        internalId: internalId,
+        description: claim.description,
+        image: claim.image,
+        endTime: claim.endTime,
+        startTime: claim.startDate,
+        resultDescription: claim.resultDescription,
+        resultIdentifier: claim.resultIdentifier,
       }
-      const planId = await db.projectInsert(entity)
 
+      const projectRecord = await db.projectInfoByExternalId(fullIri)
+      if (projectRecord == null) {
+        // new record
+        const projectId = await db.projectInsert(entity)
+      } else {
+        // edit that record
+        if (issuerDid == projectRecord.issuerDid
+            || issuerDid == projectRecord.agentDid) {
+          const numUpdated = await db.projectUpdate(entity)
+        } else {
+          // don't edit because they're not the issuer or agent
+        }
+      }
 
     } else if (isEndorserRegistrationClaim(claim)) {
 
@@ -493,10 +561,6 @@ class JwtService {
       l.trace(`${this.constructor.name} Created ${recordings.length} confirmations & network records.`, recordings)
 
       await Promise.all(recordings)
-        .catch(err => {
-          return Promise.reject(err)
-        })
-
 
     } else {
       l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
@@ -520,9 +584,6 @@ class JwtService {
       l.trace(`${this.constructor.name} creating ${recordings.length} claim records.`)
 
       await Promise.all(recordings)
-        .catch(err => {
-          return Promise.reject(err)
-        })
     } else {
       await this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
       l.trace(`${this.constructor.name} created a claim record.`)
@@ -635,7 +696,7 @@ class JwtService {
 
       await this.createEmbeddedClaimRecords(jwtEntity.id, issuerDid, payloadClaim)
         .catch(err => {
-          l.warn(err, `Failed to create embedded claim records.`)
+          l.error(err, `Failed to create embedded claim records.`)
         })
 
       // when adjusting this to an object with "success", include any failures from createEmbeddedClaimRecords

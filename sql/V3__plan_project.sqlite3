@@ -1,20 +1,32 @@
 
 CREATE TABLE plan_claim (
        jwtId CHARACTER(26),
-       issuerDid CHARACTER(100), -- DID of the entity who recorded this; did:peer are 58 chars
-       agentDid CHARACTER(100), -- DID of the plan owner/initiator; did:peer are 58 chars
-       fullIri CHARACTER(250),
-       internalId INTEGER -- short ID (without scheme:...), eg. if first generated on this server
+       issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
+       agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
+       fullIri TEXT,
+       internalId TEXT, -- short ID (without scheme:...), meaning this server is the master; otherwise, null
+       description TEXT,
+       image TEXT,
+       endTime DATE,
+       startTime DATE,
+       resultDescription TEXT,
+       resultIdentifier TEXT
 );
 
 CREATE INDEX plan_iri ON plan_claim(fullIri);
 
 CREATE TABLE project_claim (
-       jwtId CHARACTER(26),
-       issuerDid CHARACTER(100), -- DID of the entity who recorded this; did:peer are 58 chars
-       agentDid CHARACTER(100), -- DID of the plan owner/initiator; did:peer are 58 chars
-       fullIri CHARACTER(250),
-       internalId INTEGER -- short ID (without scheme:...), eg. if first generated on this server
+       jwtId TEXT,
+       issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
+       agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
+       fullIri TEXT,
+       internalId TEXT, -- short ID (without scheme:...), meaning this server is the master; otherwise, null
+       description TEXT,
+       image TEXT,
+       endTime DATE,
+       startTime DATE,
+       resultDescription TEXT,
+       resultIdentifier TEXT
 );
 
 CREATE INDEX project_iri ON project_claim(fullIri);

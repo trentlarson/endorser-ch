@@ -642,7 +642,7 @@ class EndorserDatabase {
           if (this.changes === 1) {
             resolve()
           } else {
-            reject("Expected to update 1 row but updated " + this.changes)
+            reject("Expected to update 1 jwt row but updated " + this.changes)
           }
         }
       })
@@ -735,7 +735,7 @@ class EndorserDatabase {
           if (this.changes === 1) {
             resolve(hashHex)
           } else {
-            reject("Expected to update 1 row but updated " + this.changes)
+            reject("Expected to update 1 jwt row but updated " + this.changes)
           }
         }
       })
@@ -752,7 +752,7 @@ class EndorserDatabase {
           if (this.changes === 1) {
             resolve(hashHex)
           } else {
-            reject("Expected to update 1 row but updated " + this.changes)
+            reject("Expected to update 1 jwt row but updated " + this.changes)
           }
         }
       })
@@ -831,8 +831,16 @@ class EndorserDatabase {
 
   async planInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri, internalId) VALUES (?, ?, ?, ?, ?)");
-      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId], function(err) {
+      var stmt = (
+        "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri, internalId"
+          + ", description, image, endTime, startTime, resultDescription, resultIdentifier"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+      db.run(stmt, [
+        entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId,
+        entity.description, entity.image, entity.endTime, entity.startTime,
+        entity.resultDescription, entity.resultIdentifier,
+      ], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -848,13 +856,37 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullIri: row.fullIri, internalId: row.internalId })
+          resolve(row)
         } else {
           resolve(null)
         }
       })
     })
   }
+
+  async planUpdate(entity) {
+    return new Promise((resolve, reject) => {
+      // don't allow update of IDs
+      var stmt = (
+        "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
+          + ", description = ?, image = ?, endTime = ?, startTime = ?"
+          + ", resultDescription = ?, resultIdentifier = ?"
+          + " WHERE fullIri = ?"
+      )
+      db.run(stmt, [
+        entity.jwtId, entity.issuerDid, entity.agentDid,
+        entity.description, entity.image, entity.endTime, entity.startTime,
+        entity.resultDescription, entity.resultIdentifier, entity.fullIri
+      ], function(err) {
+        if (!err && this.changes === 1) {
+          resolve()
+        } else {
+          reject("Expected to update 1 plan row but updated " + this.changes + " with error: " + err)
+        }
+      })
+    })
+  }
+
 
 
 
@@ -869,8 +901,16 @@ class EndorserDatabase {
 
   async projectInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri, internalId) VALUES (?, ?, ?, ?, ?)");
-      db.run(stmt, [entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId], function(err) {
+      var stmt = (
+        "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri, internalId"
+          + ", description, image, endTime, startTime, resultDescription, resultIdentifier"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+      db.run(stmt, [
+        entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId,
+        entity.description, entity.image, entity.endTime, entity.startTime,
+        entity.resultDescription, entity.resultIdentifier,
+      ], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -886,9 +926,32 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({ jwtId: row.jwtId, issuerDid: row.issuerDid, agentDid: row.agentDid, fullIri: row.fullIri, internalId: row.internalId })
+          resolve(row)
         } else {
           resolve(null)
+        }
+      })
+    })
+  }
+
+  async projectUpdate(entity) {
+    return new Promise((resolve, reject) => {
+      // don't allow update of IDs
+      var stmt = (
+        "UPDATE project_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
+          + ", description = ?, image = ?, endTime = ?, startTime = ?"
+          + ", resultDescription = ?, resultIdentifier = ?"
+          + " WHERE fullIri = ?"
+      )
+      db.run(stmt, [
+        entity.jwtId, entity.issuerDid, entity.agentDid,
+        entity.description, entity.image, entity.endTime, entity.startTime,
+        entity.resultDescription, entity.resultIdentifier, entity.fullIri
+      ], function(err) {
+        if (!err && this.changes === 1) {
+          resolve()
+        } else {
+          reject("Expected to update 1 project row but updated " + this.changes + " with error: " + err)
         }
       })
     })
@@ -957,7 +1020,7 @@ class EndorserDatabase {
           if (this.changes === 1) {
             resolve()
           } else {
-            reject("Expected to update 1 row but updated " + this.changes)
+            reject("Expected to update 1 registration row but updated " + this.changes)
           }
         }
       })
@@ -974,7 +1037,7 @@ class EndorserDatabase {
           if (this.changes === 1) {
             resolve()
           } else {
-            reject("Expected to update 1 row but updated " + this.changes)
+            reject("Expected to update 1 registration row but updated " + this.changes)
           }
         }
       })
