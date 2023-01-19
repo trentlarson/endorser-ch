@@ -44,7 +44,7 @@ export default express
 /**
  * Get many actions
  * @group action - Action storage
- * @route GET /api/action/
+ * @route GET /api/action
  * @param {String} agentDid.query.optional
  * @param {number} eventRowId.query.optional
  * @param {String} eventOrgName.query.optional
