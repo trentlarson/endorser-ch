@@ -57,6 +57,7 @@ const extPlanRouter = express
  * Retrieve the latest version of a plan based on the persistent ID.
  * The ID is typically supplied by the initial declaration of the plan; if not, the claim ID is used.
  *
+ * @group project - Project storage
  * @route GET /api/ext/plan/{id}
  * @param {string} id.path.required - the ID of the PlanAcation record to retrieve
  * @returns {Object} plan data if it exists (or 404)
@@ -81,6 +82,7 @@ const extProjectRouter = express
  * Retrieve the latest version of a project based on the persistent ID.
  * The ID is typically supplied by the initial declaration of the project; if not, the claim ID is used.
  *
+ * @group project - Project storage
  * @route GET /api/ext/project/{id}
  * @param {string} id.path.required - the ID of the Project record to retrieve
  * @returns {Object} project data if it exists (or 404)

@@ -86,7 +86,8 @@ export default express
 /**
  * Check if current user can create a claim.
  *
- * @route GET /api/report/canClaim
+ * @group reportAll - Reports With Paging
+ * @route GET /api/reportAll/canClaim
  * @returns {Object} data boolean property tells whether this user is allowed to create a claim
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

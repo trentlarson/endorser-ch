@@ -219,7 +219,7 @@ export default express
 /**
  * Retrieve all globally-visible DIDs
  *
- * @group claim - Reports
+ * @group report - Reports
  * @route GET /api/report/globallyVisibleDids
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -228,7 +228,7 @@ export default express
 /**
  * Consent to make push-token issuer's ID visible to the given ID
  *
- * @group claim - Reports
+ * @group network - Visibility
  * @route POST /api/report/canSeeMe
  * @param {DidBody.model} body.body.required
  */
@@ -238,7 +238,7 @@ export default express
 /**
  * Make push-token issuer's ID invisible to the given ID
  *
- * @group claim - Reports
+ * @group network - Visibility
  * @route POST /api/report/cannotSeeMe
  * @param {DidBody.model} body.body.required
  */
@@ -248,7 +248,7 @@ export default express
 /**
  * Consent to make push-token issuer's ID visible to the world
  *
- * @group claim - Reports
+ * @group network - Visibility
  * @route POST /api/report/makeMeGloballyVisible
  * @param {UrlBody.model} body.body.optional
  */
@@ -258,7 +258,7 @@ export default express
 /**
  * Get all DIDs this person can see
  *
- * @group report - Reports
+ * @group network - Visibility
  * @route GET /api/report/whichDidsICanSee
  * @returns {Array.object} 200 - list of DIDs user can see
  * @returns {Error} default - Unexpected error
@@ -270,7 +270,7 @@ export default express
  * Get all DIDs that can explicitly see this person.
  * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
  *
- * @group report - Reports
+ * @group network - Visibility
  * @route GET /api/report/whichDidsCanSeeMe
  * @param {string} did.query.required
  * @returns boolean 200 - true if the DID can see the caller
