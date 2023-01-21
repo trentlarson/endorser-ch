@@ -45,7 +45,7 @@ const projectController = new ProjectController()
 
 import * as express from 'express'
 
-const extPlanRouter = express
+const planRouter = express
   .Router()
   .all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
@@ -70,7 +70,7 @@ const extPlanRouter = express
 
 
 
-const extProjectRouter = express
+const projectRouter = express
   .Router()
   .all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
@@ -94,4 +94,4 @@ const extProjectRouter = express
 
 
 
-module.exports = { extPlanRouter, extProjectRouter }
+module.exports = { planRouter, projectRouter }
