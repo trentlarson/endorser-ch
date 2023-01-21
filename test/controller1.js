@@ -921,7 +921,7 @@ describe('1 - Action', () => {
 
   it('should get complaint about a missing JWT', () =>
      request(Server)
-     .get('/api/action/1')
+     .get('/api/report/canSeeMe')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)

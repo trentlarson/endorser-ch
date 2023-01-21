@@ -142,7 +142,7 @@ describe('6 - Plans', () => {
 
   it('check access of plan without ID by first user, by internal ID', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + firstId)
+      .get('/api/plan/' + firstId)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -170,7 +170,7 @@ describe('6 - Plans', () => {
 
   it('check access of plan by first user, by external ID', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + PLAN_1_INTERNAL_ID)
+      .get('/api/plan/' + PLAN_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -185,7 +185,7 @@ describe('6 - Plans', () => {
 
   it('check access of a different plan by first user', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + PLAN_1_INTERNAL_ID + '-bad-suffix')
+      .get('/api/plan/' + PLAN_1_INTERNAL_ID + '-bad-suffix')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).that.equals(404)
@@ -196,7 +196,7 @@ describe('6 - Plans', () => {
 
   it('check access of plan by public, by external ID', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + PLAN_1_INTERNAL_ID)
+      .get('/api/plan/' + PLAN_1_INTERNAL_ID)
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.agentDid).that.equals(HIDDEN_TEXT)
@@ -222,7 +222,7 @@ describe('6 - Plans', () => {
 
   it('check access of same plan by second person, by external ID, still getting initial plan', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + PLAN_1_INTERNAL_ID)
+      .get('/api/plan/' + PLAN_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -237,7 +237,7 @@ describe('6 - Plans', () => {
 
   it('check access of same plan by first person, by external ID, still getting initial plan', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + PLAN_1_INTERNAL_ID)
+      .get('/api/plan/' + PLAN_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -252,7 +252,7 @@ describe('6 - Plans', () => {
 
   it('check access of same plan by first person, by full external ID, still getting initial plan', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + encodeURIComponent(PLAN_1_EXTERNAL_ID))
+      .get('/api/plan/' + encodeURIComponent(PLAN_1_EXTERNAL_ID))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -267,7 +267,7 @@ describe('6 - Plans', () => {
 
   it('check access of same plan by first person, by full external ID, still getting initial plan', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + encodeURIComponent(PLAN_1_EXTERNAL_ID))
+      .get('/api/plan/' + encodeURIComponent(PLAN_1_EXTERNAL_ID))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -294,7 +294,7 @@ describe('6 - Plans', () => {
 
   it('check access of same plan by first person, still getting initial plan but with new description', async () => {
     await request(Server)
-      .get('/api/ext/plan/' + PLAN_1_INTERNAL_ID)
+      .get('/api/plan/' + PLAN_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -332,7 +332,7 @@ describe('6 - Projects', () => {
 
   it('check access of project without ID by first user, by internal ID', async () => {
     await request(Server)
-      .get('/api/ext/project/' + firstId)
+      .get('/api/project/' + firstId)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -361,7 +361,7 @@ describe('6 - Projects', () => {
 
   it('check access of project by first user, by external ID', async () => {
     await request(Server)
-      .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID)
+      .get('/api/project/' + PROJECT_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -376,7 +376,7 @@ describe('6 - Projects', () => {
 
   it('check access of a different project by first user', async () => {
     await request(Server)
-      .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID + '-bad-suffix')
+      .get('/api/project/' + PROJECT_1_INTERNAL_ID + '-bad-suffix')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).that.equals(404)
@@ -387,7 +387,7 @@ describe('6 - Projects', () => {
 
   it('check access of project by public, by external ID', async () => {
     await request(Server)
-      .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID)
+      .get('/api/project/' + PROJECT_1_INTERNAL_ID)
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.agentDid).that.equals(HIDDEN_TEXT)
@@ -414,7 +414,7 @@ describe('6 - Projects', () => {
 
   it('check access of same project by second person, by external ID, still getting initial project', async () => {
     await request(Server)
-      .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID)
+      .get('/api/project/' + PROJECT_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -429,7 +429,7 @@ describe('6 - Projects', () => {
 
   it('check access of same project by first person, by external ID, still getting initial project', async () => {
     await request(Server)
-      .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID)
+      .get('/api/project/' + PROJECT_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -444,7 +444,7 @@ describe('6 - Projects', () => {
 
   it('check access of same project by first person, by full external ID, still getting initial project', async () => {
     await request(Server)
-      .get('/api/ext/project/' + encodeURIComponent(PROJECT_1_EXTERNAL_ID))
+      .get('/api/project/' + encodeURIComponent(PROJECT_1_EXTERNAL_ID))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -459,7 +459,7 @@ describe('6 - Projects', () => {
 
   it('check access of same project by first person, by full external ID, still getting initial project', async () => {
     await request(Server)
-      .get('/api/ext/project/' + encodeURIComponent(PROJECT_1_EXTERNAL_ID))
+      .get('/api/project/' + encodeURIComponent(PROJECT_1_EXTERNAL_ID))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -486,7 +486,7 @@ describe('6 - Projects', () => {
 
   it('check access of same project by first person, still getting initial project but with new description', async () => {
     await request(Server)
-      .get('/api/ext/project/' + PROJECT_1_INTERNAL_ID)
+      .get('/api/project/' + PROJECT_1_INTERNAL_ID)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
