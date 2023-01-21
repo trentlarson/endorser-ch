@@ -15,16 +15,12 @@ const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
-function constructWhere(params, claimContents, excludeConfirmations) {
+function constructWhere(params, allowedColumns, claimContents, excludeConfirmations) {
 
   var whereClause = ""
   var paramArray = []
 
   for (var param in params) {
-    if (whereClause.length > 0) {
-      whereClause += " AND"
-    }
-
     var col = param
     var operator = "="
     if (col.endsWith(GREATER_THAN)) {
@@ -41,12 +37,18 @@ function constructWhere(params, claimContents, excludeConfirmations) {
       operator = "<="
     }
 
-    if (params[param] && params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
-      // treat dates differently for SQLite
-      whereClause += " " + col + " " + operator + " datetime('" + params[param] + "')"
-    } else {
-      whereClause += " " + col + " " + operator + " ?"
-      paramArray.push(params[param])
+    if (allowedColumns.includes(col)) {
+      if (whereClause.length > 0) {
+        whereClause += " AND"
+      }
+
+      if (params[param] && params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
+        // treat dates differently for SQLite
+        whereClause += " " + col + " " + operator + " datetime('" + params[param] + "')"
+      } else {
+        whereClause += " " + col + " " + operator + " ?"
+        paramArray.push(params[param])
+      }
     }
   }
 
@@ -136,7 +138,10 @@ class EndorserDatabase {
      @param object with a key-value for each column-value to filter
    **/
   actionClaimsByParams(params) {
-    let where = constructWhere(params)
+    let where = constructWhere(
+      params,
+      ['jwtId','issuerDid','agentDid','eventRowId','eventOrgName','eventName','eventStartTime']
+    )
     return new Promise((resolve, reject) => {
       var data = []
       let sql = "SELECT rowid, * FROM action_claim" + where.clause + " ORDER BY rowid DESC LIMIT 50"
@@ -411,7 +416,7 @@ class EndorserDatabase {
      @param object with a key-value for each column-value to filter
    **/
   eventsByParams(params) {
-    let where = constructWhere(params)
+    let where = constructWhere(params, ['orgName', 'name', 'startTime'])
     return new Promise((resolve, reject) => {
       var data = []
       let sql = "SELECT rowid, orgName, name, startTime FROM event" + where.clause + " ORDER BY startTime DESC LIMIT 50"
@@ -513,7 +518,12 @@ class EndorserDatabase {
     delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
     let excludeConfirmations = params.excludeConfirmations
     delete params.excludeConfirmations
-    let where = constructWhere(params, claimContents, excludeConfirmations)
+    let where = constructWhere(
+      params,
+      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
+      claimContents,
+      excludeConfirmations
+    )
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT, where.params, function(err, row) {
@@ -548,8 +558,12 @@ class EndorserDatabase {
     delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
     let excludeConfirmations = params.excludeConfirmations
     delete params.excludeConfirmations
-    let where = constructWhere(params, claimContents, excludeConfirmations)
-
+    let where = constructWhere(
+      params,
+      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
+      claimContents,
+      excludeConfirmations
+    )
     let allClause = where.clause
     let allParams = where.params
     if (afterIdInput) {

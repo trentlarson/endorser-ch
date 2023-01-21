@@ -4,7 +4,6 @@
 
   - test https://endorser.ch/project/...
   - check any Offer logic to handle new structure (and possibly old structure) :
-    - record these changes in old and new data for historical purposes
   - on deploy
     - migrate DB
     - add & update essential project details to project_claim & plan_claim tables
@@ -13,7 +12,6 @@
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
-  - test that duplicate registration fails
 
 - 01 mobile: stop resubmission when going back to signed screen
 
@@ -24,24 +22,6 @@
 - 02 backup & restore all data (incl private data, contacts)
 
 - 04 fix local - 'yarn run ios' (compile error, Xcode works)
-
-- 05 handy contract app in endorser-mobile :
-  - add contracts to app :
-    - 3 pledges https://initial3.paperform.co/
-    - MSA?
-    - UruleU p 13 (& page 475) :
-      - I'll take responsibility for my own promises and stake my honor on keeping them.
-      - I'll disclose my promises to everyone for whom I intend them. My secret promises will carry no weight.
-      - "I'll demand no burden greater than I have promised to carry. I'll accept whichever fulfillment is least burdensome: of the other's promise, or mine."
-  - scan to sign - submit contract, then Agreement
-  - report
-  - mobile find contract / pledge - mine, by ID, by template (w/ count & text)
-  - sender can create new JWT with full fields :
-    - have to pass full contents (on-chain + fields), then correlate with online JWT
-  - receiver must pull full contract for verification :
-    - before signing, must validate JWT contents
-  - store contracts in separate table on server for quick retrieval
-  - api.endorser.ch
 
 - .5 do limiting based on ULID and not timestamp (and change timestamp from int to string)
 
@@ -78,6 +58,24 @@
 - 01 add SAIDs for essential commitment schemas
 
 - endorser-mobile :
+
+  - 05 handy contract app in endorser-mobile :
+    - add contracts to app :
+      - 3 pledges https://initial3.paperform.co/
+      - MSA?
+      - UruleU p 13 (& page 475) :
+        - I'll take responsibility for my own promises and stake my honor on keeping them.
+        - I'll disclose my promises to everyone for whom I intend them. My secret promises will carry no weight.
+        - "I'll demand no burden greater than I have promised to carry. I'll accept whichever fulfillment is least burdensome: of the other's promise, or mine."
+    - scan to sign - submit contract, then Agreement
+    - report
+    - mobile find contract / pledge - mine, by ID, by template (w/ count & text)
+    - sender can create new JWT with full fields :
+      - have to pass full contents (on-chain + fields), then correlate with online JWT
+    - receiver must pull full contract for verification :
+      - before signing, must validate JWT contents
+    - store contracts in separate table on server for quick retrieval
+    - api.endorser.ch - requires different host for HTTPS
 
   - 01 create some user testing questions; try usabilityhub.com
 
