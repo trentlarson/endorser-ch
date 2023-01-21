@@ -80,6 +80,93 @@ function isoAndZonify(dateTime) {
 }
 
 
+/**
+   @param table is the table name
+   @param searchableColumns are names of columns allowing search
+   @param otherResultColumns are names of other columns to return in result
+   @param dateColumns are names of date columns (which must be converted in result)
+
+   @param params is an object with a key-value for each column-value to filter, with some special keys:
+   - 'claimContents' for text to look for inside claims
+   - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
+   - column + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
+   - column + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
+   @param afterIdInput (optional) is the start of the search (excluding that item)
+   @param beforeIdInput (optional) is the end of the search (excluding that item)
+
+   @return Promise of object with "data" as a list of results, reverse-chronologically,
+     with optional "hitlimit" boolean telling if we hit the limit count for this query
+**/
+function tableEntriesByParamsPaged(table, searchableColumns, otherResultColumns, dateColumns,
+                                   params, afterIdInput, beforeIdInput) {
+
+  let claimContents = params.claimContents
+  delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
+  let excludeConfirmations = params.excludeConfirmations
+  delete params.excludeConfirmations
+  let where = constructWhere(
+    params,
+    ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
+    claimContents,
+    excludeConfirmations
+  )
+  let allClause = where.clause
+  let allParams = where.params
+  if (afterIdInput) {
+    if (allClause) {
+      allClause = allClause + ' AND id > ?'
+    } else {
+      allClause = ' WHERE id > ?'
+    }
+    allParams = allParams.concat([afterIdInput])
+  }
+  if (beforeIdInput) {
+    if (allClause) {
+      allClause = allClause + ' AND id < ?'
+    } else {
+      allClause = ' WHERE id < ?'
+    }
+    allParams = allParams.concat([beforeIdInput])
+  }
+
+  let rowErr
+  return new Promise((resolve, reject) => {
+    var data = []
+    db.each("SELECT * FROM " + table + allClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
+      allParams,
+      function(err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          var fieldNames = searchableColumns.concat(otherResultColumns)
+          const result = {}
+          console.log('fieldNames & row', fieldNames, row)
+          for (let field of fieldNames) {
+            console.log('field & row.id', field, row.id)
+            console.log('field & row[field]', field, row[field])
+            result[field] =
+              dateColumns.includes(field) ? isoAndZonify(row[field]) : row[field]
+            console.log('result now', result)
+          }
+          data.push(result)
+        }
+      },
+      function(allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          const result = { data: data }
+          if (num === DEFAULT_LIMIT) {
+            result['hitLimit'] = true
+          }
+          resolve(result)
+        }
+      }
+    )
+  })
+}
+
+
 class EndorserDatabase {
 
   ALL_SUBJECT_MATCH() {
@@ -540,75 +627,20 @@ class EndorserDatabase {
   }
 
   /**
-     @param params is an object with a key-value for each column-value to filter, with some special keys:
-     - 'claimContents' for text to look for inside claims
-     - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
-     - key + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
-     - key + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
-     @param afterIdInput (optional) is the start of the search (excluding that item)
-     @param beforeIdInput (optional) is the end of the search (excluding that item)
-
-     @return Promise of object with "data" as a list of results, reverse-chronologically, with optional "hitlimit" boolean telling if we hit the limit count for this query
+     See tableEntriesByParamsPaged
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
 
-    // Note: this is very similar logic to jwtsByParams
-
-    let claimContents = params.claimContents
-    delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
-    let excludeConfirmations = params.excludeConfirmations
-    delete params.excludeConfirmations
-    let where = constructWhere(
-      params,
+    return tableEntriesByParamsPaged(
+      'jwt',
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
-      claimContents,
-      excludeConfirmations
+      ['claimContext', 'claim'],
+      ['issuedAt'],
+      params,
+      afterIdInput,
+      beforeIdInput
     )
-    let allClause = where.clause
-    let allParams = where.params
-    if (afterIdInput) {
-      if (allClause) {
-        allClause = allClause + ' AND id > ?'
-      } else {
-        allClause = ' WHERE id > ?'
-      }
-      allParams = allParams.concat([afterIdInput])
-    }
-    if (beforeIdInput) {
-      if (allClause) {
-        allClause = allClause + ' AND id < ?'
-      } else {
-        allClause = ' WHERE id < ?'
-      }
-      allParams = allParams.concat([beforeIdInput])
-    }
 
-    let rowErr
-    return new Promise((resolve, reject) => {
-      var data = []
-      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + allClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
-        allParams,
-        function(err, row) {
-          if (err) {
-            rowErr = err
-          } else {
-            row.issuedAt = isoAndZonify(row.issuedAt)
-            data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
-          }
-        },
-        function(allErr, num) {
-          if (rowErr || allErr) {
-            reject(rowErr || allErr)
-          } else {
-            const result = { data: data }
-            if (num === DEFAULT_LIMIT) {
-              result['hitLimit'] = true
-            }
-            resolve(result)
-          }
-        }
-      )
-    })
   }
 
   /**
