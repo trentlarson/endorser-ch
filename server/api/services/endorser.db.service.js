@@ -140,13 +140,9 @@ function tableEntriesByParamsPaged(table, searchableColumns, otherResultColumns,
         } else {
           var fieldNames = searchableColumns.concat(otherResultColumns)
           const result = {}
-          console.log('fieldNames & row', fieldNames, row)
           for (let field of fieldNames) {
-            console.log('field & row.id', field, row.id)
-            console.log('field & row[field]', field, row[field])
             result[field] =
               dateColumns.includes(field) ? isoAndZonify(row[field]) : row[field]
-            console.log('result now', result)
           }
           data.push(result)
         }
