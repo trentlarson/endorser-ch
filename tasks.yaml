@@ -3,21 +3,26 @@
 - 01 allow offerings to a Plan in EndorserMobile :
 
   - test https://endorser.ch/project/...
-  - check any Offer logic to handle new structure (and possibly old structure) :
-  - on deploy
+  - reset test DB (so plans not saved in separate table are erased)
+  - check any Offer logic to handle new structure (and possibly old structure)
+  - on deploy :
     - migrate DB
     - add & update essential project details to project_claim & plan_claim tables
+
+- 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
 
-- 01 mobile: stop resubmission when going back to signed screen
+- 01 mobile deploy - only after server is deployed with v2/report in place
+
+- 01 mobile - stop resubmission when going back to signed screen
 
 - 02 bring libs up-to-date
 
-- 04 mobile: link contacts to phone contacts
+- 04 mobile - link contacts to phone contacts
 
 - 02 backup & restore all data (incl private data, contacts)
 
@@ -52,8 +57,6 @@
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
 
 - 01 add sensitive issues to a separate list
-
-- 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
 - 01 add SAIDs for essential commitment schemas
 
