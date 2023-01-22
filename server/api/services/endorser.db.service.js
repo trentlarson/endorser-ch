@@ -15,7 +15,7 @@ const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
-function constructWhere(params, allowedColumns, claimContents, excludeConfirmations) {
+function constructWhere(params, allowedColumns, claimContents, contentColumn, excludeConfirmations) {
 
   var whereClause = ""
   var paramArray = []
@@ -76,7 +76,7 @@ function constructWhere(params, allowedColumns, claimContents, excludeConfirmati
 }
 
 function isoAndZonify(dateTime) {
-  return dateTime.replace(" ", "T") + "Z"
+  return dateTime == null ? dateTime : dateTime.replace(" ", "T") + "Z"
 }
 
 
@@ -97,7 +97,8 @@ function isoAndZonify(dateTime) {
    @return Promise of object with "data" as a list of results, reverse-chronologically,
      with optional "hitlimit" boolean telling if we hit the limit count for this query
 **/
-function tableEntriesByParamsPaged(table, searchableColumns, otherResultColumns, dateColumns,
+function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResultColumns,
+                                   contentColumn, dateColumns,
                                    params, afterIdInput, beforeIdInput) {
 
   let claimContents = params.claimContents
@@ -106,25 +107,26 @@ function tableEntriesByParamsPaged(table, searchableColumns, otherResultColumns,
   delete params.excludeConfirmations
   let where = constructWhere(
     params,
-    ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
+    searchableColumns,
     claimContents,
+    contentColumn,
     excludeConfirmations
   )
   let allClause = where.clause
   let allParams = where.params
   if (afterIdInput) {
     if (allClause) {
-      allClause = allClause + ' AND id > ?'
+      allClause = allClause + ' AND ' + idColumn + ' > ?'
     } else {
-      allClause = ' WHERE id > ?'
+      allClause = ' WHERE ' + idColumn + ' > ?'
     }
     allParams = allParams.concat([afterIdInput])
   }
   if (beforeIdInput) {
     if (allClause) {
-      allClause = allClause + ' AND id < ?'
+      allClause = allClause + ' AND ' + idColumn + ' < ?'
     } else {
-      allClause = ' WHERE id < ?'
+      allClause = ' WHERE ' + idColumn + ' < ?'
     }
     allParams = allParams.concat([beforeIdInput])
   }
@@ -132,7 +134,10 @@ function tableEntriesByParamsPaged(table, searchableColumns, otherResultColumns,
   let rowErr
   return new Promise((resolve, reject) => {
     var data = []
-    db.each("SELECT * FROM " + table + allClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
+    const sql =
+          "SELECT rowid, * FROM " + table
+          + allClause + " ORDER BY " + idColumn + " DESC LIMIT " + DEFAULT_LIMIT
+    db.each(sql,
       allParams,
       function(err, row) {
         if (err) {
@@ -342,7 +347,7 @@ class EndorserDatabase {
   confirmationById(confirmationId) {
     return new Promise((resolve, reject) => {
       var data = []
-      const sql = "SELECT rowid, * FROM confirmation WHERE rowId = ?"
+      const sql = "SELECT rowid, * FROM confirmation WHERE rowid = ?"
       db.each(sql, [confirmationId], function(err, row) {
         data.push({issuer: row.issuer, origClaim: row.origClaim})
       }, function(err, num) {
@@ -609,6 +614,7 @@ class EndorserDatabase {
       params,
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
       claimContents,
+      'claim',
       excludeConfirmations
     )
     return new Promise((resolve, reject) => {
@@ -630,17 +636,17 @@ class EndorserDatabase {
      See tableEntriesByParamsPaged
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
-
     return tableEntriesByParamsPaged(
       'jwt',
+      'id',
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
       ['claimContext', 'claim'],
+      'claim',
       ['issuedAt'],
       params,
       afterIdInput,
       beforeIdInput
     )
-
   }
 
   /**
@@ -667,7 +673,6 @@ class EndorserDatabase {
   jwtInsert(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?)");
-      //console.log("Inserted into DB JWT with id", entity.id, "and entity.claim", entity.claim)
       db.run(stmt, [entity.id, entity.issuer, entity.subject, entity.claimType, entity.claimContext, entity.claim, entity.claimEncoded, entity.jwtEncoded, entity.hashHex], function(err) {
         if (err) {
           reject(err)
@@ -910,6 +915,25 @@ class EndorserDatabase {
     })
   }
 
+  /**
+     See tableEntriesByParamsPaged
+  **/
+  plansByParamsPaged(params, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'plan_claim',
+      'rowid',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+       'description', 'endTime', 'startTime',
+       'resultDescription', 'resultIdentifier'],
+      ['image'],
+      'description',
+      ['endTime', 'startTime'],
+      params,
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
   async planUpdate(entity) {
     return new Promise((resolve, reject) => {
       // don't allow update of IDs
@@ -978,6 +1002,25 @@ class EndorserDatabase {
         }
       })
     })
+  }
+
+  /**
+     See tableEntriesByParamsPaged
+  **/
+  projectsByParamsPaged(params, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'project_claim',
+      'rowid',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+       'description', 'endTime', 'startTime',
+       'resultDescription', 'resultIdentifier'],
+      ['image'],
+      'description',
+      ['endTime', 'startTime'],
+      params,
+      afterIdInput,
+      beforeIdInput
+    )
   }
 
   async projectUpdate(entity) {

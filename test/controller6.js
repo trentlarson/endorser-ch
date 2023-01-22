@@ -41,6 +41,13 @@ planBy1JwtObj.claim.identifier = PLAN_1_INTERNAL_ID
 planBy1JwtObj.iss = creds[1].did
 const planBy1JwtProm = credentials[1].createVerification(planBy1JwtObj)
 
+const planWithExtFullBy1JwtObj = R.clone(testUtil.jwtTemplate)
+planWithExtFullBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
+planWithExtFullBy1JwtObj.claim.agent.identifier = creds[1].did
+planWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-id'
+planWithExtFullBy1JwtObj.iss = creds[1].did
+const planWithExtFullBy1JwtProm = credentials[1].createVerification(planWithExtFullBy1JwtObj)
+
 const planBy2JwtObj = R.clone(testUtil.jwtTemplate)
 planBy2JwtObj.claim = R.clone(testUtil.claimPlanAction)
 planBy2JwtObj.claim.agent.identifier = creds[2].did
@@ -76,6 +83,13 @@ projectBy1JwtObj.claim.identifier = PROJECT_1_INTERNAL_ID
 projectBy1JwtObj.iss = creds[1].did
 const projectBy1JwtProm = credentials[1].createVerification(projectBy1JwtObj)
 
+const projectWithExtFullBy1JwtObj = R.clone(testUtil.jwtTemplate)
+projectWithExtFullBy1JwtObj.claim = R.clone(testUtil.claimProjectAction)
+projectWithExtFullBy1JwtObj.claim.agent.identifier = creds[1].did
+projectWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-id'
+projectWithExtFullBy1JwtObj.iss = creds[1].did
+const projectWithExtFullBy1JwtProm = credentials[1].createVerification(projectWithExtFullBy1JwtObj)
+
 const projectBy2JwtObj = R.clone(testUtil.jwtTemplate)
 projectBy2JwtObj.claim = R.clone(testUtil.claimProjectAction)
 projectBy2JwtObj.claim.agent.identifier = creds[2].did
@@ -92,27 +106,33 @@ projectEditBy1JwtObj.iss = creds[1].did
 const projectEditBy1JwtProm = credentials[1].createVerification(projectEditBy1JwtObj)
 
 let pushTokens,
-    planBy1JwtEnc, planWithoutIdBy1JwtEnc, planBy2JwtEnc, planEditBy1JwtEnc,
-    projectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectBy2JwtEnc, projectEditBy1JwtEnc
+    planBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
+    planBy2JwtEnc, planEditBy1JwtEnc,
+    projectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
+    projectBy2JwtEnc, projectEditBy1JwtEnc
 
 before(async () => {
 
   await Promise.all(pushTokenProms)
     .then((jwts) => {
       pushTokens = jwts;
-      //console.log("Created controller5 push tokens", pushTokens)
+      //console.log("Created controller6 push tokens", pushTokens)
     })
 
   await Promise.all(
     [
-      planBy1JwtProm, planWithoutIdBy1JwtProm, planBy2JwtProm, planEditBy1JwtProm,
-      projectBy1JwtProm, projectWithoutIdBy1JwtProm, projectBy2JwtProm, projectEditBy1JwtProm
+      planBy1JwtProm, planWithoutIdBy1JwtProm, planWithExtFullBy1JwtProm,
+      planBy2JwtProm, planEditBy1JwtProm,
+      projectBy1JwtProm, projectWithoutIdBy1JwtProm, projectWithExtFullBy1JwtProm,
+      projectBy2JwtProm, projectEditBy1JwtProm,
     ]
   )
     .then((jwts) => {
       [
-        planBy1JwtEnc, planWithoutIdBy1JwtEnc, planBy2JwtEnc, planEditBy1JwtEnc,
-        projectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectBy2JwtEnc, projectEditBy1JwtEnc,
+        planBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
+        planBy2JwtEnc, planEditBy1JwtEnc,
+        projectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
+        projectBy2JwtEnc, projectEditBy1JwtEnc,
       ] = jwts
     })
 
@@ -160,7 +180,7 @@ describe('6 - Plans', () => {
 
   it('check insertion of plan by first user', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: planBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -212,7 +232,7 @@ describe('6 - Plans', () => {
 
   it('check insertion of plan by second person, by same external ID', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: planBy2JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -267,24 +287,9 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check access of same plan by first person, by full external ID, still getting initial plan', async () => {
-    await request(Server)
-      .get('/api/plan/' + encodeURIComponent(PLAN_1_EXTERNAL_ID))
-      .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body.agentDid).that.equals(creds[1].did)
-        expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.internalId).that.equals(PLAN_1_INTERNAL_ID)
-        expect(r.body.fullIri).that.equals(PLAN_1_EXTERNAL_ID)
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
-  }).timeout(3000)
-
   it('update a plan description', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: planEditBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -305,6 +310,31 @@ describe('6 - Plans', () => {
         expect(r.body.internalId).that.equals(PLAN_1_INTERNAL_ID)
         expect(r.body.fullIri).that.equals(PLAN_1_EXTERNAL_ID)
         expect(r.body.description).that.equals(PLAN_1_NEW_DESC)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('check insertion of plan with external ID from different system', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planWithExtFullBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('retrieve all plans', async () => {
+    await request(Server)
+      .get('/api/v2/report/plans')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(3)
+        expect(r.body.data[0].internalId).to.be.null
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -352,7 +382,7 @@ describe('6 - Projects', () => {
 
   it('check insertion of project by first user', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({jwtEncoded: projectBy1JwtEnc})
       .expect('Content-Type', /json/)
@@ -405,7 +435,7 @@ describe('6 - Projects', () => {
 
   it('check insertion of project by second person, by same external ID', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: projectBy2JwtEnc})
       .expect('Content-Type', /json/)
@@ -415,6 +445,18 @@ describe('6 - Projects', () => {
         return Promise.reject(err)
       })
   }).timeout(5000)
+
+  it('retrieve all projects xxxxxxxxxxxx', async () => {
+    await request(Server)
+      .get('/api/v2/report/projects')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(2)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
 
   it('check access of same project by second person, by external ID, still getting initial project', async () => {
     await request(Server)
@@ -461,24 +503,9 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check access of same project by first person, by full external ID, still getting initial project', async () => {
-    await request(Server)
-      .get('/api/project/' + encodeURIComponent(PROJECT_1_EXTERNAL_ID))
-      .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body.agentDid).that.equals(creds[1].did)
-        expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.internalId).that.equals(PROJECT_1_INTERNAL_ID)
-        expect(r.body.fullIri).that.equals(PROJECT_1_EXTERNAL_ID)
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
-  }).timeout(3000)
-
   it('update a project description', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: projectEditBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -499,6 +526,31 @@ describe('6 - Projects', () => {
         expect(r.body.internalId).that.equals(PROJECT_1_INTERNAL_ID)
         expect(r.body.fullIri).that.equals(PROJECT_1_EXTERNAL_ID)
         expect(r.body.description).that.equals(PROJECT_1_NEW_DESC)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('check insertion of project with external ID from different system', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: projectWithExtFullBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('retrieve all projects', async () => {
+    await request(Server)
+      .get('/api/v2/report/projects')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(3)
+        expect(r.body.data[0].internalId).to.be.null
       }).catch((err) => {
         return Promise.reject(err)
       })

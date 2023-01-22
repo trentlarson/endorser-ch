@@ -37,6 +37,30 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getAllPlansPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    DbService.plansByParamsPaged(query, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getAllProjectsPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    DbService.projectsByParamsPaged(query, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getCanClaim(req, res) {
     DbService.registrationByDid(res.locals.tokenIssuer)
       .then(r => {
@@ -94,7 +118,7 @@ export default express
   .get('/canClaim', dbController.getCanClaim)
 
 /**
- * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string), paginated, reverse-chronologically
+ * Get all claims for the query inputs, paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
  * @route GET /api/v2/report/claims
@@ -105,7 +129,7 @@ export default express
  * @param {string} claimType.query.optional
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
- * @returns {JwtArrayMaybeMoreBody} 200 - matching claims, reverse-chronologically
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -124,3 +148,47 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)
+
+/**
+ * Get all plans for the query inputs, paginated, reverse-chronologically
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/plans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} jwtId.query.optional
+ * @param {string} issuerDid.query.optional
+ * @param {string} agentDid.query.optional
+ * @param {string} fullIri.query.optional
+ * @param {string} internalId.query.optional
+ * @param {string} description.query.optional
+ * @param {string} endTime.query.optional
+ * @param {string} startTime.query.optional
+ * @param {string} resultIdentifier.query.optional
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error}  default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/plans', dbController.getAllPlansPaged)
+
+/**
+ * Get all projects for the query inputs, paginated, reverse-chronologically
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/projects
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} jwtId.query.optional
+ * @param {string} issuerDid.query.optional
+ * @param {string} agentDid.query.optional
+ * @param {string} fullIri.query.optional
+ * @param {string} internalId.query.optional
+ * @param {string} description.query.optional
+ * @param {string} endTime.query.optional
+ * @param {string} startTime.query.optional
+ * @param {string} resultIdentifier.query.optional
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error}  default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/projects', dbController.getAllProjectsPaged)

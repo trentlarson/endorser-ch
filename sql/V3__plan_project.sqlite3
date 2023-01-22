@@ -13,7 +13,11 @@ CREATE TABLE plan_claim (
        resultIdentifier TEXT
 );
 
-CREATE INDEX plan_iri ON plan_claim(fullIri);
+CREATE INDEX plan_issuerDid ON plan_claim(issuerDid);
+CREATE INDEX plan_fullIri ON plan_claim(fullIri);
+CREATE INDEX plan_internalId ON plan_claim(internalId);
+CREATE INDEX plan_endTime ON plan_claim(endTime);
+CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
 
 CREATE TABLE project_claim (
        jwtId TEXT,
@@ -29,4 +33,8 @@ CREATE TABLE project_claim (
        resultIdentifier TEXT
 );
 
-CREATE INDEX project_iri ON project_claim(fullIri);
+CREATE INDEX project_issuerDid ON project_claim(issuerDid);
+CREATE INDEX project_fullIri ON project_claim(fullIri);
+CREATE INDEX project_internalId ON project_claim(internalId);
+CREATE INDEX project_endTime ON project_claim(endTime);
+CREATE INDEX project_resultIdentifier ON project_claim(resultIdentifier);
