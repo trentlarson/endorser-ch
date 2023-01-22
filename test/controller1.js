@@ -445,7 +445,7 @@ describe('1 - Util', () => {
 
   it('should get a sorted object', () =>
      request(Server)
-     .get('/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
+     .get('/api/util/objectWithKeysSorted?object=\{"b":\[5,1,2,3,\{"bc":3,"bb":2,"ba":1\}\],"c":\{"cb":2,"ca":1\},"a":4\}')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.headers['content-type'], /json/) // same as Content-Type check above

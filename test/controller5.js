@@ -105,7 +105,7 @@ describe('5 - Registration', () => {
 
   it('check that user 12 can claim', () =>
      request(Server)
-     .get('/api/reportAll/canClaim')
+     .get('/api/v2/report/canClaim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
@@ -121,7 +121,7 @@ describe('5 - Registration', () => {
 
   it('check that user 13 cannot claim', () =>
      request(Server)
-     .get('/api/reportAll/canClaim')
+     .get('/api/v2/report/canClaim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[13])
      .expect('Content-Type', /json/)
      .then(r => {

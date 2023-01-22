@@ -46,7 +46,7 @@ const isEndorserRegistrationClaim = (claim) =>
       && claim['@type'] === 'RegisterAction'
       && claim['object'] === SERVICE_ID
 
-class JwtService {
+class ClaimService {
 
   async byId(id, requesterDid) {
     l.trace(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
@@ -710,4 +710,4 @@ class JwtService {
 
 }
 
-export default new JwtService();
+export default new ClaimService();

@@ -94,7 +94,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve single Give/Offer claim with no more after', () =>
     request(Server)
-      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
+      .get('/api/v2/report/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -133,7 +133,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
-      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
+      .get('/api/v2/report/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -151,7 +151,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve many Give/Offer claims with a few more to come', () =>
     request(Server)
-      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&beforeId=' + moreBeforeId)
+      .get('/api/v2/report/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -169,7 +169,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve a few more Give/Offer claims', () =>
     request(Server)
-      .get('/api/reportAll/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&beforeId=' + moreBeforeId)
+      .get('/api/v2/report/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])) + '&beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -187,7 +187,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve all claims with many more to come', () =>
     request(Server)
-      .get('/api/reportAll/claims')
+      .get('/api/v2/report/claims')
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -208,7 +208,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve all claims with a few more to come', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + moreBeforeId)
+      .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -227,7 +227,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve a few more claims', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + moreBeforeId)
+      .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -245,7 +245,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve a very few more claims', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + moreBeforeId)
+      .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -263,7 +263,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve some earlier claims, reverse chronologically', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + nthInListInSecondBatch.id)
+      .get('/api/v2/report/claims?beforeId=' + nthInListInSecondBatch.id)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -281,7 +281,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve rest of the earlier claims, reverse chronologically', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + moreBeforeId)
+      .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -301,7 +301,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve items at end with a maximum "beforeId" value', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=7ZZZZZZZZZZZZZZZZZZZZZZZZZ')
+      .get('/api/v2/report/claims?beforeId=7ZZZZZZZZZZZZZZZZZZZZZZZZZ')
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -319,7 +319,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve small set of items via after & before', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + startOfSecondBatchInList + '&afterId=' + nthInListInSecondBatch.id)
+      .get('/api/v2/report/claims?beforeId=' + startOfSecondBatchInList + '&afterId=' + nthInListInSecondBatch.id)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -337,7 +337,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve bigger set of items via after & before', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + firstInList.id + '&afterId=' + nthInListInSecondBatch.id)
+      .get('/api/v2/report/claims?beforeId=' + firstInList.id + '&afterId=' + nthInListInSecondBatch.id)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -353,7 +353,7 @@ describe('4 - Load Claims Incrementally', () => {
 
   it('retrieve rest of items via after & before', () =>
     request(Server)
-      .get('/api/reportAll/claims?beforeId=' + moreBeforeId + '&afterId=' + nthInListInSecondBatch.id)
+      .get('/api/v2/report/claims?beforeId=' + moreBeforeId + '&afterId=' + nthInListInSecondBatch.id)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {

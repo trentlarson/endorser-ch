@@ -10,17 +10,17 @@ import * as express from 'express'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 import { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
 
-import JwtService from '../services/jwt.service';
-class JwtController {
+import ClaimService from '../services/claim.service';
+class ClaimController {
   getIssuersMatchingClaim(req, res) {
-    JwtService.thisClaimAndConfirmationsIssuersMatchingClaimId(req.query.claimId)
+    ClaimService.thisClaimAndConfirmationsIssuersMatchingClaimId(req.query.claimId)
       .then(result =>
             hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, { result : result}))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
   getRateLimits(req, res) {
-    JwtService.getRateLimits(res.locals.tokenIssuer)
+    ClaimService.getRateLimits(res.locals.tokenIssuer)
       .then(r => res.json(r))
       .catch(err => {
         if (err.clientError) {
@@ -32,7 +32,7 @@ class JwtController {
       })
   }
 }
-let jwtController = new JwtController();
+let claimController = new ClaimController();
 
 
 import ActionService from '../services/action.service';
@@ -151,7 +151,7 @@ export default express
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/issuersWhoClaimedOrConfirmed', jwtController.getIssuersMatchingClaim)
+  .get('/issuersWhoClaimedOrConfirmed', claimController.getIssuersMatchingClaim)
 
 /**
  * Get claims and confirmations for individual
@@ -298,4 +298,4 @@ export default express
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/rateLimits', jwtController.getRateLimits)
+  .get('/rateLimits', claimController.getRateLimits)

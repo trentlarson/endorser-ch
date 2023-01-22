@@ -1,12 +1,12 @@
 import * as express from 'express'
 import R from 'ramda'
 
-import JwtService from '../services/jwt.service'
+import ClaimService from '../services/claim.service'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class Controller {
 
   getById(req, res) {
-    JwtService
+    ClaimService
       .byId(req.params.id, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => {
@@ -16,8 +16,8 @@ class Controller {
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
-  async getFullJwtById(req, res) {
-    JwtService
+  async getFullClaimById(req, res) {
+    ClaimService
       .fullJwtById(req.params.id, res.locals.tokenIssuer)
       .then(result => new Promise((resolve, reject) => {
         hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
@@ -50,7 +50,7 @@ class Controller {
   }
 
   getByQuery(req, res) {
-    JwtService.byQuery(req.query)
+    ClaimService.byQuery(req.query)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
@@ -61,7 +61,7 @@ class Controller {
       res.status(400).json("Request body is missing a 'jwtEncoded' property.").end();
       return;
     }
-    JwtService
+    ClaimService
       .createWithClaimRecord(req.body.jwtEncoded, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res
@@ -145,7 +145,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/full/:id', controller.getFullJwtById)
+  .get('/full/:id', controller.getFullClaimById)
 
  /**
  * Add a Claim JWT raw, without any processing (not recommended)

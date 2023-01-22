@@ -87,7 +87,7 @@ export default express
  * Check if current user can create a claim.
  *
  * @group reportAll - Reports With Paging
- * @route GET /api/reportAll/canClaim
+ * @route GET /api/v2/report/canClaim
  * @returns {Object} data boolean property tells whether this user is allowed to create a claim
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -97,7 +97,7 @@ export default express
  * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string), paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
- * @route GET /api/reportAll/claims
+ * @route GET /api/v2/report/claims
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @param {string} claimContents.query.optional
@@ -115,7 +115,7 @@ export default express
  * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string)
  *
  * @group reportAll - Reports With Paging
- * @route GET /api/reportAll/claimsForIssuerWithTypes
+ * @route GET /api/v2/report/claimsForIssuerWithTypes
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'

@@ -1,7 +1,7 @@
 import * as express from 'express'
 import R from 'ramda'
 import { withKeysSorted } from '../services/util'
-import JwtService from '../services/jwt.service'
+import ClaimService from '../services/claim.service'
 
 export default express
   .Router()
@@ -34,4 +34,4 @@ export default express
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/updateHashChain', (req, res) => JwtService.merkleUnmerkled().then(r => res.status(201).json({count:r.length, latest:R.last(r)}).end()).catch(err => { console.log(err); res.status(500).json(""+err).end(); }))
+  .post('/updateHashChain', (req, res) => ClaimService.merkleUnmerkled().then(r => res.status(201).json({count:r.length, latest:R.last(r)}).end()).catch(err => { console.log(err); res.status(500).json(""+err).end(); }))
