@@ -67,7 +67,7 @@ function requesterInfo(req, res, next) {
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
     // Is every endpoint OK to access now that we're hiding DIDs?
     if (req.originalUrl.startsWith("/api/action")
-        || req.originalUrl.startsWith("/api/claim") // even for POST since that JWT payload will be verified
+        || req.originalUrl.startsWith("/api/claim") // even for GET (we just hide DIDs)
         || req.originalUrl.startsWith("/api/event")
         || req.originalUrl.startsWith("/api/plan")
         || req.originalUrl.startsWith("/api/project")
@@ -76,7 +76,10 @@ function requesterInfo(req, res, next) {
         || req.originalUrl.startsWith("/api/report/issuersWhoClaimedOrConfirmed?")
         || req.originalUrl.startsWith("/api/reportAll/claims?")
         || req.originalUrl.startsWith("/api/tenure")
-        || req.originalUrl.startsWith("/api/util")) {
+        || req.originalUrl.startsWith("/api/util")
+        || req.originalUrl.startsWith("/api/v2/claim")
+        || req.originalUrl.startsWith("/api/v2/report")
+       ) {
       // these endcpoints are OK to hit without a token... so won't even set tokenIssuer
       next()
     } else {

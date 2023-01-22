@@ -294,6 +294,8 @@ class ClaimService {
         }
       }
       l.trace('Added confirmations', recordings)
+      let confirmations = await recordings
+      return { confirmations }
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
@@ -335,6 +337,7 @@ class ClaimService {
 
       let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
+      return { actionId }
 
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -353,6 +356,7 @@ class ClaimService {
         memberDid: claim.member.member.identifier
       }
       let orgRoleId = await db.orgRoleInsert(entity)
+      return { orgRoleId }
 
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -381,7 +385,7 @@ class ClaimService {
         }
       } else {
         // there is no full IRI, so we'll choose one for our system
-        internalId = jwtId
+        internalId = db.newUlid()
         fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + internalId
       }
 
@@ -405,11 +409,14 @@ class ClaimService {
       if (planRecord == null) {
         // new record
         const planId = await db.planInsert(entity)
+        return { planId, fullIri }
+
       } else {
         // edit that record
         if (issuerDid == planRecord.issuerDid
             || issuerDid == planRecord.agentDid) {
           const numUpdated = await db.planUpdate(entity)
+
         } else {
           // don't edit because they're not the issuer or agent
         }
@@ -441,7 +448,7 @@ class ClaimService {
         }
       } else {
         // there is no full IRI, so we'll choose one for our system
-        internalId = jwtId
+        internalId = db.newUlid()
         fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + internalId
       }
 
@@ -465,11 +472,14 @@ class ClaimService {
       if (projectRecord == null) {
         // new record
         const projectId = await db.projectInsert(entity)
+        return { projectId, fullIri }
+
       } else {
         // edit that record
         if (issuerDid == projectRecord.issuerDid
             || issuerDid == projectRecord.agentDid) {
           const numUpdated = await db.projectUpdate(entity)
+
         } else {
           // don't edit because they're not the issuer or agent
         }
@@ -495,6 +505,7 @@ class ClaimService {
       }
 
       let registrationId = await db.registrationInsert(registration)
+      return { registrationId }
 
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {
@@ -518,6 +529,7 @@ class ClaimService {
           }
 
       let tenureId = await db.tenureInsert(entity)
+      return { tenureId }
 
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -532,7 +544,8 @@ class ClaimService {
         eventStartTime: claim.object.event.startDate,
       }
 
-      let eventId = await db.voteInsert(vote)
+      let voteId = await db.voteInsert(vote)
+      return { voteId }
 
 
     } else if (isContextSchemaForConfirmation(claim['@context'])
@@ -560,7 +573,8 @@ class ClaimService {
       }
       l.trace(`${this.constructor.name} Created ${recordings.length} confirmations & network records.`, recordings)
 
-      await Promise.all(recordings)
+      let confirmations = await Promise.all(recordings)
+      return { confirmations }
 
     } else {
       l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
@@ -573,6 +587,7 @@ class ClaimService {
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
 
+    let embeddedResults
     if (Array.isArray(claim)) {
 
       var recordings = []
@@ -583,9 +598,9 @@ class ClaimService {
       }
       l.trace(`${this.constructor.name} creating ${recordings.length} claim records.`)
 
-      await Promise.all(recordings)
+      embeddedResults = await Promise.all(recordings)
     } else {
-      await this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
+      embeddedResults = await this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
       l.trace(`${this.constructor.name} created a claim record.`)
     }
 
@@ -594,10 +609,12 @@ class ClaimService {
     for (var did of allDidsInside(claim)) {
       netRecords.push(addCanSee(did, issuerDid))
     }
-    await Promise.all(netRecords)
-      .catch(err => {
-        return Promise.reject(err)
-      })
+    // since addCanSee doesn't return anything, this is a list of nulls
+    let allNetRecords = await Promise.all(netRecords)
+        .catch(err => {
+          return err
+        })
+    return { embeddedResult: embeddedResults }
 
   }
 
@@ -628,6 +645,11 @@ class ClaimService {
     }
   }
 
+  /**
+     @return object with:
+     - id of claim
+     - extra info for other created data, eg. planActionId if one was generated
+   **/
   async createWithClaimRecord(jwtEncoded, authIssuerId) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
@@ -694,13 +716,14 @@ class ClaimService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      await this.createEmbeddedClaimRecords(jwtEntity.id, issuerDid, payloadClaim)
+      let embedded = await this.createEmbeddedClaimRecords(jwtEntity.id, issuerDid, payloadClaim)
         .catch(err => {
           l.error(err, `Failed to create embedded claim records.`)
+          return { embeddedRecordError: err }
         })
 
-      // when adjusting this to an object with "success", include any failures from createEmbeddedClaimRecords
-      return jwtEntity.id
+      const result = R.mergeLeft({ claimId: jwtEntity.id }, embedded)
+      return result
 
     } else {
       l.warn(`${this.constructor.name} JWT received without a claim.`)

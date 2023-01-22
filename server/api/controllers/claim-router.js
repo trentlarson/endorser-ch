@@ -64,16 +64,19 @@ class Controller {
     ClaimService
       .createWithClaimRecord(req.body.jwtEncoded, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res
-            .status(201)
-            .location(`<%= apiRoot %>/claim/${r.id}`)
-            .json(r))
+      .then(r => {
+        const result = r.claimId
+        return res
+          .status(201)
+          .location(`<%= apiRoot %>/api/claim/${r.id}`)
+          .json(result)
+      })
       .catch(err => {
         if (err.clientError) {
           res.status(400).json({ error: { message: err.clientError.message, code: err.clientError.code } })
         } else {
           console.log(err)
-          res.status(500).json(""+err).end()
+          res.status(500).json({ error: err }).end()
         }
       })
   }

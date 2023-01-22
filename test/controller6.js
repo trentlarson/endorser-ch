@@ -128,28 +128,30 @@ describe('6 - Plans', () => {
 
   it('check insertion of plan without ID by first user', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: planWithoutIdBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(201)
-        expect(r.body).to.be.a('string')
-        firstId = r.body
+        expect(r.body.success.claimId).to.be.a('string')
+        expect(r.body.success.embeddedResult.fullIri).to.be.a('string')
+        firstId = r.body.success.embeddedResult.fullIri
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(5000)
 
-  it('check access of plan without ID by first user, by internal ID', async () => {
+  it('check access of plan without ID by first user, by first ID', async () => {
+    const internalId = firstId.substring(GLOBAL_PLAN_ID_IRI_PREFIX.length)
     await request(Server)
-      .get('/api/plan/' + firstId)
+      .get('/api/plan/' + internalId)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.internalId).that.equals(firstId)
-        expect(r.body.fullIri).that.equals(GLOBAL_PLAN_ID_IRI_PREFIX + firstId)
+        expect(r.body.internalId).that.equals(internalId)
+        expect(r.body.fullIri).that.equals(firstId)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
@@ -318,28 +320,30 @@ describe('6 - Projects', () => {
 
   it('check insertion of project without ID by first user', async () => {
     await request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: projectWithoutIdBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(201)
-        expect(r.body).to.be.a('string')
-        firstId = r.body
+        expect(r.body.success.claimId).to.be.a('string')
+        expect(r.body.success.embeddedResult.fullIri).to.be.a('string')
+        firstId = r.body.success.embeddedResult.fullIri
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(5000)
 
-  it('check access of project without ID by first user, by internal ID', async () => {
+  it('check access of project without ID by first user, by first ID', async () => {
+    const internalId = firstId.substring(GLOBAL_PROJECT_ID_IRI_PREFIX.length)
     await request(Server)
-      .get('/api/project/' + firstId)
+      .get('/api/project/' + internalId)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.internalId).that.equals(firstId)
-        expect(r.body.fullIri).that.equals(GLOBAL_PROJECT_ID_IRI_PREFIX + firstId)
+        expect(r.body.internalId).that.equals(internalId)
+        expect(r.body.fullIri).that.equals(firstId)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
