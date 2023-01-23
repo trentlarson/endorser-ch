@@ -27,7 +27,7 @@ class DbController {
     if (!Array.isArray(claimTypes)) {
       return res.status(400).json({error: "Parameter 'claimTypes' should be an array but got: " + req.query.claimTypes}).end()
     }
-    DbService.allIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
+    DbService.jwtIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
@@ -49,6 +49,18 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getPlansByIssuerPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    DbService.plansByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getAllProjectsPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -56,6 +68,18 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     DbService.projectsByParamsPaged(query, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getProjectsByIssuerPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    DbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -172,6 +196,19 @@ export default express
   .get('/plans', dbController.getAllPlansPaged)
 
 /**
+ * Get all plans by the issuer, paginated, reverse-chronologically
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/plansForIssuer
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error}  default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/plansByIssuer', dbController.getPlansByIssuerPaged)
+
+/**
  * Get all projects for the query inputs, paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
@@ -192,3 +229,16 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/projects', dbController.getAllProjectsPaged)
+
+/**
+ * Get all projects by the issuer, paginated, reverse-chronologically
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/projectsForIssuer
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error}  default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/projectsByIssuer', dbController.getProjectsByIssuerPaged)

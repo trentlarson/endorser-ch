@@ -703,7 +703,7 @@ class EndorserDatabase {
   /**
      Start after afterIdInput (optional) and before beforeIdinput (optional) and retrieve all claims by issuerDid with claimTypes, in reverse chronological order.
   **/
-  allIssuerClaimTypesPaged(issuerDid, claimTypes, afterIdInput, beforeIdInput) {
+  jwtIssuerClaimTypesPaged(issuerDid, claimTypes, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       const inListStr = claimTypes.map(value => "?").join(',')
       let allParams = [issuerDid].concat(claimTypes)
@@ -934,6 +934,25 @@ class EndorserDatabase {
     )
   }
 
+  /**
+     See tableEntriesByParamsPaged, with search for issuerDid
+  **/
+  plansByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'plan_claim',
+      'rowid',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+       'description', 'endTime', 'startTime',
+       'resultDescription', 'resultIdentifier'],
+      ['image'],
+      'description',
+      ['endTime', 'startTime'],
+      { issuerDid },
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
   async planUpdate(entity) {
     return new Promise((resolve, reject) => {
       // don't allow update of IDs
@@ -1018,6 +1037,25 @@ class EndorserDatabase {
       'description',
       ['endTime', 'startTime'],
       params,
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
+  /**
+     See tableEntriesByParamsPaged, with search for issuerDid
+  **/
+  projectsByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'project_claim',
+      'rowid',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+       'description', 'endTime', 'startTime',
+       'resultDescription', 'resultIdentifier'],
+      ['image'],
+      'description',
+      ['endTime', 'startTime'],
+      { issuerDid },
       afterIdInput,
       beforeIdInput
     )

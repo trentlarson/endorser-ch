@@ -48,13 +48,6 @@ planWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-i
 planWithExtFullBy1JwtObj.iss = creds[1].did
 const planWithExtFullBy1JwtProm = credentials[1].createVerification(planWithExtFullBy1JwtObj)
 
-const planBy2JwtObj = R.clone(testUtil.jwtTemplate)
-planBy2JwtObj.claim = R.clone(testUtil.claimPlanAction)
-planBy2JwtObj.claim.agent.identifier = creds[2].did
-planBy2JwtObj.claim.identifier = PLAN_1_INTERNAL_ID
-planBy2JwtObj.iss = creds[2].did
-const planBy2JwtProm = credentials[2].createVerification(planBy2JwtObj)
-
 const planEditBy1JwtObj = R.clone(testUtil.jwtTemplate)
 planEditBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
 planEditBy1JwtObj.claim.agent.identifier = creds[1].did
@@ -62,6 +55,20 @@ planEditBy1JwtObj.claim.identifier = PLAN_1_INTERNAL_ID
 planEditBy1JwtObj.claim.description = PLAN_1_NEW_DESC
 planEditBy1JwtObj.iss = creds[1].did
 const planEditBy1JwtProm = credentials[1].createVerification(planEditBy1JwtObj)
+
+const planDupBy2JwtObj = R.clone(testUtil.jwtTemplate)
+planDupBy2JwtObj.claim = R.clone(testUtil.claimPlanAction)
+planDupBy2JwtObj.claim.agent.identifier = creds[2].did
+planDupBy2JwtObj.claim.identifier = PLAN_1_INTERNAL_ID
+planDupBy2JwtObj.iss = creds[2].did
+const planDupBy2JwtProm = credentials[2].createVerification(planDupBy2JwtObj)
+
+const planNewBy2JwtObj = R.clone(testUtil.jwtTemplate)
+planNewBy2JwtObj.claim = R.clone(testUtil.claimPlanAction)
+planNewBy2JwtObj.claim.agent.identifier = creds[2].did
+planNewBy2JwtObj.claim.description = '#2 Has A Plan'
+planNewBy2JwtObj.iss = creds[2].did
+const planNewBy2JwtProm = credentials[2].createVerification(planNewBy2JwtObj)
 
 
 
@@ -90,13 +97,6 @@ projectWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-som
 projectWithExtFullBy1JwtObj.iss = creds[1].did
 const projectWithExtFullBy1JwtProm = credentials[1].createVerification(projectWithExtFullBy1JwtObj)
 
-const projectBy2JwtObj = R.clone(testUtil.jwtTemplate)
-projectBy2JwtObj.claim = R.clone(testUtil.claimProjectAction)
-projectBy2JwtObj.claim.agent.identifier = creds[2].did
-projectBy2JwtObj.claim.identifier = PROJECT_1_INTERNAL_ID
-projectBy2JwtObj.iss = creds[2].did
-const projectBy2JwtProm = credentials[2].createVerification(projectBy2JwtObj)
-
 const projectEditBy1JwtObj = R.clone(testUtil.jwtTemplate)
 projectEditBy1JwtObj.claim = R.clone(testUtil.claimProjectAction)
 projectEditBy1JwtObj.claim.agent.identifier = creds[1].did
@@ -105,11 +105,25 @@ projectEditBy1JwtObj.claim.description = PROJECT_1_NEW_DESC
 projectEditBy1JwtObj.iss = creds[1].did
 const projectEditBy1JwtProm = credentials[1].createVerification(projectEditBy1JwtObj)
 
+const projectDupBy2JwtObj = R.clone(testUtil.jwtTemplate)
+projectDupBy2JwtObj.claim = R.clone(testUtil.claimProjectAction)
+projectDupBy2JwtObj.claim.agent.identifier = creds[2].did
+projectDupBy2JwtObj.claim.identifier = PROJECT_1_INTERNAL_ID
+projectDupBy2JwtObj.iss = creds[2].did
+const projectDupBy2JwtProm = credentials[2].createVerification(projectDupBy2JwtObj)
+
+const projectNewBy2JwtObj = R.clone(testUtil.jwtTemplate)
+projectNewBy2JwtObj.claim = R.clone(testUtil.claimProjectAction)
+projectNewBy2JwtObj.claim.agent.identifier = creds[2].did
+projectNewBy2JwtObj.claim.description = '#2 Has A Project'
+projectNewBy2JwtObj.iss = creds[2].did
+const projectNewBy2JwtProm = credentials[2].createVerification(projectNewBy2JwtObj)
+
 let pushTokens,
     planBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
-    planBy2JwtEnc, planEditBy1JwtEnc,
+    planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
     projectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
-    projectBy2JwtEnc, projectEditBy1JwtEnc
+    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc
 
 before(async () => {
 
@@ -122,17 +136,17 @@ before(async () => {
   await Promise.all(
     [
       planBy1JwtProm, planWithoutIdBy1JwtProm, planWithExtFullBy1JwtProm,
-      planBy2JwtProm, planEditBy1JwtProm,
+      planEditBy1JwtProm, planDupBy2JwtProm, planNewBy2JwtProm,
       projectBy1JwtProm, projectWithoutIdBy1JwtProm, projectWithExtFullBy1JwtProm,
-      projectBy2JwtProm, projectEditBy1JwtProm,
+      projectEditBy1JwtProm, projectDupBy2JwtProm, projectNewBy2JwtProm,
     ]
   )
     .then((jwts) => {
       [
         planBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
-        planBy2JwtEnc, planEditBy1JwtEnc,
+        planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
         projectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
-        projectBy2JwtEnc, projectEditBy1JwtEnc,
+        projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc,
       ] = jwts
     })
 
@@ -233,7 +247,7 @@ describe('6 - Plans', () => {
   it('check insertion of plan by second person, by same external ID', async () => {
     await request(Server)
       .post('/api/v2/claim')
-      .send({jwtEncoded: planBy2JwtEnc})
+      .send({jwtEncoded: planDupBy2JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(201)
@@ -340,6 +354,42 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('check insertion of second plan by second person', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planNewBy2JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('retrieve all plans by first', async () => {
+    await request(Server)
+      .get('/api/v2/report/plansByIssuer')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(3)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve all plans by second', async () => {
+    await request(Server)
+      .get('/api/v2/report/plansByIssuer')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
 })
 
 describe('6 - Projects', () => {
@@ -437,7 +487,7 @@ describe('6 - Projects', () => {
     await request(Server)
       .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .send({jwtEncoded: projectBy2JwtEnc})
+      .send({jwtEncoded: projectDupBy2JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(201)
@@ -551,6 +601,42 @@ describe('6 - Projects', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(3)
         expect(r.body.data[0].internalId).to.be.null
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('check insertion of second project by second person', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: projectNewBy2JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('retrieve all projects by first', async () => {
+    await request(Server)
+      .get('/api/v2/report/projectsByIssuer')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(3)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve all projects by second', async () => {
+    await request(Server)
+      .get('/api/v2/report/projectsByIssuer')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
       }).catch((err) => {
         return Promise.reject(err)
       })
