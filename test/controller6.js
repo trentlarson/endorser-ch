@@ -378,6 +378,18 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('retrieve plans by first starting with #2', async () => {
+    await request(Server)
+      .get('/api/v2/report/plansByIssuer?beforeId=2')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   it('retrieve all plans by second', async () => {
     await request(Server)
       .get('/api/v2/report/plansByIssuer')
@@ -625,6 +637,18 @@ describe('6 - Projects', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(3)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve projects by first starting with #2', async () => {
+    await request(Server)
+      .get('/api/v2/report/projectsByIssuer?beforeId=2')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
       }).catch((err) => {
         return Promise.reject(err)
       })
