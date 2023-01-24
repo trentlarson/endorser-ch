@@ -1457,7 +1457,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT object, url FROM network WHERE subject = ? ORDER BY object", 
+        "SELECT object, url FROM network WHERE subject = ? ORDER BY object",
         [this.ALL_SUBJECT_MATCH()],
         function(err, row) {
           data.push({did: row.object, url: row.url})
