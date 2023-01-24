@@ -52,7 +52,8 @@ class ClaimService {
     l.trace(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
     let jwtRec = await db.jwtById(id)
     if (jwtRec) {
-      let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject, claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim)}
+      let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject,
+                    claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim)}
       return result
     } else {
       return null
@@ -64,7 +65,8 @@ class ClaimService {
     var resultData
     resultData = await db.jwtsByParams(params)
     let result = resultData.map(j => {
-      let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext, claimType:j.claimType, claim:JSON.parse(j.claim)}
+      let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext,
+                     claimType:j.claimType, claim:JSON.parse(j.claim)}
       return thisOne
     })
     return result
@@ -149,7 +151,10 @@ class ClaimService {
             for (let idAndClaim of idAndClaimArray) {
               latestHashChainHex = hashChain(latestHashChainHex, [idAndClaim])
               if (idAndClaim.hashHex === null) {
-                l.error("Found entries without a hashed claim, indicating some problem when inserting jwt records. Will create.")
+                l.error(
+                  "Found entries without a hashed claim, indicating some problem when inserting jwt records."
+                    + " Will create."
+                )
                 idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
               }
               updates.push(db.jwtSetMerkleHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
@@ -184,18 +189,26 @@ class ClaimService {
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
-      var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
-      if (events.length === 0) return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
+      var events = await db.eventsByParams(
+        {orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime}
+      )
+      if (events.length === 0) {
+        return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
+      }
 
       let agentDid = origClaim.agent?.identifier || origClaim.agent?.did
 
       let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
-      if (actionClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
+      if (actionClaimId === null) {
+        return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
+      }
 
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
-      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
+      if (confirmation !== null) {
+        return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
+      }
 
       let origClaimStr = canonicalize(origClaim)
 
@@ -210,12 +223,16 @@ class ClaimService {
       let partyDid = origClaim.party?.identifier || origClaim.party?.did
 
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
-      if (tenureClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
+      if (tenureClaimId === null) {
+        return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
+      }
 
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
-      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
+      if (confirmation !== null) {
+        return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
+      }
 
       let origClaimStr = canonicalize(origClaim)
 
@@ -241,7 +258,9 @@ class ClaimService {
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await db.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
-      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
+      if (confirmation !== null) {
+        return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
+      }
 
       let origClaimStr = canonicalize(origClaim)
 
@@ -254,7 +273,9 @@ class ClaimService {
 
       // check for duplicate
       let confirmation = await db.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
-      if (confirmation !== null) return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
+      if (confirmation !== null) {
+        return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
+      }
 
       let origClaimStr = canonicalize(origClaim)
 
@@ -283,7 +304,8 @@ class ClaimService {
       {
         let origClaim = claim['object']
         if (Array.isArray(origClaim)) {
-          // if we run these in parallel then there can be duplicates (when we haven't inserted previous ones in time for the duplicate check)
+          // if we run these in parallel then there can be duplicates
+          // (when we haven't inserted previous ones in time for the duplicate check)
           for (var claim of origClaim) {
             recordings.push(await this.createOneConfirmation(jwtId, issuerDid, claim).catch(console.log))
           }
@@ -322,11 +344,18 @@ class ClaimService {
       } else {
         event = events[0]
         if (events.length > 1) {
-          l.warn(`${this.constructor.name} Multiple events exist with orgName ${orgName} name ${claim.event.name} startTime ${claim.event.startTime}`)
+          l.warn(
+            `${this.constructor.name} Multiple events exist with orgName ${orgName} name ${claim.event.name}`
+            + ` startTime ${claim.event.startTime}`)
         }
 
         let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
-        if (actionClaimId) return Promise.reject(new Error("Same user attempted to record an action claim that already exists with ID " + actionClaimId))
+        if (actionClaimId) {
+          return Promise.reject(
+            new Error("Same user attempted to record an action claim that already exists with ID "
+                      + actionClaimId)
+          )
+        }
 
       }
 
@@ -623,7 +652,8 @@ class ClaimService {
       { // handle multiple claims
         let origClaims = claim['originalClaims']
         if (origClaims) {
-          // if we run these in parallel then there can be duplicates (when we haven't inserted previous ones in time for the duplicate check)
+          // if we run these in parallel then there can be duplicates
+          // (when we haven't inserted previous ones in time for the duplicate check)
           for (var origClaim of origClaims) {
             recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
           }
@@ -635,7 +665,8 @@ class ClaimService {
       return { confirmations }
 
     } else {
-      l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
+      l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type']
+             + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
 
       return {}
     }
@@ -693,14 +724,15 @@ class ClaimService {
   // ... and also if successfully verified: data, doc, signature, signer
   async decodeAndVerifyJwt(jwt) {
     if (process.env.NODE_ENV === 'test-local') {
-      // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed, eg. no "." separators.
+      // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed
+      // eg. no "." separators.
       let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
       if (payload.exp < nowEpoch) {
         l.warn("JWT with exp " + payload.exp + " has expired but we're in test mode so using a new time." )
         payload.exp = nowEpoch + 100
       }
-      return {payload, issuer: payload.iss, header: {typ: "test"}} // all the other elements will be undefined, obviously
+      return {payload, issuer: payload.iss, header: {typ: "test"}} // all the other elements will be undefined
     } else {
 
       try {
@@ -738,7 +770,10 @@ class ClaimService {
 
     const registered = await db.registrationByDid(payload.iss)
     if (!registered) {
-      return Promise.reject({ clientError: { message: `You are not registered to make claims. Contact an existing user for help.`, code: ERROR_CODES.UNREGISTERED_USER }})
+      return Promise.reject(
+        { clientError: { message: `You are not registered to make claims. Contact an existing user for help.`,
+                         code: ERROR_CODES.UNREGISTERED_USER }}
+      )
     }
 
     const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
@@ -747,7 +782,11 @@ class ClaimService {
     // 0 shouldn't mean DEFAULT
     const maxAllowedClaims = registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
     if (claimedCount >= maxAllowedClaims) {
-      return Promise.reject({ clientError: { message: `You have already made ${maxAllowedClaims} claims this week. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_CLAIM_LIMIT } })
+      return Promise.reject(
+        { clientError: { message: `You have already made ${maxAllowedClaims} claims this week.`
+                         + ` Contact an administrator for a higher limit.`,
+                         code: ERROR_CODES.OVER_CLAIM_LIMIT } }
+      )
     }
 
     const payloadClaim = this.extractClaim(payload)
@@ -759,13 +798,19 @@ class ClaimService {
         // 0 shouldn't mean DEFAULT
         const maxAllowedRegs = registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
         if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: { message: `You have already registered ${maxAllowedRegs} this month. Contact an administrator for a higher limit.`, code: ERROR_CODES.OVER_REGISTRATION_LIMIT } })
+          return Promise.reject({ clientError: { message: `You have already registered ${maxAllowedRegs} this month.`
+                                                 + ` Contact an administrator for a higher limit.`,
+                                                 code: ERROR_CODES.OVER_REGISTRATION_LIMIT } }
+                               )
         }
 
         // disallow registering others in the same week they got registered
         const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
         if (registered.epoch > startOfWeekEpoch) {
-          return Promise.reject({ clientError: { message: `You cannot register others the same week you got registered.`, code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } })
+          return Promise.reject(
+            { clientError: { message: `You cannot register others the same week you got registered.`, 
+                             code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } }
+          )
         }
       }
 
