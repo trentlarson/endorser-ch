@@ -1,6 +1,6 @@
 
 CREATE TABLE plan_claim (
-       jwtId CHARACTER(26),
+       jwtId text PRIMARY KEY,
        issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
        agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
        fullIri TEXT,
@@ -20,7 +20,7 @@ CREATE INDEX plan_endTime ON plan_claim(endTime);
 CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
 
 CREATE TABLE project_claim (
-       jwtId TEXT,
+       jwtId TEXT PRIMARY KEY,
        issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
        agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
        fullIri TEXT,

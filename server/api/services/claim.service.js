@@ -187,10 +187,7 @@ class ClaimService {
       var events = await db.eventsByParams({orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime})
       if (events.length === 0) return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
 
-      let agentDid = origClaim.agent && origClaim.agent.identifier
-      if (!isDid(agentDid) && origClaim.agent.did) {
-        agentDid = origClaim.agent.did
-      }
+      let agentDid = origClaim.agent?.identifier || origClaim.agent?.did
 
       let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
       if (actionClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
@@ -210,10 +207,7 @@ class ClaimService {
     } else if (origClaim['@context'] === 'https://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
 
-      let partyDid = origClaim.party && origClaim.party.identifier
-      if (!isDid(partyDid) && origClaim.party.did) {
-        partyDid = origClaim.party.did
-      }
+      let partyDid = origClaim.party?.identifier || origClaim.party?.did
 
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
@@ -237,7 +231,11 @@ class ClaimService {
                && origClaim.member.member
                && origClaim.member.member.identifier) {
 
-      let orgRoleClaimId = await db.orgRoleClaimIdByOrgAndDates(origClaim.name, origClaim.member.roleName, origClaim.member.startDate, origClaim.member.endDate, origClaim.member.member.identifier)
+      let orgRoleClaimId =
+          await db.orgRoleClaimIdByOrgAndDates(
+            origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
+            origClaim.member.endDate, origClaim.member.member.identifier
+          )
       if (orgRoleClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
 
       // check for duplicate
@@ -300,10 +298,7 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
 
-      let agentDid = claim.agent && claim.agent.identifier
-      if (!isDid(agentDid) && claim.agent.did) {
-        agentDid = claim.agent.did
-      }
+      let agentDid = claim.agent?.identifier || claim.agent?.did
 
       if (!agentDid) {
         l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no agent DID.`)
@@ -364,61 +359,97 @@ class ClaimService {
 
       // note that this is similar to Project
 
-      let agentDid = claim.agent && claim.agent.identifier
-      if (!isDid(agentDid) && claim.agent.did) {
-        agentDid = claim.agent.did
-      }
+      let agentDid = claim.agent?.identifier || claim.agent?.did
 
       let internalId = null
-      let fullIri = claim.identifier
-      if (fullIri != null) {
-        if (!isGlobalUri(fullIri)) {
-          // it's not an IRI, so assume they're creating an endorser.ch IRI
-          internalId = fullIri
-          fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + internalId
-        } else {
-          // it's a full IRI
-          if (fullIri.startsWith(GLOBAL_PLAN_ID_IRI_PREFIX)) {
-            internalId = fullIri.substring(GLOBAL_PLAN_ID_IRI_PREFIX.length)
-          }
-          // otherwise, the IRI is from a different system so internalId will be null
-        }
-      } else {
-        // there is no full IRI, so we'll choose one for our system
-        internalId = db.newUlid()
+      let fullIri = null
+      let planRecord = null
+      let clientMessage = null
+      if (claim.identifier == null) {
+        internalId = jwtId
         fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + internalId
+      } else {
+        if (isGlobalUri(claim.identifier)) {
+          if (claim.identifier.startsWith(GLOBAL_PLAN_ID_IRI_PREFIX)) {
+            // It should already exist.
+            planRecord = await db.planInfoByFullIri(claim.identifier)
+            if (planRecord == null) {
+              clientMessage = 'You are not allowed to use an identifier that does not already exist.'
+                + ' This will not be saved as a valid plan.'
+            } else {
+              // Found an existing record.
+              internalId = planRecord.internalId
+              fullIri = planRecord.fullIri
+            }
+          } else {
+            fullIri = claim.identifier
+
+            // It is an IRI from some other system... fine.
+            // It might already be in our system.
+            planRecord = await db.planInfoByFullIri(fullIri)
+            if (planRecord == null) {
+              internalId = jwtId
+            } else {
+              internalId = planRecord.internalId
+            }
+          }
+
+        } else {
+          // It is not a global IRI.
+          planRecord =
+            await db.planInfoByFullIri(GLOBAL_PLAN_ID_IRI_PREFIX + claim.identifier)
+
+          if (planRecord == null) {
+            clientMessage = 'You are not allowed to use an identifier that does not exist yet.'
+              + ' This will not be saved as a valid plan.'
+          } else {
+            internalId = planRecord.internalId
+            fullIri = planRecord.fullIri
+          }
+        }
       }
 
       // insert or edit
 
-      const entity = {
-        jwtId: jwtId,
-        agentDid: agentDid,
-        issuerDid: issuerDid,
-        fullIri: fullIri,
-        internalId: internalId,
-        description: claim.description,
-        image: claim.image,
-        endTime: claim.endTime,
-        startTime: claim.startDate,
-        resultDescription: claim.resultDescription,
-        resultIdentifier: claim.resultIdentifier,
-      }
-
-      const planRecord = await db.planInfoByExternalId(fullIri)
-      if (planRecord == null) {
-        // new record
-        const planId = await db.planInsert(entity)
-        return { planId, fullIri }
-
+      if (fullIri == null || internalId == null) {
+        // this is not valid for storing in our system
+        return { clientMessage }
       } else {
-        // edit that record
-        if (issuerDid == planRecord.issuerDid
-            || issuerDid == planRecord.agentDid) {
-          const numUpdated = await db.planUpdate(entity)
+        // this is valid for our system
+
+        const entity = {
+          jwtId: jwtId,
+          agentDid: agentDid,
+          issuerDid: issuerDid,
+          fullIri: fullIri,
+          internalId: internalId,
+          description: claim.description,
+          image: claim.image,
+          endTime: claim.endTime,
+          startTime: claim.startDate,
+          resultDescription: claim.resultDescription,
+          resultIdentifier: claim.resultIdentifier,
+        }
+
+        if (planRecord == null) {
+          // new record
+          const planId = await db.planInsert(entity)
+          return { clientMessage, fullIri, internalId, recordsSavedForEdit: 1 }
 
         } else {
-          // don't edit because they're not the issuer or agent
+          // edit that record
+          if (issuerDid == planRecord.issuerDid
+              || issuerDid == planRecord.agentDid) {
+            const numUpdated = await db.planUpdate(entity)
+
+            if (clientMessage != null) {
+              return { clientMessage, fullIri, internalId, recordsSavedForEdit: numUpdated }
+            }
+          } else {
+            // don't edit because they're not the issuer or agent
+            return { clientMessage: 'you are not the issuer or agent of the original record.'
+                     + ' This was not stored as a valid plan.' }
+          }
         }
       }
 
@@ -427,75 +458,105 @@ class ClaimService {
 
       // note that this is similar to PlanAction
 
-      let agentDid = claim.agent && claim.agent.identifier
-      if (!isDid(agentDid) && claim.agent.did) {
-        agentDid = claim.agent.did
-      }
+      let agentDid = claim.agent?.identifier || claim.agent?.did
 
       let internalId = null
-      let fullIri = claim.identifier
-      if (fullIri != null) {
-        if (!isGlobalUri(fullIri)) {
-          // it's not an IRI, so assume they're creating an endorser.ch IRI
-          internalId = fullIri
-          fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + internalId
-        } else {
-          // it's a full IRI
-          if (fullIri.startsWith(GLOBAL_PROJECT_ID_IRI_PREFIX)) {
-            internalId = fullIri.substring(GLOBAL_PROJECT_ID_IRI_PREFIX.length)
-          }
-          // otherwise, the IRI is from a different system so internalId will be null
-        }
-      } else {
-        // there is no full IRI, so we'll choose one for our system
-        internalId = db.newUlid()
+      let fullIri = null
+      let projectRecord = null
+      let clientMessage = null
+      if (claim.identifier == null) {
+        internalId = jwtId
         fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + internalId
+      } else {
+        if (isGlobalUri(claim.identifier)) {
+          if (claim.identifier.startsWith(GLOBAL_PROJECT_ID_IRI_PREFIX)) {
+            // It should already exist.
+            projectRecord = await db.projectInfoByFullIri(claim.identifier)
+            if (projectRecord == null) {
+              clientMessage = 'You are not allowed to use an identifier that does not already exist.'
+                + ' This will not be saved as a valid project.'
+            } else {
+              // Found an existing record.
+              internalId = projectRecord.internalId
+              fullIri = projectRecord.fullIri
+            }
+          } else {
+            fullIri = claim.identifier
+
+            // It is an IRI from some other system... fine.
+            // It might already be in our system.
+            projectRecord = await db.projectInfoByFullIri(fullIri)
+            if (projectRecord == null) {
+              internalId = jwtId
+            } else {
+              internalId = projectRecord.internalId
+            }
+          }
+
+        } else {
+          // It is not a global IRI.
+          projectRecord =
+            await db.projectInfoByFullIri(GLOBAL_PROJECT_ID_IRI_PREFIX + claim.identifier)
+
+          if (projectRecord == null) {
+            clientMessage = 'You are not allowed to use an identifier that does not exist yet.'
+              + ' This will not be saved as a valid project.'
+          } else {
+            internalId = projectRecord.internalId
+            fullIri = projectRecord.fullIri
+          }
+        }
       }
 
       // insert or edit
 
-      const entity = {
-        jwtId: jwtId,
-        agentDid: agentDid,
-        issuerDid: issuerDid,
-        fullIri: fullIri,
-        internalId: internalId,
-        description: claim.description,
-        image: claim.image,
-        endTime: claim.endTime,
-        startTime: claim.startDate,
-        resultDescription: claim.resultDescription,
-        resultIdentifier: claim.resultIdentifier,
-      }
-
-      const projectRecord = await db.projectInfoByExternalId(fullIri)
-      if (projectRecord == null) {
-        // new record
-        const projectId = await db.projectInsert(entity)
-        return { projectId, fullIri }
-
+      if (fullIri == null || internalId == null) {
+        // this is not valid for storing in our system
+        return { clientMessage }
       } else {
-        // edit that record
-        if (issuerDid == projectRecord.issuerDid
-            || issuerDid == projectRecord.agentDid) {
-          const numUpdated = await db.projectUpdate(entity)
+        // this is valid for our system
+
+        const entity = {
+          jwtId: jwtId,
+          agentDid: agentDid,
+          issuerDid: issuerDid,
+          fullIri: fullIri,
+          internalId: internalId,
+          description: claim.description,
+          image: claim.image,
+          endTime: claim.endTime,
+          startTime: claim.startDate,
+          resultDescription: claim.resultDescription,
+          resultIdentifier: claim.resultIdentifier,
+        }
+
+        if (projectRecord == null) {
+          // new record
+          const projectId = await db.projectInsert(entity)
+          return { clientMessage, fullIri, internalId, recordsSavedForEdit: 1 }
 
         } else {
-          // don't edit because they're not the issuer or agent
+          // edit that record
+          if (issuerDid == projectRecord.issuerDid
+              || issuerDid == projectRecord.agentDid) {
+            const numUpdated = await db.projectUpdate(entity)
+
+            if (clientMessage != null) {
+              return { clientMessage, fullIri, internalId, recordsSavedForEdit: numUpdated }
+            }
+          } else {
+            // don't edit because they're not the issuer or agent
+            return { clientMessage: 'you are not the issuer or agent of the original record.'
+                     + ' This was not stored as a valid project.' }
+          }
         }
       }
 
     } else if (isEndorserRegistrationClaim(claim)) {
 
-      let agentDid = claim.agent && claim.agent.identifier
-      if (!isDid(agentDid) && claim.agent.did) {
-        agentDid = claim.agent.did
-      }
+      let agentDid = claim.agent?.identifier || claim.agent?.did
 
-      let participantDid = claim.participant && claim.participant.identifier
-      if (!isDid(participantDid) && claim.participant.did) {
-        participantDid = claim.participant.did
-      }
+      let participantDid = claim.participant?.identifier || claim.participant?.did
 
       let registration = {
         did: participantDid,
@@ -510,10 +571,7 @@ class ClaimService {
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {
 
-      let partyDid = claim.party && claim.party.identifier
-      if (!isDid(partyDid) && claim.party.did) {
-        partyDid = claim.party.did
-      }
+      let partyDid = claim.party?.identifier || claim.party?.did
 
       let bbox = calcBbox(claim.spatialUnit.geo.polygon)
       let entity =
@@ -578,6 +636,8 @@ class ClaimService {
 
     } else {
       l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type'] + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
+
+      return {}
     }
 
   }
@@ -589,6 +649,12 @@ class ClaimService {
 
     let embeddedResults
     if (Array.isArray(claim)) {
+
+      if (Array.isArray.payloadClaim
+          && R.filter(c => c['@type'] === 'Project', claim).length > 1) {
+        // To allow this, you'll have to assign different IDs to each project.
+        return { clientError: 'Sending multiple Projects at once does not allow editing. Send individually.' }
+      }
 
       var recordings = []
       { // handle multiple claims
@@ -614,7 +680,12 @@ class ClaimService {
         .catch(err => {
           return err
         })
-    return { embeddedResult: embeddedResults }
+
+    if (Array.isArray(embeddedResults)) {
+      return { embeddedResults: embeddedResults, networkResult: allNetRecords }
+    } else {
+      return R.mergeLeft(embeddedResults, { networkResults: allNetRecords })
+    }
 
   }
 
@@ -648,7 +719,7 @@ class ClaimService {
   /**
      @return object with:
      - id of claim
-     - extra info for other created data, eg. planActionId if one was generated
+     - extra info for other created data, eg. planId if one was generated
    **/
   async createWithClaimRecord(jwtEncoded, authIssuerId) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);

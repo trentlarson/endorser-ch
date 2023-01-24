@@ -163,6 +163,8 @@ async function addCanSee(subject, object, url) {
     }
   }
   l.trace("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
+
+  return true
 }
 
 /**

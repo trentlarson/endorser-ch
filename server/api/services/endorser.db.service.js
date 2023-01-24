@@ -901,17 +901,15 @@ class EndorserDatabase {
     })
   }
 
-  async planInfoByExternalId(fullIri) {
+  async planInfoByFullIri(fullIri) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT * FROM plan_claim WHERE fullIri = ?", [fullIri], function(err, row) {
-        if (err) {
-          reject(err)
-        } else if (row) {
-          resolve(row)
-        } else {
-          resolve(null)
+      db.get(
+        "SELECT * FROM plan_claim WHERE fullIri = ?",
+        [fullIri],
+        function(err, row) {
+          if (err) { reject(err) } else if (row) { resolve(row) } else { resolve(null) }
         }
-      })
+      )
     })
   }
 
@@ -1009,17 +1007,15 @@ class EndorserDatabase {
     })
   }
 
-  async projectInfoByExternalId(fullIri) {
+  async projectInfoByFullIri(fullIri) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT * FROM project_claim WHERE fullIri = ?", [fullIri], function(err, row) {
-        if (err) {
-          reject(err)
-        } else if (row) {
-          resolve(row)
-        } else {
-          resolve(null)
+      db.get(
+        "SELECT * FROM project_claim WHERE fullIri = ?",
+        [fullIri],
+        function(err, row) {
+          if (err) { reject(err) } else if (row) { resolve(row) } else { resolve(null) }
         }
-      })
+      )
     })
   }
 
