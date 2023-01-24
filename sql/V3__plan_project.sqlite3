@@ -5,6 +5,7 @@ CREATE TABLE plan_claim (
        agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
        fullIri TEXT,
        internalId TEXT, -- short ID (without scheme:...), meaning this server is the master; otherwise, null
+       name TEXT,
        description TEXT,
        image TEXT,
        endTime DATE,
@@ -25,6 +26,7 @@ CREATE TABLE project_claim (
        agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
        fullIri TEXT,
        internalId TEXT, -- short ID (without scheme:...), meaning this server is the master; otherwise, null
+       name TEXT,
        description TEXT,
        image TEXT,
        endTime DATE,
