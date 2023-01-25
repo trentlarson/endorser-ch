@@ -164,12 +164,12 @@ export default express
   .get('/:id', claimController.getById)
 
 /**
- * Get most recent "entity" (claim that matches an entity ID)
+ * Get most recent "entity" (claim that matches an handle ID)
  *
  * @group report - Reports
- * @route GET /api/report/lastClaimForEntity
- * @param {string} id.query.required - the persistent "entity" ID
- * @returns {Jwt} 200 - the jwt record with the claim of the most recent changes for that entity ID
+ * @route GET /api/claim/byHandle/{id}
+ * @param {string} id.params.required - the persistent "entity" handle ID
+ * @returns {Jwt} 200 - the claim record with the most recent changes for that handle ID
  * @returns {''} 404 - if nothing found
  * @returns {Error} default - Unexpected error
  */

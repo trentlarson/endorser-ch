@@ -819,7 +819,7 @@ class ClaimService {
         }
       }
 
-      // Generate the local id and find or generate the global entity identifier.
+      // Generate the local id and find or generate the global "entity" handle ID.
       let internalId = db.newUlid()
       let handleId
       // If this has an identifier, check the previous instance to see if they are allowed to edit.
@@ -852,9 +852,9 @@ class ClaimService {
 
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)
-      const jwtEntity = db.buildJwtEntity(payload, internalId, handleId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
+      const jwtEntry = db.buildJwtEntry(payload, internalId, handleId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
       const jwtRowId =
-          await db.jwtInsert(jwtEntity)
+          await db.jwtInsert(jwtEntry)
           .catch((err) => {
             return Promise.reject(err)
           })
@@ -868,13 +868,13 @@ class ClaimService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      let embedded = await this.createEmbeddedClaimRecords(jwtEntity.id, issuerDid, payloadClaim)
+      let embedded = await this.createEmbeddedClaimRecords(jwtEntry.id, issuerDid, payloadClaim)
         .catch(err => {
           l.error(err, `Failed to create embedded claim records.`)
           return { embeddedRecordError: err }
         })
 
-      const result = R.mergeLeft({ claimId: jwtEntity.id, handleId: handleId }, embedded)
+      const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId }, embedded)
       return result
 
     } else {

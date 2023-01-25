@@ -566,7 +566,7 @@ class EndorserDatabase {
    * JWT
    **/
 
-  buildJwtEntity(payload, id, handleId, claim, claimStr, claimEncoded, jwtEncoded) {
+  buildJwtEntry(payload, id, handleId, claim, claimStr, claimEncoded, jwtEncoded) {
     let issuedAt = new Date(payload.iat * 1000).toISOString()
     let issuer = payload.iss
     let subject = payload.sub
@@ -709,14 +709,14 @@ class EndorserDatabase {
   }
   **/
 
-  jwtInsert(entity) {
+  jwtInsert(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entry.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
         [
-          entity.id, entity.issuer, entity.subject, entity.claimType, entity.claimContext, entity.claim,
-          entity.handleId, entity.claimEncoded, entity.jwtEncoded, entity.hashHex
+          entry.id, entry.issuer, entry.subject, entry.claimType, entry.claimContext, entry.claim,
+          entry.handleId, entry.claimEncoded, entry.jwtEncoded, entry.hashHex
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
@@ -728,12 +728,12 @@ class EndorserDatabase {
    *
    * This can be useful when cleaning up data, but otherwise we don't edit previous records.
    *
-  jwtUpdateClaimFields(entity) {
+  jwtUpdateClaimFields(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE jwt SET claimType = ?, claimContext = ?, claim = ?, claimEncoded = ? WHERE id = ?")
       db.run(
         stmt,
-        [entity.claimType, entity.claimContext, entity.claim, entity.claimEncoded, entity.id],
+        [entry.claimType, entry.claimContext, entry.claim, entry.claimEncoded, entry.id],
         function(err) {
           if (err) {
             reject(err)
@@ -896,14 +896,14 @@ class EndorserDatabase {
    * Org Role
    **/
 
-  async orgRoleInsert(entity) {
+  async orgRoleInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO org_role_claim (jwtId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
         [
-          entity.jwtId, entity.issuerDid, entity.orgName, entity.roleName,
-          entity.startDate, entity.endDate, entity.memberDid
+          entry.jwtId, entry.issuerDid, entry.orgName, entry.roleName,
+          entry.startDate, entry.endDate, entry.memberDid
         ],
         function(err) { if (err) { reject(err) } else { resolve(this.lastID) } })
     })
@@ -960,7 +960,7 @@ class EndorserDatabase {
    * Plan
    **/
 
-  async planInsert(entity) {
+  async planInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri, internalId"
@@ -968,9 +968,9 @@ class EndorserDatabase {
           + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
-        entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId,
-        entity.name, entity.description, entity.image, entity.endTime, entity.startTime,
-        entity.resultDescription, entity.resultIdentifier,
+        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri, entry.internalId,
+        entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+        entry.resultDescription, entry.resultIdentifier,
       ], function(err) {
         if (err) {
           reject(err)
@@ -1029,7 +1029,7 @@ class EndorserDatabase {
     )
   }
 
-  async planUpdate(entity) {
+  async planUpdate(entry) {
     return new Promise((resolve, reject) => {
       // don't allow update of IDs
       var stmt = (
@@ -1039,9 +1039,9 @@ class EndorserDatabase {
           + " WHERE fullIri = ?"
       )
       db.run(stmt, [
-        entity.jwtId, entity.issuerDid, entity.agentDid,
-        entity.name, entity.description, entity.image, entity.endTime, entity.startTime,
-        entity.resultDescription, entity.resultIdentifier, entity.fullIri
+        entry.jwtId, entry.issuerDid, entry.agentDid,
+        entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+        entry.resultDescription, entry.resultIdentifier, entry.fullIri
       ], function(err) {
         if (!err && this.changes === 1) {
           resolve()
@@ -1064,7 +1064,7 @@ class EndorserDatabase {
    * Project
    **/
 
-  async projectInsert(entity) {
+  async projectInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri, internalId"
@@ -1072,9 +1072,9 @@ class EndorserDatabase {
           + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
-        entity.jwtId, entity.issuerDid, entity.agentDid, entity.fullIri, entity.internalId,
-        entity.name, entity.description, entity.image, entity.endTime, entity.startTime,
-        entity.resultDescription, entity.resultIdentifier,
+        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri, entry.internalId,
+        entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+        entry.resultDescription, entry.resultIdentifier,
       ], function(err) {
         if (err) {
           reject(err)
@@ -1133,7 +1133,7 @@ class EndorserDatabase {
     )
   }
 
-  async projectUpdate(entity) {
+  async projectUpdate(entry) {
     return new Promise((resolve, reject) => {
       // don't allow update of IDs
       var stmt = (
@@ -1143,9 +1143,9 @@ class EndorserDatabase {
           + " WHERE fullIri = ?"
       )
       db.run(stmt, [
-        entity.jwtId, entity.issuerDid, entity.agentDid,
-        entity.name, entity.description, entity.image, entity.endTime, entity.startTime,
-        entity.resultDescription, entity.resultIdentifier, entity.fullIri
+        entry.jwtId, entry.issuerDid, entry.agentDid,
+        entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+        entry.resultDescription, entry.resultIdentifier, entry.fullIri
       ], function(err) {
         if (!err && this.changes === 1) {
           resolve()
@@ -1167,12 +1167,12 @@ class EndorserDatabase {
    * Registration
    **/
 
-  async registrationInsert(entity) {
+  async registrationInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT OR IGNORE INTO registration (did, agent, epoch, jwtId, maxRegs, maxClaims) VALUES (?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
-        [entity.did, entity.agent, entity.epoch, entity.jwtId, entity.maxRegs, entity.maxClaims],
+        [entry.did, entry.agent, entry.epoch, entry.jwtId, entry.maxRegs, entry.maxClaims],
         function(err) {
           if (err) {
             reject(err)
@@ -1335,14 +1335,14 @@ class EndorserDatabase {
   }
 
 
-  async tenureInsert(entity) {
+  async tenureInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO tenure_claim (jwtId, issuerDid, partyDid, polygon, westlon, minlat, eastlon, maxlat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
         [
-          entity.jwtId, entity.issuerDid, entity.partyDid, entity.polygon,
-          entity.westLon, entity.minLat, entity.eastLon, entity.maxLat
+          entry.jwtId, entry.issuerDid, entry.partyDid, entry.polygon,
+          entry.westLon, entry.minLat, entry.eastLon, entry.maxLat
         ],
         function(err) {
           if (err) {
@@ -1373,13 +1373,13 @@ class EndorserDatabase {
     })
   }
 
-  async voteInsert(entity) {
+  async voteInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO vote_claim (jwtId, issuerDid, actionOption, candidate, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, datetime(?))");
       db.run(
         stmt,
         [
-          entity.jwtId, entity.issuerDid, entity.actionOption, entity.candidate, entity.eventName, entity.eventStartTime
+          entry.jwtId, entry.issuerDid, entry.actionOption, entry.candidate, entry.eventName, entry.eventStartTime
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
