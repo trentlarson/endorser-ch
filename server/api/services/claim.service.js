@@ -820,7 +820,6 @@ class ClaimService {
       }
 
       let localId = db.newUlid()
-      /**
       let globalId
       // If this has an identifier, check the previous instance to see if they are allowed to edit.
       if (payloadClaim.identifier) { // 'identifier' is a schema.org convention; may add others
@@ -828,25 +827,27 @@ class ClaimService {
           isGlobalUri(payloadClaim.identifier)
           ? payloadClaim.identifier
           : globalFromInternalIdentifier(payloadClaim.identifier)
-        const prevEntry = db.jwtLastByClaimIdentifier(globalId)
-        if (prevEntry.issuer === payload.iss) {
+        const prevEntry = await db.jwtLastByClaimIdentifier(globalId)
+        if (!prevEntry) {
           // we're OK to continue
         } else {
-          const prevClaim = JSON.parse(prevEntry.claim)
-          if (prevClaim.agent?.identifier === payload.iss) {
+          if (prevEntry.issuer === payload.iss) {
             // we're OK to continue
           } else {
-            // someday check other properties, eg 'member' in Organization (requiring a role check)
-            return Promise.reject(
-              { clientError: { message: `You cannot use an identifier if you did not create the original.` } }
-            )
+            const prevClaim = JSON.parse(prevEntry.claim)
+            if (prevClaim.agent?.identifier === payload.iss) {
+              // we're OK to continue
+            } else {
+              // someday check other properties, eg 'member' in Organization (requiring a role check)
+              return Promise.reject(
+                { clientError: { message: `You cannot use an identifier if you did not create the original.` } }
+              )
+            }
           }
         }
       } else {
         globalId = globalFromInternalIdentifier(localId)
       }
-      **/
-      const globalId = localId
 
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)

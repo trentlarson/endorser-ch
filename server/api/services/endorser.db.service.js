@@ -812,7 +812,9 @@ class EndorserDatabase {
   jwtLastByClaimIdentifier(identifier) {
     return this.jwtLastByClaimIdentifierRaw(identifier)
       .then(row => {
-        row.issuedAt = isoAndZonify(row.issuedAt)
+        if (row) {
+          row.issuedAt = isoAndZonify(row.issuedAt)
+        }
         return row
       })
   }
