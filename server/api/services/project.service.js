@@ -1,6 +1,6 @@
 import l from '../../common/logger'
 import db from './endorser.db.service'
-import { GLOBAL_PLAN_ID_IRI_PREFIX, GLOBAL_PROJECT_ID_IRI_PREFIX, isGlobalUri } from './util'
+import { GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from './util'
 
 class PlanService {
 
@@ -9,7 +9,7 @@ class PlanService {
     l.trace(`${this.constructor.name}.byExternalId(${externalId})`);
     if (!isGlobalUri(externalId)) {
       // assume they're requesting an endorser.ch URI
-      externalId = GLOBAL_PLAN_ID_IRI_PREFIX + externalId
+      externalId = GLOBAL_ENTITY_ID_IRI_PREFIX + externalId
     }
     return db.planInfoByFullIri(externalId)
   }
@@ -23,7 +23,7 @@ class ProjectService {
     l.trace(`${this.constructor.name}.byExternalId(${externalId})`);
     if (!isGlobalUri(externalId)) {
       // assume they're requesting an endorser.ch URI
-      externalId = GLOBAL_PROJECT_ID_IRI_PREFIX + externalId
+      externalId = GLOBAL_ENTITY_ID_IRI_PREFIX + externalId
     }
     return db.projectInfoByFullIri(externalId)
   }

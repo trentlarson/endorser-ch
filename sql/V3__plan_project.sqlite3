@@ -1,7 +1,7 @@
 
-ALTER TABLE jwt ADD COLUMN claimIdentifier TEXT; -- full IRI for this entity
+ALTER TABLE jwt ADD COLUMN entityId TEXT; -- full IRI for this entity, used to update data via later claims
 
-CREATE INDEX jwt_claimIdentifier ON jwt(claimIdentifier);
+CREATE INDEX jwt_entityId ON jwt(entityId);
 
 CREATE TABLE plan_claim (
        jwtId text PRIMARY KEY,

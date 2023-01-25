@@ -79,6 +79,15 @@ let orgRoleController = new OrgRoleController();
 
 import DbService from '../services/endorser.db.service';
 class DbController {
+  getLastClaimWithIdentifier(req, res) {
+    DbService.jwtLastByEntityId(req.query.id)
+      .then(result => {
+        result.claim = JSON.parse(result.claim)
+        return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+      })
+      .then(r => res.json(r))
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
   getVoteCounts(req, res) {
     DbService.retrieveVoteCounts()
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
@@ -152,6 +161,18 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/issuersWhoClaimedOrConfirmed', claimController.getIssuersMatchingClaim)
+
+/**
+ * Get issuers for a claim
+ *
+ * @group report - Reports
+ * @route GET /api/report/issuersWhoClaimedOrConfirmed
+ * @param {string} claimId.query.required - the ID of the claim
+ * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
+ * @returns {Error} default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/lastClaimForEntity', dbController.getLastClaimWithIdentifier)
 
 /**
  * Get claims and confirmations for individual

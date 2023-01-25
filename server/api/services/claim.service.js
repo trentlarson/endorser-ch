@@ -10,8 +10,7 @@ import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 import l from '../../common/logger'
 import db from './endorser.db.service'
 import {
-  allDidsInside, calcBbox, ERROR_CODES,
-  GLOBAL_PLAN_ID_IRI_PREFIX, GLOBAL_PROJECT_ID_IRI_PREFIX,
+  allDidsInside, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX,
   hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT,
 } from './util';
 import { addCanSee } from './network-cache.service'
@@ -46,7 +45,7 @@ const isEndorserRegistrationClaim = (claim) =>
       && claim['@type'] === 'RegisterAction'
       && claim['object'] === SERVICE_ID
 
-const globalFromInternalIdentifier = (id) => GLOBAL_PROJECT_ID_IRI_PREFIX + id
+const globalFromInternalIdentifier = (id) => GLOBAL_ENTITY_ID_IRI_PREFIX + id
 
 class ClaimService {
 
@@ -55,7 +54,8 @@ class ClaimService {
     let jwtRec = await db.jwtById(id)
     if (jwtRec) {
       let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject,
-                    claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim)}
+                    claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim),
+                    entityId:jwtRec.entityId}
       return result
     } else {
       return null
@@ -68,7 +68,7 @@ class ClaimService {
     resultData = await db.jwtsByParams(params)
     let result = resultData.map(j => {
       let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext,
-                     claimType:j.claimType, claim:JSON.parse(j.claim)}
+                     claimType:j.claimType, claim:JSON.parse(j.claim), entityId:j.entityId}
       return thisOne
     })
     return result
@@ -372,7 +372,7 @@ class ClaimService {
                && claim.member['@type'] === 'OrganizationRole'
                && claim.member.member.identifier) {
 
-      let entity = {
+      let entry = {
         jwtId: jwtId,
         issuerDid: issuerDid,
         orgName: claim.name,
@@ -381,7 +381,7 @@ class ClaimService {
         endDate: claim.member.endDate,
         memberDid: claim.member.member.identifier
       }
-      let orgRoleId = await db.orgRoleInsert(entity)
+      let orgRoleId = await db.orgRoleInsert(entry)
       return { orgRoleId }
 
 
@@ -398,10 +398,10 @@ class ClaimService {
       let clientMessage = null
       if (claim.identifier == null) {
         internalId = jwtId
-        fullIri = GLOBAL_PLAN_ID_IRI_PREFIX + internalId
+        fullIri = GLOBAL_ENTITY_ID_IRI_PREFIX + internalId
       } else {
         if (isGlobalUri(claim.identifier)) {
-          if (claim.identifier.startsWith(GLOBAL_PLAN_ID_IRI_PREFIX)) {
+          if (claim.identifier.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)) {
             // It should already exist.
             planRecord = await db.planInfoByFullIri(claim.identifier)
             if (planRecord == null) {
@@ -428,7 +428,7 @@ class ClaimService {
         } else {
           // It is not a global IRI.
           planRecord =
-            await db.planInfoByFullIri(GLOBAL_PLAN_ID_IRI_PREFIX + claim.identifier)
+            await db.planInfoByFullIri(GLOBAL_ENTITY_ID_IRI_PREFIX + claim.identifier)
 
           if (planRecord == null) {
             clientMessage = 'You are not allowed to use an identifier that does not exist yet.'
@@ -448,7 +448,7 @@ class ClaimService {
       } else {
         // this is valid for our system
 
-        const entity = {
+        const entry = {
           jwtId: jwtId,
           agentDid: agentDid,
           issuerDid: issuerDid,
@@ -465,14 +465,14 @@ class ClaimService {
 
         if (planRecord == null) {
           // new record
-          const planId = await db.planInsert(entity)
+          const planId = await db.planInsert(entry)
           return { clientMessage, fullIri, internalId, recordsSavedForEdit: 1 }
 
         } else {
           // edit that record
           if (issuerDid == planRecord.issuerDid
               || issuerDid == planRecord.agentDid) {
-            const numUpdated = await db.planUpdate(entity)
+            const numUpdated = await db.planUpdate(entry)
 
             if (clientMessage != null) {
               return { clientMessage, fullIri, internalId, recordsSavedForEdit: numUpdated }
@@ -498,10 +498,10 @@ class ClaimService {
       let clientMessage = null
       if (claim.identifier == null) {
         internalId = jwtId
-        fullIri = GLOBAL_PROJECT_ID_IRI_PREFIX + internalId
+        fullIri = GLOBAL_ENTITY_ID_IRI_PREFIX + internalId
       } else {
         if (isGlobalUri(claim.identifier)) {
-          if (claim.identifier.startsWith(GLOBAL_PROJECT_ID_IRI_PREFIX)) {
+          if (claim.identifier.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)) {
             // It should already exist.
             projectRecord = await db.projectInfoByFullIri(claim.identifier)
             if (projectRecord == null) {
@@ -528,7 +528,7 @@ class ClaimService {
         } else {
           // It is not a global IRI.
           projectRecord =
-            await db.projectInfoByFullIri(GLOBAL_PROJECT_ID_IRI_PREFIX + claim.identifier)
+            await db.projectInfoByFullIri(GLOBAL_ENTITY_ID_IRI_PREFIX + claim.identifier)
 
           if (projectRecord == null) {
             clientMessage = 'You are not allowed to use an identifier that does not exist yet.'
@@ -548,7 +548,7 @@ class ClaimService {
       } else {
         // this is valid for our system
 
-        const entity = {
+        const entry = {
           jwtId: jwtId,
           agentDid: agentDid,
           issuerDid: issuerDid,
@@ -565,14 +565,14 @@ class ClaimService {
 
         if (projectRecord == null) {
           // new record
-          const projectId = await db.projectInsert(entity)
+          const projectId = await db.projectInsert(entry)
           return { clientMessage, fullIri, internalId, recordsSavedForEdit: 1 }
 
         } else {
           // edit that record
           if (issuerDid == projectRecord.issuerDid
               || issuerDid == projectRecord.agentDid) {
-            const numUpdated = await db.projectUpdate(entity)
+            const numUpdated = await db.projectUpdate(entry)
 
             if (clientMessage != null) {
               return { clientMessage, fullIri, internalId, recordsSavedForEdit: numUpdated }
@@ -607,7 +607,7 @@ class ClaimService {
       let partyDid = claim.party?.identifier || claim.party?.did
 
       let bbox = calcBbox(claim.spatialUnit.geo.polygon)
-      let entity =
+      let entry =
           {
             jwtId: jwtId,
             issuerDid: issuerDid,
@@ -619,7 +619,7 @@ class ClaimService {
             maxLat: bbox.maxLat
           }
 
-      let tenureId = await db.tenureInsert(entity)
+      let tenureId = await db.tenureInsert(entry)
       return { tenureId }
 
 
@@ -819,15 +819,16 @@ class ClaimService {
         }
       }
 
+      // Generate the local id and find or generate the global entity identifier.
       let localId = db.newUlid()
-      let globalId
+      let entityId
       // If this has an identifier, check the previous instance to see if they are allowed to edit.
       if (payloadClaim.identifier) { // 'identifier' is a schema.org convention; may add others
-        globalId =
+        entityId =
           isGlobalUri(payloadClaim.identifier)
           ? payloadClaim.identifier
           : globalFromInternalIdentifier(payloadClaim.identifier)
-        const prevEntry = await db.jwtLastByClaimIdentifier(globalId)
+        const prevEntry = await db.jwtLastByEntityIdRaw(entityId)
         if (!prevEntry) {
           // we're OK to continue
         } else {
@@ -846,12 +847,12 @@ class ClaimService {
           }
         }
       } else {
-        globalId = globalFromInternalIdentifier(localId)
+        entityId = globalFromInternalIdentifier(localId)
       }
 
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)
-      const jwtEntity = db.buildJwtEntity(payload, localId, globalId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
+      const jwtEntity = db.buildJwtEntity(payload, localId, entityId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
       const jwtRowId =
           await db.jwtInsert(jwtEntity)
           .catch((err) => {

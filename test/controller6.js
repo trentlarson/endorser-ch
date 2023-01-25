@@ -8,9 +8,7 @@ import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import {
-  GLOBAL_PLAN_ID_IRI_PREFIX, GLOBAL_PROJECT_ID_IRI_PREFIX, HIDDEN_TEXT,
-} from '../server/api/services/util';
+import { HIDDEN_TEXT } from '../server/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect
@@ -24,7 +22,10 @@ const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorro
 
 
 
-const PLAN_1_NEW_DESC = 'Edited details for app...'
+const ENTITY_NEW_DESC = 'Edited details for app...'
+
+
+
 
 const planWithoutIdBy1JwtObj = R.clone(testUtil.jwtTemplate)
 planWithoutIdBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
@@ -56,7 +57,6 @@ const planNewBy2JwtProm = credentials[2].createVerification(planNewBy2JwtObj)
 
 
 
-const PROJECT_1_NEW_DESC = 'Edited details for app...'
 
 const projectWithoutIdBy1JwtObj = R.clone(testUtil.jwtTemplate)
 projectWithoutIdBy1JwtObj.claim = R.clone(testUtil.claimProjectAction)
@@ -126,7 +126,7 @@ describe('6 - Plans', () => {
 
   let firstIdInternal, firstIdExternal
 
-  it('check insertion of plan without ID by first user', async () => {
+  it('v2 insert plan without ID by first user', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planWithoutIdBy1JwtEnc})
@@ -143,7 +143,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('check access of plan without ID by first user, by first ID', async () => {
+  it('access plan without ID by first user, by first ID', async () => {
     await request(Server)
       .get('/api/plan/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -159,7 +159,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check insertion of bad plan by first user', async () => {
+  it('v2 insert of bad plan by first user', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: badPlanBy1JwtEnc})
@@ -175,7 +175,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('retrieve all plans', async () => {
+  it('v2 retrieve all plans', async () => {
     await request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -188,7 +188,22 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check access of plan by first user, by external ID', async () => {
+  it('access raw plan claim by first user, by external ID', async () => {
+    await request(Server)
+      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.issuer).that.equals(creds[1].did)
+        expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
+        expect(r.body.claim.name).that.equals(testUtil.claimPlanAction.name)
+        expect(r.body.claim.description).that.equals(testUtil.claimPlanAction.description)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('access plan by first user, by external ID', async () => {
     await request(Server)
       .get('/api/plan/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -203,7 +218,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check access of a different plan by first user', async () => {
+  it('access a different plan by first user', async () => {
     await request(Server)
       .get('/api/plan/some-incorrect-id')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -214,7 +229,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check access of plan by public, by internal ID', async () => {
+  it('access plan by public, by internal ID', async () => {
     await request(Server)
       .get('/api/plan/' + firstIdInternal)
       .expect('Content-Type', /json/)
@@ -228,13 +243,13 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check insertion of plan by second person, by same external ID', async () => {
+  it('v2 insert of plan by second person, by same external ID', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimPlanAction)
     planObj.claim.agent.identifier = creds[1].did
     planObj.claim.identifier = firstIdInternal
-    planObj.claim.description = PLAN_1_NEW_DESC
+    planObj.claim.description = ENTITY_NEW_DESC
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
     await request(Server)
@@ -248,7 +263,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('check access of same plan by second person, by external ID, still getting initial plan', async () => {
+  it('access same plan by second person, by external ID, still getting initial plan', async () => {
     await request(Server)
       .get('/api/plan/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -263,7 +278,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check access of same plan by first person, by external ID, still getting initial plan', async () => {
+  it('access same plan by first person, by external ID, still getting initial plan', async () => {
     await request(Server)
       .get('/api/plan/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -278,7 +293,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check access of same plan by first person, by full external ID, still getting initial plan', async () => {
+  it('access same plan by first person, by full external ID, still getting initial plan', async () => {
     await request(Server)
       .get('/api/plan/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -293,13 +308,13 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('update a plan description', async () => {
+  it('v2 update a plan description', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimPlanAction)
     planObj.claim.agent.identifier = creds[1].did
     planObj.claim.identifier = firstIdExternal
-    planObj.claim.description = PLAN_1_NEW_DESC
+    planObj.claim.description = ENTITY_NEW_DESC
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
     await request(Server)
@@ -313,7 +328,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('check access of same plan by first person, still getting initial plan but with new description', async () => {
+  it('access same plan by first person, still getting initial plan but with new description', async () => {
     await request(Server)
       .get('/api/plan/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -323,13 +338,28 @@ describe('6 - Plans', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.internalId).that.equals(firstIdInternal)
         expect(r.body.fullIri).that.equals(firstIdExternal)
-        expect(r.body.description).that.equals(PLAN_1_NEW_DESC)
+        expect(r.body.description).that.equals(ENTITY_NEW_DESC)
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(3000)
 
-  it('check insertion of plan with external ID from different system', async () => {
+  it('access raw updated plan claim by first user, by external ID', async () => {
+    await request(Server)
+      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.issuer).that.equals(creds[1].did)
+        expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
+        expect(r.body.claim.name).that.equals(testUtil.claimPlanAction.name)
+        expect(r.body.claim.description).that.equals(ENTITY_NEW_DESC)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('v2 insert of plan with external ID from different system', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planWithExtFullBy1JwtEnc})
@@ -341,7 +371,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('retrieve all plans again', async () => {
+  it('v2 retrieve all plans again', async () => {
     await request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -354,7 +384,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('check insertion of second plan by second person', async () => {
+  it('v2 insert of second plan by second person', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planNewBy2JwtEnc})
@@ -366,7 +396,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('retrieve all plans by first user', async () => {
+  it('v2 retrieve all plans by first user', async () => {
     await request(Server)
       .get('/api/v2/report/plansByIssuer')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -378,7 +408,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('retrieve plans by first user starting with #2', async () => {
+  it('v2 retrieve plans by first user starting with #2', async () => {
     await request(Server)
       .get('/api/v2/report/plansByIssuer?beforeId=2')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -390,7 +420,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('retrieve all plans by second user', async () => {
+  it('v2 retrieve all plans by second user', async () => {
     await request(Server)
       .get('/api/v2/report/plansByIssuer')
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -410,7 +440,7 @@ describe('6 - Projects', () => {
 
   let firstIdInternal, firstIdExternal
 
-  it('check insertion of project without ID by first user', async () => {
+  it('v2 insert of project without ID by first user', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: projectWithoutIdBy1JwtEnc})
@@ -427,7 +457,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(5000)
 
-  it('check access of project without ID by first user, by first ID', async () => {
+  it('access project without ID by first user, by first ID', async () => {
     await request(Server)
       .get('/api/project/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -443,7 +473,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check insertion of bad project by first user', async () => {
+  it('v2 insert of bad project by first user', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: badProjectBy1JwtEnc})
@@ -459,7 +489,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(5000)
 
-  it('retrieve all projects', async () => {
+  it('v2 retrieve all projects', async () => {
     await request(Server)
       .get('/api/v2/report/projects')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -472,7 +502,22 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check access of project by first user, by external ID', async () => {
+  it('access raw project claim by first user, by external ID', async () => {
+    await request(Server)
+      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.issuer).that.equals(creds[1].did)
+        expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
+        expect(r.body.claim.name).that.equals(testUtil.claimProjectAction.name)
+        expect(r.body.claim.description).that.equals(testUtil.claimProjectAction.description)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('access project by first user, by external ID', async () => {
     await request(Server)
       .get('/api/project/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -487,7 +532,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check access of a different project by first user', async () => {
+  it('access a different project by first user', async () => {
     await request(Server)
       .get('/api/project/some-incorrect-id')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -498,7 +543,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check access of project by public, by internal ID', async () => {
+  it('access project by public, by internal ID', async () => {
     await request(Server)
       .get('/api/project/' + firstIdInternal)
       .expect('Content-Type', /json/)
@@ -512,13 +557,13 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check insertion of project by second person, by same external ID', async () => {
+  it('v2 insert of project by second person, by same external ID', async () => {
     // Now can create this JWT with the ID that was assigned.
     const projectObj = R.clone(testUtil.jwtTemplate)
     projectObj.claim = R.clone(testUtil.claimProjectAction)
     projectObj.claim.agent.identifier = creds[1].did
     projectObj.claim.identifier = firstIdInternal
-    projectObj.claim.description = PROJECT_1_NEW_DESC
+    projectObj.claim.description = ENTITY_NEW_DESC
     projectObj.iss = creds[1].did
     const projectJwtEnc = await credentials[1].createVerification(projectObj)
     await request(Server)
@@ -532,7 +577,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(5000)
 
-  it('check access of same project by second person, by external ID, still getting initial project', async () => {
+  it('access same project by second person, by external ID, still getting initial project', async () => {
     await request(Server)
       .get('/api/project/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -547,7 +592,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check access of same project by first person, by external ID, still getting initial project', async () => {
+  it('access same project by first person, by external ID, still getting initial project', async () => {
     await request(Server)
       .get('/api/project/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -562,7 +607,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check access of same project by first person, by full external ID, still getting initial project', async () => {
+  it('access same project by first person, by full external ID, still getting initial project', async () => {
     await request(Server)
       .get('/api/project/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -577,13 +622,13 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('update a project description', async () => {
+  it('v2 update a project description', async () => {
     // Now can create this JWT with the ID that was assigned.
     const projectObj = R.clone(testUtil.jwtTemplate)
     projectObj.claim = R.clone(testUtil.claimProjectAction)
     projectObj.claim.agent.identifier = creds[1].did
     projectObj.claim.identifier = firstIdExternal
-    projectObj.claim.description = PROJECT_1_NEW_DESC
+    projectObj.claim.description = ENTITY_NEW_DESC
     projectObj.iss = creds[1].did
     const projectJwtEnc = await credentials[1].createVerification(projectObj)
     await request(Server)
@@ -597,7 +642,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(5000)
 
-  it('check access of same project by first person, still getting initial project but with new description', async () => {
+  it('access same project by first person, still getting initial project but with new description', async () => {
     await request(Server)
       .get('/api/project/' + firstIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -607,13 +652,28 @@ describe('6 - Projects', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.internalId).that.equals(firstIdInternal)
         expect(r.body.fullIri).that.equals(firstIdExternal)
-        expect(r.body.description).that.equals(PROJECT_1_NEW_DESC)
+        expect(r.body.description).that.equals(ENTITY_NEW_DESC)
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(3000)
 
-  it('check insertion of project with external ID from different system', async () => {
+  it('access raw updated project claim by first user, by external ID', async () => {
+    await request(Server)
+      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.issuer).that.equals(creds[1].did)
+        expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
+        expect(r.body.claim.name).that.equals(testUtil.claimProjectAction.name)
+        expect(r.body.claim.description).that.equals(ENTITY_NEW_DESC)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('v2 insert of project with external ID from different system', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: projectWithExtFullBy1JwtEnc})
@@ -625,7 +685,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(5000)
 
-  it('retrieve all projects again', async () => {
+  it('v2 retrieve all projects again', async () => {
     await request(Server)
       .get('/api/v2/report/projects')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -638,7 +698,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('check insertion of second project by second person', async () => {
+  it('v2 insert of second project by second person', async () => {
     await request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: projectNewBy2JwtEnc})
@@ -650,7 +710,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(5000)
 
-  it('retrieve all projects by first user', async () => {
+  it('v2 retrieve all projects by first user', async () => {
     await request(Server)
       .get('/api/v2/report/projectsByIssuer')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -662,7 +722,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('retrieve projects by first user starting with #2', async () => {
+  it('v2 retrieve projects by first user starting with #2', async () => {
     await request(Server)
       .get('/api/v2/report/projectsByIssuer?beforeId=2')
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -674,7 +734,7 @@ describe('6 - Projects', () => {
       })
   }).timeout(3000)
 
-  it('retrieve all projects by second user', async () => {
+  it('v2 retrieve all projects by second user', async () => {
     await request(Server)
       .get('/api/v2/report/projectsByIssuer')
       .set('Authorization', 'Bearer ' + pushTokens[2])

@@ -15,8 +15,7 @@ const ERROR_CODES = {
 }
 
 const GLOBAL_ID_IRI_PREFIX = process.env.GLOBAL_ID_IRI_PREFIX || 'https://endorser.ch'
-const GLOBAL_PLAN_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/plan/'
-const GLOBAL_PROJECT_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/project/'
+const GLOBAL_ENTITY_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/entity/'
 
 /**
    Take KEY and a list of claims-and-confirmations for the same claim
@@ -184,4 +183,4 @@ function hashChain(seed, idAndClaimList) {
   return R.reduce((prev, idAndClaim) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(idAndClaim)), seed, idAndClaimList)
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, GLOBAL_PLAN_ID_IRI_PREFIX, GLOBAL_PROJECT_ID_IRI_PREFIX, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, isGlobalUri, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, isGlobalUri, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
