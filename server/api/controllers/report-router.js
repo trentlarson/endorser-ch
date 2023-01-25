@@ -82,10 +82,14 @@ class DbController {
   getLastClaimWithIdentifier(req, res) {
     DbService.jwtLastByEntityId(req.query.id)
       .then(result => {
-        result.claim = JSON.parse(result.claim)
-        return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+        if (result) {
+          result.claim = JSON.parse(result.claim)
+          return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+        } else {
+          return null
+        }
       })
-      .then(r => res.json(r))
+      .then(r => { if (r) { res.json(r) } else { res.status(404).end() } })
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getVoteCounts(req, res) {
@@ -169,6 +173,7 @@ export default express
  * @route GET /api/report/lastClaimForEntity
  * @param {string} id.query.required - the persistent "entity" ID
  * @returns {Jwt} 200 - the jwt record with the claim of the most recent changes for that entity ID
+ * @returns {''} 404 - if nothing found
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

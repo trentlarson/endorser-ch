@@ -188,6 +188,17 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('access non-existent claim', async () => {
+    await request(Server)
+      .get('/api/report/lastClaimForEntity?id=xyz')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(404)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   it('access raw plan claim by first user, by external ID', async () => {
     await request(Server)
       .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
@@ -497,6 +508,17 @@ describe('6 - Projects', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].internalId).to.be.a('string')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('access non-existent claim', async () => {
+    await request(Server)
+      .get('/api/report/lastClaimForEntity?id=xyz')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(404)
       }).catch((err) => {
         return Promise.reject(err)
       })
