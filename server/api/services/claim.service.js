@@ -46,6 +46,8 @@ const isEndorserRegistrationClaim = (claim) =>
       && claim['@type'] === 'RegisterAction'
       && claim['object'] === SERVICE_ID
 
+const globalFromInternalIdentifier = (id) => GLOBAL_PROJECT_ID_IRI_PREFIX + id
+
 class ClaimService {
 
   async byId(id, requesterDid) {
@@ -751,6 +753,8 @@ class ClaimService {
   }
 
   /**
+     @param authIssuerId is the issuer if an Authorization Bearer JWT is sent
+
      @return object with:
      - id of claim
      - extra info for other created data, eg. planId if one was generated
@@ -806,19 +810,47 @@ class ClaimService {
                                )
         }
 
-        // disallow registering others in the same week they got registered
         const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
         if (registered.epoch > startOfWeekEpoch) {
           return Promise.reject(
-            { clientError: { message: `You cannot register others the same week you got registered.`, 
+            { clientError: { message: `You cannot register others the same week you got registered.`,
                              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } }
           )
         }
       }
 
+      let localId = db.newUlid()
+      /**
+      let globalId
+      // If this has an identifier, check the previous instance to see if they are allowed to edit.
+      if (payloadClaim.identifier) { // 'identifier' is a schema.org convention; may add others
+        globalId =
+          isGlobalUri(payloadClaim.identifier)
+          ? payloadClaim.identifier
+          : globalFromInternalIdentifier(payloadClaim.identifier)
+        const prevEntry = db.jwtLastByClaimIdentifier(globalId)
+        if (prevEntry.issuer === payload.iss) {
+          // we're OK to continue
+        } else {
+          const prevClaim = JSON.parse(prevEntry.claim)
+          if (prevClaim.agent?.identifier === payload.iss) {
+            // we're OK to continue
+          } else {
+            // someday check other properties, eg 'member' in Organization (requiring a role check)
+            return Promise.reject(
+              { clientError: { message: `You cannot use an identifier if you did not create the original.` } }
+            )
+          }
+        }
+      } else {
+        globalId = globalFromInternalIdentifier(localId)
+      }
+      **/
+      const globalId = localId
+
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)
-      const jwtEntity = db.buildJwtEntity(payload, payloadClaim, claimStr, claimEncoded, jwtEncoded)
+      const jwtEntity = db.buildJwtEntity(payload, localId, globalId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
       const jwtRowId =
           await db.jwtInsert(jwtEntity)
           .catch((err) => {

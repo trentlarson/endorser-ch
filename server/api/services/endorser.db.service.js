@@ -566,8 +566,7 @@ class EndorserDatabase {
    * JWT
    **/
 
-  buildJwtEntity(payload, claim, claimStr, claimEncoded, jwtEncoded) {
-    let id = ulid()
+  buildJwtEntity(payload, id, globalId, claim, claimStr, claimEncoded, jwtEncoded) {
     let issuedAt = new Date(payload.iat * 1000).toISOString()
     let issuer = payload.iss
     let subject = payload.sub
@@ -583,6 +582,7 @@ class EndorserDatabase {
       claimType: claimType,
       claim: claimStr,
       claimEncoded: claimEncoded,
+      claimIdentifier: globalId,
       jwtEncoded: jwtEncoded,
       hashHex: hashHex
     }
@@ -592,13 +592,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = null
       db.each(
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE id = ?",
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, claimIdentifier, claimEncoded, jwtEncoded, hashHex, hashChainHex FROM jwt WHERE id = ?",
         [id],
         function(err, row) {
           row.issuedAt = isoAndZonify(row.issuedAt)
           data = {
             id: row.id, issuedAt: row.issuedAt, issuer: row.issuer, subject: row.subject,
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
+            claimIdentifier: row.claimIdentifier,
             claimEncoded: row.claimEncoded, jwtEncoded: row.jwtEncoded,
             hashHex: row.hashHex, hashChainHex: row.hashChainHex
           }
@@ -644,7 +645,7 @@ class EndorserDatabase {
     delete params.excludeConfirmations
     let where = constructWhere(
       params,
-      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
+      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'claimIdentifier', 'hashHex', 'hashChainHex'],
       claimContents,
       'claim',
       excludeConfirmations
@@ -652,13 +653,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, claimIdentifier, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
         where.params,
         function(err, row) {
           row.issuedAt = isoAndZonify(row.issuedAt)
           data.push({
             id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
             claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
+            claimIdentifier: row.claimIdentifier,
             hashHex:row.hashHex, hashChainHex:row.hashChainHex
           })
         }, function(err, num) {
@@ -674,7 +676,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'jwt',
       'id',
-      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'hashHex', 'hashChainHex'],
+      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'claimIdentifier', 'hashHex', 'hashChainHex'],
       ['claimContext', 'claim'],
       'claim',
       ['issuedAt'],
@@ -691,9 +693,9 @@ class EndorserDatabase {
   jwtByClaim(claimStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, claimIdentifier, hashHex, hashChainHex FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
         row.issuedAt = isoAndZonify(row.issuedAt)
-        data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
+        data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, claimIdentifier:row.claimIdentifier, hashHex:row.hashHex, hashChainHex:row.hashChainHex})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -707,12 +709,12 @@ class EndorserDatabase {
 
   jwtInsert(entity) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, claimIdentifier, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entity.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
         [
           entity.id, entity.issuer, entity.subject, entity.claimType, entity.claimContext, entity.claim,
-          entity.claimEncoded, entity.jwtEncoded, entity.hashHex
+          entity.claimIdentifier, entity.claimEncoded, entity.jwtEncoded, entity.hashHex
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
@@ -720,6 +722,10 @@ class EndorserDatabase {
     })
   }
 
+  /**
+   *
+   * This can be useful when cleaning up data, but otherwise we don't edit previous records.
+   *
   jwtUpdateClaimFields(entity) {
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE jwt SET claimType = ?, claimContext = ?, claim = ?, claimEncoded = ? WHERE id = ?")
@@ -739,6 +745,7 @@ class EndorserDatabase {
         })
     })
   }
+  **/
 
   /**
      Start after afterIdInput (optional) and before beforeIdinput (optional) and retrieve all claims by issuerDid with claimTypes, in reverse chronological order.
@@ -761,7 +768,7 @@ class EndorserDatabase {
       let data = []
       let rowErr
       db.each(
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, hashHex, hashChainHex FROM jwt WHERE" + moreClause + " issuer = ? AND claimType in (" + inListStr + ") ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, claimIdentifier, hashHex, hashChainHex FROM jwt WHERE" + moreClause + " issuer = ? AND claimType in (" + inListStr + ") ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
         allParams,
         function(err, row) {
           if (err) {
@@ -771,7 +778,7 @@ class EndorserDatabase {
             data.push({
               id: row.id, issuedAt: row.issuedAt, issuer: row.issuer, subject: row.subject,
               claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
-              hashHex: row.hashHex, hashChainHex: row.hashChainHex
+              claimIdentifier: row.claimIdentifier, hashHex: row.hashHex, hashChainHex: row.hashChainHex
             })
           }
         },
@@ -788,6 +795,26 @@ class EndorserDatabase {
         }
       )
     })
+  }
+
+  jwtLastByClaimIdentifierRaw(identifier) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM jwt WHERE claimIdentifier = ? ORDER BY id DESC LIMIT 1",
+        [identifier],
+        function(err, row) { if (err) { reject(err) } else { resolve(row) } })
+    })
+  }
+
+  /**
+   * Retrieve the JWT entry but format the date as ISO.
+   */
+  jwtLastByClaimIdentifier(identifier) {
+    return this.jwtLastByClaimIdentifierRaw(identifier)
+      .then(row => {
+        row.issuedAt = isoAndZonify(row.issuedAt)
+        return row
+      })
   }
 
   jwtLastMerkleHash() {
@@ -871,13 +898,7 @@ class EndorserDatabase {
           entity.jwtId, entity.issuerDid, entity.orgName, entity.roleName,
           entity.startDate, entity.endDate, entity.memberDid
         ],
-        function(err) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this.lastID)
-          }
-        })
+        function(err) { if (err) { reject(err) } else { resolve(this.lastID) } })
     })
   }
 
@@ -888,15 +909,7 @@ class EndorserDatabase {
       db.get(
         "SELECT rowid FROM org_role_claim WHERE orgName = ? AND roleName = ?" + startDateSql + endDateSql + " AND memberDid = ?",
         [orgName, roleName, memberDid],
-        function(err, row) {
-          if (err) {
-            reject(err)
-          } else if (row) {
-            resolve(row.rowid)
-          } else {
-            resolve(null)
-          }
-        })
+        function(err, row) { if (err) { reject(err) } else { resolve(row?.rowid) } })
     })
   }
 
@@ -923,7 +936,8 @@ class EndorserDatabase {
             confirmation: confirmation,
           }
           data.push(both)
-        }, function(err, num) {
+        },
+        function(err, num) {
           if (err) { reject(err) } else { resolve(data) }
         })
     })
@@ -965,9 +979,7 @@ class EndorserDatabase {
       db.get(
         "SELECT * FROM plan_claim WHERE fullIri = ?",
         [fullIri],
-        function(err, row) {
-          if (err) { reject(err) } else if (row) { resolve(row) } else { resolve(null) }
-        }
+        function(err, row) { if (err) { reject(err) } else { resolve(row) } }
       )
     })
   }
@@ -1071,9 +1083,7 @@ class EndorserDatabase {
       db.get(
         "SELECT * FROM project_claim WHERE fullIri = ?",
         [fullIri],
-        function(err, row) {
-          if (err) { reject(err) } else if (row) { resolve(row) } else { resolve(null) }
-        }
+        function(err, row) { if (err) { reject(err) } else { resolve(row) } }
       )
     })
   }
@@ -1478,7 +1488,8 @@ class EndorserDatabase {
           data.push(row.subject)
         }, function(err, num) {
           if (err) { reject(err) } else { resolve(data) }
-        })
+        }
+      )
     })
   }
 

@@ -1,4 +1,8 @@
 
+ALTER TABLE jwt ADD COLUMN claimIdentifier TEXT; -- full IRI for this entity
+
+CREATE INDEX jwt_claimIdentifier ON jwt(claimIdentifier);
+
 CREATE TABLE plan_claim (
        jwtId text PRIMARY KEY,
        issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
