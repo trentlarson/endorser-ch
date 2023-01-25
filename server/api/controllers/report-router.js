@@ -79,19 +79,6 @@ let orgRoleController = new OrgRoleController();
 
 import DbService from '../services/endorser.db.service';
 class DbController {
-  getLastClaimWithIdentifier(req, res) {
-    DbService.jwtLastByEntityId(req.query.id)
-      .then(result => {
-        if (result) {
-          result.claim = JSON.parse(result.claim)
-          return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
-        } else {
-          return null
-        }
-      })
-      .then(r => { if (r) { res.json(r) } else { res.status(404).end() } })
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
-  }
   getVoteCounts(req, res) {
     DbService.retrieveVoteCounts()
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
@@ -165,19 +152,6 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/issuersWhoClaimedOrConfirmed', claimController.getIssuersMatchingClaim)
-
-/**
- * Get most recent "entity" (claim that matches an entity ID)
- *
- * @group report - Reports
- * @route GET /api/report/lastClaimForEntity
- * @param {string} id.query.required - the persistent "entity" ID
- * @returns {Jwt} 200 - the jwt record with the claim of the most recent changes for that entity ID
- * @returns {''} 404 - if nothing found
- * @returns {Error} default - Unexpected error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/lastClaimForEntity', dbController.getLastClaimWithIdentifier)
 
 /**
  * Get claims and confirmations for individual

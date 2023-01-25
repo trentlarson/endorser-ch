@@ -3,7 +3,7 @@ import R from 'ramda'
 
 import ClaimService from '../services/claim.service'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
-class Controller {
+class ClaimController {
 
   getById(req, res) {
     ClaimService
@@ -82,7 +82,31 @@ class Controller {
   }
 
 }
-let controller = new Controller();
+let claimController = new ClaimController()
+
+
+
+
+import DbService from '../services/endorser.db.service';
+class DbController {
+  getLastClaimWithHandleId(req, res) {
+    DbService.jwtLastByHandleId(req.params.id)
+      .then(result => {
+        if (result) {
+          result.claim = JSON.parse(result.claim)
+          return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+        } else {
+          return null
+        }
+      })
+      .then(r => { if (r) { res.json(r) } else { res.status(404).end() } })
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+}
+let dbController = new DbController()
+
+
+
 
 
 export default express
@@ -111,7 +135,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/', controller.importClaim)
+  .post('/', claimController.importClaim)
 
 /**
  * Get many Claim JWTs
@@ -126,7 +150,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/', controller.getByQuery)
+  .get('/', claimController.getByQuery)
 
 /**
  * Get a Claim JWT
@@ -137,7 +161,20 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/:id', controller.getById)
+  .get('/:id', claimController.getById)
+
+/**
+ * Get most recent "entity" (claim that matches an entity ID)
+ *
+ * @group report - Reports
+ * @route GET /api/report/lastClaimForEntity
+ * @param {string} id.query.required - the persistent "entity" ID
+ * @returns {Jwt} 200 - the jwt record with the claim of the most recent changes for that entity ID
+ * @returns {''} 404 - if nothing found
+ * @returns {Error} default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/byHandle/:id', dbController.getLastClaimWithHandleId)
 
 /**
  * Get a Claim JWT with full encoding
@@ -148,7 +185,7 @@ export default express
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/full/:id', controller.getFullClaimById)
+  .get('/full/:id', claimController.getFullClaimById)
 
  /**
  * Add a Claim JWT raw, without any processing (not recommended)
@@ -158,5 +195,5 @@ export default express
  * @returns {object} 200 - internal ID of Claim JWT
  * @returns {Error}  default - Unexpected error
  *
-  .post('/raw', controller.create)
+  .post('/raw', claimController.create)
  */

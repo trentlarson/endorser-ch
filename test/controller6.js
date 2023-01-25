@@ -190,7 +190,7 @@ describe('6 - Plans', () => {
 
   it('access non-existent claim', async () => {
     await request(Server)
-      .get('/api/report/lastClaimForEntity?id=xyz')
+      .get('/api/claim/byHandle/xyz')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).that.equals(404)
@@ -201,7 +201,7 @@ describe('6 - Plans', () => {
 
   it('access raw plan claim by first user, by external ID', async () => {
     await request(Server)
-      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .get('/api/claim/byHandle/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -357,7 +357,7 @@ describe('6 - Plans', () => {
 
   it('access raw updated plan claim by first user, by external ID', async () => {
     await request(Server)
-      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .get('/api/claim/byHandle/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -515,7 +515,7 @@ describe('6 - Projects', () => {
 
   it('access non-existent claim', async () => {
     await request(Server)
-      .get('/api/report/lastClaimForEntity?id=xyz')
+      .get('/api/claim/byHandle/xyz')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).that.equals(404)
@@ -526,7 +526,7 @@ describe('6 - Projects', () => {
 
   it('access raw project claim by first user, by external ID', async () => {
     await request(Server)
-      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .get('/api/claim/byHandle/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -682,7 +682,7 @@ describe('6 - Projects', () => {
 
   it('access raw updated project claim by first user, by external ID', async () => {
     await request(Server)
-      .get('/api/report/lastClaimForEntity?id=' + encodeURIComponent(firstIdExternal))
+      .get('/api/claim/byHandle/' + encodeURIComponent(firstIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {

@@ -55,7 +55,7 @@ class ClaimService {
     if (jwtRec) {
       let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject,
                     claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim),
-                    entityId:jwtRec.entityId}
+                    handleId:jwtRec.handleId}
       return result
     } else {
       return null
@@ -68,7 +68,7 @@ class ClaimService {
     resultData = await db.jwtsByParams(params)
     let result = resultData.map(j => {
       let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext,
-                     claimType:j.claimType, claim:JSON.parse(j.claim), entityId:j.entityId}
+                     claimType:j.claimType, claim:JSON.parse(j.claim), handleId:j.handleId}
       return thisOne
     })
     return result
@@ -626,7 +626,7 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'VoteAction') {
 
-      let vote = {
+      let entry = {
         jwtId: jwtId,
         issuerDid: issuerDid,
         actionOption: claim.actionOption,
@@ -635,7 +635,7 @@ class ClaimService {
         eventStartTime: claim.object.event.startDate,
       }
 
-      let voteId = await db.voteInsert(vote)
+      let voteId = await db.voteInsert(entry)
       return { voteId }
 
 
@@ -820,15 +820,15 @@ class ClaimService {
       }
 
       // Generate the local id and find or generate the global entity identifier.
-      let localId = db.newUlid()
-      let entityId
+      let internalId = db.newUlid()
+      let handleId
       // If this has an identifier, check the previous instance to see if they are allowed to edit.
       if (payloadClaim.identifier) { // 'identifier' is a schema.org convention; may add others
-        entityId =
+        handleId =
           isGlobalUri(payloadClaim.identifier)
           ? payloadClaim.identifier
           : globalFromInternalIdentifier(payloadClaim.identifier)
-        const prevEntry = await db.jwtLastByEntityIdRaw(entityId)
+        const prevEntry = await db.jwtLastByHandleIdRaw(handleId)
         if (!prevEntry) {
           // we're OK to continue
         } else {
@@ -847,12 +847,12 @@ class ClaimService {
           }
         }
       } else {
-        entityId = globalFromInternalIdentifier(localId)
+        handleId = globalFromInternalIdentifier(internalId)
       }
 
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)
-      const jwtEntity = db.buildJwtEntity(payload, localId, entityId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
+      const jwtEntity = db.buildJwtEntity(payload, internalId, handleId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
       const jwtRowId =
           await db.jwtInsert(jwtEntity)
           .catch((err) => {
@@ -874,7 +874,7 @@ class ClaimService {
           return { embeddedRecordError: err }
         })
 
-      const result = R.mergeLeft({ claimId: jwtEntity.id }, embedded)
+      const result = R.mergeLeft({ claimId: jwtEntity.id, handleId: handleId }, embedded)
       return result
 
     } else {

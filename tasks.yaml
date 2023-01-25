@@ -32,6 +32,8 @@
 
 - .2 add search for all my issued claims
 
+- .5 remove the open-ended search capability (ie generic claim.service getByQuery)
+
 - 01 switch time check to work off JWT ID in registration & claim
 
 - 02 store claim column as canonical (possibly migrating), remove claimEncoded, add claimHash, add claimObfuHash
