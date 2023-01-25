@@ -163,12 +163,12 @@ export default express
   .get('/issuersWhoClaimedOrConfirmed', claimController.getIssuersMatchingClaim)
 
 /**
- * Get issuers for a claim
+ * Get most recent "entity" (claim that matches an entity ID)
  *
  * @group report - Reports
- * @route GET /api/report/issuersWhoClaimedOrConfirmed
- * @param {string} claimId.query.required - the ID of the claim
- * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
+ * @route GET /api/report/lastClaimForEntity
+ * @param {string} id.query.required - the persistent "entity" ID
+ * @returns {Jwt} 200 - the jwt record with the claim of the most recent changes for that entity ID
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
