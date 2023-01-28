@@ -26,7 +26,7 @@ const claimOffer = {
   "@type": "Offer",
   identifier: "abc",
   issuedAt: '2022-02-15 19:28:00Z',
-  itemOffered: { amountOfThisGood: 2, unitCode: 'HUR' },
+  includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
   offeredBy: { identifier: creds[0].did },
   recipient: { identifier: creds[1].did },
 }

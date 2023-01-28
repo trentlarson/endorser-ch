@@ -2,12 +2,11 @@
 
 - 01 allow offerings to a Plan in EndorserMobile :
 
-  - test https://endorser.ch/project/...
-  - reset test DB (so plans not saved in separate table are erased)
   - check any Offer logic to handle new structure (and possibly old structure)
   - on deploy :
     - migrate DB
     - add & update essential project details to project_claim & plan_claim tables
+  - test https://endorser.ch/entity/... (and /api/ext/...?)
 
 - 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
