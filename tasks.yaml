@@ -1,23 +1,17 @@
 ---
 
-- 01 allow offerings to a Plan in EndorserMobile :
+- .5 mobile - recent offer doesn't show as a specific amount
 
-  - check any Offer logic to handle new structure (and possibly old structure)
-  - on deploy :
-    - migrate DB
-    - add & update essential project details to project_claim & plan_claim tables
-  - test https://endorser.ch/entity/... (and /api/ext/...?)
+- 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
 
 - 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
+
+- .2 mobile - remove duplicate background check
 
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
-
-- 01 mobile deploy - only after server is deployed with v2/report in place
-
-- 01 mobile - stop resubmission when going back to signed screen
 
 - 02 bring libs up-to-date
 
@@ -113,7 +107,7 @@
   - .1 After adding by URL, erase text box
   - .5 Add a way to give link to a Plan & Offer
   - 01 Show the full VC for a result from a search (ie. from lookup in back-end)
-  - optimize feed: "VirtualizedList: You have a large list that is slow to update - make sure your renderItem function renders components that follow React performance best practices like PureComponent, shouldComponentUpdate, etc."
+  - optimize feed and search for transactions (eg. for test data) - "VirtualizedList: You have a large list that is slow to update - make sure your renderItem function renders components that follow React performance best practices like PureComponent, shouldComponentUpdate, etc."
 
   - Add other options to PlanAction :
     - 01 Event - identifier, attendee, startDate, endDate(?), location
@@ -161,7 +155,6 @@
   - .5 move Search All results to separate page, and let us apply TakeAction or AgreeAction
   - 02 when there's a network error, the error message is delayed (so seems like nothing happened)
     - check all network & DB calls & then calls for error handlingp
-    - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
     - handle errors if server is inaccessible
   - .5 clear the contact TextInput boxes after hitting "Create"
   - .5 remove didManagerFind call from ConfirmOthers without causing an error
@@ -206,6 +199,7 @@
     - allow to download
     - conform to DWN https://identity.foundation/decentralized-web-node/spec/
     - conform to EDV https://identity.foundation/edv-spec/
+  - fix where setting API server did not change it, and 'save' made it undefined
   - 04 publish feed in RSS and/or Atom format
   - 04 replace android background registerHeadlessTask & DailyTaskWorker with react-native-background-fetch (for consistency)
   - 01 check that contact JWT was recently created, even in bulk (because they may be sending you a different contact)
