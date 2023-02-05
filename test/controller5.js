@@ -135,8 +135,9 @@ describe('5 - Registration', () => {
      })
   ).timeout(3000)
 
-  it('bump User 0 abilities (since it is often used for test servers)', async () =>
+  it('bump User 0 abilities (since it is often used for test servers)', async () => {
     await dbService.registrationUpdateMaxClaims(creds[0].did, 10000)
-  ).timeout(3000)
+    await dbService.registrationUpdateMaxRegs(creds[0].did, 1000)
+  }).timeout(3000)
 
 })

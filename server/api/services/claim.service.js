@@ -830,7 +830,17 @@ class ClaimService {
           : globalFromInternalIdentifier(payloadClaim.identifier)
         const prevEntry = await db.jwtLastByHandleIdRaw(handleId)
         if (!prevEntry) {
-          // we're OK to continue
+          if (!isGlobalUri(payloadClaim.identifier)
+              && payloadClaim.identifier?.length === 26) {
+            // don't allow any IDs that may clash with IDs
+            return Promise.reject(
+              { clientError: {
+                message: `You cannot use a non-global-URI identifer you don't own that may clash with another ID.`
+              } }
+            )
+          } else {
+            // we're OK to continue
+          }
         } else {
           if (prevEntry.issuer === payload.iss) {
             // we're OK to continue
@@ -841,7 +851,9 @@ class ClaimService {
             } else {
               // someday check other properties, eg 'member' in Organization (requiring a role check)
               return Promise.reject(
-                { clientError: { message: `You cannot use an identifier if you did not create the original.` } }
+                { clientError: {
+                  message: `You cannot use a non-global-URI identifier if you did not create the original.`
+                } }
               )
             }
           }

@@ -85,11 +85,26 @@ projectNewBy2JwtObj.claim.description = '#2 Has A Project'
 projectNewBy2JwtObj.iss = creds[2].did
 const projectNewBy2JwtProm = credentials[2].createVerification(projectNewBy2JwtObj)
 
+
+
+
+const projectBadHandleBy2JwtObj = R.clone(testUtil.jwtTemplate)
+projectBadHandleBy2JwtObj.claim = R.clone(testUtil.claimProjectAction)
+projectBadHandleBy2JwtObj.claim.agent.identifier = creds[2].did
+projectBadHandleBy2JwtObj.claim.description = '#2 tries to get an ID'
+projectBadHandleBy2JwtObj.claim.identifier = '01GR2QJ4M8A5MGBTZDF0FG4X0W'
+projectBadHandleBy2JwtObj.iss = creds[2].did
+const projectBadHandleBy2JwtProm = credentials[2].createVerification(projectBadHandleBy2JwtObj)
+
+
+
+
 let pushTokens,
     badPlanBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
     planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
     badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
-    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc
+    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc,
+    projectBadHandleBy2JwtEnc
 
 before(async () => {
 
@@ -105,6 +120,7 @@ before(async () => {
       planNewBy2JwtProm,
       badProjectBy1JwtProm, projectWithoutIdBy1JwtProm, projectWithExtFullBy1JwtProm,
       projectNewBy2JwtProm,
+      projectBadHandleBy2JwtProm,
     ]
   )
     .then((jwts) => {
@@ -113,6 +129,7 @@ before(async () => {
         planNewBy2JwtEnc,
         badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
         projectNewBy2JwtEnc,
+        projectBadHandleBy2JwtEnc,
       ] = jwts
     })
 
@@ -767,5 +784,21 @@ describe('6 - Projects', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+})
+
+describe('6 - handle', () => {
+
+  it('fail to insert project with bad handle', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: projectBadHandleBy2JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
 
 })
