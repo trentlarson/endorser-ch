@@ -88,23 +88,11 @@ const projectNewBy2JwtProm = credentials[2].createVerification(projectNewBy2JwtO
 
 
 
-const projectBadHandleBy2JwtObj = R.clone(testUtil.jwtTemplate)
-projectBadHandleBy2JwtObj.claim = R.clone(testUtil.claimProjectAction)
-projectBadHandleBy2JwtObj.claim.agent.identifier = creds[2].did
-projectBadHandleBy2JwtObj.claim.description = '#2 tries to get an ID'
-projectBadHandleBy2JwtObj.claim.identifier = '01GR2QJ4M8A5MGBTZDF0FG4X0W'
-projectBadHandleBy2JwtObj.iss = creds[2].did
-const projectBadHandleBy2JwtProm = credentials[2].createVerification(projectBadHandleBy2JwtObj)
-
-
-
-
 let pushTokens,
     badPlanBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
     planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
     badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
-    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc,
-    projectBadHandleBy2JwtEnc
+    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc
 
 before(async () => {
 
@@ -120,7 +108,6 @@ before(async () => {
       planNewBy2JwtProm,
       badProjectBy1JwtProm, projectWithoutIdBy1JwtProm, projectWithExtFullBy1JwtProm,
       projectNewBy2JwtProm,
-      projectBadHandleBy2JwtProm,
     ]
   )
     .then((jwts) => {
@@ -129,13 +116,14 @@ before(async () => {
         planNewBy2JwtEnc,
         badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
         projectNewBy2JwtEnc,
-        projectBadHandleBy2JwtEnc,
       ] = jwts
     })
 
   return Promise.resolve()
 
 })
+
+let someValidInternalId
 
 describe('6 - Plans', () => {
 
@@ -155,6 +143,7 @@ describe('6 - Plans', () => {
         expect(r.body.success.recordsSavedForEdit).to.equal(1)
         firstIdExternal = r.body.success.fullIri
         firstIdInternal = r.body.success.internalId
+        someValidInternalId = r.body.success.internalId
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -790,12 +779,28 @@ describe('6 - Projects', () => {
 describe('6 - handle', () => {
 
   it('fail to insert project with bad handle', async () => {
+
+    // Create a JWT with an ID that's similar to auto-generated IDs.
+    const lastChar = someValidInternalId.charAt(someValidInternalId.length - 1)
+    const newChar = lastChar === '0' ? '1' : '0'
+    const someInvalidInternalId = someValidInternalId.substring(0, someValidInternalId.length - 1) + newChar
+    const projectObj = R.clone(testUtil.jwtTemplate)
+    projectObj.claim = R.clone(testUtil.claimProjectAction)
+    projectObj.claim.agent.identifier = creds[2].did
+    projectObj.claim.identifier = someInvalidInternalId
+    projectObj.claim.description = ENTITY_NEW_DESC
+    projectObj.iss = creds[2].did
+    const projectJwtEnc = await credentials[2].createVerification(projectObj)
+
     await request(Server)
       .post('/api/v2/claim')
-      .send({jwtEncoded: projectBadHandleBy2JwtEnc})
+      .send({jwtEncoded: projectJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.equals(
+          "You cannot use a non-global-URI identifer you don't own that may clash with another ID."
+        )
       }).catch((err) => {
         return Promise.reject(err)
       })
