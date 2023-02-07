@@ -182,6 +182,13 @@ module.exports = {
     "endTime": "2023-03"
   },
 
+  claimPerson: {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "identifier": null, // supply DID
+    "seeks": "stuff",
+  },
+
   allDidsAreHidden: allDidsAreHidden,
 
 }

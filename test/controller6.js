@@ -88,11 +88,38 @@ const projectNewBy2JwtProm = credentials[2].createVerification(projectNewBy2JwtO
 
 
 
+const person1By2JwtObj = R.clone(testUtil.jwtTemplate)
+person1By2JwtObj.claim = {
+  ... R.clone(testUtil.claimPerson),
+  identifier: creds[1].did,
+}
+const person1By2JwtProm = credentials[2].createVerification(person1By2JwtObj)
+
+const person1By1JwtObj = R.clone(testUtil.jwtTemplate)
+person1By1JwtObj.claim = {
+  ... R.clone(testUtil.claimPerson),
+  identifier: creds[1].did,
+  seeks: "ice cream",
+}
+const person1By1JwtProm = credentials[1].createVerification(person1By1JwtObj)
+
+const person1By2AgainFailsJwtObj = R.clone(testUtil.jwtTemplate)
+person1By2AgainFailsJwtObj.claim = {
+  ... R.clone(testUtil.claimPerson),
+  identifier: creds[1].did,
+  seeks: "back to stuff",
+}
+const person1By2AgainFailsJwtProm = credentials[2].createVerification(person1By2AgainFailsJwtObj)
+
+
+
+
 let pushTokens,
     badPlanBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
     planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
     badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
-    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc
+    projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc,
+    person1By2JwtEnc, person1By1JwtEnc, person1By2AgainFailsJwtEnc
 
 before(async () => {
 
@@ -108,6 +135,7 @@ before(async () => {
       planNewBy2JwtProm,
       badProjectBy1JwtProm, projectWithoutIdBy1JwtProm, projectWithExtFullBy1JwtProm,
       projectNewBy2JwtProm,
+      person1By2JwtProm, person1By1JwtProm, person1By2AgainFailsJwtProm
     ]
   )
     .then((jwts) => {
@@ -116,6 +144,7 @@ before(async () => {
         planNewBy2JwtEnc,
         badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
         projectNewBy2JwtEnc,
+        person1By2JwtEnc, person1By1JwtEnc, person1By2AgainFailsJwtEnc,
       ] = jwts
     })
 
@@ -801,6 +830,42 @@ describe('6 - handle', () => {
         expect(r.body.error.message).that.equals(
           "You cannot use a non-global-URI identifer you don't own that may clash with another ID."
         )
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('declare with a handle that matches user 0 DID', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: person1By2JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('take over a handle that matches my user 0 DID', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: person1By1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('fail to take over a handle that matches user 0 DID', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: person1By2AgainFailsJwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
       })

@@ -832,7 +832,7 @@ class ClaimService {
         if (!prevEntry) {
           if (!isGlobalUri(payloadClaim.identifier)
               && payloadClaim.identifier?.length === 26) {
-            // don't allow any IDs that may clash with IDs
+            // don't allow any non-global IDs that may clash with IDs
             return Promise.reject(
               { clientError: {
                 message: `You cannot use a non-global-URI identifer you don't own that may clash with another ID.`
@@ -842,12 +842,14 @@ class ClaimService {
             // we're OK to continue
           }
         } else {
-          if (prevEntry.issuer === payload.iss) {
-            // we're OK to continue
+          if (payload.iss == prevEntry.issuer || payload.iss == handleId) {
+            // The issuer is the same as the previous, or the issuer matches the global handle.
+            // We're OK to continue.
           } else {
             const prevClaim = JSON.parse(prevEntry.claim)
-            if (prevClaim.agent?.identifier === payload.iss) {
-              // we're OK to continue
+            if (payload.iss == prevClaim.agent?.identifier) {
+              // The issuer was assigned as an agent.
+              // We're OK to continue.
             } else {
               // someday check other properties, eg 'member' in Organization (requiring a role check)
               return Promise.reject(
