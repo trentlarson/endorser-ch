@@ -883,6 +883,6 @@ describe('6 - handle', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(5000)
+  }).timeout(3000)
 
 })
