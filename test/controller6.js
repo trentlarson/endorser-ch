@@ -88,6 +88,8 @@ const projectNewBy2JwtProm = credentials[2].createVerification(projectNewBy2JwtO
 
 
 
+const FINAL_SEEKS = "ice cream"
+
 const person1By2JwtObj = R.clone(testUtil.jwtTemplate)
 person1By2JwtObj.claim = {
   ... R.clone(testUtil.claimPerson),
@@ -99,7 +101,7 @@ const person1By1JwtObj = R.clone(testUtil.jwtTemplate)
 person1By1JwtObj.claim = {
   ... R.clone(testUtil.claimPerson),
   identifier: creds[1].did,
-  seeks: "ice cream",
+  seeks: FINAL_SEEKS,
 }
 const person1By1JwtProm = credentials[1].createVerification(person1By1JwtObj)
 
@@ -866,6 +868,18 @@ describe('6 - handle', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('handle retrieval gives latest value', async () => {
+    await request(Server)
+      .get('/api/claim/byHandle/' + creds[1].did)
+      .send({jwtEncoded: person1By2AgainFailsJwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.claim.seeks).that.equals(FINAL_SEEKS)
       }).catch((err) => {
         return Promise.reject(err)
       })
