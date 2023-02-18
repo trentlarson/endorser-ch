@@ -199,7 +199,7 @@ export default express
  * Get all plans by the issuer, paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/plansForIssuer
+ * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
@@ -234,7 +234,7 @@ export default express
  * Get all projects by the issuer, paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/projectsForIssuer
+ * @route GET /api/v2/report/projectsByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically

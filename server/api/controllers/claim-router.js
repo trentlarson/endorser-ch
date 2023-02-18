@@ -2,6 +2,7 @@ import * as express from 'express'
 import R from 'ramda'
 
 import ClaimService from '../services/claim.service'
+import { GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from '../services/util'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class ClaimController {
 
@@ -90,7 +91,9 @@ let claimController = new ClaimController()
 import DbService from '../services/endorser.db.service';
 class DbController {
   getLastClaimWithHandleId(req, res) {
-    DbService.jwtLastByHandleId(req.params.id)
+    const handleId =
+      isGlobalUri(req.params.id) ? req.params.id : GLOBAL_ENTITY_ID_IRI_PREFIX + req.params.id
+    DbService.jwtLastByHandleId(handleId)
       .then(result => {
         if (result) {
           result.claim = JSON.parse(result.claim)

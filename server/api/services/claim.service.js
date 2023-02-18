@@ -839,7 +839,7 @@ class ClaimService {
               } }
             )
           } else {
-            // we're OK to continue
+            // we're OK to continue, with the handle being either global or local and not potentially clashing
           }
         } else {
           if (payload.iss == prevEntry.issuer || payload.iss == handleId) {

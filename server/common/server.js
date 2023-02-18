@@ -27,7 +27,7 @@ let options = {
     info: {
       title: 'endorser-ch',
       description: 'Endorser recording & search',
-      version: process.env.VERSION,
+      version: process.env.ENDORSER_VERSION,
     },
     host: (process.env.EXT_DOMAIN || 'localhost') + ':' + (process.env.EXT_PORT || DEFAULT_PORT),
     basePath: '',

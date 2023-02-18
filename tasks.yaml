@@ -1,6 +1,9 @@
 ---
 
-- .5 mobile - recent offer doesn't show as a specific amount
+- .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
+  - migrate to "claimsByIssuerWithTypes"
+
+- .2 change API docs with handles (eg. plan & project) to be "HANDLE_ID" in the endpoint definition
 
 - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
 
@@ -8,10 +11,14 @@
 
 - .2 mobile - remove duplicate background check
 
+- .5 mobile & server - change the registration from mobile to agent & participant .identifier (from agent.did), and look for others
+
 - 01 release :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
+
+- 50 desktop version of mobile app (for Vermont)
 
 - 02 bring libs up-to-date
 
@@ -31,6 +38,7 @@
 
 - 02 store claim column as canonical (possibly migrating), remove claimEncoded, add claimHash, add claimObfuHash
 
+- 01 mark some endpoints as experimental (eg. open-ended JWT search)
 - .5 disable open-ended JWT search endpoint
 
 - 01 add endpoint for license
@@ -50,8 +58,6 @@
 - 01 bump dependencies
 
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
-
-- 01 add sensitive issues to a separate list
 
 - 01 add SAIDs for essential commitment schemas
 
@@ -302,3 +308,5 @@
 - 01 report page - who has the most activity for a time range
 - desktop app:
   - get initial build on MacOS
+
+- x 01 mobile: requiresOffers & requiresOfferAmount
