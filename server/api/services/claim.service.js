@@ -198,6 +198,7 @@ class ClaimService {
         return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
       }
 
+      // agent.did is for legacy data, some still in mobile app
       let agentDid = origClaim.agent?.identifier || origClaim.agent?.did
 
       let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
@@ -222,6 +223,7 @@ class ClaimService {
     } else if (origClaim['@context'] === 'https://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
 
+      // party.did is for legacy data, some still in mobile app
       let partyDid = origClaim.party?.identifier || origClaim.party?.did
 
       let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
@@ -282,10 +284,10 @@ class ClaimService {
       let origClaimStr = canonicalize(origClaim)
 
       // If we choose to add the subject, it's found in these places (as of today):
-      //   claim.agent.identifier
-      //   claim.member.member.identifier
-      //   claim.party.identifier
-      //   claim.identifier
+      //   claim.[ agent | member.member | party | participant ].identifier
+      //
+      //   The "did" version is for legacy data, maybe still in mobile app.
+      //   claim.[ agent | member.member | party | participant ].did
 
       let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for a generic confirmation`);
@@ -322,6 +324,7 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
 
+      // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
       if (!agentDid) {
@@ -390,6 +393,7 @@ class ClaimService {
 
       // note that this is similar to Project
 
+      // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
       let internalId = null
@@ -490,6 +494,7 @@ class ClaimService {
 
       // note that this is similar to PlanAction
 
+      // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
       let internalId = null
@@ -587,8 +592,10 @@ class ClaimService {
 
     } else if (isEndorserRegistrationClaim(claim)) {
 
+      // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
+      // participant.did is for legacy data, some still in the mobile app
       let participantDid = claim.participant?.identifier || claim.participant?.did
 
       let registration = {
@@ -604,6 +611,7 @@ class ClaimService {
     } else if (claim['@context'] === 'https://endorser.ch'
                && claim['@type'] === 'Tenure') {
 
+      // party.did is for legacy data, some still in the mobile app
       let partyDid = claim.party?.identifier || claim.party?.did
 
       let bbox = calcBbox(claim.spatialUnit.geo.polygon)

@@ -1,7 +1,9 @@
 ---
 
+- 01 mobile - change agent.did to agent.identifier
+
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
-  - migrate to "claimsByIssuerWithTypes"
+  - migrate to "claimsByIssuerWithTypes" (on mobile?)
 
 - .2 change API docs with handles (eg. plan & project) to be "HANDLE_ID" in the endpoint definition
 
