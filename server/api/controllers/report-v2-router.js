@@ -207,38 +207,3 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByIssuer', dbController.getPlansByIssuerPaged)
-
-/**
- * Get all projects for the query inputs, paginated, reverse-chronologically
- *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/projects
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} jwtId.query.optional
- * @param {string} issuerDid.query.optional
- * @param {string} agentDid.query.optional
- * @param {string} fullIri.query.optional
- * @param {string} internalId.query.optional
- * @param {string} description.query.optional
- * @param {string} endTime.query.optional
- * @param {string} startTime.query.optional
- * @param {string} resultIdentifier.query.optional
- * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
- * @returns {Error}  default - Unexpected error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/projects', dbController.getAllProjectsPaged)
-
-/**
- * Get all projects by the issuer, paginated, reverse-chronologically
- *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/projectsByIssuer
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
- * @returns {Error}  default - Unexpected error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/projectsByIssuer', dbController.getProjectsByIssuerPaged)

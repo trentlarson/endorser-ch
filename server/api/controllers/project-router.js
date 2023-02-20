@@ -21,27 +21,6 @@ const planController = new PlanController()
 
 
 
-class ProjectController {
-
-  // gets info but not the full claim
-  getProjectInfoByExternalId(req, res) {
-    projectService
-      .infoByExternalId(req.params.id)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => {
-        if (r) res.json(r);
-        else res.status(404).end();
-      })
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
-  }
-
-}
-const projectController = new ProjectController()
-
-
-
-
-
 
 import * as express from 'express'
 
@@ -55,7 +34,8 @@ const planRouter = express
 
 /**
  * Retrieve the latest version of a plan based on the persistent ID.
- * The ID is typically supplied by the initial declaration of the plan; if not, the claim ID is used.
+ * The ID is typically supplied by the initial declaration of the plan;
+ * if not, the claim ID is used. See handleId in the result after creation.
  *
  * @group project - Project storage
  * @route GET /api/plan/{id}
@@ -69,29 +49,4 @@ const planRouter = express
 
 
 
-
-const projectRouter = express
-  .Router()
-  .all('*', function (req, res, next) {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    next();
-  })
-
-/**
- * Retrieve the latest version of a project based on the persistent ID.
- * The ID is typically supplied by the initial declaration of the project; if not, the claim ID is used.
- *
- * @group project - Project storage
- * @route GET /api/project/{id}
- * @param {string} id.path.required - the ID of the Project record to retrieve
- * @returns {Object} project data if it exists (or 404)
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/:id', projectController.getProjectInfoByExternalId)
-
-
-
-
-
-module.exports = { planRouter, projectRouter }
+module.exports = planRouter
