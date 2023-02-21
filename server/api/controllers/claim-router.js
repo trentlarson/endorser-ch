@@ -169,7 +169,7 @@ export default express
 /**
  * Get most recent "entity" (claim that matches an handle ID)
  *
- * @group report - Reports
+ * @group claim - Claim storage
  * @route GET /api/claim/byHandle/{id}
  * @param {string} id.params.required - the persistent "entity" handle ID
  * @returns {Jwt} 200 - the claim record with the most recent changes for that handle ID

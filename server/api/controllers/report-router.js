@@ -142,6 +142,70 @@ export default express
  */
 
 /**
+ * Consent to make push-token issuer's ID visible to the given ID
+ *
+ * @group network - Visibility
+ * @route POST /api/report/canSeeMe
+ * @param {DidBody.model} body.body.required
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/canSeeMe', dbController.makeMeVisibleTo)
+
+/**
+ * Make push-token issuer's ID invisible to the given ID
+ *
+ * @group network - Visibility
+ * @route POST /api/report/cannotSeeMe
+ * @param {DidBody.model} body.body.required
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
+
+/**
+ * Consent to make push-token issuer's ID visible to the world
+ *
+ * @group network - Visibility
+ * @route POST /api/report/makeMeGloballyVisible
+ * @param {UrlBody.model} body.body.optional
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
+
+/**
+ * Get all DIDs this person can see
+ *
+ * @group network - Visibility
+ * @route GET /api/report/whichDidsICanSee
+ * @returns {Array.object} 200 - list of DIDs user can see
+ * @returns {Error} default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/whichDidsICanSee', dbController.getCanSeeDids)
+
+/**
+ * Get all DIDs that can explicitly see this person.
+ * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
+ *
+ * @group network - Visibility
+ * @route GET /api/report/whichDidsCanSeeMe
+ * @param {string} did.query.required
+ * @returns boolean 200 - true if the DID can see the caller
+ * @returns {Error} default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitly)
+
+/**
+ * @typedef RateLimits
+ * @property {string} doneClaimsThisWeek
+ * @property {string} doneRegistrationsThisMonth
+ * @property {string} maxClaimsPerWeek
+ * @property {string} maxRegistrationsPerMonth
+ * @property {string} nextMonthBeginDateTime
+ * @property {string} nextWeekBeginDateTime
+ */
+
+/**
  * Get issuers for a claim
  *
  * @group report - Reports
@@ -224,70 +288,6 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/globallyVisibleDids', dbController.getSeenByAll)
-
-/**
- * Consent to make push-token issuer's ID visible to the given ID
- *
- * @group network - Visibility
- * @route POST /api/report/canSeeMe
- * @param {DidBody.model} body.body.required
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/canSeeMe', dbController.makeMeVisibleTo)
-
-/**
- * Make push-token issuer's ID invisible to the given ID
- *
- * @group network - Visibility
- * @route POST /api/report/cannotSeeMe
- * @param {DidBody.model} body.body.required
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
-
-/**
- * Consent to make push-token issuer's ID visible to the world
- *
- * @group network - Visibility
- * @route POST /api/report/makeMeGloballyVisible
- * @param {UrlBody.model} body.body.optional
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
-
-/**
- * Get all DIDs this person can see
- *
- * @group network - Visibility
- * @route GET /api/report/whichDidsICanSee
- * @returns {Array.object} 200 - list of DIDs user can see
- * @returns {Error} default - Unexpected error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/whichDidsICanSee', dbController.getCanSeeDids)
-
-/**
- * Get all DIDs that can explicitly see this person.
- * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
- *
- * @group network - Visibility
- * @route GET /api/report/whichDidsCanSeeMe
- * @param {string} did.query.required
- * @returns boolean 200 - true if the DID can see the caller
- * @returns {Error} default - Unexpected error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitly)
-
-/**
- * @typedef RateLimits
- * @property {string} doneClaimsThisWeek
- * @property {string} doneRegistrationsThisMonth
- * @property {string} maxClaimsPerWeek
- * @property {string} maxRegistrationsPerMonth
- * @property {string} nextMonthBeginDateTime
- * @property {string} nextWeekBeginDateTime
- */
 
 /**
  * Get this DID's registration and claim limits.
