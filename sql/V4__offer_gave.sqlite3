@@ -1,0 +1,35 @@
+
+CREATE TABLE offer_claim (
+       jwtId TEXT PRIMARY KEY, -- initial declaration
+       handleId TEXT,
+       -- note that did:peer are 58 chars
+       offeredByDid TEXT, -- DID of the entity offering the item
+       recipientDid TEXT, -- DID of recipient
+       recipientPlanId TEXT, -- full ID of PlanAction
+       amount REAL,
+       unit TEXT,
+       validThrough DATE,
+       fullClaim TEXT -- full claim JSON
+);
+
+CREATE INDEX offer_handleId ON offer_claim(handleId);
+CREATE INDEX offer_offeredByDid ON offer_claim(offeredByDid);
+CREATE INDEX offer_recipientDid ON offer_claim(recipientDid);
+CREATE INDEX offer_recipientPlanId ON offer_claim(recipientPlanId);
+CREATE INDEX offer_validThrough ON offer_claim(validThrough);
+
+CREATE TABLE give_claim (
+       jwtId TEXT PRIMARY KEY, -- initial declaration
+       handleId TEXT,
+       -- note that did:peer are 58 chars
+       agentDid TEXT, -- DID of the entity who gave the item
+       recipientDid TEXT, -- DID of recipient
+       fulfillsId TEXT, -- full ID of offer or plan to which this applies
+       fulfillsType TEXT,
+       fullClaim TEXT -- full claim JSON
+);
+
+CREATE INDEX give_handleId ON give_claim(handleId);
+CREATE INDEX give_agentDid ON give_claim(agentDid);
+CREATE INDEX give_recipientDid ON give_claim(recipientDid);
+CREATE INDEX give_fulfillsId ON give_claim(fulfillsId);

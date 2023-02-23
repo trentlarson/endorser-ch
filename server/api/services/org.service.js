@@ -2,7 +2,7 @@ import util from 'util'
 import R from 'ramda'
 
 import l from '../../common/logger';
-import db from './endorser.db.service';
+import { dbService } from './endorser.db.service';
 import { buildConfirmationList } from './util'
 
 class OrgService {
@@ -13,7 +13,7 @@ class OrgService {
 
 
     // retrieve "cac" (claim and confirmations), eg [{ orgRole: { ORGROLE DATA }, confirmation: { ISSUER & ROW DATA }|null }, ...]
-    let cacs = await db.retrieveOrgRoleClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr)
+    let cacs = await dbService.retrieveOrgRoleClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr)
 
     // group by DID, eg {did1: [ ALL CACS FOR did1 ], did2: ...}
     let cacListsByDid = R.groupBy(cac => cac.orgRole.memberDid)(cacs)

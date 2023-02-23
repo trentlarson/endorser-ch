@@ -8,7 +8,7 @@ import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import dbService from '../server/api/services/endorser.db.service'
+import { dbService } from '../server/api/services/endorser.db.service'
 import { UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 

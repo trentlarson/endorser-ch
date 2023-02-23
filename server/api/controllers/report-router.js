@@ -77,16 +77,16 @@ class OrgRoleController {
 let orgRoleController = new OrgRoleController();
 
 
-import DbService from '../services/endorser.db.service';
+import { dbService } from '../services/endorser.db.service';
 class DbController {
   getVoteCounts(req, res) {
-    DbService.retrieveVoteCounts()
+    dbService.retrieveVoteCounts()
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getSeenByAll(req, res) {
-    DbService.getSeenByAll()
+    dbService.getSeenByAll()
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })

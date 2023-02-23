@@ -2,14 +2,14 @@ import util from 'util'
 import R from 'ramda'
 
 import l from '../../common/logger'
-import db from './endorser.db.service'
+import { dbService } from './endorser.db.service'
 import { buildConfirmationList } from './util'
 
 class ActionService {
 
   byId(id) {
     l.trace(`${this.constructor.name}.byId(${id})`);
-    return db.actionClaimById(id)
+    return dbService.actionClaimById(id)
   }
 
   async byQuery(params) {
@@ -18,7 +18,7 @@ class ActionService {
       params.rowid = params.id
       delete params.id
     }
-    let resultData = await db.actionClaimsByParams(params)
+    let resultData = await dbService.actionClaimsByParams(params)
     return resultData
   }
 
@@ -26,7 +26,7 @@ class ActionService {
     // Note that the following is very similar to OrgService.getClaimsAndConfirmationsForRoleOnDate & TenureService.getClaimsAndConfirmationsAtPoint
 
     // retrieve "cac" (claim and confirmations), eg [{ action: { ACTION DATA }, confirmation: { ISSUER & ROW DATA }|null }, ...]
-    let cacs = await db.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
+    let cacs = await dbService.retrieveActionClaimsAndConfirmationsForEventsSince(dateTime)
 
     // group by DID, eg {did1: [ ALL CACS FOR did1 ], did2: ...}
     let cacListsByDid = R.groupBy(cac => cac.action.agentDid)(cacs)

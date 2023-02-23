@@ -3,7 +3,8 @@ import * as R from 'ramda'
 
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
-import DbService from '../services/endorser.db.service';
+import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
+console.log('dbService', dbService)
 class DbController {
 
   getAllJwtsPaged(req, res, next) {
@@ -12,7 +13,7 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    DbService.jwtsByParamsPaged(query, afterId, beforeId)
+    dbService.jwtsByParamsPaged(query, afterId, beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
@@ -27,7 +28,7 @@ class DbController {
     if (!Array.isArray(claimTypes)) {
       return res.status(400).json({error: "Parameter 'claimTypes' should be an array but got: " + req.query.claimTypes}).end()
     }
-    DbService.jwtIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
+    dbService.jwtIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
@@ -37,13 +38,39 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getOfferTotals(req, res, next) {
+    const query = req.query
+    const planId = req.query.planId
+    const recipientId = req.query.recipientId
+    if (recipientId && recipientId != res.locals.tokenIssuer) {
+      res.status(400).json({ error: "Request for recipient totals must be made by that recipient." }).end()
+      return
+    } else {
+      const afterId = req.query.afterId
+      const beforeId = req.query.beforeId
+      const unit = req.query.unit
+      dbService.offerTotals(planId, recipientId, unit, afterId, beforeId)
+        .then(results => { res.json(results).end() })
+        .catch(err => {
+          if (err == MUST_FILTER_TOTALS_ERROR) {
+            res.status(400).json(
+              "Client must filter by plan or recipient when asking for totals."
+            ).end()
+          } else {
+            console.error(err)
+            res.status(500).json(""+err).end()
+          }
+        })
+    }
+  }
+
   getAllPlansPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    DbService.plansByParamsPaged(query, afterId, beforeId)
+    dbService.plansByParamsPaged(query, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -55,7 +82,7 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    DbService.plansByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
+    dbService.plansByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -67,7 +94,7 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    DbService.projectsByParamsPaged(query, afterId, beforeId)
+    dbService.projectsByParamsPaged(query, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -79,14 +106,14 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    DbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
+    dbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
   getCanClaim(req, res) {
-    DbService.registrationByDid(res.locals.tokenIssuer)
+    dbService.registrationByDid(res.locals.tokenIssuer)
       .then(r => {
         const dataResult = { data: !!r }
         if (!r) {
@@ -207,3 +234,19 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByIssuer', dbController.getPlansByIssuerPaged)
+
+/**
+ * Get totals of offers
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/offerTotals
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planId - handle ID of the plan which has received offers
+ * @param {string} recipientId - DID of recipient who has received offers
+ * @param {string} unit - unit code to restrict amounts
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error}  default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/offerTotals', dbController.getOfferTotals)

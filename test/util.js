@@ -158,6 +158,18 @@ module.exports = {
 
   INITIAL_DESCRIPTION: INITIAL_DESCRIPTION,
 
+  claimOffer: {
+    "@context": "https://schema.org",
+    "@type": "Offer",
+    //identifier: "...", // only supply a global IRI string
+    issuedAt: '2023-02-19T19:28:00Z',
+    //includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
+    //itemOffered: { description: "...", isPartOf: { '@type': 'PlanAction', identifier: "..." }},
+    offeredBy: { identifier: null }, // offering agent's DID string
+    //recipient: { identifier: null }, // individual recipient DID string
+    //validThrough: '...', // date string
+  },
+
   claimPlanAction: {
     "@context": "https://schema.org",
     "@type": "PlanAction",

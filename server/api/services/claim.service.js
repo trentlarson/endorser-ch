@@ -8,7 +8,7 @@ import util from 'util'
 import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 
 import l from '../../common/logger'
-import db from './endorser.db.service'
+import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX,
   hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT,
@@ -51,7 +51,7 @@ class ClaimService {
 
   async byId(id, requesterDid) {
     l.trace(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
-    let jwtRec = await db.jwtById(id)
+    let jwtRec = await dbService.jwtById(id)
     if (jwtRec) {
       let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject,
                     claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim),
@@ -65,7 +65,7 @@ class ClaimService {
   async byQuery(params) {
     l.trace(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
     var resultData
-    resultData = await db.jwtsByParams(params)
+    resultData = await dbService.jwtsByParams(params)
     let result = resultData.map(j => {
       let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext,
                      claimType:j.claimType, claim:JSON.parse(j.claim), handleId:j.handleId}
@@ -79,7 +79,7 @@ class ClaimService {
    */
   async fullJwtById(id, requesterDid) {
     l.trace(`${this.constructor.name}.fullJwtById(${id}, ${requesterDid})`);
-    let jwtRec = await db.jwtById(id)
+    let jwtRec = await dbService.jwtById(id)
     if (jwtRec) {
       return jwtRec
     } else {
@@ -88,11 +88,11 @@ class ClaimService {
   }
 
   async thisClaimAndConfirmationsIssuersMatchingClaimId(claimId) {
-    let jwtClaim = await db.jwtById(claimId)
+    let jwtClaim = await dbService.jwtById(claimId)
     if (!jwtClaim) {
       return []
     } else {
-      let confirmations = await db.confirmationsByClaim(jwtClaim.claim)
+      let confirmations = await dbService.confirmationsByClaim(jwtClaim.claim)
       let allDids = R.append(
         jwtClaim.issuer,
         R.map((c)=>c.issuer, confirmations)
@@ -102,7 +102,7 @@ class ClaimService {
   }
 
   async getRateLimits(requestorDid) {
-    const registered = await db.registrationByDid(requestorDid)
+    const registered = await dbService.registrationByDid(requestorDid)
     if (registered) {
       const startOfMonthDate = DateTime.utc().startOf('month')
       const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
@@ -113,10 +113,10 @@ class ClaimService {
         nextWeekBeginDateTime: startOfWeekDate.plus({weeks: 1}).toISO(),
       }
 
-      const claimedCount = await db.jwtCountByAfter(requestorDid, startOfWeekString)
+      const claimedCount = await dbService.jwtCountByAfter(requestorDid, startOfWeekString)
       result.doneClaimsThisWeek = claimedCount
 
-      const regCount = await db.registrationCountByAfter(requestorDid, startOfMonthEpoch)
+      const regCount = await dbService.registrationCountByAfter(requestorDid, startOfMonthEpoch)
       result.doneRegistrationsThisMonth = regCount
       result.maxClaimsPerWeek = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
       result.maxRegistrationsPerMonth = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
@@ -140,9 +140,9 @@ class ClaimService {
   }
 
   async merkleUnmerkled() {
-    return db.jwtClaimsAndIdsUnmerkled()
+    return dbService.jwtClaimsAndIdsUnmerkled()
       .then(idAndClaimArray => {
-        return db.jwtLastMerkleHash()
+        return dbService.jwtLastMerkleHash()
           .then(hashHexArray => {
             var seedHex = ""
             if (hashHexArray.length > 0) {
@@ -159,7 +159,7 @@ class ClaimService {
                 )
                 idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
               }
-              updates.push(db.jwtSetMerkleHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
+              updates.push(dbService.jwtSetMerkleHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
             }
             return Promise.all(updates)
           })
@@ -191,7 +191,7 @@ class ClaimService {
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
-      var events = await db.eventsByParams(
+      var events = await dbService.eventsByParams(
         {orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime}
       )
       if (events.length === 0) {
@@ -201,21 +201,21 @@ class ClaimService {
       // agent.did is for legacy data, some still in mobile app
       let agentDid = origClaim.agent?.identifier || origClaim.agent?.did
 
-      let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
+      let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
       if (actionClaimId === null) {
         return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
       }
 
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
-      let confirmation = await db.confirmationByIssuerAndAction(issuerDid, actionClaimId)
+      let confirmation = await dbService.confirmationByIssuerAndAction(issuerDid, actionClaimId)
       if (confirmation !== null) {
         return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
       }
 
       let origClaimStr = canonicalize(origClaim)
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
+      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
       return {confirmId:result, actionClaimId}
 
@@ -226,21 +226,21 @@ class ClaimService {
       // party.did is for legacy data, some still in mobile app
       let partyDid = origClaim.party?.identifier || origClaim.party?.did
 
-      let tenureClaimId = await db.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
+      let tenureClaimId = await dbService.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) {
         return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
       }
 
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
-      let confirmation = await db.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
+      let confirmation = await dbService.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
       if (confirmation !== null) {
         return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
       }
 
       let origClaimStr = canonicalize(origClaim)
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
+      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
       return {confirmId:result, tenureClaimId}
 
@@ -253,7 +253,7 @@ class ClaimService {
                && origClaim.member.member.identifier) {
 
       let orgRoleClaimId =
-          await db.orgRoleClaimIdByOrgAndDates(
+          await dbService.orgRoleClaimIdByOrgAndDates(
             origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
             origClaim.member.endDate, origClaim.member.member.identifier
           )
@@ -261,14 +261,14 @@ class ClaimService {
 
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
-      let confirmation = await db.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
+      let confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
       if (confirmation !== null) {
         return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
       }
 
       let origClaimStr = canonicalize(origClaim)
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
+      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
       return {confirmId:result, orgRoleClaimId}
 
@@ -276,7 +276,7 @@ class ClaimService {
     } else {
 
       // check for duplicate
-      let confirmation = await db.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
+      let confirmation = await dbService.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) {
         return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
       }
@@ -289,14 +289,14 @@ class ClaimService {
       //   The "did" version is for legacy data, maybe still in mobile app.
       //   claim.[ agent | member.member | party | participant ].did
 
-      let result = await db.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
+      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for a generic confirmation`);
       return {confirmId:result}
 
     }
   }
 
-  async createEmbeddedClaimRecord(jwtId, issuerDid, claim) {
+  async createEmbeddedClaimRecord(jwtId, issuerDid, handleId, claim) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -339,10 +339,10 @@ class ClaimService {
 
       var event
       var orgName = claim.event.organizer && claim.event.organizer.name
-      var events = await db.eventsByParams({orgName:orgName, name:claim.event.name, startTime:claim.event.startTime})
+      var events = await dbService.eventsByParams({orgName:orgName, name:claim.event.name, startTime:claim.event.startTime})
 
       if (events.length === 0) {
-        let eventId = await db.eventInsert(orgName, claim.event.name, claim.event.startTime)
+        let eventId = await dbService.eventInsert(orgName, claim.event.name, claim.event.startTime)
         event = {id:eventId, orgName:orgName, name:claim.event.name, startTime:claim.event.startTime}
         l.trace(`${this.constructor.name} New event # ${util.inspect(event)}`)
 
@@ -354,7 +354,7 @@ class ClaimService {
             + ` startTime ${claim.event.startTime}`)
         }
 
-        let actionClaimId = await db.actionClaimIdByDidEventId(agentDid, events[0].id)
+        let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
         if (actionClaimId) {
           return Promise.reject(
             new Error("Same user attempted to record an action claim that already exists with ID "
@@ -364,7 +364,7 @@ class ClaimService {
 
       }
 
-      let actionId = await db.actionClaimInsert(issuerDid, agentDid, jwtId, event)
+      let actionId = await dbService.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
       return { actionId }
 
@@ -384,8 +384,38 @@ class ClaimService {
         endDate: claim.member.endDate,
         memberDid: claim.member.member.identifier
       }
-      let orgRoleId = await db.orgRoleInsert(entry)
+      let orgRoleId = await dbService.orgRoleInsert(entry)
       return { orgRoleId }
+
+
+    } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'Offer') {
+
+      if (claim.offeredBy?.identifier
+          && claim.offeredBy.identifier != issuerDid) {
+        return Promise.reject(
+          new Error("The entity in offeredBy doesn't match the issuer.")
+        )
+      }
+
+      let planId =
+          claim.itemOffered?.isPartOf
+          && claim.itemOffered.isPartOf['@type'] == 'PlanAction'
+          && claim.itemOffered.isPartOf.identifier
+      let entry = {
+        jwtId: jwtId,
+        handleId: handleId,
+        issuerDid: issuerDid,
+        offeredByDid: claim.offeredBy?.identifier,
+        recipientDid: claim.recipient?.identifier,
+        recipientPlanId: planId,
+        amount: claim.includesObject?.amountOfThisGood,
+        unit: claim.includesObject?.unitCode,
+        validThrough: claim.validThrough,
+        fullClaim: canonicalize(claim),
+      }
+      let offerId = await dbService.offerInsert(entry)
+      return { offerId }
 
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -396,97 +426,30 @@ class ClaimService {
       // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
-      let internalId = null
-      let fullIri = null
-      let planRecord = null
-      let clientMessage = null
-      if (claim.identifier == null) {
-        internalId = jwtId
-        fullIri = GLOBAL_ENTITY_ID_IRI_PREFIX + internalId
-      } else {
-        if (isGlobalUri(claim.identifier)) {
-          if (claim.identifier.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)) {
-            // It should already exist.
-            planRecord = await db.planInfoByFullIri(claim.identifier)
-            if (planRecord == null) {
-              clientMessage = 'You are not allowed to use an identifier that does not already exist.'
-                + ' This will not be saved as a valid plan.'
-            } else {
-              // Found an existing record.
-              internalId = planRecord.internalId
-              fullIri = planRecord.fullIri
-            }
-          } else {
-            fullIri = claim.identifier
-
-            // It is an IRI from some other system... fine.
-            // It might already be in our system.
-            planRecord = await db.planInfoByFullIri(fullIri)
-            if (planRecord == null) {
-              internalId = jwtId
-            } else {
-              internalId = planRecord.internalId
-            }
-          }
-
-        } else {
-          // It is not a global IRI.
-          planRecord =
-            await db.planInfoByFullIri(GLOBAL_ENTITY_ID_IRI_PREFIX + claim.identifier)
-
-          if (planRecord == null) {
-            clientMessage = 'You are not allowed to use an identifier that does not exist yet.'
-              + ' This will not be saved as a valid plan.'
-          } else {
-            internalId = planRecord.internalId
-            fullIri = planRecord.fullIri
-          }
-        }
+      const entry = {
+        jwtId: jwtId,
+        agentDid: agentDid,
+        issuerDid: issuerDid,
+        fullIri: handleId,
+        name: claim.name,
+        description: claim.description,
+        image: claim.image,
+        endTime: claim.endTime,
+        startTime: claim.startDate,
+        resultDescription: claim.resultDescription,
+        resultIdentifier: claim.resultIdentifier,
       }
 
-      // insert or edit
+      let planRecord = await dbService.planInfoByFullIri(handleId)
+      if (planRecord == null) {
+        // new record
+        const planId = await dbService.planInsert(entry)
+        return { fullIri: handleId, handleId, recordsSavedForEdit: 1, planId }
 
-      if (fullIri == null || internalId == null) {
-        // this is not valid for storing in our system
-        return { clientMessage }
       } else {
-        // this is valid for our system
-
-        const entry = {
-          jwtId: jwtId,
-          agentDid: agentDid,
-          issuerDid: issuerDid,
-          fullIri: fullIri,
-          internalId: internalId,
-          name: claim.name,
-          description: claim.description,
-          image: claim.image,
-          endTime: claim.endTime,
-          startTime: claim.startDate,
-          resultDescription: claim.resultDescription,
-          resultIdentifier: claim.resultIdentifier,
-        }
-
-        if (planRecord == null) {
-          // new record
-          const planId = await db.planInsert(entry)
-          return { clientMessage, fullIri, internalId, recordsSavedForEdit: 1 }
-
-        } else {
-          // edit that record
-          if (issuerDid == planRecord.issuerDid
-              || issuerDid == planRecord.agentDid) {
-            const numUpdated = await db.planUpdate(entry)
-
-            if (clientMessage != null) {
-              return { clientMessage, fullIri, internalId, recordsSavedForEdit: numUpdated }
-            }
-          } else {
-            // don't edit because they're not the issuer or agent
-            return { clientMessage: 'you are not the issuer or agent of the original record.'
-                     + ' This was not stored as a valid plan.' }
-          }
-        }
+        // edit existing record
+        const numUpdated = await dbService.planUpdate(entry)
+        return { fullIri: handleId, handleId, recordsSavedForEdit: numUpdated }
       }
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -497,97 +460,30 @@ class ClaimService {
       // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
-      let internalId = null
-      let fullIri = null
-      let projectRecord = null
-      let clientMessage = null
-      if (claim.identifier == null) {
-        internalId = jwtId
-        fullIri = GLOBAL_ENTITY_ID_IRI_PREFIX + internalId
-      } else {
-        if (isGlobalUri(claim.identifier)) {
-          if (claim.identifier.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)) {
-            // It should already exist.
-            projectRecord = await db.projectInfoByFullIri(claim.identifier)
-            if (projectRecord == null) {
-              clientMessage = 'You are not allowed to use an identifier that does not already exist.'
-                + ' This will not be saved as a valid project.'
-            } else {
-              // Found an existing record.
-              internalId = projectRecord.internalId
-              fullIri = projectRecord.fullIri
-            }
-          } else {
-            fullIri = claim.identifier
-
-            // It is an IRI from some other system... fine.
-            // It might already be in our system.
-            projectRecord = await db.projectInfoByFullIri(fullIri)
-            if (projectRecord == null) {
-              internalId = jwtId
-            } else {
-              internalId = projectRecord.internalId
-            }
-          }
-
-        } else {
-          // It is not a global IRI.
-          projectRecord =
-            await db.projectInfoByFullIri(GLOBAL_ENTITY_ID_IRI_PREFIX + claim.identifier)
-
-          if (projectRecord == null) {
-            clientMessage = 'You are not allowed to use an identifier that does not exist yet.'
-              + ' This will not be saved as a valid project.'
-          } else {
-            internalId = projectRecord.internalId
-            fullIri = projectRecord.fullIri
-          }
-        }
+      const entry = {
+        jwtId: jwtId,
+        agentDid: agentDid,
+        issuerDid: issuerDid,
+        fullIri: handleId,
+        name: claim.name,
+        description: claim.description,
+        image: claim.image,
+        endTime: claim.endTime,
+        startTime: claim.startDate,
+        resultDescription: claim.resultDescription,
+        resultIdentifier: claim.resultIdentifier,
       }
 
-      // insert or edit
+      let projectRecord = await dbService.projectInfoByFullIri(handleId)
+      if (projectRecord == null) {
+        // new record
+        const projectId = await dbService.projectInsert(entry)
+        return { fullIri: handleId, handleId, recordsSavedForEdit: 1, projectId }
 
-      if (fullIri == null || internalId == null) {
-        // this is not valid for storing in our system
-        return { clientMessage }
       } else {
-        // this is valid for our system
-
-        const entry = {
-          jwtId: jwtId,
-          agentDid: agentDid,
-          issuerDid: issuerDid,
-          fullIri: fullIri,
-          internalId: internalId,
-          name: claim.name,
-          description: claim.description,
-          image: claim.image,
-          endTime: claim.endTime,
-          startTime: claim.startDate,
-          resultDescription: claim.resultDescription,
-          resultIdentifier: claim.resultIdentifier,
-        }
-
-        if (projectRecord == null) {
-          // new record
-          const projectId = await db.projectInsert(entry)
-          return { clientMessage, fullIri, internalId, recordsSavedForEdit: 1 }
-
-        } else {
-          // edit that record
-          if (issuerDid == projectRecord.issuerDid
-              || issuerDid == projectRecord.agentDid) {
-            const numUpdated = await db.projectUpdate(entry)
-
-            if (clientMessage != null) {
-              return { clientMessage, fullIri, internalId, recordsSavedForEdit: numUpdated }
-            }
-          } else {
-            // don't edit because they're not the issuer or agent
-            return { clientMessage: 'you are not the issuer or agent of the original record.'
-                     + ' This was not stored as a valid project.' }
-          }
-        }
+        // edit existing record
+        const numUpdated = await dbService.projectUpdate(entry)
+        return { fullIri: handleId, handleId, recordsSavedForEdit: numUpdated }
       }
 
     } else if (isEndorserRegistrationClaim(claim)) {
@@ -605,7 +501,7 @@ class ClaimService {
         jwtId: jwtId,
       }
 
-      let registrationId = await db.registrationInsert(registration)
+      let registrationId = await dbService.registrationInsert(registration)
       return { registrationId }
 
     } else if (claim['@context'] === 'https://endorser.ch'
@@ -627,7 +523,7 @@ class ClaimService {
             maxLat: bbox.maxLat
           }
 
-      let tenureId = await db.tenureInsert(entry)
+      let tenureId = await dbService.tenureInsert(entry)
       return { tenureId }
 
 
@@ -643,7 +539,7 @@ class ClaimService {
         eventStartTime: claim.object.event.startDate,
       }
 
-      let voteId = await db.voteInsert(entry)
+      let voteId = await dbService.voteInsert(entry)
       return { voteId }
 
 
@@ -685,7 +581,7 @@ class ClaimService {
 
   }
 
-  async createEmbeddedClaimRecords(jwtId, issuerDid, claim) {
+  async createEmbeddedClaimRecords(jwtId, issuerDid, handleId, claim) {
 
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
@@ -693,6 +589,9 @@ class ClaimService {
     let embeddedResults
     if (Array.isArray(claim)) {
 
+      return { clientError: 'We no longer support sending multiple at once. Send individually.' }
+
+      /**
       if (Array.isArray.payloadClaim
           && R.filter(c => c['@type'] === 'Project', claim).length > 1) {
         // To allow this, you'll have to assign different IDs to each project.
@@ -702,14 +601,15 @@ class ClaimService {
       var recordings = []
       { // handle multiple claims
         for (var subClaim of claim) {
-          recordings.push(this.createEmbeddedClaimRecord(jwtId, issuerDid, subClaim))
+          recordings.push(this.createEmbeddedClaimRecord(jwtId, issuerDid, handleId, subClaim))
         }
       }
       l.trace(`${this.constructor.name} creating ${recordings.length} claim records.`)
 
       embeddedResults = await Promise.all(recordings)
+      **/
     } else {
-      embeddedResults = await this.createEmbeddedClaimRecord(jwtId, issuerDid, claim)
+      embeddedResults = await this.createEmbeddedClaimRecord(jwtId, issuerDid, handleId, claim)
       l.trace(`${this.constructor.name} created a claim record.`)
     }
 
@@ -782,7 +682,7 @@ class ClaimService {
       return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss}`)
     }
 
-    const registered = await db.registrationByDid(payload.iss)
+    const registered = await dbService.registrationByDid(payload.iss)
     if (!registered) {
       return Promise.reject(
         { clientError: { message: `You are not registered to make claims. Contact an existing user for help.`,
@@ -792,7 +692,7 @@ class ClaimService {
 
     const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
     const startOfWeekString = startOfWeekDate.toISO()
-    const claimedCount = await db.jwtCountByAfter(payload.iss, startOfWeekString)
+    const claimedCount = await dbService.jwtCountByAfter(payload.iss, startOfWeekString)
     // 0 shouldn't mean DEFAULT
     const maxAllowedClaims = registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
     if (claimedCount >= maxAllowedClaims) {
@@ -808,7 +708,7 @@ class ClaimService {
       if (isEndorserRegistrationClaim(payloadClaim)) {
         const startOfMonthDate = DateTime.utc().startOf('month')
         const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
-        const regCount = await db.registrationCountByAfter(payload.iss, startOfMonthEpoch)
+        const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
         // 0 shouldn't mean DEFAULT
         const maxAllowedRegs = registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
         if (regCount >= maxAllowedRegs) {
@@ -828,32 +728,25 @@ class ClaimService {
       }
 
       // Generate the local id and find or generate the global "entity" handle ID.
-      let internalId = db.newUlid()
+      let jwtId = dbService.newUlid()
       let handleId
       // If this has an identifier, check the previous instance to see if they are allowed to edit.
       if (payloadClaim.identifier) { // 'identifier' is a schema.org convention; may add others
+
         handleId =
           isGlobalUri(payloadClaim.identifier)
           ? payloadClaim.identifier
           : globalFromInternalIdentifier(payloadClaim.identifier)
-        const prevEntry = await db.jwtLastByHandleIdRaw(handleId)
-        if (!prevEntry) {
-          if (!isGlobalUri(payloadClaim.identifier)
-              && payloadClaim.identifier?.length === 26) {
-            // don't allow any non-global IDs that may clash with IDs
-            return Promise.reject(
-              { clientError: {
-                message: `You cannot use a non-global-URI identifer you don't own that may clash with another ID.`
-              } }
-            )
-          } else {
-            // we're OK to continue, with the handle being either global or local and not potentially clashing
-          }
-        } else {
+
+        const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
+        if (prevEntry) {
+          // There is a previous entry.
           if (payload.iss == prevEntry.issuer || payload.iss == handleId) {
             // The issuer is the same as the previous, or the issuer matches the global handle.
             // We're OK to continue.
           } else {
+            // The issuer doesn't match the previous entry issuer or person record.
+            // They likely shouldn't be allowed, but we'll allow if they're the agent.
             const prevClaim = JSON.parse(prevEntry.claim)
             if (payload.iss == prevClaim.agent?.identifier) {
               // The issuer was assigned as an agent.
@@ -867,16 +760,34 @@ class ClaimService {
               )
             }
           }
+        } else {
+          // no previous record with that handle exists
+          if (!isGlobalUri(payloadClaim.identifier)) {
+            // Don't allow any non-global IDs if they don't already exist
+            // ie. if they weren't created by this server.
+            // (If you allow this, ensure they can't choose any past or future jwtId.)
+            return Promise.reject(
+              {
+                clientError: {
+                  message:
+                  `You cannot use a non-global-URI identifer you don't already own.`
+                }
+              }
+            )
+          }
         }
       } else {
-        handleId = globalFromInternalIdentifier(internalId)
+        // There's no payloadClaim.identifier
+        handleId = globalFromInternalIdentifier(jwtId)
       }
 
       const claimStr = canonicalize(payloadClaim)
       const claimEncoded = base64url.encode(claimStr)
-      const jwtEntry = db.buildJwtEntry(payload, internalId, handleId, payloadClaim, claimStr, claimEncoded, jwtEncoded)
+      const jwtEntry = dbService.buildJwtEntry(
+        payload, jwtId, handleId, payloadClaim, claimStr, claimEncoded, jwtEncoded
+      )
       const jwtRowId =
-          await db.jwtInsert(jwtEntry)
+          await dbService.jwtInsert(jwtEntry)
           .catch((err) => {
             return Promise.reject(err)
           })
@@ -890,11 +801,12 @@ class ClaimService {
       // this is the same as the doc.publicKey in my example
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
-      let embedded = await this.createEmbeddedClaimRecords(jwtEntry.id, issuerDid, payloadClaim)
-        .catch(err => {
-          l.error(err, `Failed to create embedded claim records.`)
-          return { embeddedRecordError: err }
-        })
+      let embedded =
+          await this.createEmbeddedClaimRecords(jwtEntry.id, issuerDid, handleId, payloadClaim)
+          .catch(err => {
+            l.error(err, `Failed to create embedded claim records.`)
+            return { embeddedRecordError: err }
+          })
 
       const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId }, embedded)
       return result

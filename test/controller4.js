@@ -9,7 +9,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import dbService from '../server/api/services/endorser.db.service'
+import { dbService } from '../server/api/services/endorser.db.service'
 import { HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
@@ -24,7 +24,7 @@ const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorro
 const claimOffer = {
   "@context": "https://schema.org",
   "@type": "Offer",
-  identifier: "abc",
+  //identifier: "...", // set in loop
   issuedAt: '2022-02-15 19:28:00Z',
   includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
   offeredBy: { identifier: creds[0].did },
@@ -41,7 +41,7 @@ const manyClaims =
       R.lensProp('claim'),
       R.set(
         R.lensProp('identifier'),
-        'abcxyz' + String(n),
+        'abc:/xyz' + String(n),
         R.set(
           R.lensProp('issuedAt'),
           new Date().toISOString(),

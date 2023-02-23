@@ -15,6 +15,11 @@ const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
+export const MUST_FILTER_TOTALS_ERROR = 'MUST_FILTER_TOTALS_ON_PROJECT_OR_RECIPIENT'
+
+
+
+
 function constructWhere(params, allowedColumns, claimContents, contentColumn, excludeConfirmations) {
 
   var whereClause = ""
@@ -56,7 +61,7 @@ function constructWhere(params, allowedColumns, claimContents, contentColumn, ex
     if (whereClause.length > 0) {
       whereClause += " AND"
     }
-    whereClause += " INSTR(lower(claim), lower(?))"
+    whereClause += " INSTR(lower(" + contentColumn + "), lower(?))"
     paramArray.push(claimContents)
   }
 
@@ -84,7 +89,7 @@ function isoAndZonify(dateTime) {
    @param table is the table name
    @param searchableColumns are names of columns allowing search
    @param otherResultColumns are names of other columns to return in result
-   @param dateColumns are names of date columns (which must be converted in result)
+   @param dateColumns are names of date columns which will be converted in result
 
    @param params is an object with a key-value for each column-value to filter, with some special keys:
    - 'claimContents' for text to look for inside claims
@@ -892,6 +897,99 @@ class EndorserDatabase {
 
 
 
+
+
+  /****************************************************************
+   * Offer
+   **/
+
+  async offerInsert(entry) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("INSERT INTO offer_claim (jwtId, handleId, offeredByDid, recipientDid, recipientPlanId, amount, unit, validThrough, fullClaim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      db.run(
+        stmt,
+        [
+          entry.jwtId, entry.handleId, entry.offeredByDid, entry.recipientDid,
+          entry.recipientPlanId, entry.amount, entry.unit, entry.validThrough, entry.fullClaim
+        ],
+        function(err) { if (err) { reject(err) } else { resolve(this.lastID) } })
+    })
+  }
+
+  async offersByParamsPaged(params, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'offer_claim',
+      'jwtId',
+      ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId', 'validThrough'],
+      ['fullClaim'],
+      null,
+      ['validThrough'],
+      params,
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
+  async offerTotals(planId, recipientId, unit, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      let allParams = []
+      let whereClause = ''
+      if (planId) {
+        whereClause += ' recipientPlanId = ?'
+        allParams = allParams.concat([planId])
+      }
+      if (recipientId) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause += ' recipientId = ?'
+        allParams = allParams.concat([recipientId])
+      }
+      if (!whereClause) {
+        reject(MUST_FILTER_TOTALS_ERROR)
+      }
+      if (unit) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause += ' unit = ?'
+        allParams = allParams.concat([unit])
+      }
+      if (afterIdInput) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause = ' jwtId > ?'
+        allParams = allParams.concat([afterIdInput])
+      }
+      if (beforeIdInput) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause += ' jwtId < ?'
+        allParams = allParams.concat([beforeIdInput])
+      }
+      whereClause = ' WHERE' + whereClause
+
+      let data = []
+      let rowErr
+      const sql =
+        "SELECT unit, sum(amount) as total FROM offer_claim" + whereClause + " GROUP BY unit"
+      console.log('sql & params', sql, allParams)
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) { rowErr = err } else { data.push(row) }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            resolve({ data: data })
+          }
+        }
+      )
+    })
+  }
+
+
+
+
+
+
   /****************************************************************
    * Org Role
    **/
@@ -1502,4 +1600,4 @@ class EndorserDatabase {
 
 }
 
-export default new EndorserDatabase()
+export const dbService = new EndorserDatabase()

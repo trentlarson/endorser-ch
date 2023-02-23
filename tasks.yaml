@@ -1,6 +1,17 @@
 ---
 
-- 01 mobile - change agent.did to agent.identifier
+- 04 time offered/given to projects :
+  - recently/total offered/given to you/others in your list
+    /offer
+    /give
+
+    params : plan vs issuer, unit (optional?), ID range
+    /totalOffered
+    /totalGiven
+  - shrink all the long lines in services
+  - deploy : run migration
+  - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
+
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
   - migrate to "claimsByIssuerWithTypes" (on mobile?)

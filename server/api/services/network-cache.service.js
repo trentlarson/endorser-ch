@@ -1,7 +1,7 @@
 import NodeCache from 'node-cache'
 import R from 'ramda'
 
-import db from './endorser.db.service'
+import { dbService } from './endorser.db.service'
 
 import l from '../../common/logger'
 
@@ -27,7 +27,7 @@ async function getDidsRequesterCanSeeExplicitly(requesterDid) {
   if (!requesterDid) return []
   var allowedDids = SeesNetworkCache.get(requesterDid)
   if (!allowedDids) {
-    allowedDids = await db.getSeenBy(requesterDid)
+    allowedDids = await dbService.getSeenBy(requesterDid)
     l.trace(`Here are the currently allowed DIDs from DB who ${requesterDid} can see: ` + JSON.stringify(allowedDids)) // using stringify because empty arrays show as nothing (ug!)
     SeesNetworkCache.set(requesterDid, allowedDids)
   }
@@ -35,10 +35,10 @@ async function getDidsRequesterCanSeeExplicitly(requesterDid) {
 }
 
 async function getDidsSeenByAll() {
-  let requesterDid = db.ALL_SUBJECT_MATCH()
+  let requesterDid = dbService.ALL_SUBJECT_MATCH()
   var allowedDids = SeesNetworkCache.get(requesterDid)
   if (!allowedDids) {
-    var allowedDidsAndUrls = await db.getSeenByAll()
+    var allowedDidsAndUrls = await dbService.getSeenByAll()
 
     // set all the public URLs we see
     UrlsForPublicDids = {}
@@ -74,7 +74,7 @@ async function getDidsWhoCanSeeExplicitly(object) {
   if (!object) return []
   var allowedDids = WhoCanSeeNetworkCache.get(object)
   if (!allowedDids) {
-    allowedDids = await db.getWhoCanSee(object)
+    allowedDids = await dbService.getWhoCanSee(object)
     l.trace(`Here are the currently allowed DIDs from DB who can see ${object}: ` + JSON.stringify(allowedDids)) // using stringify because empty arrays show as nothing (ug!)
     WhoCanSeeNetworkCache.set(object, allowedDids)
   }
@@ -88,13 +88,13 @@ async function canSeeExplicitly(subject, object) {
 }
 
 /**
-   return either [db.ALL_SUBJECT_MATCH()] or the list of DIDs who can explicitly see object (excluding db.ALL_SUBJECT_MATCH())
+   return either [dbService.ALL_SUBJECT_MATCH()] or the list of DIDs who can explicitly see object (excluding dbService.ALL_SUBJECT_MATCH())
 **/
 /** unused
 async function getAllDidsWhoCanSeeObject(object) {
   let allowedDids = getDidsWhoCanSeeExplicitly(object)
-  if (allowedDids.indexOf(db.ALL_SUBJECT_MATCH()) > -1) {
-    return [db.ALL_SUBJECT_MATCH()]
+  if (allowedDids.indexOf(dbService.ALL_SUBJECT_MATCH()) > -1) {
+    return [dbService.ALL_SUBJECT_MATCH()]
   } else {
     return allowedDids
   }
@@ -119,13 +119,13 @@ async function addCanSee(subject, object, url) {
   }
 
   if (subject !== object) {
-    await db.networkInsert(subject, object, url)
+    await dbService.networkInsert(subject, object, url)
   } else {
     // no need to save themselves in the DB (heck: we could do without the caching, too, since we always add this person via getAllDidsRequesterCanSee, but it's fast, so whatever)
     l.trace("Not adding DB network entry since it's the same DID.")
   }
 
-  if (subject === db.ALL_SUBJECT_MATCH()) {
+  if (subject === dbService.ALL_SUBJECT_MATCH()) {
     UrlsForPublicDids[object] = (url ? url : BLANK_URL)
   }
   // else it has to be fully initialized from the DB before next read anyway
@@ -182,16 +182,16 @@ async function removeCanSee(subject, object) {
   }
 
   if (subject !== object) {
-    await db.networkDelete(subject, object)
+    await dbService.networkDelete(subject, object)
   } else {
     // we don't save themselves in the DB anyway
     l.trace("Not removing DB network entry since it's the same DID.")
   }
 
-  if (subject === db.ALL_SUBJECT_MATCH()) {
+  if (subject === dbService.ALL_SUBJECT_MATCH()) {
     UrlsForPublicDids = R.omit([object], UrlsForPublicDids)
   }
-  // else it has to be fully initialized from the DB before next read anyway
+  // else it has to be fully initialized from the DBSERVICE before next read anyway
 
 
 

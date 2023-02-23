@@ -88,12 +88,12 @@ let claimController = new ClaimController()
 
 
 
-import DbService from '../services/endorser.db.service';
+import { dbService } from '../services/endorser.db.service';
 class DbController {
   getLastClaimWithHandleId(req, res) {
     const handleId =
       isGlobalUri(req.params.id) ? req.params.id : GLOBAL_ENTITY_ID_IRI_PREFIX + req.params.id
-    DbService.jwtLastByHandleId(handleId)
+    dbService.jwtLastByHandleId(handleId)
       .then(result => {
         if (result) {
           result.claim = JSON.parse(result.claim)

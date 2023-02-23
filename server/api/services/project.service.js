@@ -1,5 +1,5 @@
 import l from '../../common/logger'
-import db from './endorser.db.service'
+import { dbService } from './endorser.db.service'
 import { GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from './util'
 
 class PlanService {
@@ -11,7 +11,7 @@ class PlanService {
       // assume they're requesting an endorser.ch URI
       externalId = GLOBAL_ENTITY_ID_IRI_PREFIX + externalId
     }
-    return db.planInfoByFullIri(externalId)
+    return dbService.planInfoByFullIri(externalId)
   }
 
 }
@@ -25,7 +25,7 @@ class ProjectService {
       // assume they're requesting an endorser.ch URI
       externalId = GLOBAL_ENTITY_ID_IRI_PREFIX + externalId
     }
-    return db.projectInfoByFullIri(externalId)
+    return dbService.projectInfoByFullIri(externalId)
   }
 
 }

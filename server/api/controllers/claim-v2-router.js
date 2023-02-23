@@ -51,7 +51,17 @@ export default express
  * @group claim - Claim storage
  * @route POST /api/v2/claim
  * @param {EncodedJwt.model} jwt.body.required
- * @returns {object} 200 - { success: { claimId, clientMessage, embeddedRecordError, fullIri, internalId, recordsSavedForEdit, actionId || orgRoleId || registrationId || tenureId || voteId, confirmations: { confirmId } }, error: { code, message} }
+ * @returns {object} 200 - {
+   success: {
+     claimId: string,
+     clientMessage: string,
+     embeddedRecordError: object,
+     handleId: string,
+     recordsSavedForEdit:
+       number, actionId || orgRoleId || registrationId || tenureId || voteId: number,
+     confirmations: { confirmId: number }
+   },
+   error: { code: string, message: string} }
  * @returns {Error}  default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
