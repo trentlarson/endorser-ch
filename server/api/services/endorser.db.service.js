@@ -142,6 +142,7 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
     const sql =
           "SELECT rowid, * FROM " + table
           + allClause + " ORDER BY " + idColumn + " DESC LIMIT " + DEFAULT_LIMIT
+    console.log('sql & params', sql, allParams)
     db.each(sql,
       allParams,
       function(err, row) {
@@ -755,7 +756,9 @@ class EndorserDatabase {
   **/
 
   /**
-     Start after afterIdInput (optional) and before beforeIdinput (optional) and retrieve all claims by issuerDid with claimTypes, in reverse chronological order.
+     Start after afterIdInput (optional) and before beforeIdinput (optional)
+     and retrieve all claims by issuerDid with claimTypes
+     in reverse chronological order.
   **/
   jwtIssuerClaimTypesPaged(issuerDid, claimTypes, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
@@ -775,8 +778,12 @@ class EndorserDatabase {
       let data = []
       let rowErr
       db.each(
-        // don't include things like claimEncoded & jwtEncoded because they contain all info (not hidden later)
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, hashHex, hashChainHex FROM jwt WHERE" + moreClause + " issuer = ? AND claimType in (" + inListStr + ") ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
+        // don't include things like claimEncoded & jwtEncoded
+        // because they contain all info (not hidden later)
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim"
+          + ", handleId, hashHex, hashChainHex FROM jwt WHERE" + moreClause
+          + " issuer = ? AND claimType in (" + inListStr + ")"
+          + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
         allParams,
         function(err, row) {
           if (err) {
@@ -784,9 +791,11 @@ class EndorserDatabase {
           } else {
             row.issuedAt = isoAndZonify(row.issuedAt)
             data.push({
-              id: row.id, issuedAt: row.issuedAt, issuer: row.issuer, subject: row.subject,
-              claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
-              handleId: row.handleId, hashHex: row.hashHex, hashChainHex: row.hashChainHex
+              id: row.id, issuedAt: row.issuedAt, issuer: row.issuer,
+              subject: row.subject, claimContext: row.claimContext,
+              claimType: row.claimType, claim: row.claim,
+              handleId: row.handleId, hashHex: row.hashHex,
+              hashChainHex: row.hashChainHex
             })
           }
         },
@@ -903,26 +912,31 @@ class EndorserDatabase {
    * Offer
    **/
 
-  async offerInsert(entry) {
+  offerInsert(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO offer_claim (jwtId, handleId, offeredByDid, recipientDid, recipientPlanId, amount, unit, validThrough, fullClaim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      var stmt =
+          "INSERT INTO offer_claim (jwtId, handleId, offeredByDid, recipientDid"
+          + ", recipientPlanId, amount, unit, objectDescription, validThrough"
+          + ", fullClaim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.offeredByDid, entry.recipientDid,
-          entry.recipientPlanId, entry.amount, entry.unit, entry.validThrough, entry.fullClaim
+          entry.recipientPlanId, entry.amount, entry.unit, entry.objectDescription,
+          entry.validThrough, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(this.lastID) } })
     })
   }
 
-  async offersByParamsPaged(params, afterIdInput, beforeIdInput) {
+  offersByParamsPaged(params, afterIdInput, beforeIdInput) {
+    console.log('called offersByParamsPaged', params)
     return tableEntriesByParamsPaged(
       'offer_claim',
       'jwtId',
       ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId', 'validThrough'],
       ['fullClaim'],
-      null,
+      "objectDescription",
       ['validThrough'],
       params,
       afterIdInput,
@@ -930,7 +944,7 @@ class EndorserDatabase {
     )
   }
 
-  async offerTotals(planId, recipientId, unit, afterIdInput, beforeIdInput) {
+  offerTotals(planId, recipientId, unit, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       let allParams = []
       let whereClause = ''
@@ -967,7 +981,6 @@ class EndorserDatabase {
       let rowErr
       const sql =
         "SELECT unit, sum(amount) as total FROM offer_claim" + whereClause + " GROUP BY unit"
-      console.log('sql & params', sql, allParams)
       db.each(
         sql,
         allParams,
@@ -994,7 +1007,7 @@ class EndorserDatabase {
    * Org Role
    **/
 
-  async orgRoleInsert(entry) {
+  orgRoleInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO org_role_claim (jwtId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
       db.run(
@@ -1058,15 +1071,15 @@ class EndorserDatabase {
    * Plan
    **/
 
-  async planInsert(entry) {
+  planInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
-        "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri, internalId"
+        "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri"
           + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
-        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri, entry.internalId,
+        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.resultDescription, entry.resultIdentifier,
       ], function(err) {
@@ -1079,7 +1092,7 @@ class EndorserDatabase {
     })
   }
 
-  async planInfoByFullIri(fullIri) {
+  planInfoByFullIri(fullIri) {
     return new Promise((resolve, reject) => {
       db.get(
         "SELECT * FROM plan_claim WHERE fullIri = ?",
@@ -1096,7 +1109,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'plan_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1115,7 +1128,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'plan_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1127,7 +1140,7 @@ class EndorserDatabase {
     )
   }
 
-  async planUpdate(entry) {
+  planUpdate(entry) {
     return new Promise((resolve, reject) => {
       // don't allow update of IDs
       var stmt = (
@@ -1162,15 +1175,15 @@ class EndorserDatabase {
    * Project
    **/
 
-  async projectInsert(entry) {
+  projectInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
-        "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri, internalId"
+        "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri"
           + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
           + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
-        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri, entry.internalId,
+        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.resultDescription, entry.resultIdentifier,
       ], function(err) {
@@ -1183,7 +1196,7 @@ class EndorserDatabase {
     })
   }
 
-  async projectInfoByFullIri(fullIri) {
+  projectInfoByFullIri(fullIri) {
     return new Promise((resolve, reject) => {
       db.get(
         "SELECT * FROM project_claim WHERE fullIri = ?",
@@ -1200,7 +1213,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'project_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1219,7 +1232,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'project_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri', 'internalId',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1231,7 +1244,7 @@ class EndorserDatabase {
     )
   }
 
-  async projectUpdate(entry) {
+  projectUpdate(entry) {
     return new Promise((resolve, reject) => {
       // don't allow update of IDs
       var stmt = (
@@ -1265,7 +1278,7 @@ class EndorserDatabase {
    * Registration
    **/
 
-  async registrationInsert(entry) {
+  registrationInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT OR IGNORE INTO registration (did, agent, epoch, jwtId, maxRegs, maxClaims) VALUES (?, ?, ?, ?, ?, ?)");
       db.run(
@@ -1281,7 +1294,7 @@ class EndorserDatabase {
     })
   }
 
-  async registrationByDid(did) {
+  registrationByDid(did) {
     return new Promise((resolve, reject) => {
       db.get("SELECT * FROM registration WHERE did = ?", [did], function(err, row) {
         if (err) {
@@ -1316,7 +1329,7 @@ class EndorserDatabase {
     })
   }
 
-  async registrationUpdateMaxClaims(issuer, maxClaims) {
+  registrationUpdateMaxClaims(issuer, maxClaims) {
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE registration SET maxClaims = ? WHERE did = ?");
       db.run(stmt, [maxClaims, issuer], function(err) {
@@ -1333,7 +1346,7 @@ class EndorserDatabase {
     })
   }
 
-  async registrationUpdateMaxRegs(issuer, maxRegs) {
+  registrationUpdateMaxRegs(issuer, maxRegs) {
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE registration SET maxRegs = ? WHERE did = ?");
       db.run(stmt, [maxRegs, issuer], function(err) {
@@ -1357,7 +1370,7 @@ class EndorserDatabase {
    * Tenure
    **/
 
-  async tenureClaimById(id) {
+  tenureClaimById(id) {
     return new Promise((resolve, reject) => {
       db.get("SELECT * FROM tenure_claim WHERE rowid = ?", [id], function(err, row) {
         if (err) {
@@ -1394,7 +1407,7 @@ class EndorserDatabase {
     })
   }
 
-  async tenureByPoint(lat, lon) {
+  tenureByPoint(lat, lon) {
     return new Promise((resolve, reject) => {
       let data = []
       db.each("SELECT rowid, * FROM tenure_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [lon, lon, lat, lat], function(err, row) {
@@ -1415,7 +1428,7 @@ class EndorserDatabase {
     })
   }
 
-  async tenureClaimIdByPartyAndGeoShape(partyDid, polygon) {
+  tenureClaimIdByPartyAndGeoShape(partyDid, polygon) {
     return new Promise((resolve, reject) => {
       db.get(
         "SELECT rowid FROM tenure_claim WHERE partyDid = ? AND polygon = ?",
@@ -1433,7 +1446,7 @@ class EndorserDatabase {
   }
 
 
-  async tenureInsert(entry) {
+  tenureInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO tenure_claim (jwtId, issuerDid, partyDid, polygon, westlon, minlat, eastlon, maxlat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(
@@ -1471,7 +1484,7 @@ class EndorserDatabase {
     })
   }
 
-  async voteInsert(entry) {
+  voteInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT INTO vote_claim (jwtId, issuerDid, actionOption, candidate, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, datetime(?))");
       db.run(
@@ -1485,7 +1498,7 @@ class EndorserDatabase {
     })
   }
 
-  async retrieveVoteCounts() {
+  retrieveVoteCounts() {
     return new Promise((resolve, reject) => {
       var data = []
       var stmt = ("select candidate, actionOption, count(*) as numVotes from vote_claim group by candidate, actionOption order by count(*) desc");
@@ -1510,7 +1523,7 @@ class EndorserDatabase {
   /**
     If the pair already exists, will resolve (instead of rejecting).
    **/
-  async networkInsert(subject, object, url) {
+  networkInsert(subject, object, url) {
     return new Promise((resolve, reject) => {
       var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?, ?)")
       db.run(stmt, [subject, object, url], function(err) {
@@ -1532,7 +1545,7 @@ class EndorserDatabase {
     })
   }
 
-  async networkDelete(subject, object, url) {
+  networkDelete(subject, object, url) {
     return new Promise((resolve, reject) => {
       var stmt = ("DELETE FROM network WHERE subject = ? AND object = ?")
       db.run(
@@ -1549,7 +1562,7 @@ class EndorserDatabase {
   }
 
   // return all objects that subject can explicitly see
-  async getSeenBy(subject) {
+  getSeenBy(subject) {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
@@ -1568,7 +1581,7 @@ class EndorserDatabase {
   }
 
   // return all {did, url} records that are seen by everyone
-  async getSeenByAll() {
+  getSeenByAll() {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
@@ -1583,7 +1596,7 @@ class EndorserDatabase {
   }
 
   // return all subjects that can see object
-  async getWhoCanSee(object) {
+  getWhoCanSee(object) {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(

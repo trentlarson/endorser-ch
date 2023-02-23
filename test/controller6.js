@@ -486,6 +486,7 @@ describe('6 - retrieve offered and given totals', () => {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
     }
     credObj.claim.itemOffered = {
+      description: 'Groom the horses',
       isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[2].did
@@ -542,6 +543,19 @@ describe('6 - retrieve offered and given totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal([{ total: 2, unit: 'HUR'}])
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('find offer in search', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?claimContents=groom')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

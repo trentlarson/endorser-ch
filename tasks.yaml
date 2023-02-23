@@ -11,6 +11,7 @@
   - shrink all the long lines in services
   - deploy : run migration
   - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
+  - make internalId all null (since we're deprecating it)
 
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)

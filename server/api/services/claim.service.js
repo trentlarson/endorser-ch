@@ -411,6 +411,7 @@ class ClaimService {
         recipientPlanId: planId,
         amount: claim.includesObject?.amountOfThisGood,
         unit: claim.includesObject?.unitCode,
+        objectDescription: claim.itemOffered?.description,
         validThrough: claim.validThrough,
         fullClaim: canonicalize(claim),
       }
