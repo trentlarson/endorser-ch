@@ -8,6 +8,7 @@
     params : plan vs issuer, unit (optional?), ID range
     /totalOffered
     /totalGiven
+  - rename total output to "amount", change to currency key
   - shrink all the long lines in services
   - deploy : run migration
   - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
