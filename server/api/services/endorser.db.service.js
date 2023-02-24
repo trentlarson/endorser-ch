@@ -954,21 +954,23 @@ class EndorserDatabase {
       let whereClause = " recipientPlanId in (" + inListStr + ")"
 
       if (afterIdInput) {
-        whereClause = whereClause + ' AND ? < jwtId'
+        whereClause += ' AND ? < jwtId'
         allParams = allParams.concat([afterIdInput])
       }
       if (beforeIdInput) {
-        whereClause = whereClause + ' AND jwtId < ?'
+        whereClause += ' AND jwtId < ?'
         allParams = allParams.concat([beforeIdInput])
       }
 
       let data = []
       let rowErr
+      const sql =
+            "SELECT jwtId, handleId, issuedAt, offeredByDid, amount, unit"
+            + ", objectDescription, validThrough, fullClaim FROM offer_claim WHERE"
+            + whereClause
+            + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
       db.each(
-        "SELECT jwtId, handleId, issuedAt, offeredByDid, amount, unit"
-          + ", objectDescription, validThrough, fullClaim FROM offer_claim WHERE"
-          + whereClause
-          + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT,
+        sql,
         allParams,
         function(err, row) {
           if (err) {

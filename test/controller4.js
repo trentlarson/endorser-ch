@@ -26,14 +26,19 @@ const claimOffer = {
   "@type": "Offer",
   //identifier: "...", // set in loop
   issuedAt: '2022-02-15 19:28:00Z',
-  includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
+  includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' },
   offeredBy: { identifier: creds[0].did },
+  itemOffered: { isPartOf: { "@type": "PlanAction", identifier: null } },
   recipient: { identifier: creds[1].did },
 }
 
 const claimOffer_By0_JwtObj = R.clone(testUtil.jwtTemplate)
 claimOffer_By0_JwtObj.claim = R.clone(claimOffer)
 claimOffer_By0_JwtObj.sub = creds[1].did
+
+const claimOffer_OthersBy0_JwtObj = R.clone(testUtil.jwtTemplate)
+claimOffer_OthersBy0_JwtObj.claim = R.clone(claimOffer)
+claimOffer_OthersBy0_JwtObj.sub = creds[1].did
 
 const manyClaims =
   R.times(n =>
@@ -45,16 +50,27 @@ const manyClaims =
         R.set(
           R.lensProp('issuedAt'),
           new Date().toISOString(),
-          claimOffer
+          R.clone(claimOffer)
         )
       ),
-      claimOffer_By0_JwtObj
+      R.clone(claimOffer_OthersBy0_JwtObj)
     ),
     101
   )
+// change the first 10 to be part of a plan
+const PLAN_ID = 'elsewhere:Amish-Group-5/Barn-Raising'
+const NUM_OFFERS_WITH_PLANS = 51
+for (let i = 0; i < NUM_OFFERS_WITH_PLANS; i++) {
+  manyClaims[i].claim.itemOffered.isPartOf.identifier = PLAN_ID
+}
+
+
+
+const oneOfferJwt = credentials[0].createVerification(claimOffer_By0_JwtObj)
+
 const manyClaimsJwts = manyClaims.map(claim => credentials[0].createVerification(claim)) // adds iss & exp
 
-let pushTokens, manyClaimsJwtEnc
+let pushTokens, oneOfferJwtEnc, manyClaimsJwtEnc
 
 before(async () => {
 
@@ -63,6 +79,8 @@ before(async () => {
       pushTokens = jwts;
       //console.log("Created controller4 push tokens", pushTokens)
     })
+
+  await oneOfferJwt.then(jwt => oneOfferJwtEnc = jwt)
 
   await Promise.all(manyClaimsJwts)
     .then((jwts) => {
@@ -82,7 +100,7 @@ describe('4 - Load Claims Incrementally', () => {
     request(Server)
       .post('/api/claim')
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-      .send({jwtEncoded: manyClaimsJwtEnc[0]})
+      .send({jwtEncoded: oneOfferJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.a('string')
@@ -131,6 +149,8 @@ describe('4 - Load Claims Incrementally', () => {
     )
   }).timeout(9000)
 
+  //---------------- Now retrieve them a bunch at a time.
+
   it('retrieve many Give/Offer claims with many more to come', () =>
     request(Server)
       .get('/api/v2/report/claimsForIssuerWithTypes?claimTypes=' + encodeURIComponent(JSON.stringify(["GiveAction","Offer"])))
@@ -176,6 +196,51 @@ describe('4 - Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         expect(r.body.data).to.be.an('array').of.length(2)
+        expect(r.body).that.does.not.have.property('hitLimit')
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  ).timeout(3000)
+
+  //---------------- Now do the same with offer retrieval (by plan).
+
+  it('retrieve many Offer entries with many more to come', () =>
+    request(Server)
+      .get(
+        '/api/v2/report/offersForPlans?planIds='
+          + encodeURIComponent(JSON.stringify([PLAN_ID]))
+      )
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(RESULT_COUNT_LIMIT)
+        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.true
+        moreBeforeId = r.body.data[r.body.data.length - 1].jwtId
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  ).timeout(3000)
+
+  it('retrieve a few more Give/Offer claims', () =>
+    request(Server)
+      .get(
+        '/api/v2/report/offersForPlans?planIds='
+          + encodeURIComponent(JSON.stringify([PLAN_ID]))
+          + '&beforeId=' + moreBeforeId
+      )
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        expect(r.body.data).to.be.an('array').of.length(
+          NUM_OFFERS_WITH_PLANS - RESULT_COUNT_LIMIT
+        )
         expect(r.body).that.does.not.have.property('hitLimit')
         expect(r.status).that.equals(200)
       }).catch((err) => {
