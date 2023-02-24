@@ -1029,7 +1029,7 @@ class EndorserDatabase {
       }
       whereClause = ' WHERE' + whereClause
 
-      let data = []
+      let data = {}
       let rowErr
       const sql =
         "SELECT unit, sum(amount) as total FROM offer_claim" + whereClause + " GROUP BY unit"
@@ -1037,7 +1037,7 @@ class EndorserDatabase {
         sql,
         allParams,
         function(err, row) {
-          if (err) { rowErr = err } else { data.push(row) }
+          if (err) { rowErr = err } else { data[row.unit] = row.total }
         },
         function(allErr, num) {
           if (rowErr || allErr) {

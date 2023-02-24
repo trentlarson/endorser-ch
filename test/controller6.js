@@ -540,7 +540,7 @@ describe('6 - retrieve offered and given totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
-        expect(r.body.data).to.deep.equal([{ total: 1, unit: 'HUR'}])
+        expect(r.body.data).to.deep.equal({ "HUR": 1})
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -634,7 +634,7 @@ describe('6 - retrieve offered and given totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
-        expect(r.body.data).to.deep.equal([{ total: 4, unit: 'HUR'}])
+        expect(r.body.data).to.deep.equal({ "HUR": 4 })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -765,9 +765,7 @@ describe('6 - retrieve offered and given totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
-        expect(r.body.data).to.deep.equal(
-          [{ total: 2, unit: 'HUR'}, { total: 20, unit: 'USD' }]
-        )
+        expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 20 })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
