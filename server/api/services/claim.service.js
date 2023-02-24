@@ -321,6 +321,31 @@ class ClaimService {
       return { confirmations }
 
     } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'GiveAction') {
+
+      let fulfillsId = claim.fulfills?.identifier
+      let fulfillsType
+      if (fulfillsId) {
+        fulfillsId = globalId(fulfillsId)
+        fulfillsType = claim.fulfills['@type']
+      }
+      let entry = {
+        jwtId: jwtId,
+        handleId: handleId,
+        issuedAt: issuedAt,
+        agentDid: claim.agent?.identifier,
+        recipientDid: claim.recipient?.identifier,
+        fulfillsId: fulfillsId,
+        fulfillsType: fulfillsType,
+        amount: claim.object?.amountOfThisGood,
+        unit: claim.object?.unitCode,
+        description: claim.description,
+        fullClaim: canonicalize(claim),
+      }
+      let giveId = await dbService.giveInsert(entry)
+      return { giveId }
+
+    } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
 
       // agent.did is for legacy data, some still in the mobile app
@@ -370,13 +395,6 @@ class ClaimService {
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Offer') {
-
-      if (claim.offeredBy?.identifier
-          && claim.offeredBy.identifier != issuerDid) {
-        return Promise.reject(
-          new Error("The entity in offeredBy doesn't match the issuer.")
-        )
-      }
 
       let planId =
           claim.itemOffered?.isPartOf

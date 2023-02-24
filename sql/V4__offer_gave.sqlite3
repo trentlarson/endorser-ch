@@ -30,11 +30,14 @@ CREATE TABLE give_claim (
 
        -- note that did:peer are 58 chars
        agentDid TEXT, -- DID of the entity who gave the item
-       recipientDid TEXT, -- DID of recipient
 
+       recipientDid TEXT, -- DID of recipient
        fulfillsId TEXT, -- full ID of offer or plan to which this applies
-       fulfillsType TEXT,
-       objectDescription TEXT,
+       fulfillsType TEXT, -- type of entity (currently assuming context of schema.org)
+
+       amount REAL,
+       unit TEXT,
+       description TEXT,
 
        fullClaim TEXT -- full claim JSON
 );

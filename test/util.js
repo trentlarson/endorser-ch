@@ -158,11 +158,21 @@ module.exports = {
 
   INITIAL_DESCRIPTION: INITIAL_DESCRIPTION,
 
+  claimGive: {
+    "@context": "https://schema.org",
+    "@type": "GiveAction",
+    //identifier: "...",
+    //agent: "...",
+    //recipient: "...",
+    object: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
+    fulfills: { '@type': 'Offer', identifier: "..." },
+    description: "Helped pull a snowboarder along.",
+  },
+
   claimOffer: {
     "@context": "https://schema.org",
     "@type": "Offer",
-    //identifier: "...", // only supply a global IRI string
-    issuedAt: '2023-02-19T19:28:00Z',
+    //identifier: "...",
     //includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
     itemOffered: {
       description: "Help groom the runs before powder days!",

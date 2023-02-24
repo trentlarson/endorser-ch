@@ -476,7 +476,9 @@ describe('6 - Plans', () => {
 
 describe('6 - retrieve offered and given totals', () => {
 
-  it('insert offer', async () => {
+  let firstOfferId
+
+  it('insert offer #1', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
@@ -493,7 +495,7 @@ describe('6 - retrieve offered and given totals', () => {
     const claimJwtEnc = await credentials[2].createVerification(credObj)
 
     return request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
@@ -502,7 +504,8 @@ describe('6 - retrieve offered and given totals', () => {
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
-        expect(r.body).to.be.a('string')
+        expect(r.body.success.handleId).to.be.a('string')
+        firstOfferId = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -767,6 +770,36 @@ describe('6 - retrieve offered and given totals', () => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 20 })
         expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('insert gave', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.fulfills.identifier = firstOfferId
+    credObj.claim.object = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
+    }
+    credObj.claim.description = 'Had so much fun that we danced'
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
       })

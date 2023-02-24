@@ -567,6 +567,56 @@ class EndorserDatabase {
 
 
 
+
+
+
+
+
+
+  /****************************************************************
+   * Give
+   **/
+
+  giveInsert(entry) {
+    return new Promise((resolve, reject) => {
+      var stmt =
+          "INSERT INTO give_claim (jwtId, handleId, issuedAt, agentDid"
+          + ", recipientDid, fulfillsId, fulfillsType, amount, unit"
+          + ", description, fullClaim)"
+          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      db.run(
+        stmt,
+        [
+          entry.jwtId, entry.handleId, entry.issuedAt, entry.agentDid,
+          entry.recipientDid, entry.fulfillsId, entry.fulfillsType,
+          entry.amount, entry.unit, entry.description, entry.fullClaim
+        ],
+        function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
+    })
+  }
+
+  givesByParamsPaged(params, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'give_claim',
+      'jwtId',
+      ['jwtId', 'handleId', 'agentDid', 'recipientDid', 'fulfillsId', 'fulfillsType'],
+      ['amount', 'fullClaim', 'unit'],
+      'description',
+      ['issuedAt', 'validThrough'],
+      params,
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
+
+
+
+
+
+
+
+
   /****************************************************************
    * JWT
    **/
@@ -907,6 +957,9 @@ class EndorserDatabase {
 
 
 
+
+
+
   /****************************************************************
    * Offer
    **/
@@ -924,7 +977,7 @@ class EndorserDatabase {
           entry.recipientDid, entry.recipientPlanId, entry.amount, entry.unit,
           entry.objectDescription, entry.validThrough, entry.fullClaim
         ],
-        function(err) { if (err) { reject(err) } else { resolve(this.lastID) } })
+        function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
     })
   }
 
@@ -933,7 +986,7 @@ class EndorserDatabase {
       'offer_claim',
       'jwtId',
       ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId', 'validThrough'],
-      ['fullClaim'],
+      ['amount', 'fullClaim', 'unit'],
       'objectDescription',
       ['issuedAt', 'validThrough'],
       params,

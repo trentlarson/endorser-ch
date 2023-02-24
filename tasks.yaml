@@ -12,7 +12,9 @@
   - shrink all the long lines in services
   - deploy : run migration
   - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
+  - reconcile fullIri & handleId
   - make internalId all null (since we're deprecating it)
+  - update endorser.ch doc for offer (eg. isPartOf & gave)
 
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
