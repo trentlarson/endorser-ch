@@ -135,7 +135,7 @@ export default express
  * @route POST /api/claim
  * @param {EncodedJwt.model} jwt.body.required
  * @returns {object} 200 - internal ID of Claim JWT
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/', claimController.importClaim)
@@ -150,7 +150,7 @@ export default express
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
  * @returns {Array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', claimController.getByQuery)
@@ -161,7 +161,7 @@ export default express
  * @route GET /api/claim/{id}
  * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', claimController.getById)
@@ -185,7 +185,7 @@ export default express
  * @route GET /api/claim/full/{id}
  * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/full/:id', claimController.getFullClaimById)
@@ -196,7 +196,7 @@ export default express
  * @route POST /api/claim/raw
  * @param {string} jwt.body.required
  * @returns {object} 200 - internal ID of Claim JWT
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  *
   .post('/raw', claimController.create)
  */

@@ -62,7 +62,7 @@ export default express
      confirmations: { confirmId: number }
    },
    error: { code: string, message: string} }
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('', controller.importClaim)

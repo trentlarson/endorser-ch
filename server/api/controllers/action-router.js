@@ -51,7 +51,7 @@ export default express
  * @param {String} eventName.query.optional
  * @param {String} eventStartTime.query.optional
  * @returns {Array.object} 200 - many events (up to 50)
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', controller.getByQuery)
@@ -62,7 +62,7 @@ export default express
  * @route GET /api/action/{id}
  * @param {number} id.path.required - the ID of the Action record to retrieve
  * @returns {object} 200 - Action if it exists, otherwise 404
- * @returns {Error}  default - Unexpected error
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', controller.getById)
