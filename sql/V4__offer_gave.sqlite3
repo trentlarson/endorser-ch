@@ -2,6 +2,7 @@
 CREATE TABLE offer_claim (
        jwtId TEXT PRIMARY KEY, -- initial declaration
        handleId TEXT,
+       issuedAt DATE,
 
        -- note that did:peer are 58 chars
        offeredByDid TEXT, -- DID of the entity offering the item
@@ -25,6 +26,7 @@ CREATE INDEX offer_validThrough ON offer_claim(validThrough);
 CREATE TABLE give_claim (
        jwtId TEXT PRIMARY KEY, -- initial declaration
        handleId TEXT,
+       issuedAt DATE,
 
        -- note that did:peer are 58 chars
        agentDid TEXT, -- DID of the entity who gave the item

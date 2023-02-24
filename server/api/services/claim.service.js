@@ -11,6 +11,7 @@ import l from '../../common/logger'
 import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX,
+  globalFromInternalIdentifier, globalId,
   hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT,
 } from './util';
 import { addCanSee } from './network-cache.service'
@@ -44,8 +45,6 @@ const isEndorserRegistrationClaim = (claim) =>
       isContextSchemaOrg(claim['@context'])
       && claim['@type'] === 'RegisterAction'
       && claim['object'] === SERVICE_ID
-
-const globalFromInternalIdentifier = (id) => GLOBAL_ENTITY_ID_IRI_PREFIX + id
 
 class ClaimService {
 
@@ -296,7 +295,7 @@ class ClaimService {
     }
   }
 
-  async createEmbeddedClaimRecord(jwtId, issuerDid, handleId, claim) {
+  async createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -370,6 +369,39 @@ class ClaimService {
 
 
     } else if (isContextSchemaOrg(claim['@context'])
+               && claim['@type'] === 'Offer') {
+
+      if (claim.offeredBy?.identifier
+          && claim.offeredBy.identifier != issuerDid) {
+        return Promise.reject(
+          new Error("The entity in offeredBy doesn't match the issuer.")
+        )
+      }
+
+      let planId =
+          claim.itemOffered?.isPartOf
+          && claim.itemOffered.isPartOf['@type'] == 'PlanAction'
+          && claim.itemOffered.isPartOf.identifier
+      if (planId) {
+        planId = globalId(planId)
+      }
+      let entry = {
+        jwtId: jwtId,
+        handleId: handleId,
+        issuedAt: issuedAt,
+        offeredByDid: claim.offeredBy?.identifier || issuerDid,
+        recipientDid: claim.recipient?.identifier,
+        recipientPlanId: planId,
+        amount: claim.includesObject?.amountOfThisGood,
+        unit: claim.includesObject?.unitCode,
+        objectDescription: claim.itemOffered?.description,
+        validThrough: claim.validThrough,
+        fullClaim: canonicalize(claim),
+      }
+      let offerId = await dbService.offerInsert(entry)
+      return { offerId }
+
+    } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Organization'
                && claim.member
                && claim.member['@type'] === 'OrganizationRole'
@@ -386,37 +418,6 @@ class ClaimService {
       }
       let orgRoleId = await dbService.orgRoleInsert(entry)
       return { orgRoleId }
-
-
-    } else if (isContextSchemaOrg(claim['@context'])
-               && claim['@type'] === 'Offer') {
-
-      if (claim.offeredBy?.identifier
-          && claim.offeredBy.identifier != issuerDid) {
-        return Promise.reject(
-          new Error("The entity in offeredBy doesn't match the issuer.")
-        )
-      }
-
-      let planId =
-          claim.itemOffered?.isPartOf
-          && claim.itemOffered.isPartOf['@type'] == 'PlanAction'
-          && claim.itemOffered.isPartOf.identifier
-      let entry = {
-        jwtId: jwtId,
-        handleId: handleId,
-        issuerDid: issuerDid,
-        offeredByDid: claim.offeredBy?.identifier,
-        recipientDid: claim.recipient?.identifier,
-        recipientPlanId: planId,
-        amount: claim.includesObject?.amountOfThisGood,
-        unit: claim.includesObject?.unitCode,
-        objectDescription: claim.itemOffered?.description,
-        validThrough: claim.validThrough,
-        fullClaim: canonicalize(claim),
-      }
-      let offerId = await dbService.offerInsert(entry)
-      return { offerId }
 
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -582,7 +583,7 @@ class ClaimService {
 
   }
 
-  async createEmbeddedClaimRecords(jwtId, issuerDid, handleId, claim) {
+  async createEmbeddedClaimRecords(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
@@ -602,7 +603,9 @@ class ClaimService {
       var recordings = []
       { // handle multiple claims
         for (var subClaim of claim) {
-          recordings.push(this.createEmbeddedClaimRecord(jwtId, issuerDid, handleId, subClaim))
+          recordings.push(
+            this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, subClaim)
+          )
         }
       }
       l.trace(`${this.constructor.name} creating ${recordings.length} claim records.`)
@@ -610,7 +613,8 @@ class ClaimService {
       embeddedResults = await Promise.all(recordings)
       **/
     } else {
-      embeddedResults = await this.createEmbeddedClaimRecord(jwtId, issuerDid, handleId, claim)
+      embeddedResults =
+        await this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim)
       l.trace(`${this.constructor.name} created a claim record.`)
     }
 
@@ -803,7 +807,9 @@ class ClaimService {
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
       let embedded =
-          await this.createEmbeddedClaimRecords(jwtEntry.id, issuerDid, handleId, payloadClaim)
+          await this.createEmbeddedClaimRecords(
+            jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim
+          )
           .catch(err => {
             l.error(err, `Failed to create embedded claim records.`)
             return { embeddedRecordError: err }

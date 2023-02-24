@@ -83,6 +83,23 @@ class DbController {
     }
   }
 
+  getOffersForPlansPaged(req, res, next) {
+    const planIds = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIds)) {
+      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + req.query.planIds}).end()
+    }
+    dbService.offersForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getAllPlansPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -269,6 +286,20 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/offers', dbController.getAllOffersPaged)
+
+/**
+ * Get totals of offers
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/getOffersForPlans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planIds.query.optional - handle ID of the plan which has received offers
+ * @returns {JwtArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error}  default - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/offersForPlans', dbController.getOffersForPlansPaged)
 
 /**
  * Get totals of offers

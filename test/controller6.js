@@ -473,9 +473,6 @@ describe('6 - Plans', () => {
 
 })
 
-const RESULT_COUNT_LIMIT = 50
-let moreBeforeId
-
 describe('6 - retrieve offered and given totals', () => {
 
   it('insert offer', async () => {
@@ -483,7 +480,7 @@ describe('6 - retrieve offered and given totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
     }
     credObj.claim.itemOffered = {
       description: 'Groom the horses',
@@ -542,7 +539,7 @@ describe('6 - retrieve offered and given totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
-        expect(r.body.data).to.deep.equal([{ total: 2, unit: 'HUR'}])
+        expect(r.body.data).to.deep.equal([{ total: 1, unit: 'HUR'}])
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -556,16 +553,109 @@ describe('6 - retrieve offered and given totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].recipientPlanId).that.equals(firstIdExternal)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(3000)
 
-  // recent offers
-  // offers for me
-  // offers for my projects
-  // offers for watched projects
+  it('insert offer #2', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.includesObject = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
+    }
+    credObj.claim.itemOffered = {
+      description: 'Take dogs for a walk',
+      isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
+    }
+    credObj.claim.offeredBy.identifier = creds[2].did
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('insert offer #3', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.includesObject = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
+    }
+    credObj.claim.itemOffered = {
+      description: 'Feed cats',
+      isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
+    }
+    credObj.claim.offeredBy.identifier = creds[3].did
+    credObj.sub = creds[3].did
+    credObj.iss = creds[3].did
+    const claimJwtEnc = await credentials[3].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[3])
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer totals are correct after offer #3', () => {
+    return request(Server)
+      .get('/api/v2/report/offerTotals?planId=' + firstIdExternal)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.deep.equal([{ total: 4, unit: 'HUR'}])
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offers are correct for multiple projects', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/offersForPlans?planIds='
+          + encodeURIComponent(JSON.stringify([firstIdExternal]))
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.be.an('array').of.length(3)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
 
   // outstanding offers
 

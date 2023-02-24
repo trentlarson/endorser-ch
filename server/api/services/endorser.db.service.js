@@ -142,7 +142,6 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
     const sql =
           "SELECT rowid, * FROM " + table
           + allClause + " ORDER BY " + idColumn + " DESC LIMIT " + DEFAULT_LIMIT
-    console.log('sql & params', sql, allParams)
     db.each(sql,
       allParams,
       function(err, row) {
@@ -915,33 +914,84 @@ class EndorserDatabase {
   offerInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
-          "INSERT INTO offer_claim (jwtId, handleId, offeredByDid, recipientDid"
-          + ", recipientPlanId, amount, unit, objectDescription, validThrough"
-          + ", fullClaim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO offer_claim (jwtId, handleId, issuedAt, offeredByDid"
+          + ", recipientDid, recipientPlanId, amount, unit, objectDescription"
+          + ", validThrough, fullClaim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
-          entry.jwtId, entry.handleId, entry.offeredByDid, entry.recipientDid,
-          entry.recipientPlanId, entry.amount, entry.unit, entry.objectDescription,
-          entry.validThrough, entry.fullClaim
+          entry.jwtId, entry.handleId, entry.issuedAt, entry.offeredByDid,
+          entry.recipientDid, entry.recipientPlanId, entry.amount, entry.unit,
+          entry.objectDescription, entry.validThrough, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(this.lastID) } })
     })
   }
 
   offersByParamsPaged(params, afterIdInput, beforeIdInput) {
-    console.log('called offersByParamsPaged', params)
     return tableEntriesByParamsPaged(
       'offer_claim',
       'jwtId',
       ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId', 'validThrough'],
       ['fullClaim'],
-      "objectDescription",
-      ['validThrough'],
+      'objectDescription',
+      ['issuedAt', 'validThrough'],
       params,
       afterIdInput,
       beforeIdInput
     )
+  }
+
+  /**
+     Start after afterIdInput (optional) and before beforeIdinput (optional)
+     and retrieve all offers by planId in reverse chronological order.
+  **/
+  offersForPlansPaged(planIds, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      const inListStr = planIds.map(value => "?").join(',')
+      let allParams = planIds.map(util.globalId)
+
+      let whereClause = " recipientPlanId in (" + inListStr + ")"
+
+      if (afterIdInput) {
+        whereClause = whereClause + ' AND ? < jwtId'
+        allParams = allParams.concat([afterIdInput])
+      }
+      if (beforeIdInput) {
+        whereClause = whereClause + ' AND jwtId < ?'
+        allParams = allParams.concat([beforeIdInput])
+      }
+
+      let data = []
+      let rowErr
+      db.each(
+        "SELECT jwtId, handleId, issuedAt, offeredByDid, amount, unit"
+          + ", objectDescription, validThrough, fullClaim FROM offer_claim WHERE"
+          + whereClause
+          + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            row.validThrough = isoAndZonify(row.validThrough)
+            data.push(row)
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result["hitLimit"] = true
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
   }
 
   offerTotals(planId, recipientId, unit, afterIdInput, beforeIdInput) {
