@@ -83,6 +83,7 @@ class DbController {
     const planId = req.query.planId
     if (recipientId && recipientId != res.locals.tokenIssuer) {
       res.status(400).json({
+        // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
         error: "Request for recipient totals must be made by that recipient."
       }).end()
       return

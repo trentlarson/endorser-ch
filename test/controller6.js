@@ -476,7 +476,7 @@ describe('6 - Plans', () => {
 
 describe('6 - retrieve offered and given totals', () => {
 
-  let firstOfferId
+  let firstOfferId, anotherProjectOfferId
 
   it('insert offer #1', async () => {
 
@@ -581,7 +581,7 @@ describe('6 - retrieve offered and given totals', () => {
     const claimJwtEnc = await credentials[2].createVerification(credObj)
 
     return request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
@@ -590,7 +590,7 @@ describe('6 - retrieve offered and given totals', () => {
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
-        expect(r.body).to.be.a('string')
+        expect(r.body.success.handleId).to.be.a('string')
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -614,7 +614,7 @@ describe('6 - retrieve offered and given totals', () => {
     const claimJwtEnc = await credentials[3].createVerification(credObj)
 
     return request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[3])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
@@ -623,7 +623,7 @@ describe('6 - retrieve offered and given totals', () => {
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
-        expect(r.body).to.be.a('string')
+        expect(r.body.success.handleId).to.be.a('string')
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -678,7 +678,7 @@ describe('6 - retrieve offered and given totals', () => {
     const claimJwtEnc = await credentials[4].createVerification(credObj)
 
     return request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
@@ -687,7 +687,8 @@ describe('6 - retrieve offered and given totals', () => {
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
-        expect(r.body).to.be.a('string')
+        expect(r.body.success.handleId).to.be.a('string')
+        anotherProjectOfferId = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -775,7 +776,7 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
-  it('insert give', async () => {
+  it('insert give #1', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
@@ -841,6 +842,105 @@ describe('6 - retrieve offered and given totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2 })
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('insert give #2', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.fulfills.identifier = anotherProjectOfferId
+    credObj.claim.object = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
+    }
+    credObj.claim.description = 'Found new homeschooling friends'
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('insert give #3', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.fulfills.identifier = anotherProjectOfferId
+    credObj.claim.object = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
+    }
+    credObj.claim.description = 'Found new homeschooling friends who jam'
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give totals are correct for second', () => {
+    return request(Server)
+      .get('/api/v2/report/giveTotals?planId=' + secondIdExternal)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.deep.equal({ "HUR": 4 })
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('gives are correct for multiple projects', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/givesForPlans?planIds='
+          + encodeURIComponent(JSON.stringify([firstIdExternal, secondIdExternal]))
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.be.an('array').of.length(3)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

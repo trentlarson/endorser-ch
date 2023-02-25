@@ -15,7 +15,7 @@
   - reconcile fullIri & handleId
   - make internalId all null (since we're deprecating it)
   - update endorser.ch doc for offer (eg. isPartOf & gave)
-  - disallow searches for DIDs if they're not visible to issuer (including router getOfferTotals check)
+  - allow searches by recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
   - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
 
 
