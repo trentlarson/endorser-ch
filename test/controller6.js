@@ -775,7 +775,7 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
-  it('insert gave', async () => {
+  it('insert give', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
@@ -790,12 +790,16 @@ describe('6 - retrieve offered and given totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
           console.log('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
@@ -805,8 +809,46 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
-  // current gave total
+  it('give total fails without certain parameters', () => {
+    return request(Server)
+      .get('/api/v2/report/giveTotals?unit=HUR')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give total fails with recipient that does not match issuer', () => {
+    return request(Server)
+      .get('/api/v2/report/giveTotals?recipientId=' + creds[1].did)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give totals are correct', () => {
+    return request(Server)
+      .get('/api/v2/report/giveTotals?planId=' + firstIdExternal)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.deep.equal({ "HUR": 2 })
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   // recent gave
+  // current gave total
   // unconfirmed gave
   // confirmed gave
   // given to me

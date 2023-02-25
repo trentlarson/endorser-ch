@@ -329,14 +329,29 @@ class ClaimService {
         fulfillsId = globalId(fulfillsId)
         fulfillsType = claim.fulfills['@type']
       }
+
+      let fulfillsPlanId
+      // look for the most applicable Plan
+      if (fulfillsType == 'PlanAction') {
+        fulfillsPlanId = fulfillsId
+      } else {
+        let fulfillsObj = await dbService.jwtLastByHandleIdRaw(fulfillsId)
+        let fulfillsClaim = fulfillsObj ? JSON.parse(fulfillsObj.claim) : null
+        if (fulfillsClaim?.itemOffered?.isPartOf
+            && fulfillsClaim.itemOffered.isPartOf['@type'] == 'PlanAction') {
+          fulfillsPlanId = fulfillsClaim.itemOffered.isPartOf.identifier
+        }
+      }
+
       let entry = {
         jwtId: jwtId,
         handleId: handleId,
         issuedAt: issuedAt,
-        agentDid: claim.agent?.identifier,
+        agentDid: claim.agent?.identifier || issuerDid,
         recipientDid: claim.recipient?.identifier,
         fulfillsId: fulfillsId,
         fulfillsType: fulfillsType,
+        fulfillsPlanId: fulfillsPlanId,
         amount: claim.object?.amountOfThisGood,
         unit: claim.object?.unitCode,
         description: claim.description,
@@ -609,9 +624,12 @@ class ClaimService {
     let embeddedResults
     if (Array.isArray(claim)) {
 
-      return { clientError: 'We no longer support sending multiple at once. Send individually.' }
+      return { clientError: 'We do not support sending multiple at once. Send individually.' }
 
       /**
+      // Here's how we used to support it.
+      // If you want this, you'll need to figure if and how to manage claim IDs & handles.
+
       if (Array.isArray.payloadClaim
           && R.filter(c => c['@type'] === 'Project', claim).length > 1) {
         // To allow this, you'll have to assign different IDs to each project.
@@ -630,7 +648,9 @@ class ClaimService {
 
       embeddedResults = await Promise.all(recordings)
       **/
+
     } else {
+      // it's not an array
       embeddedResults =
         await this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim)
       l.trace(`${this.constructor.name} created a claim record.`)

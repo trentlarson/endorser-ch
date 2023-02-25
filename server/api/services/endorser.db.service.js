@@ -581,15 +581,16 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, agentDid"
-          + ", recipientDid, fulfillsId, fulfillsType, amount, unit"
-          + ", description, fullClaim)"
-          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ", recipientDid, fulfillsId, fulfillsType, fulfillsPlanId"
+          + ", amount, unit, description, fullClaim)"
+          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.agentDid,
           entry.recipientDid, entry.fulfillsId, entry.fulfillsType,
-          entry.amount, entry.unit, entry.description, entry.fullClaim
+          entry.fulfillsPlanId, entry.amount, entry.unit, entry.description,
+          entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
     })
@@ -599,14 +600,128 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'give_claim',
       'jwtId',
-      ['jwtId', 'handleId', 'agentDid', 'recipientDid', 'fulfillsId', 'fulfillsType'],
+      ['jwtId', 'handleId', 'agentDid', 'recipientDid',
+       'fulfillsId', 'fulfillsType', 'fullfillsPlanId'],
       ['amount', 'fullClaim', 'unit'],
       'description',
-      ['issuedAt', 'validThrough'],
+      ['issuedAt'],
       params,
       afterIdInput,
       beforeIdInput
     )
+  }
+
+  /**
+     Start after afterIdInput (optional) and before beforeIdinput (optional)
+     and retrieve all gives for planId in reverse chronological order.
+  **/
+  givesForPlansPaged(planIds, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      const inListStr = planIds.map(value => "?").join(',')
+      let whereClause =
+          " fulfillsPlanId in (" + inListStr + ")"
+
+      let allParams = planIds.map(util.globalId)
+
+      if (afterIdInput) {
+        whereClause += ' AND ? < jwtId'
+        allParams = allParams.concat([afterIdInput])
+      }
+      if (beforeIdInput) {
+        whereClause += ' AND jwtId < ?'
+        allParams = allParams.concat([beforeIdInput])
+      }
+
+      let data = []
+      let rowErr
+      const sql =
+            "SELECT * FROM give_claim WHERE"
+            + whereClause
+            + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            row.validThrough = isoAndZonify(row.validThrough)
+            data.push(row)
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result["hitLimit"] = true
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
+  giveTotals(agentId, recipientDid, planId, unit, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      let allParams = []
+      let whereClause = ''
+      if (agentId) {
+        whereClause += ' agentDid = ?'
+        allParams = allParams.concat([agentId])
+      }
+      if (planId) {
+        whereClause += ' fulfillsPlanId = ?'
+        allParams = allParams.concat([planId])
+      }
+      if (recipientDid) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause += ' recipientDid = ?'
+        allParams = allParams.concat([recipientDid])
+      }
+      if (!whereClause) {
+        reject(MUST_FILTER_TOTALS_ERROR)
+      }
+      if (unit) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause += ' unit = ?'
+        allParams = allParams.concat([unit])
+      }
+      if (afterIdInput) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause = ' jwtId > ?'
+        allParams = allParams.concat([afterIdInput])
+      }
+      if (beforeIdInput) {
+        whereClause += whereClause ? ' AND' : ''
+        whereClause += ' jwtId < ?'
+        allParams = allParams.concat([beforeIdInput])
+      }
+      whereClause = ' WHERE' + whereClause
+
+      let data = {}
+      let rowErr
+      const sql =
+            "SELECT unit, sum(amount) as total FROM give_claim" + whereClause
+            + " GROUP BY unit"
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) { rowErr = err } else { data[row.unit] = row.total }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            resolve({ data: data })
+          }
+        }
+      )
+    })
   }
 
 
@@ -973,8 +1088,8 @@ class EndorserDatabase {
       db.run(
         stmt,
         [
-          entry.jwtId, entry.handleId, entry.issuedAt, entry.offeredByDid,
-          entry.recipientDid, entry.recipientPlanId, entry.amount, entry.unit,
+          entry.jwtId, entry.handleId, entry.issuedAt, entry.offeredById,
+          entry.recipientId, entry.recipientPlanId, entry.amount, entry.unit,
           entry.objectDescription, entry.validThrough, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
@@ -997,7 +1112,7 @@ class EndorserDatabase {
 
   /**
      Start after afterIdInput (optional) and before beforeIdinput (optional)
-     and retrieve all offers by planId in reverse chronological order.
+     and retrieve all offers for planId in reverse chronological order.
   **/
   offersForPlansPaged(planIds, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
@@ -1049,7 +1164,7 @@ class EndorserDatabase {
     })
   }
 
-  offerTotals(planId, recipientId, unit, afterIdInput, beforeIdInput) {
+  offerTotals(planId, recipientDid, unit, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       let allParams = []
       let whereClause = ''
@@ -1057,10 +1172,10 @@ class EndorserDatabase {
         whereClause += ' recipientPlanId = ?'
         allParams = allParams.concat([planId])
       }
-      if (recipientId) {
+      if (recipientDid) {
         whereClause += whereClause ? ' AND' : ''
-        whereClause += ' recipientId = ?'
-        allParams = allParams.concat([recipientId])
+        whereClause += ' recipientDId = ?'
+        allParams = allParams.concat([recipientDid])
       }
       if (!whereClause) {
         reject(MUST_FILTER_TOTALS_ERROR)

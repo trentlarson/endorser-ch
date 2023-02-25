@@ -38,7 +38,91 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
-  getAllOffersPaged(req, res, next) {
+  getGivesForPlansPaged(req, res, next) {
+    const planIds = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIds)) {
+      return res.status(400).json({
+        error: "Parameter 'planIds' should be an array but got: "
+          + req.query.planIds
+      }).end()
+    }
+    dbService.givesForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getGivesPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.givesByParamsPaged(query, afterId, beforeId)
+      .then(results => ({
+        data: results.data.map(
+          datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getGiveTotals(req, res, next) {
+    const agentId = req.query.agentId
+    const recipientId = req.query.recipientId
+    const planId = req.query.planId
+    if (recipientId && recipientId != res.locals.tokenIssuer) {
+      res.status(400).json({
+        error: "Request for recipient totals must be made by that recipient."
+      }).end()
+      return
+    } else {
+      const afterId = req.query.afterId
+      const beforeId = req.query.beforeId
+      const unit = req.query.unit
+      dbService.giveTotals(agentId, recipientId, planId, unit, afterId, beforeId)
+        .then(results => { res.json(results).end() })
+        .catch(err => {
+          if (err == MUST_FILTER_TOTALS_ERROR) {
+            res.status(400).json(
+              "Client must filter by plan or recipient when asking for totals."
+            ).end()
+          } else {
+            console.error(err)
+            res.status(500).json(""+err).end()
+          }
+        })
+    }
+  }
+
+  getOffersForPlansPaged(req, res, next) {
+    const planIds = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIds)) {
+      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + req.query.planIds}).end()
+    }
+    dbService.offersForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getOffersPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
     delete query.afterId
@@ -81,23 +165,6 @@ class DbController {
           }
         })
     }
-  }
-
-  getOffersForPlansPaged(req, res, next) {
-    const planIds = JSON.parse(req.query.planIds)
-    if (!Array.isArray(planIds)) {
-      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + req.query.planIds}).end()
-    }
-    dbService.offersForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
-      .then(results => ({
-        data: results.data.map(datum =>
-          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
-        ),
-        hitLimit: results.hitLimit,
-      }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
-      .then(results => { res.json(results).end() })
-      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
   getAllPlansPaged(req, res, next) {
@@ -174,6 +241,28 @@ export default express
 /**
  * See /server/common/server.js for other Swagger settings & pieces of generated docs.
  **/
+
+/**
+ * @typedef Give
+ * @property {string} jwtId
+ * @property {string} handleId
+ * @property {datetime} issuedAt
+ * @property {string} agentId
+ * @property {string} recipientDid
+ * @property {string} fulfillsId
+ * @property {string} fulfillsType
+ * @property {string} fulfillsPlanId
+ * @property {string} amount
+ * @property {object} unit
+ * @property {string} description
+ * @property {object} fullClaim
+ */
+
+/**
+ * @typedef GiveArrayMaybeMoreBody
+ * @property {Array.Offer} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ */
 
 /**
  * @typedef Jwt
@@ -281,6 +370,98 @@ export default express
   .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)
 
 /**
+ * Search gives
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/gives
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} claimContext.query.optional - search description of item given
+ * @param {string} recipientId.query.optional - gives for recipient
+ * @param {string} fulfillsId.query.optional - gives that apply to a particular item (eg. an offer)
+ * @returns {GiveArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/gives', dbController.getGivesPaged)
+
+/**
+ * Get totals of gives
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/getGivesForPlans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planIds.query.optional - handle ID of the plan which has received gives
+ * @returns {GiveArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/givesForPlans', dbController.getGivesForPlansPaged)
+
+/**
+ * Get totals of gives
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/giveTotals
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planId.query.optional - handle ID of the plan which has received gives
+ * @param {string} recipientId.query.optional - DID of recipient who has received gives
+ * @param {string} unit.query.optional - unit code to restrict amounts
+ * @returns {Object} 200 - keys are units and values are number amounts of total gives for them
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/giveTotals', dbController.getGiveTotals)
+
+/**
+ * Search offers
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/offers
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} claimContext.query.optional - search description of item offered
+ * @param {string} recipientPlanId.query.optional - get offers associated with plan
+ * @param {string} recipientId.query.optional - DID of recipient who has received offers
+ * @returns {OfferArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/offers', dbController.getOffersPaged)
+
+/**
+ * Get totals of offers
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/getOffersForPlans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planIds.query.optional - handle ID of the plan which has received offers
+ * @returns {OfferArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/offersForPlans', dbController.getOffersForPlansPaged)
+
+/**
+ * Get totals of offers
+ *
+ * @group reportAll - Reports With Paging
+ * @route GET /api/v2/report/offerTotals
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planId.query.optional - handle ID of the plan which has received offers
+ * @param {string} recipientId.query.optional - DID of recipient who has received offers
+ * @param {string} unit.query.optional - unit code to restrict amounts
+ * @returns {Object} 200 - keys are units and values are number amounts of total offers for them
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/offerTotals', dbController.getOfferTotals)
+
+/**
  * Get all plans for the query inputs, paginated, reverse-chronologically
  *
  * @group reportAll - Reports With Paging
@@ -314,49 +495,3 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByIssuer', dbController.getPlansByIssuerPaged)
-
-/**
- * Search offers
- *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/offers
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} claimContext.query.optional - search description of item offered
- * @param {string} recipientPlanId.query.optional - get offers associated with plan
- * @param {string} recipientId.query.optional - DID of recipient who has received offers
- * @returns {OfferArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/offers', dbController.getAllOffersPaged)
-
-/**
- * Get totals of offers
- *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/getOffersForPlans
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} planIds.query.optional - handle ID of the plan which has received offers
- * @returns {OfferArrayMaybeMoreBody} 200 - matching entries, reverse-chronologically
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/offersForPlans', dbController.getOffersForPlansPaged)
-
-/**
- * Get totals of offers
- *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/offerTotals
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} planId.query.optional - handle ID of the plan which has received offers
- * @param {string} recipientId.query.optional - DID of recipient who has received offers
- * @param {string} unit.query.optional - unit code to restrict amounts
- * @returns {Object} 200 - keys are units and values are number amounts of total offers for them
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/offerTotals', dbController.getOfferTotals)

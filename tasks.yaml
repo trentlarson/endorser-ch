@@ -15,6 +15,8 @@
   - reconcile fullIri & handleId
   - make internalId all null (since we're deprecating it)
   - update endorser.ch doc for offer (eg. isPartOf & gave)
+  - disallow searches for DIDs if they're not visible to issuer (including router getOfferTotals check)
+  - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
 
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
