@@ -6,6 +6,7 @@ if (!process.env.NODE_ENV) {
 }
 const FILE_LOC = process.env.APP_DB_FILE || '../endorser-ch-' + process.env.NODE_ENV + '.sqlite3'
 
+// see https://github.com/markgardner/node-flywaydb/blob/HEAD/sample/config.js
 // fileLoc is my own addition since I'm using this same DB info inside my services
 module.exports = {
   fileLoc: FILE_LOC,
@@ -16,5 +17,8 @@ module.exports = {
     sqlMigrationSuffixes: '.sqlite3',
     user: process.env.DBUSER,
     password: process.env.DBPASS
-  }
+  },
+  downloads: {
+    expirationTimeInMs: -1 // -1 means never check for updates
+  },
 }

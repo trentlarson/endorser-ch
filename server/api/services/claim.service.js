@@ -177,7 +177,7 @@ class ClaimService {
      @return object with: {confirmId: NUMBER, actionClaimId: NUMBER, orgRoleClaimId: NUMBER, tenureClaimId: NUMBER}
        ... where confirmId is -1 if something went wrong, and all others are optional
    **/
-  async createOneConfirmation(jwtId, issuerDid, origClaim) {
+  async createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim) {
 
     l.trace(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
 
@@ -186,13 +186,88 @@ class ClaimService {
       origClaim['@context'] = 'https://schema.org'
     }
 
-
     if (isContextSchemaOrg(origClaim['@context'])
+        && origClaim['@type'] === 'GiveAction') {
+
+      let origGive, giveJwtId, embeddedResult = {}
+
+      // find the original give
+      const origId = origClaim.identifier || origClaim.handleId
+      if (origId) {
+        const globalOrigId = globalId(origId)
+        const origGives =
+            await dbService.givesByParamsPaged({ handleId: globalOrigId })
+        l.trace(`... createOneConfirm origGive lookup gave ${util.inspect(origGives)}`)
+        if (origGives.data.length > 0) {
+          origGive = origGives.data[0]
+          giveJwtId = origGive.jwtId
+        }
+      } else {
+        // Should we look for an uncomfirmed give
+        // by that agent for the same recipient for that amount?
+      }
+      if (!origGive) {
+
+        embeddedResult = {
+          embeddedRecordError:
+          `This confirmation referenced some unknown give record`
+            + ` so it has no effect.`
+            + ` When not referencing an existing record,`
+            + ` just send a separate 'give' claim instead of a confirmation.`
+        }
+        return embeddedResult
+
+      } else if (origGive.issuer == issuerDid) {
+        embeddedResult = {
+          embeddedRecordError:
+          `This confirmation referenced a 'give' claim by yourself`
+            + ` so it has no effect.`
+            + ` If there is no existing record,`
+            + ` create one with a separate 'give' claim`
+            + ` and then there is no need for you to confirm it.`
+        }
+        return embeddedResult
+
+      } else {
+
+        l.trace(`... createOneConfirm orig ID & give (${origId}, ${util.inspect(origGive)})`)
+
+        let origClaimStr = canonicalize(origClaim)
+        let result =
+            await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr)
+
+        if (!origGive.confirmedByRecipient) {
+          // mark the give as confirmed by recipient, if this is a recipient
+          let confirmedByRecipient = false
+          if (issuerDid == origGive.recipientDid) {
+            confirmedByRecipient = true
+          } else {
+            // check also for creator of plan
+            const planId = origGive.fulfillsPlanId
+            if (planId) {
+              const plan = await dbService.planInfoByFullIri(planId)
+              confirmedByRecipient =
+                (issuerDid == plan?.issuerDid)
+                || (issuerDid == plan?.agentDid)
+            }
+          }
+          if (confirmedByRecipient && !origGive.confirmedByRecipient) {
+            await dbService.giveUpdateConfirmed(giveJwtId)
+          }
+        }
+
+        return R.mergeLeft(result, embeddedResult)
+
+      }
+
+    } else if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
-      var events = await dbService.eventsByParams(
-        {orgName:origClaim.event.organizer.name, name:origClaim.event.name, startTime:origClaim.event.startTime}
-      )
+      var events = await dbService.eventsByParams({
+        orgName: origClaim.event.organizer.name,
+        name: origClaim.event.name,
+        startTime: origClaim.event.startTime
+      })
       if (events.length === 0) {
         return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
       }
@@ -295,13 +370,58 @@ class ClaimService {
     }
   }
 
+  async createGive(jwtId, issuerDid, issuedAt, handleId, claim, confirmedByRecipient) {
+
+    let fulfillsId = claim.fulfills?.identifier
+    let fulfillsType
+    if (fulfillsId) {
+      fulfillsId = globalId(fulfillsId)
+      fulfillsType = claim.fulfills['@type']
+    }
+
+    let fulfillsPlanId
+    // look for the most applicable Plan
+    if (fulfillsType == 'PlanAction') {
+      fulfillsPlanId = globalId(fulfillsId)
+    } else {
+      let fulfillsObj = await dbService.jwtLastByHandleIdRaw(fulfillsId)
+      let fulfillsClaim = fulfillsObj ? JSON.parse(fulfillsObj.claim) : null
+      l.trace(`Give Creation checking fulfillClaim ${util.inspect(fulfillsClaim)}`)
+      if (fulfillsClaim?.itemOffered?.isPartOf
+          && fulfillsClaim.itemOffered.isPartOf['@type'] == 'PlanAction') {
+        fulfillsPlanId =
+          globalId(fulfillsClaim.itemOffered.isPartOf.identifier)
+      }
+    }
+
+    let entry = {
+      jwtId: jwtId,
+      handleId: handleId,
+      issuedAt: issuedAt,
+      agentDid: claim.agent?.identifier || issuerDid,
+      recipientDid: claim.recipient?.identifier,
+      fulfillsId: fulfillsId,
+      fulfillsType: fulfillsType,
+      fulfillsPlanId: fulfillsPlanId,
+      amount: claim.object?.amountOfThisGood,
+      unit: claim.object?.unitCode,
+      description: claim.description,
+      confirmedByRecipient: confirmedByRecipient ? 1 : 0,
+      fullClaim: canonicalize(claim),
+    }
+    let giveId = await dbService.giveInsert(entry)
+    l.trace(`${this.constructor.name} New give ${util.inspect(entry)}`)
+    return entry
+  }
+
   async createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
 
+      // note that @type of 'Confirmation' does similar logic (but is deprecated)
+
       l.trace('Adding AgreeAction confirmation', claim)
-      // note that 'Confirmation' does similar logic (but is deprecated)
 
       let recordings = []
       {
@@ -310,10 +430,16 @@ class ClaimService {
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (var claim of origClaim) {
-            recordings.push(await this.createOneConfirmation(jwtId, issuerDid, claim).catch(console.log))
+            recordings.push(
+              await this.createOneConfirmation(jwtId, issuerDid, issuedAt, claim)
+                .catch(console.log)
+            )
           }
         } else if (origClaim) {
-          recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
+          recordings.push(
+            await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim)
+              .catch(console.log)
+          )
         }
       }
       l.trace('Added confirmations', recordings)
@@ -323,42 +449,8 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'GiveAction') {
 
-      let fulfillsId = claim.fulfills?.identifier
-      let fulfillsType
-      if (fulfillsId) {
-        fulfillsId = globalId(fulfillsId)
-        fulfillsType = claim.fulfills['@type']
-      }
-
-      let fulfillsPlanId
-      // look for the most applicable Plan
-      if (fulfillsType == 'PlanAction') {
-        fulfillsPlanId = fulfillsId
-      } else {
-        let fulfillsObj = await dbService.jwtLastByHandleIdRaw(fulfillsId)
-        let fulfillsClaim = fulfillsObj ? JSON.parse(fulfillsObj.claim) : null
-        if (fulfillsClaim?.itemOffered?.isPartOf
-            && fulfillsClaim.itemOffered.isPartOf['@type'] == 'PlanAction') {
-          fulfillsPlanId = fulfillsClaim.itemOffered.isPartOf.identifier
-        }
-      }
-
-      let entry = {
-        jwtId: jwtId,
-        handleId: handleId,
-        issuedAt: issuedAt,
-        agentDid: claim.agent?.identifier || issuerDid,
-        recipientDid: claim.recipient?.identifier,
-        fulfillsId: fulfillsId,
-        fulfillsType: fulfillsType,
-        fulfillsPlanId: fulfillsPlanId,
-        amount: claim.object?.amountOfThisGood,
-        unit: claim.object?.unitCode,
-        description: claim.description,
-        fullClaim: canonicalize(claim),
-      }
-      let giveId = await dbService.giveInsert(entry)
-      return { giveId }
+      const newGive = this.createGive(jwtId, issuerDid, issuedAt, handleId, claim)
+      return newGive
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'JoinAction') {
@@ -432,6 +524,7 @@ class ClaimService {
         fullClaim: canonicalize(claim),
       }
       let offerId = await dbService.offerInsert(entry)
+      l.trace(`${this.constructor.name} New offer ${offerId} ${entry}`)
       return { offerId }
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -653,7 +746,7 @@ class ClaimService {
       // it's not an array
       embeddedResults =
         await this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim)
-      l.trace(`${this.constructor.name} created a claim record.`)
+      l.trace(`${this.constructor.name} created an embedded claim record.`)
     }
 
     // now record all the "sees" relationships to the issuer
@@ -854,6 +947,8 @@ class ClaimService {
           })
 
       const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId }, embedded)
+      l.trace(`${this.constructor.name}.createWithClaimRecord`
+              + ` resulted in ${util.inspect(result)}`)
       return result
 
     } else {

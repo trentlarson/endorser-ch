@@ -12,6 +12,8 @@ CREATE TABLE offer_claim (
        amount REAL,
        unit TEXT,
        objectDescription TEXT,
+       amountGiven REAL,
+       amountGivenConfirmedByRecipient REAL,
 
        validThrough DATE,
        fullClaim TEXT -- full claim JSON
@@ -31,18 +33,22 @@ CREATE TABLE give_claim (
        -- note that did:peer are 58 chars
        agentDid TEXT, -- global ID of the entity who gave the item
 
-       recipientDId TEXT, -- global ID of recipient
-       fulfillsId TEXT, -- global ID to which this applies
+       recipientDid TEXT, -- global ID of recipient
+       fulfillsId TEXT, -- global ID to the offer to which this Give applies
        fulfillsType TEXT, -- type of that ID (assuming in context schema.org)
 
-       -- This plan ID is for the case where this is given to a broader plan
-       -- that is nested inside the related data.
+       -- This global plan ID is for the case where this is given to a broader
+       -- plan that is nested inside the related data.
        fulfillsPlanId TEXT,
 
        amount REAL,
        unit TEXT,
-       description TEXT,
 
+       -- true (1) if this Give has been confirmed by the recipient from the
+       -- original Give or the issuer or agent of the plan
+       confirmedByRecipient INTEGER,
+
+       description TEXT,
        fullClaim TEXT -- full claim JSON
 );
 

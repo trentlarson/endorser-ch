@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose()
 const ulidx = require('ulidx')
 const ulid = ulidx.monotonicFactory()
 
+const logger = require('../../common/logger')
 const dbInfo = require('../../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
 const util = require('./util')
@@ -57,7 +58,7 @@ function constructWhere(params, allowedColumns, claimContents, contentColumn, ex
     }
   }
 
-  if (claimContents) {
+  if (claimContents && contentColumn) {
     if (whereClause.length > 0) {
       whereClause += " AND"
     }
@@ -87,8 +88,9 @@ function isoAndZonify(dateTime) {
 
 /**
    @param table is the table name
-   @param searchableColumns are names of columns allowing search
+   @param searchableColumns are names of columns allowing comparison operations (<, =, >)
    @param otherResultColumns are names of other columns to return in result
+   @param contentColumn is a text column that can be searched with 'claimContents'
    @param dateColumns are names of date columns which will be converted in result
 
    @param params is an object with a key-value for each column-value to filter, with some special keys:
@@ -107,7 +109,8 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
                                    params, afterIdInput, beforeIdInput) {
 
   let claimContents = params.claimContents
-  delete params.claimContents // note that value of '' is hard to detect (which is why this isn't conditional)
+  // note that value of '' is hard to detect (which is why this isn't conditional)
+  delete params.claimContents
   let excludeConfirmations = params.excludeConfirmations
   delete params.excludeConfirmations
   let where = constructWhere(
@@ -148,9 +151,13 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
         if (err) {
           rowErr = err
         } else {
-          var fieldNames = searchableColumns.concat(otherResultColumns)
+          var fieldNames =
+              searchableColumns.concat(otherResultColumns).concat([contentColumn])
           const result = {}
           for (let field of fieldNames) {
+            if (row[field] === undefined) {
+              logger.error(`DB field reference ${field} was not found in results.`)
+            }
             result[field] =
               dateColumns.includes(field) ? isoAndZonify(row[field]) : row[field]
           }
@@ -582,27 +589,28 @@ class EndorserDatabase {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, agentDid"
           + ", recipientDid, fulfillsId, fulfillsType, fulfillsPlanId"
-          + ", amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ", confirmedByRecipient, amount, unit, description, fullClaim)"
+          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.agentDid,
           entry.recipientDid, entry.fulfillsId, entry.fulfillsType,
-          entry.fulfillsPlanId, entry.amount, entry.unit, entry.description,
-          entry.fullClaim
+          entry.fulfillsPlanId, entry.confirmedByRecipient,
+          entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
     })
   }
 
+  // Returns Promise of { data: [] }
   givesByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
       'give_claim',
       'jwtId',
       ['jwtId', 'handleId', 'agentDid', 'recipientDid',
-       'fulfillsId', 'fulfillsType', 'fullfillsPlanId'],
-      ['amount', 'fullClaim', 'unit'],
+       'fulfillsId', 'fulfillsType', 'fulfillsPlanId', 'confirmedByRecipient'],
+      ['issuedAt', 'amount', 'fullClaim', 'unit'],
       'description',
       ['issuedAt'],
       params,
@@ -724,6 +732,18 @@ class EndorserDatabase {
     })
   }
 
+  giveUpdateConfirmed(jwtId) {
+    return new Promise((resolve, reject) => {
+      var stmt =
+          "UPDATE give_claim set confirmedByRecipient = 1 WHERE jwtId = ?"
+      db.run(
+        stmt,
+        [jwtId],
+        function(err) { if (err) { reject(err) } else { resolve(this.changes) } })
+    })
+  }
+
+
 
 
 
@@ -842,6 +862,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged
+     Returns Promise of { data: [] }
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1096,6 +1117,7 @@ class EndorserDatabase {
     })
   }
 
+  // Returns Promise of { data: [] }
   offersByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
       'offer_claim',
@@ -1324,6 +1346,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged
+     Returns Promise of { data: [] }
   **/
   plansByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1343,6 +1366,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged, with search for issuerDid
+     Returns Promise of { data: [] }
   **/
   plansByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1428,6 +1452,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged
+     Returns Promise of { data: [] }
   **/
   projectsByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1447,6 +1472,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged, with search for issuerDid
+     Returns Promise of { data: [] }
   **/
   projectsByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(

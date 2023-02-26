@@ -776,6 +776,8 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
+  let giveRecordHandleId
+
   it('insert give #1', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
@@ -804,6 +806,8 @@ describe('6 - retrieve offered and given totals', () => {
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
+        expect(r.body.success.fulfillsPlanId).to.be.a('string')
+        giveRecordHandleId = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -941,19 +945,110 @@ describe('6 - retrieve offered and given totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(3)
+        expect(r.body.data[0].confirmedByRecipient).to.be.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(3000)
 
-  // recent gave
-  // current gave total
-  // unconfirmed gave
-  // confirmed gave
-  // given to me
-  // given to my projects
-  // given to watched projects
+  it('wrong user tries to confirm a give', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    const credClaimObj = { '@type': 'GiveAction', identifier: giveRecordHandleId }
+    credObj.claim.object.push(credClaimObj)
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give confirmation did not work (wrong issuer)', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/gives?handleId='
+          + encodeURIComponent(giveRecordHandleId)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].confirmedByRecipient).to.be.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('confirm a give by the original recipient', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    const credClaimObj = { '@type': 'GiveAction', identifier: giveRecordHandleId }
+    credObj.claim.object.push(credClaimObj)
+    credObj.sub = creds[1].did
+    credObj.iss = creds[1].did
+    const claimJwtEnc = await credentials[1].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give confirmation worked', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/gives?handleId='
+          + encodeURIComponent(giveRecordHandleId)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].confirmedByRecipient).to.be.equal(1)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
 
   // outstanding offers
 
