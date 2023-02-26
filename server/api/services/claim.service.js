@@ -17,28 +17,43 @@ import {
 import { addCanSee } from './network-cache.service'
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
-const resolver = new Resolver({...ethrDidResolver({infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'})})
+const resolver =
+      new Resolver({
+        ...ethrDidResolver({
+          infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'
+        })
+      })
 
 const SERVICE_ID = process.env.SERVICE_ID
 
-const DEFAULT_MAX_REGISTRATIONS_PER_MONTH = process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 10
-const DEFAULT_MAX_CLAIMS_PER_WEEK = process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 100
+const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
+      process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 10
+const DEFAULT_MAX_CLAIMS_PER_WEEK =
+      process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 100
 
 // Determine if a claim has the right context, eg schema.org
 //
 // Different versions are because of "legacy context" issues.
 //
-// We still use this "http" since some have an old version of the app, but we expect to turn it off in late 2022.
+// We still use this "http" since some have an old version of the app,
+// but we expect to turn it off in late 2022.
 // (It is also useful when we need to run scripts against that data.)
-// Check with: select max(issuedAt) from jwt where claimContext = 'http://schema.org'
-const isContextSchemaOrg = (context) => context === 'https://schema.org' || context === 'http://schema.org'
-// ... and we only use the following for scripts.
-// Check with: select max(issuedAt) from jwt where claimContext = 'http://endorser.ch'
-//const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context) || context === 'http://endorser.ch' // latest was in 2020
+// Verify: select max(issuedAt) from jwt where claimContext='http://schema.org'
+const isContextSchemaOrg =
+      (context) =>
+      context === 'https://schema.org' || context === 'http://schema.org'
 //
-// Here is what to use for new deployments, and for endorser.ch after all users have updated their apps.
+// ... and we only use the following for scripts.
+// Verify: select max(issuedAt) from jwt where claimContext='http://endorser.ch'
+// Latest was in 2020
+//const isContextSchemaForConfirmation =
+//    (context) =>
+//    isContextSchemaOrg(context) || context === 'http://endorser.ch'
+//
+// Here is what to use for new deployments, and for endorser.ch after all users
+// have updated their apps.
 //const isContextSchemaOrg = (context) => context === 'https://schema.org'
-// Claims inside AgreeAction may not have a context if they're also in schema.org
+// Claims inside AgreeAction may not have context if they're also in schema.org
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
 const isEndorserRegistrationClaim = (claim) =>
@@ -52,9 +67,16 @@ class ClaimService {
     l.trace(`${this.constructor.name}.byId(${id}, ${requesterDid})`);
     let jwtRec = await dbService.jwtById(id)
     if (jwtRec) {
-      let result = {id:jwtRec.id, issuedAt:jwtRec.issuedAt, issuer:jwtRec.issuer, subject:jwtRec.subject,
-                    claimContext:jwtRec.claimContext, claimType:jwtRec.claimType, claim:JSON.parse(jwtRec.claim),
-                    handleId:jwtRec.handleId}
+      let result = {
+        id: jwtRec.id,
+        issuedAt: jwtRec.issuedAt,
+        issuer: jwtRec.issuer,
+        subject: jwtRec.subject,
+        claimContext: jwtRec.claimContext,
+        claimType: jwtRec.claimType,
+        claim: JSON.parse(jwtRec.claim),
+        handleId:jwtRec.handleId
+      }
       return result
     } else {
       return null
@@ -66,8 +88,11 @@ class ClaimService {
     var resultData
     resultData = await dbService.jwtsByParams(params)
     let result = resultData.map(j => {
-      let thisOne = {id:j.id, issuer:j.issuer, issuedAt:j.issuedAt, subject:j.subject, claimContext:j.claimContext,
-                     claimType:j.claimType, claim:JSON.parse(j.claim), handleId:j.handleId}
+      let thisOne = {
+        id: j.id, issuer: j.issuer, issuedAt: j.issuedAt, subject: j.subject,
+        claimContext: j.claimContext, claimType: j.claimType,
+        claim: JSON.parse(j.claim), handleId: j.handleId
+      }
       return thisOne
     })
     return result
@@ -153,12 +178,14 @@ class ClaimService {
               latestHashChainHex = hashChain(latestHashChainHex, [idAndClaim])
               if (idAndClaim.hashHex === null) {
                 l.error(
-                  "Found entries without a hashed claim, indicating some problem when inserting jwt records."
-                    + " Will create."
+                  "Found entries without a hashed claim, indicating some"
+                  + " problem when inserting jwt records. Will create."
                 )
                 idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
               }
-              updates.push(dbService.jwtSetMerkleHash(idAndClaim.id, idAndClaim.hashHex, latestHashChainHex))
+              updates.push(dbService.jwtSetMerkleHash(
+                idAndClaim.id, idAndClaim.hashHex, latestHashChainHex
+              ))
             }
             return Promise.all(updates)
           })
@@ -174,12 +201,18 @@ class ClaimService {
   }
 
   /**
-     @return object with: {confirmId: NUMBER, actionClaimId: NUMBER, orgRoleClaimId: NUMBER, tenureClaimId: NUMBER}
+     @return object with: {
+       confirmId: NUMBER,
+       actionClaimId: NUMBER,
+       orgRoleClaimId: NUMBER,
+       tenureClaimId: NUMBER
+     }
        ... where confirmId is -1 if something went wrong, and all others are optional
    **/
   async createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim) {
 
-    l.trace(`${this.constructor.name}.createOneConfirmation(${jwtId}, ${issuerDid}, ${util.inspect(origClaim)})`);
+    l.trace(`${this.constructor.name}.createOneConfirmation(${jwtId},`
+            + ` ${issuerDid}, ${util.inspect(origClaim)})`);
 
     // since AgreeAction is from schema.org, the embedded claim is the same by default
     if (origClaim['@context'] == null) {
@@ -284,13 +317,18 @@ class ClaimService {
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await dbService.confirmationByIssuerAndAction(issuerDid, actionClaimId)
       if (confirmation !== null) {
-        return Promise.reject(new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`))
+        return Promise.reject(
+          new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`)
+        )
       }
 
       let origClaimStr = canonicalize(origClaim)
 
-      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
-      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for actionClaimId ${actionClaimId}`);
+      let result =
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
+              + ` for actionClaimId ${actionClaimId}`
+             )
       return {confirmId:result, actionClaimId}
 
 
@@ -300,7 +338,8 @@ class ClaimService {
       // party.did is for legacy data, some still in mobile app
       let partyDid = origClaim.party?.identifier || origClaim.party?.did
 
-      let tenureClaimId = await dbService.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
+      let tenureClaimId =
+          await dbService.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) {
         return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
       }
@@ -309,13 +348,17 @@ class ClaimService {
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await dbService.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
       if (confirmation !== null) {
-        return Promise.reject(new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`))
+        return Promise.reject(
+          new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`)
+        )
       }
 
       let origClaimStr = canonicalize(origClaim)
 
-      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
-      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for tenureClaimId ${tenureClaimId}`);
+      let result =
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
+              + ` added for tenureClaimId ${tenureClaimId}`);
       return {confirmId:result, tenureClaimId}
 
 
@@ -331,19 +374,26 @@ class ClaimService {
             origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
             origClaim.member.endDate, origClaim.member.member.identifier
           )
-      if (orgRoleClaimId === null) return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
+      if (orgRoleClaimId === null) {
+        return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
+      }
 
       // check for duplicate
       // this can be replaced by confirmationByIssuerAndOrigClaim
       let confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
       if (confirmation !== null) {
-        return Promise.reject(new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`))
+        return Promise.reject(
+          new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`)
+        )
       }
 
       let origClaimStr = canonicalize(origClaim)
 
-      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
-      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for orgRoleClaimId ${orgRoleClaimId}`);
+      let result =
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
+              + ` added for orgRoleClaimId ${orgRoleClaimId}`
+             )
       return {confirmId:result, orgRoleClaimId}
 
 
@@ -352,7 +402,9 @@ class ClaimService {
       // check for duplicate
       let confirmation = await dbService.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) {
-        return Promise.reject(new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`))
+        return Promise.reject(
+          new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`)
+        )
       }
 
       let origClaimStr = canonicalize(origClaim)
@@ -363,8 +415,11 @@ class ClaimService {
       //   The "did" version is for legacy data, maybe still in mobile app.
       //   claim.[ agent | member.member | party | participant ].did
 
-      let result = await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
-      l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added for a generic confirmation`);
+      let result =
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
+              + ` added for a generic confirmation`
+             )
       return {confirmId:result}
 
     }
@@ -460,29 +515,40 @@ class ClaimService {
 
       if (!agentDid) {
         l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no agent DID.`)
-        return Promise.reject(new Error("Attempted to record a JoinAction claim with no agent DID."))
+        return Promise.reject(
+          new Error("Attempted to record a JoinAction claim with no agent DID.")
+        )
       }
 
       if (!claim.event) {
         l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no event info.`)
-        return Promise.reject(new Error("Attempted to record a JoinAction claim with no event info."))
+        return Promise.reject(
+          new Error("Attempted to record a JoinAction claim with no event info.")
+        )
       }
 
       var event
       var orgName = claim.event.organizer && claim.event.organizer.name
-      var events = await dbService.eventsByParams({orgName:orgName, name:claim.event.name, startTime:claim.event.startTime})
+      var events =
+          await dbService.eventsByParams({
+            orgName:orgName, name:claim.event.name, startTime:claim.event.startTime
+          })
 
       if (events.length === 0) {
         let eventId = await dbService.eventInsert(orgName, claim.event.name, claim.event.startTime)
-        event = {id:eventId, orgName:orgName, name:claim.event.name, startTime:claim.event.startTime}
+        event = {
+          id:eventId, orgName:orgName, name:claim.event.name, startTime:claim.event.startTime
+        }
         l.trace(`${this.constructor.name} New event # ${util.inspect(event)}`)
 
       } else {
         event = events[0]
         if (events.length > 1) {
           l.warn(
-            `${this.constructor.name} Multiple events exist with orgName ${orgName} name ${claim.event.name}`
-            + ` startTime ${claim.event.startTime}`)
+            `${this.constructor.name} Multiple events exist with orgName`
+              + ` ${orgName} name ${claim.event.name}`
+              + ` startTime ${claim.event.startTime}`
+          )
         }
 
         let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
@@ -681,7 +747,9 @@ class ClaimService {
       { // handle a single claim
         let origClaim = claim['originalClaim']
         if (origClaim) {
-          recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
+          recordings.push(
+            await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log)
+          )
         }
       }
 
@@ -691,18 +759,24 @@ class ClaimService {
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (var origClaim of origClaims) {
-            recordings.push(await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log))
+            recordings.push(
+              await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log)
+            )
           }
         }
       }
-      l.trace(`${this.constructor.name} Created ${recordings.length} confirmations & network records.`, recordings)
+      l.trace(`${this.constructor.name} Created ${recordings.length}`
+              + ` confirmations & network records.`, recordings)
 
       let confirmations = await Promise.all(recordings)
       return { confirmations }
 
     } else {
-      l.info("Submitted unknown claim type with @context " + claim['@context'] + " and @type " + claim['@type']
-             + "  This isn't a problem, it just means there is no dedicated storage or reporting for that type.")
+      l.info("Submitted unknown claim type with @context " + claim['@context']
+             + " and @type " + claim['@type']
+             + "  This isn't a problem, it just means there is no dedicated"
+             + " storage or reporting for that type."
+            )
 
       return {}
     }
@@ -726,7 +800,9 @@ class ClaimService {
       if (Array.isArray.payloadClaim
           && R.filter(c => c['@type'] === 'Project', claim).length > 1) {
         // To allow this, you'll have to assign different IDs to each project.
-        return { clientError: 'Sending multiple Projects at once does not allow editing. Send individually.' }
+        return { clientError:
+          'Sending multiple Projects at once does not allow editing. Send individually.'
+        }
       }
 
       var recordings = []
@@ -777,10 +853,12 @@ class ClaimService {
       let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
       if (payload.exp < nowEpoch) {
-        l.warn("JWT with exp " + payload.exp + " has expired but we're in test mode so using a new time." )
+        l.warn("JWT with exp " + payload.exp
+               + " has expired but we're in test mode so using a new time."
+              )
         payload.exp = nowEpoch + 100
       }
-      return {payload, issuer: payload.iss, header: {typ: "test"}} // all the other elements will be undefined
+      return {payload, issuer: payload.iss, header: {typ: "test"}} // other elements will = undefined
     } else {
 
       try {
@@ -807,7 +885,7 @@ class ClaimService {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
-    // available: { didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified }
+    // available: {didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified}
     const { payload } =
         await this.decodeAndVerifyJwt(jwtEncoded)
         .catch((err) => {
@@ -821,8 +899,10 @@ class ClaimService {
     const registered = await dbService.registrationByDid(payload.iss)
     if (!registered) {
       return Promise.reject(
-        { clientError: { message: `You are not registered to make claims. Contact an existing user for help.`,
-                         code: ERROR_CODES.UNREGISTERED_USER }}
+        { clientError: {
+          message: `You are not registered to make claims. Contact an existing user for help.`,
+          code: ERROR_CODES.UNREGISTERED_USER
+        }}
       )
     }
 
@@ -830,7 +910,8 @@ class ClaimService {
     const startOfWeekString = startOfWeekDate.toISO()
     const claimedCount = await dbService.jwtCountByAfter(payload.iss, startOfWeekString)
     // 0 shouldn't mean DEFAULT
-    const maxAllowedClaims = registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
+    const maxAllowedClaims =
+          registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
     if (claimedCount >= maxAllowedClaims) {
       return Promise.reject(
         { clientError: { message: `You have already made ${maxAllowedClaims} claims this week.`
@@ -846,19 +927,23 @@ class ClaimService {
         const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
         const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
         // 0 shouldn't mean DEFAULT
-        const maxAllowedRegs = registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+        const maxAllowedRegs =
+              registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
         if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: { message: `You have already registered ${maxAllowedRegs} this month.`
-                                                 + ` Contact an administrator for a higher limit.`,
-                                                 code: ERROR_CODES.OVER_REGISTRATION_LIMIT } }
-                               )
+          return Promise.reject({ clientError: {
+            message: `You have already registered ${maxAllowedRegs} this month.`
+              + ` Contact an administrator for a higher limit.`,
+            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+          }})
         }
 
         const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
         if (registered.epoch > startOfWeekEpoch) {
           return Promise.reject(
-            { clientError: { message: `You cannot register others the same week you got registered.`,
-                             code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON } }
+            { clientError: {
+              message: `You cannot register others the same week you got registered.`,
+              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
+            } }
           )
         }
       }
