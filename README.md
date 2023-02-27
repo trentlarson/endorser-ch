@@ -1,10 +1,6 @@
 # endorser-ch
 
-A server for recording assertions and then querying about them in privacy-preserving ways
-
-
-
-This repo is an API for creating and querying claims.  For a full system, use the mobile app linked at [the public endorser-ch server](https://endorser.ch); there's [a test server](https://test.endorser.ch:8000). (The old approach is with the uPort app and [this web app repo](https://github.com/trentlarson/uport-demo).)
+This repo is an API for creating and querying claims in privacy-preserving ways.  For a full system, use the mobile app linked at [the public EndorserSearch.com server](https://endorsersearch.com); there's [a test server](https://test.endorser.ch:8000).
 
 
 
@@ -12,9 +8,9 @@ This repo is an API for creating and querying claims.  For a full system, use th
 
 ## Get Started
 
-Get started developing.
+Requires node v14+
 
-Works with node v14
+* You can use [asdf](https://asdf-vm.com) with this project.
 
 ```shell
 # install dependencies
@@ -30,65 +26,30 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # run in development mode
 NODE_ENV=dev npm run dev
 
-# to add claims: add initial DID, used to register other DIDs via VCs -- replace YOUR_DID
+# set up ths first permissioned user by adding a DID thus:
 echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser-ch-dev.sqlite3
-
+# ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev`.
 ```
 
+#### Other Ways To Run
 
+Debug: `npm run dev:debug`
 
-## Sample Data
+Run on Docker:
 
-See 'Test It' below, then after running it: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3`
-... and you'll have a set of data in the DB which you can query.
+* Tag the release, and set ENDORSER_VERSION to that tag.
 
+```
+export ENDORSER_VERSION=release-1.1.35
 
+docker build -t endorser-ch:$ENDORSER_VERSION --build-arg ENDORSER_VERSION .
 
-## Run It
-#### Run in *development* mode:
-Runs the application is development mode. Should not be used in production
-
-```shell
-npm run dev
+docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database --name endorser-ch --env-file $PATH/.env -e APP_DB_FILE=/mnt/database/endorser-ch-dev.sqlite3 -e NODE_ENV=dev endorser-ch:$ENDORSER_VERSION
 ```
 
-or debug it
+Run on another domain:
 
-```shell
-npm run dev:debug
-```
-
-#### Run on Docker:
-
-`export ENDORSER_VERSION=release-1.1.35`
-
-`docker build -t endorser-ch:$ENDORSER_VERSION --build-arg ENDORSER_VERSION .`
-
-`docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database --name endorser-ch --env-file $PATH/.env -e APP_DB_FILE=/mnt/database/endorser-ch-dev.sqlite3 -e NODE_ENV=dev endorser-ch:$ENDORSER_VERSION`
-
-
-#### Run in *production* mode:
-
-The following compiles the application and starts it in production mode.
-
-If you move/remove the previous install, you'll need to copy the .env file to new endorser-ch dir.
-
-Tag the release version (after updating the package.json version).
-
-```shell
-# SSH to the box and kill the "node dist/index.js".
-# ... and may have to kill nodemon & pino-pretty processes separately
-# On local:
-# - update package.json
-# - tag in GitHub
-git pull
-scripts/deploy.sh ubuntutest release-X ~/.ssh/id_rsa
-# On remote:
-cd endorser-ch
-NODE_ENV=prod nohup npm start >> ../endorser-ch.out 2>&1 &
-```
-
-When installing on a different server, you may want to edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
+You probably want to edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
 
 
 
@@ -96,43 +57,24 @@ When installing on a different server, you may want to edit the .env SERVICE_ID 
 
 ## Test It
 
-You can use the test server at: [https://test.endorser.ch:8000/api-explorer](https://test.endorser.ch:8000/api-explorer)
+You can use the test server APIs at [https://test.endorser.ch:8000](https://test.endorser.ch:8000)
 
-Run the Mocha unit tests
+Run the local automated tests and build sample data with this: `./test/test.sh`
 
-```shell
-./test/test.sh
-```
+* That creates a sample DB file ../endorser-ch-test-local.sqlite3
 
-or debug them
+* You can also run the server in offline test mode by setting environment
+variable `NODE_ENV=test-local` and then it will accept all JWTs and it won't do
+any real JWT validity checking, including expiration. (This may be changed when
+I figure out how to validate JWTs without being online. It is accomplished with
+the `process.env.NODE_ENV === 'test-local'` code currently only found in
+server/api/services/claim.service.js )
 
-```shell
-./test/test.sh :debug
-```
-
-You can also run the server in offline test mode by setting environment variable
-`NODE_ENV=test-local` and then it will accept all JWTs and it won't do any real
-JWT validity checking, including expiration. (This may be changed when I figure
-out how to validate JWTs without being online.) This is accomplished by the
-`process.env.NODE_ENV === 'test-local'` code currently only found in
-server/api/services/jwt.service.js
+With the server running see the local API docs at [http://localhost:3000/api-explorer](http://localhost:3000/api-explorer)
 
 
-## Try It
 
-For the full experience, use [the mobile app](https://github.com/trentlarson/endorser-mobile) or [this customized uPort demo](https://github.com/trentlarson/uport-demo) to connect to it.
-
-Settings:
-
-- `APP_DB_FILE` is used to select the DB file (see conf/flyway.js)
-- `NODE_ENV` is used to determine the DB file if `APP_DB_FILE` is not set (see conf/flyway.js)
-
-Steps:
-
-* Open your browser to [http://localhost:3000](http://localhost:3000)
-* That includes a link to API docs at [http://localhost:3000/api-explorer](http://localhost:3000/api-explorer)
-
-Let's create some claims.  First, a claim of attendance.  Here's the object structure:
+Let's create some claims. First, we'll create a claim of attendance. Here's the payload structure:
 
 ```
 {
@@ -146,6 +88,10 @@ Let's create some claims.  First, a claim of attendance.  Here's the object stru
   }
 }
 ```
+
+That is sent to the /api/claims
+
+
 ... and base 64 encoded: `eyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjlUMDg6MDA6MDAuMDAwLTA3OjAwIn19`
 
 Now for a confirmation of that activity:
@@ -159,10 +105,9 @@ Now for a confirmation of that activity:
 ```
 
 
-```shell
-
-
 #### Generate JWTs
+
+```shell
 
 # Setup:
 # - Run `npm install` in this project.
@@ -190,14 +135,20 @@ await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
 # Now you can put that jwt value into a JWT env var make a call as user #0.
 curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://test.endorser.ch:8000/api/claims
 
+```
 
 
 #### Extensive, old tests
 
+```shell
+
 # These JWTs are old so they'll require running in "test-local" mode.
 export UPORT_PUSH_TOKEN=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NjAyMTI0MTMsImV4cCI6MTU2MDI5ODgxMywiaXNzIjoiZGlkOmV0aHI6MHgwMGM5YzIzMjZjNzNmNzMzODBlODQwMmIwMWRlOWRlZmNmZjJiMDY0In0.mUydq67R-gzz7c6iQBd06uKu2OEO32vqFbMWTxK3k5VUcDwFQR9XEj28KflBMmohm72nlITd_0kK0zIYSGaDwgA
+# see claims
 curl http://localhost:3000/api/claim -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
-# action claim
+# register
+
+# create an action claim
 curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NksifQ.eyJpYXQiOjE1NzQxMzcwMDAsInN1YiI6ImRpZDpldGhyOjB4MDBjOWMyMzI2YzczZjczMzgwZTg0MDJiMDFkZTlkZWZjZmYyYjA2NCIsImNsYWltIjp7IkBjb250ZXh0IjoiaHR0cDovL3NjaGVtYS5vcmciLCJAdHlwZSI6IkpvaW5BY3Rpb24iLCJhZ2VudCI6eyJkaWQiOiJkaWQ6ZXRocjoweDAwYzljMjMyNmM3M2Y3MzM4MGU4NDAyYjAxZGU5ZGVmY2ZmMmIwNjQifSwiZXZlbnQiOnsib3JnYW5pemVyIjp7Im5hbWUiOiJCb3VudGlmdWwgVm9sdW50YXJ5aXN0IENvbW11bml0eSJ9LCJuYW1lIjoiU2F0dXJkYXkgTW9ybmluZyBNZWV0aW5nIiwic3RhcnRUaW1lIjoiMjAxOC0xMi0yOVQwODowMDowMC4wMDAtMDc6MDAifX0sImlzcyI6ImRpZDpldGhyOjB4MDBjOWMyMzI2YzczZjczMzgwZTg0MDJiMDFkZTlkZWZjZmYyYjA2NCJ9.juVv789ByzMRt7ny29TaG2jxSQ74hRjEbtbCw3XziRLCBOnHYr55puFSn24rEjPTe8QjfGy6OXptvkVdrqQfHg"}' -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
 curl http://localhost:3000/api/claim/1 -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
 curl http://localhost:3000/api/action/1 -H 'Uport-Push-Token: eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NTU4MDc0MTYsImV4cCI6MTU1NzEwMzQxNiwiYXVkIjoiZGlkOmV0aHI6MHg2MWU3YmFlNzM5NDZjZGY4ZWUyZWE3ZWE4ZmQzYWZjZGVlOTcxMjBhIiwidHlwZSI6Im5vdGlmaWNhdGlvbnMiLCJ2YWx1ZSI6ImFybjphd3M6c25zOnVzLXdlc3QtMjoxMTMxOTYyMTY1NTg6ZW5kcG9pbnQvR0NNL3VQb3J0L2I3ODJkNGEzLWYwYzMtM2I1OS1hMjk3LTY4ZTlmYmViYWQyOSIsImlzcyI6ImRpZDpldGhyOjB4ZGYwZDhlNWZkMjM0MDg2ZjY2NDlmNzdiYjAwNTlkZTFhZWJkMTQzZSJ9.7GnYLHHO8gT3ApW-c3pa0FH1Yj15xDB_UJmzpiHNvqpmxMZo_CnHYxyg9R-I71CZqfiO_7X7IXhj-oCI9jzmWwE' -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
@@ -221,7 +172,9 @@ curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-T
 # clean out and recreate DB
 rm ../endorser-ch-dev.sqlite3
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
+
 ```
+
 
 
 
@@ -319,7 +272,7 @@ User stories:
 - in uport-demo
   - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
 
-  - run: `npm run start`
+  - run: `npm run build && npm run start`
 
   - show attendance results
     - on Best Attendance screen
@@ -454,6 +407,23 @@ async function verify(jwt) {
 - Finally, enter this with your JWT string: `verify("PASTE JWT HERE")`
 - If you see `Signature invalid for JWT`, you're being tricked.  Otherwise, it checks out.
   - If you see some other error (eg. "expired"), that's OK... it still passed the signature check, as long as it gets past this line: https://github.com/decentralized-identity/did-jwt/blob/v4.0.0/src/JWT.ts#L231
+
+
+
+
+DB Settings:
+
+- `APP_DB_FILE` is used to select the DB file (see conf/flyway.js)
+- `NODE_ENV` is used to determine the DB file if `APP_DB_FILE` is not set (see conf/flyway.js)
+
+
+
+
+Debug the tests (though I don't know what that means):
+
+```shell
+./test/test.sh :debug
+```
 
 
 
