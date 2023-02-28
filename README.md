@@ -26,9 +26,9 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # run in development mode
 NODE_ENV=dev npm run dev
 
-# set up ths first permissioned user by adding a DID thus:
+# register ths first permissioned user by adding a DID thus:
 echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser-ch-dev.sqlite3
-# ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev`.
+# ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
 ```
 
 #### Other Ways To Run
@@ -73,6 +73,82 @@ server/api/services/claim.service.js )
 
 
 
+#### Send sample plan
+
+First, ensure your DID is registered (see above). Then make a claim that looks
+like `claimPlanAction` in this [test file](./test/util.js), wrapped in a JWT.
+Here's an example in node:
+
+```
+let claimPlanAction = {
+  "@context": "https://schema.org",
+  "@type": "PlanAction",
+  "agent": { identifier: null }, // supply DID for intiator of this plan
+  "identifier": null, // supply plan ID
+  "name": "KickStarter for Time",
+  "description": "Deliver the games and set them up",
+  "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
+  "startTime": "2022-07",
+  "endTime": "2023-03"
+}
+
+// generate a JWT with that payload, and POST to /api/claim:
+
+fetch(
+  "https://endorser.ch/api/claim",
+  {
+    method: "POST",
+    header: { "Content-Type": "application/json" }
+  },
+  body: JSON.stringify({ jwtEncoded: jwt })
+)
+
+```
+
+That will give you a resulting ID (or a result with an "error" property).
+
+
+
+
+#### Generate JWTs
+
+Following are a few ways to generate a JWT with contents `{a:1}`:
+
+```shell
+
+# Setup:
+# - Run `npm install` in this project.
+# - Get the endorser-mobile project, run `yarn` there, and run the following in a shell inside there.
+# Note that this command may fail with a `hunk` message, but it's worth continuing because the rest may work.
+npx yarn-add-no-save esm typescript ts-node tslib @types/node
+# Edit tsconfig.json and set `isolatedModules` to false.
+# Run the CLI:
+npx ts-node
+
+// Then run the following in that node REPL:
+const testUtil = require('../endorser-ch/test/util') // import does not work
+
+// One approach:
+await testUtil.credentials[0].signJWT({a:1})
+
+// Another approach:
+const didJwt = require('did-jwt')
+const cred = testUtil.creds[0]
+const signer = didJwt.SimpleSigner(cred.privateKey)
+const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
+await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
+
+// Another approach (not-fully-tested): use the endorser-mobile project and create an identifier and use the utility.accessToken method from this:
+//import * as utility from './endorser-mobile/src/utility/utility' // require does not work
+
+# Now you can go to a terminal and put that JWT value into a JWT env var make a call as user #0.
+curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://test.endorser.ch:8000/api/claims
+
+```
+
+
+#### Old basic sample
+
 Let's create some claims. First, we'll create a claim of attendance. Here's the payload structure:
 
 ```
@@ -88,56 +164,29 @@ Let's create some claims. First, we'll create a claim of attendance. Here's the 
 }
 ```
 
-That is sent to the /api/claims
+* To send to the server, package that in a JWT (see code above) and POST to the /api/claim endpoint inside a body of `{ jwtEncoded: ... }`
 
 
-... and base 64 encoded: `eyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjlUMDg6MDA6MDAuMDAwLTA3OjAwIn19`
-
-Now for a confirmation of that activity:
+Now to confirm that activity, place all the previous into the `object` of an `AgreeAction`:
 
 ```
 {
   "@context": "http://endorser.ch",
-  "@type": "Confirmation",
-  "claimEncoded": "eyJAY29udGV4dCI6Imh0dHA6Ly9zY2hlbWEub3JnIiwiQHR5cGUiOiJKb2luQWN0aW9uIiwiYWdlbnQiOnsiZGlkIjoiZGlkOmV0aHI6MHhkZjBkOGU1ZmQyMzQwODZmNjY0OWY3N2JiMDA1OWRlMWFlYmQxNDNlIn0sImV2ZW50Ijp7Im9yZ2FuaXplciI6eyJuYW1lIjoiQm91bnRpZnVsIFZvbHVudGFyeWlzdCBDb21tdW5pdHkifSwibmFtZSI6IlNhdHVyZGF5IE1vcm5pbmcgTWVldGluZyIsInN0YXJ0VGltZSI6IjIwMTgtMTItMjlUMDg6MDA6MDAuMDAwLTA3OjAwIn19"
+  "@type": "AgreeAction",
+  "object": {
+    "@type": "JoinAction",
+    "agent": { "did": "did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e" },
+    "event": {
+      "organizer": { "name": "Bountiful Voluntaryist Community" },
+      "name": "Saturday Morning Meeting",
+      "startTime": "2018-12-29T08:00:00.000-07:00"
+    }
+  }
 }
 ```
 
 
-#### Generate JWTs
-
-```shell
-
-# Setup:
-# - Run `npm install` in this project.
-# - Get the endorser-mobile project, run `yarn` there, and run the following in a shell inside there.
-# Note that this command may fail with a `hunk` message, but it's worth continuing because the rest may work.
-npx yarn-add-no-save esm typescript ts-node tslib @types/node
-# Edit tsconfig.json and set `isolatedModules` to false.
-npx ts-node
-# Then run the following in that node REPL:
-import * as utility from './src/utility/utility' // require does not work
-const testUtil = require('../endorser-ch/test/util') // import does not work
-
-# One approach:
-await testUtil.credentials[0].signJWT({a:1})
-
-# Another approach:
-import didJwt from 'did-jwt'
-const cred = testUtil.creds[0]
-const signer = didJwt.SimpleSigner(cred.privateKey)
-const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
-await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
-
-# Another approach (untried): create identifier and use utility.accessToken method
-
-# Now you can put that jwt value into a JWT env var make a call as user #0.
-curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://test.endorser.ch:8000/api/claims
-
-```
-
-
-#### Extensive, old tests
+#### Old extensive samples
 
 ```shell
 
@@ -146,7 +195,7 @@ export UPORT_PUSH_TOKEN=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NkstUiJ9.eyJpYXQiOjE1NjA
 # see claims
 curl http://localhost:3000/api/claim -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
 # register
-
+curl http://localhost:3000/api/claim -h ...UNFINISHED: RegisterAction with agent & participant...
 # create an action claim
 curl http://localhost:3000/api/claim -H "Content-Type: application/json" -d '{"jwtEncoded": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NksifQ.eyJpYXQiOjE1NzQxMzcwMDAsInN1YiI6ImRpZDpldGhyOjB4MDBjOWMyMzI2YzczZjczMzgwZTg0MDJiMDFkZTlkZWZjZmYyYjA2NCIsImNsYWltIjp7IkBjb250ZXh0IjoiaHR0cDovL3NjaGVtYS5vcmciLCJAdHlwZSI6IkpvaW5BY3Rpb24iLCJhZ2VudCI6eyJkaWQiOiJkaWQ6ZXRocjoweDAwYzljMjMyNmM3M2Y3MzM4MGU4NDAyYjAxZGU5ZGVmY2ZmMmIwNjQifSwiZXZlbnQiOnsib3JnYW5pemVyIjp7Im5hbWUiOiJCb3VudGlmdWwgVm9sdW50YXJ5aXN0IENvbW11bml0eSJ9LCJuYW1lIjoiU2F0dXJkYXkgTW9ybmluZyBNZWV0aW5nIiwic3RhcnRUaW1lIjoiMjAxOC0xMi0yOVQwODowMDowMC4wMDAtMDc6MDAifX0sImlzcyI6ImRpZDpldGhyOjB4MDBjOWMyMzI2YzczZjczMzgwZTg0MDJiMDFkZTlkZWZjZmYyYjA2NCJ9.juVv789ByzMRt7ny29TaG2jxSQ74hRjEbtbCw3XziRLCBOnHYr55puFSn24rEjPTe8QjfGy6OXptvkVdrqQfHg"}' -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
 curl http://localhost:3000/api/claim/1 -H "Uport-Push-Token: $UPORT_PUSH_TOKEN"
@@ -243,23 +292,33 @@ tar: Error exit delayed from previous errors.
 
 
 
+
+
+
 ## Tests
 
 - Make sure API works: http://localhost:3000/api-explorer
-- test/test.sh
-- test these :3001 URLs by running [the web app](https://github.com/trentlarson/uport-demo)
+- Run test/test.sh
+- Test these :3001 URLs by running [the web app](https://github.com/trentlarson/uport-demo)
 http://localhost:3001/reportClaim?claimId=1
+
 ... and see confirmations eventually (even if they're HIDDEN which causes console errors)
 http://localhost:3001/reportClaims
+
 ... to see a list of claims
 http://localhost:3001/reportConfirms
+
 ... plus push a button and see results
 http://localhost:3001/signClaim?claim=%7B%22%40context%22%3A%22http%3A%2F%2Fendorser.ch%22%2C%22%40type%22%3A%22Confirmation%22%2C%22originalClaims%22%3A%5B%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-elsest%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3AElsa's-sister%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%5D%7D
+
 ... gives 5 confirmations
+
 ... and then go to a place not logged in
 http://localhost:3001/reportBestAttendance
+
 ... and see all hidden
-... then test the following user story if you have time
+
+... then test the following user story if you have time.
 
 User stories:
 
@@ -309,6 +368,8 @@ User stories:
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
 - to do: show strong network; show networks with personal connection vs public DID; show fake network
+
+
 
 
 
@@ -376,9 +437,11 @@ await all()
 
 
 
-## Tasks
+## Organization of This Project
 
 See [tasks.yml](tasks.yml).
+
+
 
 
 
