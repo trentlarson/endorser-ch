@@ -61,7 +61,7 @@ You can use the test server APIs at [https://test.endorser.ch:8000](https://test
 
 Run the local automated tests and build sample data with this: `./test/test.sh`
 
-* That creates a sample DB file ../endorser-ch-test-local.sqlite3
+* That creates a sample DB file ../endorser-ch-test-local.sqlite3 which you may then use as baseline data for running in dev mode by copying to ../endorser-ch-dev.sqlite3
 
 * You can also run the server in offline test mode by setting environment
 variable `NODE_ENV=test-local` and then it will accept all JWTs and it won't do
@@ -70,7 +70,6 @@ I figure out how to validate JWTs without being online. It is accomplished with
 the `process.env.NODE_ENV === 'test-local'` code currently only found in
 server/api/services/claim.service.js )
 
-With the server running see the local API docs at [http://localhost:3000/api-explorer](http://localhost:3000/api-explorer)
 
 
 
@@ -169,10 +168,6 @@ curl 'http://localhost:3000/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-11
 curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787' -H "Uport-Push-Token: $UPORT_PUSH_TOKEN" | json_pp
 curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-Type: application/json" -H "Uport-Push-Token: $UPORT_PUSH_TOKEN" -d '{"url":"http://IgniteCommunity.org"}'
 
-# clean out and recreate DB
-rm ../endorser-ch-dev.sqlite3
-NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
-
 ```
 
 
@@ -192,11 +187,14 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 - [Blockcerts for blockchain credentials](https://www.blockcerts.org)
 - [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
 
+
+
+
+
+
 ## Troubleshooting
 
-- When the API disallows and says a user "has already claimed" or "has already registered" their maximum for the week, you can up their limit in the database registration table (or increase the DEFAULT_MAX settings at the top of jwt.service.js if they haven't been set explicitly).
-
-- Runs on node v12 & v14, at least as of Feb 2022. (We recommend using nvm to manage node versions.)
+- When the API disallows and says a user "has already claimed" or "has already registered" their maximum for the week, you can up their limit in the database registration table (or, if they haven't been set explicitly in the DB for that user, increase the DEFAULT_MAX settings at the top of jwt.service.js).
 
 - Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)
 
@@ -320,46 +318,59 @@ User stories:
 ```
 mkdir metrics
 cd metrics
-yarn add @veramo/did-jwt bent ramda
+
+# If you like asdf:
+#asdf local nodejs 16.18.0
+#asdf local yarn 1.22.19
+
+yarn add bent ramda
+
+// This is just if you want to get private data. (See below, too.)
+#yarn add @veramo/did-jwt
+
 node
 
-const OWNER_DID = 'OWNER_DID'
-const OWNER_PRIVATE_KEY_HEX = 'OWNER_PRIVATE_KEY_HEX'
-const SERVER = 'http://localhost:3000'
+// The rest is inside your node CLI.
+let getServer = () => { return 'http://localhost:3000' }
 const bent = require('bent')
-const didJwt = require('did-jwt')
-// return { data: [...], maybeMoreAfter: 'ID' }
-const count = async (moreAfter) => {
+
+// These are just if you want to get private data. (See below, too.)
+//const OWNER_DID = 'OWNER_DID'
+//const OWNER_PRIVATE_KEY_HEX = 'OWNER_PRIVATE_KEY_HEX'
+//const didJwt = require('did-jwt')
+
+// 'count' returns { data: [...], maybeMoreAfter: 'ID' }
+let count = async (moreBefore) => {
+  let options = { "Content-Type": "application/json" }
+  /**
+  // These are just if you want to get private data.
   const nowEpoch = Math.floor(Date.now() / 1000)
   const endEpoch = nowEpoch + 60
   const tokenPayload = { exp: endEpoch, iat: nowEpoch, iss: OWNER_DID }
   const signer = didJwt.SimpleSigner(OWNER_PRIVATE_KEY_HEX)
   const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: OWNER_DID, signer })
-  const options = {
-    "Content-Type": "application/json",
-    "Uport-Push-Token": accessJwt
-  }
+  options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt })
+  **/
   const getJson = bent('json', options)
-  return getJson(SERVER + '/api/reportAll/claims?afterId=' + moreAfter)
+  return getJson(getServer() + '/api/v2/report/claims?beforeId=' + moreBefore)
 }
 const R = require('ramda')
-const all = async () => {
+let all = async () => {
   let total = []
-  let moreAfter = '0'
+  let moreBefore = 'Z'
   do {
-    const result = await count(moreAfter)
+    const result = await count(moreBefore)
     total = R.concat(total, result.data)
-    moreAfter = result.maybeMoreAfter
-    console.log(total.length, '...')
-  } while (moreAfter)
+    moreBefore = result.hitLimit ? result.data[result.data.length - 1].id : ''
+    console.log(total.length, moreBefore, '...')
+  } while (moreBefore)
   console.log('Grand total:', total.length)
   const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), total)
   const grouped = R.groupBy(i => i.month, totalSum)
   const table = R.map(i => i.length, grouped)
   console.log('Grouped:', JSON.stringify(table, null, 2))
-  return total
 }
-all()
+await all()
 ```
 
 
