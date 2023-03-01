@@ -310,7 +310,7 @@ export default express
  * @property {string} jwtId
  * @property {string} issuerDid
  * @property {string} agentDid
- * @property {string} fullIri
+ * @property {string} handleId
  * @property {string} name
  * @property {string} description
  * @property {string} image
@@ -472,7 +472,7 @@ export default express
  * @param {string} jwtId.query.optional
  * @param {string} issuerDid.query.optional
  * @param {string} agentDid.query.optional
- * @param {string} fullIri.query.optional
+ * @param {string} handleId.query.optional
  * @param {string} internalId.query.optional
  * @param {string} description.query.optional
  * @param {string} endTime.query.optional

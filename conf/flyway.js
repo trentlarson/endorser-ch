@@ -19,6 +19,6 @@ module.exports = {
     password: process.env.DBPASS
   },
   downloads: {
-    expirationTimeInMs: -1 // -1 means never check for updates
+    expirationTimeInMs: -1 // -1 means never check for updates but it's not working
   },
 }

@@ -1,26 +1,18 @@
 ---
 
 - 04 time offered/given to projects :
-  - recently/total offered/given to you/others in your list
-    /offer
-    /give
-
-    params : plan vs issuer, unit (optional?), ID range
-    /totalOffered
-    /totalGiven
-  - shrink all the long lines in services
   - check that offers are updated with given amounts
-
-  - deploy : run migration
   - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
-  - reconcile fullIri & handleId
+
   - make internalId all null (since we're deprecating it)
+  - check the 'did' properties listed in test/util.js (eg. registration)
   - update endorser.ch doc for offer (eg. isPartOf & gave)
   - allow searches by recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
   - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
   - change confirmationTemplate to have an object (rather than array)
   - handle attempts to edit unsupported or multi-claim JWTs
   - add give-total tests - for the recipient, for the plan, with a separate give claim
+  - deploy : run migration
 
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)

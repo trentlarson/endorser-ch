@@ -172,9 +172,9 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.status).that.equals(201)
         expect(r.body.success.claimId).to.be.a('string')
-        expect(r.body.success.fullIri).to.be.a('string')
+        expect(r.body.success.handleId).to.be.a('string')
         expect(r.body.success.recordsSavedForEdit).to.equal(1)
-        firstIdExternal = r.body.success.fullIri
+        firstIdExternal = r.body.success.handleId
         firstIdInternal = r.body.success.claimId
       }).catch((err) => {
         return Promise.reject(err)
@@ -189,7 +189,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
@@ -216,7 +216,7 @@ describe('6 - Plans', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].fullIri).to.be.a('string')
+        expect(r.body.data[0].handleId).to.be.a('string')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -256,7 +256,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -280,7 +280,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(HIDDEN_TEXT)
         expect(r.body.issuerDid).that.equals(HIDDEN_TEXT)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -314,7 +314,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -328,7 +328,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -342,7 +342,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -376,7 +376,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.fullIri).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstIdExternal)
         expect(r.body.description).that.equals(ENTITY_NEW_DESC)
       }).catch((err) => {
         return Promise.reject(err)
@@ -404,7 +404,7 @@ describe('6 - Plans', () => {
       .send({jwtEncoded: planWithExtFullBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
-        secondIdExternal = r.body.success.fullIri
+        secondIdExternal = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -418,7 +418,7 @@ describe('6 - Plans', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(2)
-        expect(r.body.data[1].fullIri).to.equal(firstIdExternal)
+        expect(r.body.data[1].handleId).to.equal(firstIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })

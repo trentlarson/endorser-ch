@@ -11,7 +11,7 @@ class PlanService {
       // assume they're requesting an endorser.ch URI
       externalId = GLOBAL_ENTITY_ID_IRI_PREFIX + externalId
     }
-    return dbService.planInfoByFullIri(externalId)
+    return dbService.planInfoByHandleId(externalId)
   }
 
 }
@@ -25,7 +25,7 @@ class ProjectService {
       // assume they're requesting an endorser.ch URI
       externalId = GLOBAL_ENTITY_ID_IRI_PREFIX + externalId
     }
-    return dbService.projectInfoByFullIri(externalId)
+    return dbService.projectInfoByHandleId(externalId)
   }
 
 }

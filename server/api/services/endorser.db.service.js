@@ -1316,12 +1316,12 @@ class EndorserDatabase {
   planInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
-        "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, fullIri"
+        "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
           + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
           + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
-        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri,
+        entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.resultDescription, entry.resultIdentifier,
       ], function(err) {
@@ -1334,11 +1334,11 @@ class EndorserDatabase {
     })
   }
 
-  planInfoByFullIri(fullIri) {
+  planInfoByHandleId(handleId) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT * FROM plan_claim WHERE fullIri = ?",
-        [fullIri],
+        "SELECT * FROM plan_claim WHERE handleId = ?",
+        [handleId],
         function(err, row) { if (err) { reject(err) } else { resolve(row) } }
       )
     })
@@ -1352,7 +1352,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'plan_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1372,7 +1372,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'plan_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1386,17 +1386,16 @@ class EndorserDatabase {
 
   planUpdate(entry) {
     return new Promise((resolve, reject) => {
-      // don't allow update of IDs
       var stmt = (
         "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = ?, startTime = ?"
           + ", resultDescription = ?, resultIdentifier = ?"
-          + " WHERE fullIri = ?"
+          + " WHERE handleId = ?"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier, entry.fullIri
+        entry.resultDescription, entry.resultIdentifier, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
           resolve()
@@ -1422,12 +1421,12 @@ class EndorserDatabase {
   projectInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
-        "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, fullIri"
+        "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, handleId"
           + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
           + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
-        entry.jwtId, entry.issuerDid, entry.agentDid, entry.fullIri,
+        entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.resultDescription, entry.resultIdentifier,
       ], function(err) {
@@ -1440,11 +1439,11 @@ class EndorserDatabase {
     })
   }
 
-  projectInfoByFullIri(fullIri) {
+  projectInfoByHandleId(handleId) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT * FROM project_claim WHERE fullIri = ?",
-        [fullIri],
+        "SELECT * FROM project_claim WHERE handleId = ?",
+        [handleId],
         function(err, row) { if (err) { reject(err) } else { resolve(row) } }
       )
     })
@@ -1458,7 +1457,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'project_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1478,7 +1477,7 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'project_claim',
       'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'fullIri',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
       ['image'],
@@ -1492,17 +1491,16 @@ class EndorserDatabase {
 
   projectUpdate(entry) {
     return new Promise((resolve, reject) => {
-      // don't allow update of IDs
       var stmt = (
         "UPDATE project_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = ?, startTime = ?"
           + ", resultDescription = ?, resultIdentifier = ?"
-          + " WHERE fullIri = ?"
+          + " WHERE handleId = ?"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier, entry.fullIri
+        entry.resultDescription, entry.resultIdentifier, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
           resolve()

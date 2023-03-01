@@ -278,7 +278,7 @@ class ClaimService {
             // check also for creator of plan
             const planId = origGive.fulfillsPlanId
             if (planId) {
-              const plan = await dbService.planInfoByFullIri(planId)
+              const plan = await dbService.planInfoByHandleId(planId)
               confirmedByRecipient =
                 (issuerDid == plan?.issuerDid)
                 || (issuerDid == plan?.agentDid)
@@ -624,7 +624,7 @@ class ClaimService {
         jwtId: jwtId,
         agentDid: agentDid,
         issuerDid: issuerDid,
-        fullIri: handleId,
+        handleId: handleId,
         name: claim.name,
         description: claim.description,
         image: claim.image,
@@ -634,16 +634,16 @@ class ClaimService {
         resultIdentifier: claim.resultIdentifier,
       }
 
-      let planRecord = await dbService.planInfoByFullIri(handleId)
+      let planRecord = await dbService.planInfoByHandleId(handleId)
       if (planRecord == null) {
         // new record
         const planId = await dbService.planInsert(entry)
-        return { fullIri: handleId, handleId, recordsSavedForEdit: 1, planId }
+        return { handleId, recordsSavedForEdit: 1, planId }
 
       } else {
         // edit existing record
         const numUpdated = await dbService.planUpdate(entry)
-        return { fullIri: handleId, handleId, recordsSavedForEdit: numUpdated }
+        return { handleId, recordsSavedForEdit: numUpdated }
       }
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -658,7 +658,7 @@ class ClaimService {
         jwtId: jwtId,
         agentDid: agentDid,
         issuerDid: issuerDid,
-        fullIri: handleId,
+        handleId: handleId,
         name: claim.name,
         description: claim.description,
         image: claim.image,
@@ -668,16 +668,16 @@ class ClaimService {
         resultIdentifier: claim.resultIdentifier,
       }
 
-      let projectRecord = await dbService.projectInfoByFullIri(handleId)
+      let projectRecord = await dbService.projectInfoByHandleId(handleId)
       if (projectRecord == null) {
         // new record
         const projectId = await dbService.projectInsert(entry)
-        return { fullIri: handleId, handleId, recordsSavedForEdit: 1, projectId }
+        return { handleId, recordsSavedForEdit: 1, projectId }
 
       } else {
         // edit existing record
         const numUpdated = await dbService.projectUpdate(entry)
-        return { fullIri: handleId, handleId, recordsSavedForEdit: numUpdated }
+        return { handleId, recordsSavedForEdit: numUpdated }
       }
 
     } else if (isEndorserRegistrationClaim(claim)) {

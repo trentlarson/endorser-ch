@@ -1,7 +1,10 @@
 
+ALTER TABLE plan_claim RENAME COLUMN fullIri TO handleId;
+ALTER TABLE project_claim RENAME COLUMN fullIri TO handleId;
+
 CREATE TABLE offer_claim (
-       jwtId TEXT PRIMARY KEY, -- initial declaration
-       handleId TEXT,
+       handleId TEXT PRIMARY KEY,
+       jwtId TEXT,
        issuedAt DATE,
 
        -- note that did:peer are 58 chars
@@ -9,25 +12,25 @@ CREATE TABLE offer_claim (
        recipientDid TEXT, -- global ID of recipient (if any)
        recipientPlanId TEXT, -- full ID of PlanAction (if any)
 
-       amount REAL,
        unit TEXT,
-       objectDescription TEXT,
+       amount REAL,
        amountGiven REAL,
        amountGivenConfirmedByRecipient REAL,
 
        validThrough DATE,
+
+       objectDescription TEXT,
        fullClaim TEXT -- full claim JSON
 );
 
-CREATE INDEX offer_handleId ON offer_claim(handleId);
 CREATE INDEX offer_offeredByDid ON offer_claim(offeredByDid);
 CREATE INDEX offer_recipientDid ON offer_claim(recipientDid);
 CREATE INDEX offer_recipientPlanId ON offer_claim(recipientPlanId);
 CREATE INDEX offer_validThrough ON offer_claim(validThrough);
 
 CREATE TABLE give_claim (
-       jwtId TEXT PRIMARY KEY, -- initial declaration
-       handleId TEXT,
+       handleId TEXT PRIMARY KEY,
+       jwtId TEXT,
        issuedAt DATE,
 
        -- note that did:peer are 58 chars
@@ -41,8 +44,8 @@ CREATE TABLE give_claim (
        -- plan that is nested inside the related data.
        fulfillsPlanId TEXT,
 
-       amount REAL,
        unit TEXT,
+       amount REAL,
 
        -- true (1) if this Give has been confirmed by the recipient from the
        -- original Give or the issuer or agent of the plan
@@ -52,7 +55,6 @@ CREATE TABLE give_claim (
        fullClaim TEXT -- full claim JSON
 );
 
-CREATE INDEX give_handleId ON give_claim(handleId);
 CREATE INDEX give_agentDid ON give_claim(agentDid);
 CREATE INDEX give_recipientDid ON give_claim(recipientDid);
 CREATE INDEX give_fulfillsId ON give_claim(fulfillsId);
