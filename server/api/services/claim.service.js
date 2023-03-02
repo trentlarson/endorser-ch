@@ -504,7 +504,47 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'GiveAction') {
 
-      const newGive = this.createGive(jwtId, issuerDid, issuedAt, handleId, claim)
+      const newGive = await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim)
+
+      // add to confirmedByRecipient if the issuer matches the recipientId or ...
+      if (issuerDid == newGive.recipientDid) {
+        // yes, this is a confirmed amount
+      } else if (newGive.fulfillsPlanId) {
+        // check if the issuer is a plan issuer or agent
+
+
+      }
+
+      // if it's an offer, add to the given amounts inside the offer record
+      if (newGive.fulfillsId && newGive.fulfillsType == 'Offer') {
+        const offers =
+              await  dbService.offersByParamsPaged({ handleId: newGive.fulfillsId })
+        if (offers.data.length > 0
+            // and only if the units match
+            && offers.data[0].unit == newGive.unit) {
+          const offer = offers.data[0]
+          const confirmedAmount = 0
+          // check if the issuer matches any of the offer items
+          if (issuerDid = offer.recipientId) {
+            // hooray! the issuer is the direct offer recipient
+            confirmedAmount = newGive.amount
+
+          } else if (offer.recipientPlanId
+                     || newGive.fulfillsPlanId) {
+            // gotta look further into the plan
+            const planId = offer.recipientPlanId || newGive.fulfillsPlanId
+            const plan = await dbService.planInfoByHandleId(newGive.handleId)
+            if (plan
+                && (issuerDid == plan.issuerDid || issuerDid == plan.agentDid)) {
+              confirmedAmount = newGive.amount
+            }
+          }
+          await dbService.offerUpdateAmounts(
+            offer.handleId, newGive.amount, confirmedAmount
+          )
+        }
+      }
+
       return newGive
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -590,7 +630,7 @@ class ClaimService {
         fullClaim: canonicalize(claim),
       }
       let offerId = await dbService.offerInsert(entry)
-      l.trace(`${this.constructor.name} New offer ${offerId} ${entry}`)
+      l.trace(`${this.constructor.name} New offer ${offerId} ${util.inspect(entry)}`)
       return { offerId }
 
     } else if (isContextSchemaOrg(claim['@context'])

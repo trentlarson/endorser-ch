@@ -255,6 +255,8 @@ Project initialized with https://github.com/cdimascio/generator-express-no-stres
 
 - "Converting circular structure to JSON": network connected?
 
+- "Error: expected "Content-Type" header field" during automated tests: run them again.
+
 - This:
 ```
 ../fsevents.cc:85:58: error: expected ';' after top level declarator

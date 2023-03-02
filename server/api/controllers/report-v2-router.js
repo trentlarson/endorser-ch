@@ -250,11 +250,12 @@ export default express
  * @property {datetime} issuedAt
  * @property {string} agentId
  * @property {string} recipientDid
- * @property {string} fulfillsId
- * @property {string} fulfillsType
- * @property {string} fulfillsPlanId
- * @property {string} amount
- * @property {object} unit
+ * @property {string} fulfillsId - handle ID of the offer this fulfills
+ * @property {string} fulfillsType - type of the element this fulfills, usually "Offer"
+ * @property {string} fulfillsPlanId - handle ID of the plan, if the offer applies to one
+ * @property {string} unit
+ * @property {number} amount
+ * @property {number} confirmedByRecipient - amount of this that recipient has confirmed
  * @property {string} description
  * @property {object} fullClaim
  */
@@ -290,10 +291,12 @@ export default express
  * @property {string} handleId
  * @property {datetime} issuedAt
  * @property {string} offeredByDid
- * @property {string} recipientDid
- * @property {string} recipientPlanId
- * @property {string} amount
- * @property {object} unit
+ * @property {string} recipientDid - recipient DID if this is for a plan
+ * @property {string} recipientPlanId - plan handle ID if this is for a plan
+ * @property {string} unit
+ * @property {number} amount
+ * @property {number} amountGiven - amount of Gives to this Offer
+ * @property {number} amountGivenConfirmedByRecipient - amount of Gives confirmed by recipient
  * @property {string} objectDescription
  * @property {datetime} validThrough
  * @property {object} fullClaim

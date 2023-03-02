@@ -512,6 +512,26 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
+  it('offer data is correct', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].offeredByDid).to.equal(creds[2].did)
+        expect(r.body.data[0].recipientDid).to.be.null
+        expect(r.body.data[0].recipientPlanId).to.equal(firstIdExternal)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(1)
+        expect(r.body.data[0].amountGiven).to.equal(0)
+        expect(r.body.data[0].amountGivenConfirmedByRecipient).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   it('offer total fails without certain parameters', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?unit=HUR')
@@ -814,6 +834,23 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
+  it('offer data has some new amounts from the Give', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(1)
+        expect(r.body.data[0].amountGiven).to.equal(2)
+        expect(r.body.data[0].amountGivenConfirmedByRecipient).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   it('give total fails without certain parameters', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?unit=HUR')
@@ -844,8 +881,24 @@ describe('6 - retrieve offered and given totals', () => {
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2 })
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer embedded amounts have new totals', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.amount).to.equal()
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -920,7 +973,7 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
-  it('give totals are correct for second', () => {
+  it('give totals are correct for second plan', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?planId=' + secondIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -1035,8 +1088,7 @@ describe('6 - retrieve offered and given totals', () => {
   it('give confirmation worked', () => {
     return request(Server)
       .get(
-        '/api/v2/report/gives?handleId='
-          + encodeURIComponent(giveRecordHandleId)
+        '/api/v2/report/gives?handleId=' + encodeURIComponent(giveRecordHandleId)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)

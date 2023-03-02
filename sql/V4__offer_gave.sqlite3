@@ -14,8 +14,8 @@ CREATE TABLE offer_claim (
 
        unit TEXT,
        amount REAL,
-       amountGiven REAL,
-       amountGivenConfirmedByRecipient REAL,
+       amountGiven REAL DEFAULT 0,
+       amountGivenConfirmedByRecipient REAL DEFAULT 0,
 
        validThrough DATE,
 
@@ -49,7 +49,7 @@ CREATE TABLE give_claim (
 
        -- true (1) if this Give has been confirmed by the recipient from the
        -- original Give or the issuer or agent of the plan
-       confirmedByRecipient INTEGER,
+       confirmedByRecipient INTEGER DEFAULT 0,
 
        description TEXT,
        fullClaim TEXT -- full claim JSON

@@ -603,7 +603,7 @@ class EndorserDatabase {
     })
   }
 
-  // Returns Promise of { data: [] }
+  // Returns Promise of { data: [], hitLimit: true|false }
   givesByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
       'give_claim',
@@ -862,7 +862,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged
-     Returns Promise of { data: [] }
+     Returns Promise of { data: [], hitLimit: true|false }
    **/
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1109,21 +1109,21 @@ class EndorserDatabase {
       db.run(
         stmt,
         [
-          entry.jwtId, entry.handleId, entry.issuedAt, entry.offeredById,
-          entry.recipientId, entry.recipientPlanId, entry.amount, entry.unit,
+          entry.jwtId, entry.handleId, entry.issuedAt, entry.offeredByDid,
+          entry.recipientDid, entry.recipientPlanId, entry.amount, entry.unit,
           entry.objectDescription, entry.validThrough, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
     })
   }
 
-  // Returns Promise of { data: [] }
+  // Returns Promise of { data: [], hitLimit: true|false }
   offersByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
       'offer_claim',
       'jwtId',
       ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId', 'validThrough'],
-      ['amount', 'fullClaim', 'unit'],
+      ['amount', 'unit', 'amountGiven', 'amountGivenConfirmedByRecipient', 'fullClaim'],
       'objectDescription',
       ['issuedAt', 'validThrough'],
       params,
@@ -1135,6 +1135,8 @@ class EndorserDatabase {
   /**
      Start after afterIdInput (optional) and before beforeIdinput (optional)
      and retrieve all offers for planId in reverse chronological order.
+
+     Returns Promise of { data: [], hitLimit: true|false }
   **/
   offersForPlansPaged(planIds, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
@@ -1239,6 +1241,21 @@ class EndorserDatabase {
       )
     })
   }
+
+  offerUpdateAmounts(handleId, addAmountGiven, addAmountGivenConfirmedByRecipient) {
+    return new Promise((resolve, reject) => {
+      var stmt =
+          "UPDATE offer_claim SET amountGiven = amountGiven + ?"
+          + ", amountGivenConfirmedByRecipient = amountGivenConfirmedByRecipient"
+          + " + ? WHERE handleId = ?"
+      db.run(
+        stmt,
+        [addAmountGiven, addAmountGivenConfirmedByRecipient, handleId],
+        function(err) { if (err) { reject(err) } else { resolve(this.changes) } })
+    })
+  }
+
+
 
 
 
@@ -1346,7 +1363,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged
-     Returns Promise of { data: [] }
+     Returns Promise of { data: [], hitLimit: true|false }
   **/
   plansByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1366,7 +1383,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged, with search for issuerDid
-     Returns Promise of { data: [] }
+     Returns Promise of { data: [], hitLimit: true|false }
   **/
   plansByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1451,7 +1468,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged
-     Returns Promise of { data: [] }
+     Returns Promise of { data: [], hitLimit: true|false }
   **/
   projectsByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
@@ -1471,7 +1488,7 @@ class EndorserDatabase {
 
   /**
      See tableEntriesByParamsPaged, with search for issuerDid
-     Returns Promise of { data: [] }
+     Returns Promise of { data: [], hitLimit: true|false }
   **/
   projectsByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
