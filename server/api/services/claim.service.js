@@ -200,6 +200,56 @@ class ClaimService {
       })
   }
 
+  async checkOfferConfirms(
+    issuerDid, giveRecipientId, giveUnit, giveAmount,
+    giveFulfillsId, giveFulfillsTypeId, giveFulfillsPlanId,
+    isOnlyConfirmation
+  ) {
+    if (giveFulfillsId && giveFulfillsTypeId == 'Offer') {
+      const offers =
+            await dbService.offersByParamsPaged({ handleId: giveFulfillsId })
+      if (offers.data.length > 0
+          // and only if the units match
+          && offers.data[0].unit == giveUnit) {
+        const offer = offers.data[0]
+
+        let confirmedAmount = 0
+        let confirmedNonAmount = 0
+        // confirm if this issuer is the direct offer & give recipient
+        if (issuerDid == offer.recipientId
+            && issuerDid == giveRecipientId) {
+          // hooray! now confirm the amount or non-amount
+          if (giveUnit == offer.unit
+              && giveAmount > 0) {
+            confirmedAmount = giveAmount
+          } else {
+            confirmedNonAmount = 1
+          }
+
+        } else if (offer.recipientPlanId
+                   // if there is no plan in the offer, allow plan from give
+                   || giveFulfillsPlanId) {
+          // gotta look further into the associated plan
+          const planId = offer.recipientPlanId || giveFulfillsPlanId
+          const plan = await dbService.planInfoByHandleId(planId)
+          if (plan
+              && (issuerDid == plan.issuerDid || issuerDid == plan.agentDid)) {
+            if (giveUnit == offer.unit
+                && giveAmount > 0) {
+              confirmedAmount = giveAmount
+            } else {
+              confirmedNonAmount = 1
+            }
+          }
+        }
+        const amountToUpdate = isOnlyConfirmation ? 0 : giveAmount
+        await dbService.offerUpdateAmounts(
+          offer.handleId, amountToUpdate, confirmedAmount, confirmedNonAmount
+        )
+      }
+    }
+  }
+
   /**
      @return object with: {
        confirmId: NUMBER,
@@ -222,7 +272,7 @@ class ClaimService {
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'GiveAction') {
 
-      let origGive, giveJwtId, embeddedResult = {}
+      let origGive, embeddedResult = {}
 
       // find the original give
       const origId = origClaim.identifier || origClaim.handleId
@@ -233,11 +283,7 @@ class ClaimService {
         l.trace(`... createOneConfirm origGive lookup gave ${util.inspect(origGives)}`)
         if (origGives.data.length > 0) {
           origGive = origGives.data[0]
-          giveJwtId = origGive.jwtId
         }
-      } else {
-        // Should we look for an uncomfirmed give
-        // by that agent for the same recipient for that amount?
       }
       if (!origGive) {
 
@@ -250,17 +296,6 @@ class ClaimService {
         }
         return embeddedResult
 
-      } else if (origGive.issuer == issuerDid) {
-        embeddedResult = {
-          embeddedRecordError:
-          `This confirmation referenced a 'give' claim by yourself`
-            + ` so it has no effect.`
-            + ` If there is no existing record,`
-            + ` create one with a separate 'give' claim`
-            + ` and then there is no need for you to confirm it.`
-        }
-        return embeddedResult
-
       } else {
 
         l.trace(`... createOneConfirm orig ID & give (${origId}, ${util.inspect(origGive)})`)
@@ -269,7 +304,7 @@ class ClaimService {
         let result =
             await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr)
 
-        if (!origGive.confirmedByRecipient) {
+        if (!origGive.confirmed) {
           // mark the give as confirmed by recipient, if this is a recipient
           let confirmedByRecipient = false
           if (issuerDid == origGive.recipientDid) {
@@ -279,13 +314,22 @@ class ClaimService {
             const planId = origGive.fulfillsPlanId
             if (planId) {
               const plan = await dbService.planInfoByHandleId(planId)
-              confirmedByRecipient =
-                (issuerDid == plan?.issuerDid)
-                || (issuerDid == plan?.agentDid)
+              if (issuerDid == plan?.issuerDid
+                  || issuerDid == plan?.agentDid) {
+                confirmedByRecipient = true
+              }
             }
           }
-          if (confirmedByRecipient && !origGive.confirmedByRecipient) {
-            await dbService.giveUpdateConfirmed(giveJwtId)
+          if (confirmedByRecipient) {
+            await dbService.giveUpdateConfirmed(origGive.handleId)
+
+            // now check if any associated offer also needs updating
+            await this.checkOfferConfirms(
+              issuerDid, origGive.recipientDid, origGive.unit, origGive.amount,
+              origGive.fulfillsId, origGive.fulfillsType,
+              origGive.fulfillPlansId, true
+            )
+
           }
         }
 
@@ -425,7 +469,7 @@ class ClaimService {
     }
   }
 
-  async createGive(jwtId, issuerDid, issuedAt, handleId, claim, confirmedByRecipient) {
+  async createGive(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     let fulfillsId = claim.fulfills?.identifier
     let fulfillsType
@@ -449,6 +493,8 @@ class ClaimService {
       }
     }
 
+    const byRecipient = issuerDid == claim.recipient?.identifier
+
     let entry = {
       jwtId: jwtId,
       handleId: handleId,
@@ -461,7 +507,7 @@ class ClaimService {
       amount: claim.object?.amountOfThisGood,
       unit: claim.object?.unitCode,
       description: claim.description,
-      confirmedByRecipient: confirmedByRecipient ? 1 : 0,
+      confirmed: byRecipient ? 1 : 0,
       fullClaim: canonicalize(claim),
     }
     let giveId = await dbService.giveInsert(entry)
@@ -504,46 +550,13 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'GiveAction') {
 
-      const newGive = await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim)
+      const newGive =
+            await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim)
 
-      // add to confirmedByRecipient if the issuer matches the recipientId or ...
-      if (issuerDid == newGive.recipientDid) {
-        // yes, this is a confirmed amount
-      } else if (newGive.fulfillsPlanId) {
-        // check if the issuer is a plan issuer or agent
-
-
-      }
-
-      // if it's an offer, add to the given amounts inside the offer record
-      if (newGive.fulfillsId && newGive.fulfillsType == 'Offer') {
-        const offers =
-              await  dbService.offersByParamsPaged({ handleId: newGive.fulfillsId })
-        if (offers.data.length > 0
-            // and only if the units match
-            && offers.data[0].unit == newGive.unit) {
-          const offer = offers.data[0]
-          const confirmedAmount = 0
-          // check if the issuer matches any of the offer items
-          if (issuerDid = offer.recipientId) {
-            // hooray! the issuer is the direct offer recipient
-            confirmedAmount = newGive.amount
-
-          } else if (offer.recipientPlanId
-                     || newGive.fulfillsPlanId) {
-            // gotta look further into the plan
-            const planId = offer.recipientPlanId || newGive.fulfillsPlanId
-            const plan = await dbService.planInfoByHandleId(newGive.handleId)
-            if (plan
-                && (issuerDid == plan.issuerDid || issuerDid == plan.agentDid)) {
-              confirmedAmount = newGive.amount
-            }
-          }
-          await dbService.offerUpdateAmounts(
-            offer.handleId, newGive.amount, confirmedAmount
-          )
-        }
-      }
+      this.checkOfferConfirms(
+        issuerDid, newGive.recipientDid, newGive.unit, newGive.amount,
+        newGive.fulfillsId, newGive.fulfillsType, newGive.fulfillsPlanId, false
+      )
 
       return newGive
 

@@ -255,7 +255,7 @@ export default express
  * @property {string} fulfillsPlanId - handle ID of the plan, if the offer applies to one
  * @property {string} unit
  * @property {number} amount
- * @property {number} confirmedByRecipient - amount of this that recipient has confirmed
+ * @property {number} confirmed - amount of this that recipient has confirmed
  * @property {string} description
  * @property {object} fullClaim
  */
@@ -296,7 +296,7 @@ export default express
  * @property {string} unit
  * @property {number} amount
  * @property {number} amountGiven - amount of Gives to this Offer
- * @property {number} amountGivenConfirmedByRecipient - amount of Gives confirmed by recipient
+ * @property {number} amountGivenConfirmed - amount of Gives confirmed by recipient
  * @property {string} objectDescription
  * @property {datetime} validThrough
  * @property {object} fullClaim

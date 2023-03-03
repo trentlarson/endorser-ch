@@ -4,16 +4,20 @@
   - check that offers are updated with given amounts
   - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
   - test when Give issuer is same as recipient, same as plan issuer/agent, same as offer recipient, or same as offer plan issuer/agent
+  - add give-total tests - for the recipient, for the plan, with a separate give claim
+  - check for fullIri in mobile app
 
   - make internalId all null (since we're deprecating it); this is best in a baseline
-  - check the 'did' properties listed in test/util.js (eg. registration)
+  - check the 'did' properties listed in test/util.js (eg. registration) -- which should be "identifier" eh
   - update endorser.ch doc for offer (eg. isPartOf & gave)
   - allow searches by recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
   - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
   - change confirmationTemplate to have an object (rather than array)
   - handle attempts to edit unsupported or multi-claim JWTs
-  - add give-total tests - for the recipient, for the plan, with a separate give claim
   - deploy : run migration
+
+  - mobile: screens - offers total, offers to me, give total, recent gives, open offers, open gives, plans, plan - offers & gives
+  - mobile: front-page selection for plan / offer / give feed
 
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)

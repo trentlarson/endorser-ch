@@ -525,7 +525,8 @@ describe('6 - retrieve offered and given totals', () => {
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(1)
         expect(r.body.data[0].amountGiven).to.equal(0)
-        expect(r.body.data[0].amountGivenConfirmedByRecipient).to.equal(0)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(0)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -796,7 +797,7 @@ describe('6 - retrieve offered and given totals', () => {
       })
   }).timeout(3000)
 
-  let giveRecordHandleId
+  let firstGiveRecordHandleId
 
   it('insert give #1', async () => {
 
@@ -827,7 +828,7 @@ describe('6 - retrieve offered and given totals', () => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
         expect(r.body.success.fulfillsPlanId).to.be.a('string')
-        giveRecordHandleId = r.body.success.handleId
+        firstGiveRecordHandleId = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -844,7 +845,8 @@ describe('6 - retrieve offered and given totals', () => {
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(1)
         expect(r.body.data[0].amountGiven).to.equal(2)
-        expect(r.body.data[0].amountGivenConfirmedByRecipient).to.equal(0)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(0)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -998,7 +1000,7 @@ describe('6 - retrieve offered and given totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(3)
-        expect(r.body.data[0].confirmedByRecipient).to.be.equal(0)
+        expect(r.body.data[0].confirmed).to.be.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1009,7 +1011,7 @@ describe('6 - retrieve offered and given totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
-    const credClaimObj = { '@type': 'GiveAction', identifier: giveRecordHandleId }
+    const credClaimObj = { '@type': 'GiveAction', identifier: firstGiveRecordHandleId }
     credObj.claim.object.push(credClaimObj)
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1040,14 +1042,14 @@ describe('6 - retrieve offered and given totals', () => {
     return request(Server)
       .get(
         '/api/v2/report/gives?handleId='
-          + encodeURIComponent(giveRecordHandleId)
+          + encodeURIComponent(firstGiveRecordHandleId)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].confirmedByRecipient).to.be.equal(0)
+        expect(r.body.data[0].confirmed).to.be.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1058,7 +1060,7 @@ describe('6 - retrieve offered and given totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
-    const credClaimObj = { '@type': 'GiveAction', identifier: giveRecordHandleId }
+    const credClaimObj = { '@type': 'GiveAction', identifier: firstGiveRecordHandleId }
     credObj.claim.object.push(credClaimObj)
     credObj.sub = creds[1].did
     credObj.iss = creds[1].did
@@ -1088,14 +1090,33 @@ describe('6 - retrieve offered and given totals', () => {
   it('give confirmation worked', () => {
     return request(Server)
       .get(
-        '/api/v2/report/gives?handleId=' + encodeURIComponent(giveRecordHandleId)
+        '/api/v2/report/gives?handleId='
+          + encodeURIComponent(firstGiveRecordHandleId)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].confirmedByRecipient).to.be.equal(1)
+        expect(r.body.data[0].confirmed).to.be.equal(1)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer data now has a confirmed amount', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(1)
+        expect(r.body.data[0].amountGiven).to.equal(2)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(2)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

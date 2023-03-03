@@ -589,14 +589,14 @@ class EndorserDatabase {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, agentDid"
           + ", recipientDid, fulfillsId, fulfillsType, fulfillsPlanId"
-          + ", confirmedByRecipient, amount, unit, description, fullClaim)"
+          + ", confirmed, amount, unit, description, fullClaim)"
           + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.agentDid,
           entry.recipientDid, entry.fulfillsId, entry.fulfillsType,
-          entry.fulfillsPlanId, entry.confirmedByRecipient,
+          entry.fulfillsPlanId, entry.confirmed,
           entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
@@ -609,7 +609,7 @@ class EndorserDatabase {
       'give_claim',
       'jwtId',
       ['jwtId', 'handleId', 'agentDid', 'recipientDid',
-       'fulfillsId', 'fulfillsType', 'fulfillsPlanId', 'confirmedByRecipient'],
+       'fulfillsId', 'fulfillsType', 'fulfillsPlanId', 'confirmed'],
       ['issuedAt', 'amount', 'fullClaim', 'unit'],
       'description',
       ['issuedAt'],
@@ -732,13 +732,13 @@ class EndorserDatabase {
     })
   }
 
-  giveUpdateConfirmed(jwtId) {
+  giveUpdateConfirmed(handleId) {
     return new Promise((resolve, reject) => {
       var stmt =
-          "UPDATE give_claim set confirmedByRecipient = 1 WHERE jwtId = ?"
+          "UPDATE give_claim SET confirmed = confirmed + 1 WHERE handleId = ?"
       db.run(
         stmt,
-        [jwtId],
+        [handleId],
         function(err) { if (err) { reject(err) } else { resolve(this.changes) } })
     })
   }
@@ -1122,8 +1122,10 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'offer_claim',
       'jwtId',
-      ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId', 'validThrough'],
-      ['amount', 'unit', 'amountGiven', 'amountGivenConfirmedByRecipient', 'fullClaim'],
+      ['jwtId', 'handleId', 'offeredByDid', 'recipientDid', 'recipientPlanId',
+       'validThrough'],
+      ['amount', 'unit', 'amountGiven', 'amountGivenConfirmed',
+       'nonAmountGivenConfirmed', 'fullClaim'],
       'objectDescription',
       ['issuedAt', 'validThrough'],
       params,
@@ -1242,15 +1244,19 @@ class EndorserDatabase {
     })
   }
 
-  offerUpdateAmounts(handleId, addAmountGiven, addAmountGivenConfirmedByRecipient) {
+  offerUpdateAmounts(
+    handleId, addAmountGiven, addAmountGivenConfirmed, addNonAmountGivenConfirmed
+  ) {
     return new Promise((resolve, reject) => {
       var stmt =
           "UPDATE offer_claim SET amountGiven = amountGiven + ?"
-          + ", amountGivenConfirmedByRecipient = amountGivenConfirmedByRecipient"
-          + " + ? WHERE handleId = ?"
+          + ", amountGivenConfirmed = amountGivenConfirmed + ?"
+          + ", nonAmountGivenConfirmed = nonAmountGivenConfirmed + ?"
+          + " WHERE handleId = ?"
       db.run(
         stmt,
-        [addAmountGiven, addAmountGivenConfirmedByRecipient, handleId],
+        [addAmountGiven, addAmountGivenConfirmed,
+         addNonAmountGivenConfirmed, handleId],
         function(err) { if (err) { reject(err) } else { resolve(this.changes) } })
     })
   }

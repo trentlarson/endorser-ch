@@ -14,8 +14,19 @@ CREATE TABLE offer_claim (
 
        unit TEXT,
        amount REAL,
+
+       -- amount of Gives with same unit
+       --
+       -- does not count any that have no amounts
        amountGiven REAL DEFAULT 0,
-       amountGivenConfirmedByRecipient REAL DEFAULT 0,
+
+       -- amount of Gives with same unit that have been confirmed
+       -- (see 'confirmed' in give_claim)
+       amountGivenConfirmed REAL DEFAULT 0,
+
+       -- whether there are non-amount gives, where non-zero means
+       -- an associated Give has been confirmed
+       nonAmountGivenConfirmed INTEGER DEFAULT 0,
 
        validThrough DATE,
 
@@ -38,7 +49,7 @@ CREATE TABLE give_claim (
 
        recipientDid TEXT, -- global ID of recipient
        fulfillsId TEXT, -- global ID to the offer to which this Give applies
-       fulfillsType TEXT, -- type of that ID (assuming in context schema.org)
+       fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
 
        -- This global plan ID is for the case where this is given to a broader
        -- plan that is nested inside the related data.
@@ -47,9 +58,9 @@ CREATE TABLE give_claim (
        unit TEXT,
        amount REAL,
 
-       -- true (1) if this Give has been confirmed by the recipient from the
-       -- original Give or the issuer or agent of the plan
-       confirmedByRecipient INTEGER DEFAULT 0,
+       -- non-zero if this Give has been confirmed
+       -- by the Give recipient or by the plan issuer or agent
+       confirmed REAL DEFAULT 0,
 
        description TEXT,
        fullClaim TEXT -- full claim JSON
