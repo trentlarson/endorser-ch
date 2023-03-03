@@ -1,7 +1,6 @@
 ---
 
 - 04 time offered/given to projects :
-  - check the 'did' properties listed in test/util.js (eg. registration) -- which should be "identifier" eh
 
   - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
   - check that offers are updated with given amounts

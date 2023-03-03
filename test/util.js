@@ -115,9 +115,9 @@ module.exports = {
   registrationTemplate: {
     "@context": "https://schema.org",
     "@type": "RegisterAction",
-    "agent": { "did": null }, // supply DID
+    "agent": { "identifier": null }, // supply DID
     "object": "endorser.ch",
-    "participant": { "did": null }, // supply DID
+    "participant": { "identifier": null }, // supply DID
   },
 
   confirmationTemplate: {
