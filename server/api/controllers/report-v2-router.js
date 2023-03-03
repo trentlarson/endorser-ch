@@ -333,7 +333,7 @@ export default express
 /**
  * Check if current user can create a claim.
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/canClaim
  * @returns {Object} 200 - data boolean property tells whether this user is allowed to create a claim
  * @returns {Error} 400 - error
@@ -344,7 +344,7 @@ export default express
 /**
  * Get all claims for the query inputs, paginated, reverse-chronologically
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/claims
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
@@ -362,7 +362,7 @@ export default express
 /**
  * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string)
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/claimsForIssuerWithTypes
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
@@ -376,7 +376,7 @@ export default express
 /**
  * Search gives
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/gives
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -392,8 +392,8 @@ export default express
 /**
  * Get totals of gives
  *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/getGivesForPlans
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/givesForPlans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received gives
@@ -406,7 +406,7 @@ export default express
 /**
  * Get totals of gives
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/giveTotals
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -422,7 +422,7 @@ export default express
 /**
  * Search offers
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/offers
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -438,8 +438,8 @@ export default express
 /**
  * Get totals of offers
  *
- * @group reportAll - Reports With Paging
- * @route GET /api/v2/report/getOffersForPlans
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/offersForPlans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received offers
@@ -452,7 +452,7 @@ export default express
 /**
  * Get totals of offers
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/offerTotals
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -468,7 +468,7 @@ export default express
 /**
  * Get all plans for the query inputs, paginated, reverse-chronologically
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/plans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -490,7 +490,7 @@ export default express
 /**
  * Get all plans by the issuer, paginated, reverse-chronologically
  *
- * @group reportAll - Reports With Paging
+ * @group reports - Reports With Paging
  * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included

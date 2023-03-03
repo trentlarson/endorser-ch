@@ -48,20 +48,20 @@ export default express
 
 /**
  * Add a Claim JWT and insert claims into their own tables
- * @group claim - Claim storage
+ * @group claims - Claim storage
  * @route POST /api/v2/claim
  * @param {EncodedJwt.model} jwt.body.required
  * @returns {object} 200 - {
-   success: {
-     claimId: string,
-     clientMessage: string,
-     embeddedRecordError: object,
-     handleId: string,
-     recordsSavedForEdit:
-       number, actionId || orgRoleId || registrationId || tenureId || voteId: number,
-     confirmations: { confirmId: number }
-   },
-   error: { code: string, message: string} }
+ *   success: {
+ *    claimId: string,
+ *    clientMessage: string,
+ *    embeddedRecordError: object,
+ *   handleId: string,
+ *   recordsSavedForEdit:
+ *     number, actionId || orgRoleId || registrationId || tenureId || voteId: number,
+ *   confirmations: { confirmId: number }
+ * },
+ * error: { code: string, message: string} }
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

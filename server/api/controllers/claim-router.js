@@ -131,7 +131,7 @@ export default express
 
 /**
  * Add a Claim JWT and insert claims into their own tables
- * @group claim - Claim storage
+ * @group claims v1 - Claim storage
  * @route POST /api/claim
  * @param {EncodedJwt.model} jwt.body.required
  * @returns {object} 200 - internal ID of Claim JWT
@@ -142,7 +142,7 @@ export default express
 
 /**
  * Get many Claim JWTs
- * @group claim - Claim storage
+ * @group claims v1 - Claim storage
  * @route GET /api/claim
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
@@ -157,7 +157,7 @@ export default express
 
 /**
  * Get a Claim JWT
- * @group claim - Claim storage
+ * @group claims v1 - Claim storage
  * @route GET /api/claim/{id}
  * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
@@ -169,7 +169,7 @@ export default express
 /**
  * Get most recent "entity" (claim that matches an handle ID)
  *
- * @group claim - Claim storage
+ * @group claims v1 - Claim storage
  * @route GET /api/claim/byHandle/{id}
  * @param {string} id.params.required - the persistent "entity" handle ID
  * @returns {Jwt} 200 - the claim record with the most recent changes for that handle ID
@@ -181,7 +181,7 @@ export default express
 
 /**
  * Get a Claim JWT with full encoding
- * @group claim - Claim storage
+ * @group claims v1 - Claim storage
  * @route GET /api/claim/full/{id}
  * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
@@ -192,7 +192,7 @@ export default express
 
  /**
  * Add a Claim JWT raw, without any processing (not recommended)
- * @group claim - Claim storage
+ * @group claims v1 - Claim storage
  * @route POST /api/claim/raw
  * @param {string} jwt.body.required
  * @returns {object} 200 - internal ID of Claim JWT

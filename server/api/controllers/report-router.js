@@ -144,7 +144,7 @@ export default express
 /**
  * Consent to make push-token issuer's ID visible to the given ID
  *
- * @group network - Visibility
+ * @group reports on network - Visibility
  * @route POST /api/report/canSeeMe
  * @param {DidBody.model} body.body.required
  */
@@ -154,7 +154,7 @@ export default express
 /**
  * Make push-token issuer's ID invisible to the given ID
  *
- * @group network - Visibility
+ * @group reports on network - Visibility
  * @route POST /api/report/cannotSeeMe
  * @param {DidBody.model} body.body.required
  */
@@ -164,7 +164,7 @@ export default express
 /**
  * Consent to make push-token issuer's ID visible to the world
  *
- * @group network - Visibility
+ * @group reports on network - Visibility
  * @route POST /api/report/makeMeGloballyVisible
  * @param {UrlBody.model} body.body.optional
  */
@@ -174,7 +174,7 @@ export default express
 /**
  * Get all DIDs this person can see
  *
- * @group network - Visibility
+ * @group reports on network - Visibility
  * @route GET /api/report/whichDidsICanSee
  * @returns {Array.object} 200 - list of DIDs user can see
  * @returns {Error} default - Unexpected error
@@ -186,7 +186,7 @@ export default express
  * Get all DIDs that can explicitly see this person.
  * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
  *
- * @group network - Visibility
+ * @group reports on network - Visibility
  * @route GET /api/report/whichDidsCanSeeMe
  * @param {string} did.query.required
  * @returns boolean 200 - true if the DID can see the caller
@@ -208,7 +208,7 @@ export default express
 /**
  * Get issuers for a claim
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
  * @param {string} claimId.query.required - the ID of the claim
  * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
@@ -220,7 +220,7 @@ export default express
 /**
  * Get claims and confirmations for individual
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/actionClaimsAndConfirmationsSince
  * @param {datetime} date.query.optional - the date from which to show actionclaims
  * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
@@ -232,7 +232,7 @@ export default express
 /**
  * Get tenure claims for a point
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/tenureClaimsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
@@ -245,7 +245,7 @@ export default express
 /**
  * Get tenure claims and confirmations for a point
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
@@ -258,7 +258,7 @@ export default express
 /**
  * Get org-role claims and confirmations for org & role & date
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/orgRoleClaimsAndConfirmationsOnDate
  * @param {string} orgName.query.required
  * @param {string} roleName.query.required
@@ -272,7 +272,7 @@ export default express
 /**
  * Get all votes for all candidates.
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/voteCounts
  * @returns {Array.object} 200 - { speaker, title, count }
  * @returns {Error} default - Unexpected error
@@ -283,7 +283,7 @@ export default express
 /**
  * Retrieve all globally-visible DIDs
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/globallyVisibleDids
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -292,7 +292,7 @@ export default express
 /**
  * Get this DID's registration and claim limits.
  *
- * @group report - Reports
+ * @group reports v1 - Reports
  * @route GET /api/report/rateLimits
  * @returns {RateLimits} 200 - the count & limits of claims & registrations
  * @returns {Error} default - Unexpected error

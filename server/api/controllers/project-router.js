@@ -37,7 +37,7 @@ const planRouter = express
  * The ID is typically supplied by the initial declaration of the plan;
  * if not, the claim ID is used. See handleId in the result after creation.
  *
- * @group project - Project storage
+ * @group projects - Project storage
  * @route GET /api/plan/{id}
  * @param {string} id.path.required - the ID of the PlanAcation record to retrieve
  * @returns {Object} plan data if it exists (or 404)

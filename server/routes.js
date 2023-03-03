@@ -9,15 +9,17 @@ import tenureRouter from './api/controllers/tenure-router';
 import utilRouter from './api/controllers/util-router';
 
 export default function routes(app) {
-  app.use('/api/action', actionRouter)
-  app.use('/api/claim', claimRouter)
   app.use('/api/v2/claim', claimV2Router)
+  app.use('/api/claim', claimRouter)
+  app.use('/api/v2/report', reportV2Router)
+  app.use('/api/reportAll', reportV2Router) // deprecate after mobile is updated
+  app.use('/api/report', reportRouter)
+  app.use('/api/util', utilRouter)
+
+  app.use('/api/action', actionRouter)
   app.use('/api/event', eventRouter)
   app.use('/api/plan', planRouter)
-  app.use('/api/report', reportRouter)
-  app.use('/api/reportAll', reportV2Router) // deprecate after mobile is updated
-  app.use('/api/v2/report', reportV2Router)
   app.use('/api/tenure', tenureRouter)
-  app.use('/api/util', utilRouter)
+
   app.use('*', (req, res) => { res.status(404).send({ error: 'Route not found' }) })
 }
