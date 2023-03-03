@@ -40,7 +40,7 @@ const claimBvc = {
   "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
-    // did: "..."
+    // identifier: "..."
   },
   event: {
     organizer: { name: "Bountiful Voluntaryist Community" },
@@ -53,7 +53,7 @@ const claimMyNight = {
   "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
-    // did: "..."
+    // identifier: "..."
   },
   event: {
     organizer: { name: "Me, Myself, and I" },
@@ -66,7 +66,7 @@ const claimDebug = {
   "@context": "https://schema.org",
   "@type": "JoinAction",
   agent: {
-    // did: "..."
+    // identifier: "..."
   },
   event: {
     organizer: { name: "Trent @ home" },
@@ -79,7 +79,7 @@ const claimIIW2019a = {
   "@context": "https://schema.org",
   "@type": "JoinAction",
   "agent": {
-    // supply "did"
+    // supply "identifier"
   },
   "event": {
     "organizer": {

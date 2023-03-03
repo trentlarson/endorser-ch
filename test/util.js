@@ -138,7 +138,7 @@ module.exports = {
       }
     },
     "party": {
-      // supply "did"
+      // supply "identifier"
     }
   },
 
@@ -152,7 +152,7 @@ module.exports = {
       }
     },
     "party": {
-      // supply "did"
+      // supply "identifier"
     }
   },
 
