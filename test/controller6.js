@@ -43,7 +43,7 @@ const badPlanBy1JwtProm = credentials[1].createVerification(badPlanBy1JwtObj)
 const planWithExtFullBy1JwtObj = R.clone(testUtil.jwtTemplate)
 planWithExtFullBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
 planWithExtFullBy1JwtObj.claim.agent.identifier = creds[1].did
-planWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-id'
+planWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-plan-id'
 planWithExtFullBy1JwtObj.iss = creds[1].did
 const planWithExtFullBy1JwtProm = credentials[1].createVerification(planWithExtFullBy1JwtObj)
 
@@ -74,7 +74,7 @@ const badProjectBy1JwtProm = credentials[1].createVerification(badProjectBy1JwtO
 const projectWithExtFullBy1JwtObj = R.clone(testUtil.jwtTemplate)
 projectWithExtFullBy1JwtObj.claim = R.clone(testUtil.claimProjectAction)
 projectWithExtFullBy1JwtObj.claim.agent.identifier = creds[1].did
-projectWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-id'
+projectWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-project-id'
 projectWithExtFullBy1JwtObj.iss = creds[1].did
 const projectWithExtFullBy1JwtProm = credentials[1].createVerification(projectWithExtFullBy1JwtObj)
 
@@ -474,9 +474,15 @@ describe('6 - Plans', () => {
 
 })
 
-describe('6 - retrieve offered and given totals', () => {
 
-  let firstOfferId, anotherProjectOfferId
+
+
+
+
+
+let firstOfferId, anotherProjectOfferId, offerId6
+
+describe('6 - check offer totals', () => {
 
   it('insert offer #1', async () => {
 
@@ -758,7 +764,7 @@ describe('6 - retrieve offered and given totals', () => {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 20, unitCode: 'USD'
     }
     credObj.claim.itemOffered = {
-      description: 'Fleece sheep',
+      description: 'Help with church performance night',
       isPartOf: { '@type': 'PlanAction', identifier: secondIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[4].did
@@ -796,6 +802,72 @@ describe('6 - retrieve offered and given totals', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+  it('insert offer #6 directly to someone', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.offeredBy = { identifier: creds[4].did }
+    credObj.claim.recipient = { identifier: creds[2].did }
+    credObj.claim.includesObject = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
+    }
+    credObj.claim.itemOffered = {
+      description: 'First grade materials',
+    }
+    credObj.sub = creds[4].did
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        offerId6 = r.body.success.handleId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer data for #6 is correct', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].handleId).to.equal(offerId6)
+        expect(r.body.data[0].offeredByDid).to.equal(creds[4].did)
+        expect(r.body.data[0].recipientDid).to.equal(creds[2].did)
+        expect(r.body.data[0].recipientPlanId).to.be.null
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(3)
+        expect(r.body.data[0].amountGiven).to.equal(0)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(0)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+})
+
+
+
+
+
+
+
+describe('6 - check give totals', () => {
 
   let firstGiveRecordHandleId
 
@@ -1116,6 +1188,58 @@ describe('6 - retrieve offered and given totals', () => {
         expect(r.body.data[0].amount).to.equal(1)
         expect(r.body.data[0].amountGiven).to.equal(2)
         expect(r.body.data[0].amountGivenConfirmed).to.equal(2)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('insert give #4 by recipient, recognizing it from someone else', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.agent = { identifier: creds[4].did }
+    credObj.claim.recipient = { identifier: creds[2].did }
+    credObj.claim.fulfills.identifier = offerId6
+    credObj.claim.description = 'Giving it up for those first graders'
+    credObj.claim.object.amountOfThisGood = 3
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer #6 data now has a confirmed amount', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(3)
+        expect(r.body.data[0].amountGiven).to.equal(3)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(3)
         expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {

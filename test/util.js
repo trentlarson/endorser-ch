@@ -166,7 +166,7 @@ module.exports = {
     //recipient: { identifier: "..." },
     object: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
     fulfills: { '@type': 'Offer', identifier: "..." },
-    description: "Helped pull a snowboarder along.",
+    description: "Help pulling a snowboarder along.",
   },
 
   claimOffer: {

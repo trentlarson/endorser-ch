@@ -6,6 +6,7 @@
   - test when Give issuer is same as recipient, same as plan issuer/agent, same as offer recipient, or same as offer plan issuer/agent
   - add give-total tests - for the recipient, for the plan, with a separate give claim
   - check for fullIri in mobile app
+  - deploy endorser-docs
 
   - make internalId all null (since we're deprecating it); this is best in a baseline
   - check the 'did' properties listed in test/util.js (eg. registration) -- which should be "identifier" eh
@@ -16,6 +17,7 @@
   - handle attempts to edit unsupported or multi-claim JWTs
   - deploy : run migration
 
+  - offer validThrough
   - mobile: screens - offers total, offers to me, give total, recent gives, open offers, open gives, plans, plan - offers & gives
   - mobile: front-page selection for plan / offer / give feed
 

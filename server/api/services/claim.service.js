@@ -217,7 +217,7 @@ class ClaimService {
         let confirmedNonAmount = 0
         // confirm if this issuer is the direct offer & give recipient
         if (issuerDid == offer.recipientId
-            && issuerDid == giveRecipientId) {
+            || issuerDid == giveRecipientId) {
           // hooray! now confirm the amount or non-amount
           if (giveUnit == offer.unit
               && giveAmount > 0) {
