@@ -1,12 +1,15 @@
-import actionRouter from './api/controllers/action-router';
-import claimRouter from './api/controllers/claim-router';
-import claimV2Router from './api/controllers/claim-v2-router';
-import eventRouter from './api/controllers/event-router';
-import planRouter from './api/controllers/project-router';
-import reportV2Router from './api/controllers/report-v2-router';
-import reportRouter from './api/controllers/report-router';
-import tenureRouter from './api/controllers/tenure-router';
-import utilRouter from './api/controllers/util-router';
+import claimV2Router from  './api/controllers/claim-router';
+import claimRouter from    './api/controllers/claim-v1-router';
+import reportV2Router from './api/controllers/report-router';
+import reportRouter from   './api/controllers/report-v1-router';
+
+import actionRouter from   './api/controllers/storage-action-router';
+import eventRouter from    './api/controllers/storage-event-router';
+import planRouter from     './api/controllers/storage-project-router';
+import tenureRouter from   './api/controllers/storage-tenure-router';
+
+import utilRouter from     './api/controllers/util-router';
+
 
 export default function routes(app) {
   app.use('/api/v2/claim', claimV2Router)

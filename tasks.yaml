@@ -2,11 +2,9 @@
 
 - 04 time offered/given to projects :
 
-  - make 'success' (claim post) vs 'data' result consistent on v2 endpoints
   - check that offers are updated with given amounts
   - test when Give issuer is same as recipient, same as plan issuer/agent, same as offer recipient, or same as offer plan issuer/agent
   - add give-total tests - for the recipient, for the plan, with a separate give claim
-  - check for fullIri in mobile app
   - update endorser.ch doc for offer (eg. isPartOf & gave)
   - deploy endorser-docs
 

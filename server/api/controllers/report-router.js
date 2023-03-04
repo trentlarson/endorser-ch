@@ -1,121 +1,233 @@
-/**
- *
- * See report-all-router.js instead.
- * Many of these are deprecated: they often have a limit on the number of DB records.
- * The recommended versions return a payload with a "result" field, and potentially other fields like "error".
- *
- */
-
 import * as express from 'express'
-import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
-import { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
+import * as R from 'ramda'
 
-import ClaimService from '../services/claim.service';
-class ClaimController {
-  getIssuersMatchingClaim(req, res) {
-    ClaimService.thisClaimAndConfirmationsIssuersMatchingClaimId(req.query.claimId)
-      .then(result =>
-            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, { result : result}))
-      .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end() })
-  }
-  getRateLimits(req, res) {
-    ClaimService.getRateLimits(res.locals.tokenIssuer)
-      .then(r => res.json(r))
-      .catch(err => {
-        if (err.clientError) {
-          res.status(400).json({ error: { message: err.clientError.message, code: err.clientError.code } })
-        } else {
-          console.log(err)
-          res.status(500).json(""+err).end()
-        }
-      })
-  }
-}
-let claimController = new ClaimController();
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
+import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
 
-import ActionService from '../services/action.service';
-class ActionController {
-  getActionClaimsAndConfirmationsSince(req, res) {
-    ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
-  }
-}
-let actionController = new ActionController();
-
-
-import TenureService from '../services/tenure.service';
-class TenureController {
-  getAtPoint(req, res) {
-    TenureService.atPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
-  }
-  getClaimsAndConfirmationsAtPoint(req, res) {
-    TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
-  }
-}
-let tenureController = new TenureController();
-
-
-import OrgRoleService from '../services/org.service';
-class OrgRoleController {
-  getClaimsAndConfirmationsOnDate(req, res) {
-    OrgRoleService.getClaimsAndConfirmationsOnDate(req.query.orgName, req.query.roleName, req.query.onDate)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => res.status(500).json(""+err).end())
-  }
-}
-let orgRoleController = new OrgRoleController();
-
-
-import { dbService } from '../services/endorser.db.service';
 class DbController {
-  getVoteCounts(req, res) {
-    dbService.retrieveVoteCounts()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getAllJwtsPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.jwtsByParamsPaged(query, afterId, beforeId)
+      .then(results => ({
+        data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
-  getSeenByAll(req, res) {
-    dbService.getSeenByAll()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
-      .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getAllIssuerClaimTypesPaged(req, res, next) {
+    const claimTypes = JSON.parse(req.query.claimTypes)
+    if (!Array.isArray(claimTypes)) {
+      return res.status(400).json({error: "Parameter 'claimTypes' should be an array but got: " + req.query.claimTypes}).end()
+    }
+    dbService.jwtIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
-  makeMeVisibleTo(req, res) {
-    addCanSee(req.body.did, res.locals.tokenIssuer)
-      .then(() => res.status(200).json({success:true}).end())
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getGivesForPlansPaged(req, res, next) {
+    const planIds = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIds)) {
+      return res.status(400).json({
+        error: "Parameter 'planIds' should be an array but got: "
+          + req.query.planIds
+      }).end()
+    }
+    dbService.givesForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
-  makeMeInvisibleTo(req, res) {
-    removeCanSee(req.body.did, res.locals.tokenIssuer)
-      .then(() => res.status(200).json({success:true}).end())
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getGivesPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.givesByParamsPaged(query, afterId, beforeId)
+      .then(results => ({
+        data: results.data.map(
+          datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
-  makeMeGloballyVisible(req, res) {
-    makeGloballyVisible(res.locals.tokenIssuer, req.body.url)
-      .then(() => res.status(200).json({success:true}).end())
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getGiveTotals(req, res, next) {
+    const agentId = req.query.agentId
+    const recipientId = req.query.recipientId
+    const planId = req.query.planId
+    if (recipientId && recipientId != res.locals.tokenIssuer) {
+      res.status(400).json({
+        // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
+        error: "Request for recipient totals must be made by that recipient."
+      }).end()
+      return
+    } else {
+      const afterId = req.query.afterId
+      const beforeId = req.query.beforeId
+      const unit = req.query.unit
+      dbService.giveTotals(agentId, recipientId, planId, unit, afterId, beforeId)
+        .then(results => { res.json(results).end() })
+        .catch(err => {
+          if (err == MUST_FILTER_TOTALS_ERROR) {
+            res.status(400).json(
+              "Client must filter by plan or recipient when asking for totals."
+            ).end()
+          } else {
+            console.error(err)
+            res.status(500).json(""+err).end()
+          }
+        })
+    }
   }
-  getCanSeeDids(req, res) {
-    getAllDidsRequesterCanSee(res.locals.tokenIssuer)
-      .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getOffersForPlansPaged(req, res, next) {
+    const planIds = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIds)) {
+      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + req.query.planIds}).end()
+    }
+    dbService.offersForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
-  getCanSeeMeExplicitly(req, res) {
-    canSeeExplicitly(req.query.did, res.locals.tokenIssuer)
-      .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+
+  getOffersPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.offersByParamsPaged(query, afterId, beforeId)
+      .then(results => ({
+        data: results.data.map(
+          datum =>
+          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
+
+  getOfferTotals(req, res, next) {
+    const query = req.query
+    const planId = req.query.planId
+    const recipientId = req.query.recipientId
+    if (recipientId && recipientId != res.locals.tokenIssuer) {
+      res.status(400).json({ error: "Request for recipient totals must be made by that recipient." }).end()
+      return
+    } else {
+      const afterId = req.query.afterId
+      const beforeId = req.query.beforeId
+      const unit = req.query.unit
+      dbService.offerTotals(planId, recipientId, unit, afterId, beforeId)
+        .then(results => { res.json(results).end() })
+        .catch(err => {
+          if (err == MUST_FILTER_TOTALS_ERROR) {
+            res.status(400).json(
+              "Client must filter by plan or recipient when asking for totals."
+            ).end()
+          } else {
+            console.error(err)
+            res.status(500).json(""+err).end()
+          }
+        })
+    }
+  }
+
+  getAllPlansPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.plansByParamsPaged(query, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getPlansByIssuerPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.plansByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getAllProjectsPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.projectsByParamsPaged(query, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getProjectsByIssuerPaged(req, res, next) {
+    const query = req.query
+    const afterId = req.query.afterId
+    delete query.afterId
+    const beforeId = req.query.beforeId
+    delete query.beforeId
+    dbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getCanClaim(req, res) {
+    dbService.registrationByDid(res.locals.tokenIssuer)
+      .then(r => {
+        const dataResult = { data: !!r }
+        if (!r) {
+          dataResult.error = "The person who referred you can register you."
+        }
+        return res.json(dataResult).end()
+      })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
+  }
+
 }
 let dbController = new DbController();
 
@@ -132,170 +244,258 @@ export default express
  **/
 
 /**
- * @typedef DidBody
- * @property {string} did.required
+ * @typedef Give
+ * @property {string} jwtId
+ * @property {string} handleId
+ * @property {datetime} issuedAt
+ * @property {string} agentId
+ * @property {string} recipientDid
+ * @property {string} fulfillsId - handle ID of the offer this fulfills
+ * @property {string} fulfillsType - type of the element this fulfills, usually "Offer"
+ * @property {string} fulfillsPlanId - handle ID of the plan, if the offer applies to one
+ * @property {string} unit
+ * @property {number} amount
+ * @property {number} confirmed - amount of this that recipient has confirmed
+ * @property {string} description
+ * @property {object} fullClaim
  */
 
 /**
- * @typedef UrlBody
- * @property {string} url
+ * @typedef GiveArrayMaybeMoreBody
+ * @property {Array.Offer} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
- * Consent to make push-token issuer's ID visible to the given ID
+ * @typedef Jwt
+ * @property {string} id
+ * @property {datetime} issuedAt
+ * @property {string} issuer
+ * @property {string} subject
+ * @property {string} claimContext
+ * @property {string} claimType
+ * @property {object} claim
+ * @property {string} hashHex
+ * @property {string} hashChainHex
+ */
+
+/**
+ * @typedef JwtArrayMaybeMoreBody
+ * @property {Array.Jwt} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ */
+
+/**
+ * @typedef Offer
+ * @property {string} jwtId
+ * @property {string} handleId
+ * @property {datetime} issuedAt
+ * @property {string} offeredByDid
+ * @property {string} recipientDid - recipient DID if this is for a plan
+ * @property {string} recipientPlanId - plan handle ID if this is for a plan
+ * @property {string} unit
+ * @property {number} amount
+ * @property {number} amountGiven - amount of Gives to this Offer
+ * @property {number} amountGivenConfirmed - amount of Gives confirmed by recipient
+ * @property {string} objectDescription
+ * @property {datetime} validThrough
+ * @property {object} fullClaim
+ */
+
+/**
+ * @typedef OfferArrayMaybeMoreBody
+ * @property {Array.Offer} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ */
+
+/**
+ * @typedef Plan
+ * @property {string} jwtId
+ * @property {string} issuerDid
+ * @property {string} agentDid
+ * @property {string} handleId
+ * @property {string} name
+ * @property {string} description
+ * @property {string} image
+ * @property {string} endTime
+ * @property {datetime} endTime
+ * @property {datetime} startTime
+ * @property {string} resultDescription
+ * @property {string} resultIdentifier
+ */
+
+/**
+ * @typedef PlanArrayMaybeMoreBody
+ * @property {Array.Plan} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ */
+
+/**
+ * Check if current user can create a claim.
  *
- * @group reports on network - Visibility
- * @route POST /api/report/canSeeMe
- * @param {DidBody.model} body.body.required
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/canClaim
+ * @returns {Object} 200 - 'data' boolean property tells whether this user is allowed to create a claim
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/canSeeMe', dbController.makeMeVisibleTo)
+  .get('/canClaim', dbController.getCanClaim)
 
 /**
- * Make push-token issuer's ID invisible to the given ID
+ * Get all claims for the query inputs, paginated, reverse-chronologically
  *
- * @group reports on network - Visibility
- * @route POST /api/report/cannotSeeMe
- * @param {DidBody.model} body.body.required
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/claims
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @param {string} claimContents.query.optional
+ * @param {string} claimContext.query.optional
+ * @param {string} claimType.query.optional
+ * @param {string} issuedAt.query.optional
+ * @param {string} subject.query.optional
+ * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
+  .get('/claims', dbController.getAllJwtsPaged)
 
 /**
- * Consent to make push-token issuer's ID visible to the world
+ * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string)
  *
- * @group reports on network - Visibility
- * @route POST /api/report/makeMeGloballyVisible
- * @param {UrlBody.model} body.body.optional
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/claimsForIssuerWithTypes
+ * @param {string} claimTypes.query.required - the array of `claimType` strings to find
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
+  .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)
 
 /**
- * Get all DIDs this person can see
+ * Search gives
  *
- * @group reports on network - Visibility
- * @route GET /api/report/whichDidsICanSee
- * @returns {Array.object} 200 - list of DIDs user can see
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/gives
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} claimContext.query.optional - search description of item given
+ * @param {string} recipientId.query.optional - gives for recipient
+ * @param {string} fulfillsId.query.optional - gives that apply to a particular item (eg. an offer)
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/whichDidsICanSee', dbController.getCanSeeDids)
+  .get('/gives', dbController.getGivesPaged)
 
 /**
- * Get all DIDs that can explicitly see this person.
- * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
+ * Get gives dedicated to any in a list of plan IDs
  *
- * @group reports on network - Visibility
- * @route GET /api/report/whichDidsCanSeeMe
- * @param {string} did.query.required
- * @returns boolean 200 - true if the DID can see the caller
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/givesForPlans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planIds.query.optional - handle ID of the plan which has received gives
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitly)
+  .get('/givesForPlans', dbController.getGivesForPlansPaged)
 
 /**
- * @typedef RateLimits
- * @property {string} doneClaimsThisWeek
- * @property {string} doneRegistrationsThisMonth
- * @property {string} maxClaimsPerWeek
- * @property {string} maxRegistrationsPerMonth
- * @property {string} nextMonthBeginDateTime
- * @property {string} nextWeekBeginDateTime
- */
-
-/**
- * Get issuers for a claim
+ * Get totals of gives
  *
- * @group reports v1 - Reports
- * @route GET /api/report/issuersWhoClaimedOrConfirmed
- * @param {string} claimId.query.required - the ID of the claim
- * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/giveTotals
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planId.query.optional - handle ID of the plan which has received gives
+ * @param {string} recipientId.query.optional - DID of recipient who has received gives
+ * @param {string} unit.query.optional - unit code to restrict amounts
+ * @returns {Object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/issuersWhoClaimedOrConfirmed', claimController.getIssuersMatchingClaim)
+  .get('/giveTotals', dbController.getGiveTotals)
 
 /**
- * Get claims and confirmations for individual
+ * Search offers
  *
- * @group reports v1 - Reports
- * @route GET /api/report/actionClaimsAndConfirmationsSince
- * @param {datetime} date.query.optional - the date from which to show actionclaims
- * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/offers
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} claimContext.query.optional - search description of item offered
+ * @param {string} recipientPlanId.query.optional - get offers associated with plan
+ * @param {string} recipientId.query.optional - DID of recipient who has received offers
+ * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/actionClaimsAndConfirmationsSince', actionController.getActionClaimsAndConfirmationsSince)
+  .get('/offers', dbController.getOffersPaged)
 
 /**
- * Get tenure claims for a point
+ * Get offers dedicated to any in a list of plan IDs
  *
- * @group reports v1 - Reports
- * @route GET /api/report/tenureClaimsAtPoint
- * @param {number} lat.query.required
- * @param {number} lon.query.required
- * @returns {Array.object} 200 - claimed tenures (up to 50)
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/offersForPlans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planIds.query.optional - handle ID of the plan which has received offers
+ * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/tenureClaimsAtPoint', tenureController.getAtPoint)
+  .get('/offersForPlans', dbController.getOffersForPlansPaged)
 
 /**
- * Get tenure claims and confirmations for a point
+ * Get totals of offers
  *
- * @group reports v1 - Reports
- * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
- * @param {number} lat.query.required
- * @param {number} lon.query.required
- * @returns {Array.object} 200 - claimed tenures (up to 50)
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/offerTotals
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planId.query.optional - handle ID of the plan which has received offers
+ * @param {string} recipientId.query.optional - DID of recipient who has received offers
+ * @param {string} unit.query.optional - unit code to restrict amounts
+ * @returns {Object} 200 - 'data' property with keys being units and values being the number amounts of total offers for them
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsAtPoint)
+  .get('/offerTotals', dbController.getOfferTotals)
 
 /**
- * Get org-role claims and confirmations for org & role & date
+ * Get all plans for the query inputs, paginated, reverse-chronologically
  *
- * @group reports v1 - Reports
- * @route GET /api/report/orgRoleClaimsAndConfirmationsOnDate
- * @param {string} orgName.query.required
- * @param {string} roleName.query.required
- * @param {date} onDate.query.required
- * @returns {Array.object} 200 - claimed tenures (up to 50)
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/plans
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} jwtId.query.optional
+ * @param {string} issuerDid.query.optional
+ * @param {string} agentDid.query.optional
+ * @param {string} handleId.query.optional
+ * @param {string} internalId.query.optional
+ * @param {string} description.query.optional
+ * @param {string} endTime.query.optional
+ * @param {string} startTime.query.optional
+ * @param {string} resultIdentifier.query.optional
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/orgRoleClaimsAndConfirmationsOnDate', orgRoleController.getClaimsAndConfirmationsOnDate)
+  .get('/plans', dbController.getAllPlansPaged)
 
 /**
- * Get all votes for all candidates.
+ * Get all plans by the issuer, paginated, reverse-chronologically
  *
- * @group reports v1 - Reports
- * @route GET /api/report/voteCounts
- * @returns {Array.object} 200 - { speaker, title, count }
- * @returns {Error} default - Unexpected error
+ * @group reports - Reports With Paging
+ * @route GET /api/v2/report/plansByIssuer
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-//  .get('/voteCounts', dbController.getVoteCounts)
-
-/**
- * Retrieve all globally-visible DIDs
- *
- * @group reports v1 - Reports
- * @route GET /api/report/globallyVisibleDids
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/globallyVisibleDids', dbController.getSeenByAll)
-
-/**
- * Get this DID's registration and claim limits.
- *
- * @group reports v1 - Reports
- * @route GET /api/report/rateLimits
- * @returns {RateLimits} 200 - the count & limits of claims & registrations
- * @returns {Error} default - Unexpected error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/rateLimits', claimController.getRateLimits)
+  .get('/plansByIssuer', dbController.getPlansByIssuerPaged)

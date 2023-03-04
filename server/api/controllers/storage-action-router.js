@@ -43,7 +43,7 @@ export default express
 
 /**
  * Get many actions
- * @group actions - Action storage
+ * @group storage of actions - Action storage
  * @route GET /api/action
  * @param {String} agentDid.query.optional
  * @param {number} eventRowId.query.optional
@@ -58,7 +58,7 @@ export default express
 
 /**
  * Get an Action
- * @group actions - Action storage
+ * @group storage of actions - Action storage
  * @route GET /api/action/{id}
  * @param {number} id.path.required - the ID of the Action record to retrieve
  * @returns {object} 200 - Action if it exists, otherwise 404
