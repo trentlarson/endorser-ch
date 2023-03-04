@@ -484,7 +484,7 @@ let firstOfferId, anotherProjectOfferId, offerId6
 
 describe('6 - check offer totals', () => {
 
-  it('insert offer #1', async () => {
+  it('insert offer #1 that is for a project', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
@@ -591,7 +591,7 @@ describe('6 - check offer totals', () => {
       })
   }).timeout(3000)
 
-  it('insert offer #2', async () => {
+  it('insert offer #2 that is for the same project', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
@@ -624,7 +624,7 @@ describe('6 - check offer totals', () => {
       })
   }).timeout(3000)
 
-  it('insert offer #3', async () => {
+  it('insert offer #3 that is for the same project', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
@@ -853,6 +853,50 @@ describe('6 - check offer totals', () => {
         expect(r.body.data[0].amountGiven).to.equal(0)
         expect(r.body.data[0].amountGivenConfirmed).to.equal(0)
         expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('insert offer #7 directly to someone for non-amount', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.offeredBy = { identifier: creds[5].did }
+    credObj.claim.recipient = { identifier: creds[2].did }
+    credObj.claim.itemOffered = {
+      description: 'First grade reading help',
+    }
+    credObj.sub = creds[5].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer total succeeds with recipient that matches issuer', () => {
+    return request(Server)
+      .get('/api/v2/report/offerTotals?recipientId=' + creds[2].did)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('object')
+        expect(r.body.data).to.deep.equal({ "HUR": 3 })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1241,6 +1285,24 @@ describe('6 - check give totals', () => {
         expect(r.body.data[0].amountGiven).to.equal(4)
         expect(r.body.data[0].amountGivenConfirmed).to.equal(4)
         expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give total works with recipient that matches issuer', () => {
+    return request(Server)
+      .get('/api/v2/report/giveTotals?recipientId=' + creds[2].did)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.body.data).to.be.an('object')
+        expect(r.body.data).to.deep.equal({ "HUR": 4 })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

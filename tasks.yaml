@@ -2,14 +2,13 @@
 
 - 04 time offered/given to projects :
 
-  - check that offers are updated with given amounts
-  - test when Give issuer is same as recipient, same as plan issuer/agent, same as offer recipient, or same as offer plan issuer/agent
   - add give-total tests - for the recipient, for the plan, with a separate give claim
   - update endorser.ch doc for offer (eg. isPartOf & gave)
   - deploy endorser-docs
 
   - make internalId all null (since we're deprecating it); this is best in a baseline
-  - allow searches by recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
+  - offer totals tests for agents
+  - allow searches by agent & recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
   - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
   - change confirmationTemplate to have an object (rather than array)
   - handle attempts to edit unsupported or multi-claim JWTs

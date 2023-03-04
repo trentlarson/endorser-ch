@@ -84,9 +84,13 @@ class DbController {
     if (recipientId && recipientId != res.locals.tokenIssuer) {
       res.status(400).json({
         // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
-        error: "Request for recipient totals must be made by that recipient."
+        error: "Request for recipient totals can only be made by that recipient."
       }).end()
-      return
+    } else if (agentId && agentId != res.locals.tokenIssuer) {
+      res.status(400).json({
+        // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
+        error: "Request for agent totals can only be made by that agent."
+      }).end()
     } else {
       const afterId = req.query.afterId
       const beforeId = req.query.beforeId
@@ -95,9 +99,9 @@ class DbController {
         .then(results => { res.json(results).end() })
         .catch(err => {
           if (err == MUST_FILTER_TOTALS_ERROR) {
-            res.status(400).json(
-              "Client must filter by plan or recipient when asking for totals."
-            ).end()
+            res.status(400).json({
+              error: "Client must filter by plan or recipient when asking for totals."
+            }).end()
           } else {
             console.error(err)
             res.status(500).json(""+err).end()

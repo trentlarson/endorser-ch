@@ -708,7 +708,7 @@ class EndorserDatabase {
         whereClause += ' jwtId < ?'
         allParams = allParams.concat([beforeIdInput])
       }
-      whereClause = ' WHERE' + whereClause
+      whereClause = ' WHERE' + whereClause + ' AND unit IS NOT null'
 
       let data = {}
       let rowErr
@@ -1221,7 +1221,7 @@ class EndorserDatabase {
         whereClause += ' jwtId < ?'
         allParams = allParams.concat([beforeIdInput])
       }
-      whereClause = ' WHERE' + whereClause
+      whereClause = ' WHERE' + whereClause + ' AND unit IS NOT null'
 
       let data = {}
       let rowErr
