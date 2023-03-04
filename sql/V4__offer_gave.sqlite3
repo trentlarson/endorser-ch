@@ -13,7 +13,7 @@ CREATE TABLE offer_claim (
        recipientPlanId TEXT, -- full ID of PlanAction (if any)
 
        unit TEXT,
-       amount REAL,
+       amount REAL DEFAULT 0,
 
        -- amount of Gives with same unit
        --
@@ -56,7 +56,7 @@ CREATE TABLE give_claim (
        fulfillsPlanId TEXT,
 
        unit TEXT,
-       amount REAL,
+       amount REAL DEFAULT 0,
 
        -- non-zero if this Give has been confirmed
        -- by the Give recipient or by the plan issuer or agent

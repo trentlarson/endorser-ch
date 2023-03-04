@@ -1247,6 +1247,58 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
+  it('insert give #5 by recipient that has no specific amounts', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.agent = { identifier: creds[4].did }
+    credObj.claim.recipient = { identifier: creds[2].did }
+    credObj.claim.fulfills.identifier = offerId6
+    credObj.claim.description = 'Thanks for the first-grade learning materials!'
+    delete credObj.claim.object
+    credObj.sub = creds[2].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer #6 data now has a confirmed non-amount', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(3)
+        expect(r.body.data[0].amountGiven).to.equal(3)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(3)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(1)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   // outstanding offers
 
 })

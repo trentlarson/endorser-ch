@@ -208,9 +208,7 @@ class ClaimService {
     if (giveFulfillsId && giveFulfillsTypeId == 'Offer') {
       const offers =
             await dbService.offersByParamsPaged({ handleId: giveFulfillsId })
-      if (offers.data.length > 0
-          // and only if the units match
-          && offers.data[0].unit == giveUnit) {
+      if (offers.data.length > 0) {
         const offer = offers.data[0]
 
         let confirmedAmount = 0
@@ -242,7 +240,7 @@ class ClaimService {
             }
           }
         }
-        const amountToUpdate = isOnlyConfirmation ? 0 : giveAmount
+        const amountToUpdate = isOnlyConfirmation ? 0 : (giveAmount || 0)
         await dbService.offerUpdateAmounts(
           offer.handleId, amountToUpdate, confirmedAmount, confirmedNonAmount
         )
