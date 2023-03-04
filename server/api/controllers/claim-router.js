@@ -51,17 +51,20 @@ export default express
  * @group claims - Claim Recording (with extended feedback)
  * @route POST /api/v2/claim
  * @param {EncodedJwt.model} jwt.body.required
- * @returns {object} 200 - {
- *   success: {
- *     claimId: string, // ID for this claim
- *     clientMessage: string,
- *     embeddedRecordError: object,
- *     handleId: string, // ID for permanent reference, potentially based on input
- *     recordsSavedForEdit: number,
- *     actionId || orgRoleId || registrationId || tenureId || voteId: number,
- *     confirmations: { confirmId: number }
- * },
- * error: { code: string, message: string} }
+ * @returns {object} 200 -
+ * {
+ * &nbsp; success:
+ * &nbsp; {
+ * &nbsp;&nbsp;&nbsp; claimId: string, // ID for this claim
+ * &nbsp;&nbsp;&nbsp; clientMessage: string,
+ * &nbsp;&nbsp;&nbsp; embeddedRecordError: object,
+ * &nbsp;&nbsp;&nbsp; handleId: string, // ID for permanent reference, potentially based on input
+ * &nbsp;&nbsp;&nbsp; recordsSavedForEdit: number,
+ * &nbsp;&nbsp;&nbsp; actionId || orgRoleId || registrationId || tenureId || voteId: number,
+ * &nbsp;&nbsp;&nbsp; confirmations: { confirmId: number }
+ * &nbsp; },
+ * &nbsp; error: { code: string, message: string }
+ * }
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
