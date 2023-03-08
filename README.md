@@ -37,7 +37,7 @@ Debug: `npm run dev:debug`
 
 Run on Docker:
 
-* Tag the release, and set ENDORSER_VERSION to that tag.
+* Update changelog, tag the release, and set ENDORSER_VERSION to that tag.
 
 ```
 export ENDORSER_VERSION=release-1.1.35
@@ -145,6 +145,30 @@ await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
 curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://test.endorser.ch:8000/api/claims
 
 ```
+
+
+
+
+#### V2 Queries
+
+As you can see from the [Swagger docs](https://endorser.ch:3000), there are reports with "v2" in the URL and these include paging that will retrieve more than just the most recent matches (currently 50). These endpoints return an object with a "data" property that contains all the results, and then a "hitLimit" property that tells whether there may be more results:
+
+```
+{
+  "data": [...],
+  "hitLimit": true
+}
+```
+
+Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter. For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeID" then you'll get the next set:
+
+```
+curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
+```
+
+
+
+
 
 
 #### Old basic sample
