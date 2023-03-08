@@ -160,7 +160,7 @@ As you can see from the [Swagger docs](https://endorser.ch:3000), there are repo
 }
 ```
 
-Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter. For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeID" then you'll get the next set:
+Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter. For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next set:
 
 ```
 curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
