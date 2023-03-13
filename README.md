@@ -160,7 +160,9 @@ As you can see from the [Swagger docs](https://endorser.ch:3000), there are repo
 }
 ```
 
-Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter. For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next set:
+Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter.
+
+For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next batch that goes further in the past (excluding that one):
 
 ```
 curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
@@ -455,7 +457,12 @@ let all = async () => {
   const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), total)
   const grouped = R.groupBy(i => i.month, totalSum)
   const table = R.map(i => i.length, grouped)
-  console.log('Grouped:', JSON.stringify(table, null, 2))
+
+  // output grouped totals
+  //console.log('Grouped:', JSON.stringify(table, null, 2))
+
+  // output each row in CSV format
+  total.map(record => console.log(record.issuedAt.substring(0, 7), ",", record.claimType))
 }
 await all()
 ```

@@ -25,7 +25,17 @@ echo "If you get this error: 'could not detect network (event=\"noNetwork\", cod
 echo "... then you're missing the INFURA_PROJECT_ID in the .env file."
 echo ""
 
-echo "In 5..."
+echo "In 10..."
+sleep 1
+echo "9..."
+sleep 1
+echo "8..."
+sleep 1
+echo "7..."
+sleep 1
+echo "6..."
+sleep 1
+echo "5..."
 sleep 1
 echo "4..."
 sleep 1

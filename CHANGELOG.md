@@ -12,10 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.1.35] - 2022-12-30
+
+## [1.6.0] - 2023-03-13
 
 ### Added
-- Accept Authentication header with Bearer JWT.
+- Offer & Give storage, with endpoints for totals and queries
+- Plan storage & endpoints
+- Persistent references with `handleId`
+- Docker setup
+
+
+
+
+## [1.1.35] - 2022-12-30 - 486687d6d1aaea9aa5354291eaac5b8e17524783
+
+### Added
+- Authentication header with Bearer JWT
 
 
 
@@ -23,9 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.31] - 2022-11-03
 
 ### Added
-- Can limit number of claims.
-- Can limit registration by DIDs.
+- Limit on number of claims
+- Limit on registration by DIDs
 
 ### Fixed
-- Accurately validate JWTs.
-- Fix Swagger API docs page.
+- Accurate JWT validation
+- Swagger API docs page
