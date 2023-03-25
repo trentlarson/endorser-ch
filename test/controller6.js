@@ -167,7 +167,6 @@ describe('6 - Plans', () => {
   it('v2 insert plan without ID by first user', () => {
     planEndTime = new Date(planWithoutIdBy1JwtObj.claim.endTime)
     planEndTime.setMilliseconds(0)
-    console.log('planEndTime', planEndTime)
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planWithoutIdBy1JwtEnc})
@@ -194,9 +193,7 @@ describe('6 - Plans', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstIdExternal)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
-        console.log('r.body.endTime', r.body.endTime)
         const dbTime = new Date(r.body.endTime)
-        console.log('planEndTime', planEndTime)
         expect(dbTime.getTime()).that.equals(planEndTime.getTime())
       }).catch((err) => {
         return Promise.reject(err)

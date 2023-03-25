@@ -410,7 +410,6 @@ describe('2 - Vote', async () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body).to.be.a('string')
-          console.log('r.body', r.body)
         expect(r.status).that.equals(201)
       })
   }).timeout(5000)
