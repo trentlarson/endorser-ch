@@ -199,7 +199,7 @@ module.exports = {
     "description": INITIAL_DESCRIPTION,
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
-    "endTime": "2023-03"
+    "endTime": "2023-03-31T07:07:07Z",
   },
 
   claimProjectAction: {
@@ -211,15 +211,15 @@ module.exports = {
     "description": INITIAL_DESCRIPTION,
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
-    "endTime": "2023-03"
+    "endTime": "2023-03-31T07:07:07Z",
   },
 
   claimVote: {
     "@context": "https://schema.org",
     "@type": "VoteAction",
     //"actionOption": "...", // supply option
-    //"candidate": { identifier: "..." }
-    "object": { "event": { "name": "Speaking Event", "startDate": "2023-03-25" } }
+    //"candidate": { identifier: "..." },
+    "object": { "event": { "name": "Speaking Event", "startDate": "2023-03-25" } },
   },
 
   allDidsAreHidden: allDidsAreHidden,
