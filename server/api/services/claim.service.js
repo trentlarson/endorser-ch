@@ -627,6 +627,15 @@ class ClaimService {
       if (planId) {
         planId = globalId(planId)
       }
+
+      // We'll put the given times into the DB but only if they're valid dates.
+      // This also helps when JS parses but DB datetime() would not.
+      const validTime = new Date(claim.validThrough)
+      console.log('validTime', validTime)
+      console.log('validTime.getTime()', validTime.getTime())
+      const validTimeStr =
+        isNaN(validTime.getTime()) ? undefined : validTime.toISOString()
+
       let entry = {
         jwtId: jwtId,
         handleId: handleId,
@@ -637,7 +646,7 @@ class ClaimService {
         amount: claim.includesObject?.amountOfThisGood,
         unit: claim.includesObject?.unitCode,
         objectDescription: claim.itemOffered?.description,
-        validThrough: claim.validThrough,
+        validThrough: validTime,
         fullClaim: canonicalize(claim),
       }
       let offerId = await dbService.offerInsert(entry)
@@ -671,6 +680,15 @@ class ClaimService {
       // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
+      // We'll put the given times into the DB but only if they're valid dates.
+      // This also helps when JS parses but DB datetime() would not.
+      const startTime = new Date(claim.startTime)
+      const startTimeStr =
+        isNaN(startTime.getTime()) ? undefined : startTime.toISOString()
+      const endTime = new Date(claim.endTime)
+      const endTimeStr =
+        isNaN(endTime.getTime()) ? undefined : endTime.toISOString()
+
       const entry = {
         jwtId: jwtId,
         agentDid: agentDid,
@@ -679,8 +697,8 @@ class ClaimService {
         name: claim.name,
         description: claim.description,
         image: claim.image,
-        endTime: claim.endTime,
-        startTime: claim.startDate,
+        endTime: endTimeStr,
+        startTime: startTimeStr,
         resultDescription: claim.resultDescription,
         resultIdentifier: claim.resultIdentifier,
       }
@@ -705,6 +723,15 @@ class ClaimService {
       // agent.did is for legacy data, some still in the mobile app
       let agentDid = claim.agent?.identifier || claim.agent?.did
 
+      // We'll put the given times into the DB but only if they're valid dates.
+      // This also helps when JS parses but DB datetime() would not.
+      const startTime = new Date(claim.startTime)
+      const startTimeStr =
+        isNaN(startTime.getTime()) ? undefined : startTime.toISOString()
+      const endTime = new Date(claim.endTime)
+      const endTimeStr =
+        isNaN(endTime.getTime()) ? undefined : endTime.toISOString()
+
       const entry = {
         jwtId: jwtId,
         agentDid: agentDid,
@@ -713,8 +740,8 @@ class ClaimService {
         name: claim.name,
         description: claim.description,
         image: claim.image,
-        endTime: claim.endTime,
-        startTime: claim.startDate,
+        endTime: endTimeStr,
+        startTime: startTimeStr,
         resultDescription: claim.resultDescription,
         resultIdentifier: claim.resultIdentifier,
       }

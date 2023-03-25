@@ -1,4 +1,6 @@
 
+// There are a few changes to plan/project. We should baseline sometime.
+// Note also that we don't plan to use internalID, and endTime/startTime should be DATETIME.
 ALTER TABLE plan_claim RENAME COLUMN fullIri TO handleId;
 ALTER TABLE project_claim RENAME COLUMN fullIri TO handleId;
 

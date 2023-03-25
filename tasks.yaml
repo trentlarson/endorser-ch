@@ -2,6 +2,7 @@
 
 - 04 time offered/given to projects :
 
+  - fix how offer (& give?) has ISO date formatting
 
   - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
 

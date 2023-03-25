@@ -325,8 +325,8 @@ class EndorserDatabase {
   retrieveActionClaimsAndConfirmationsForEventsSince(dateTimeStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime('" + dateTimeStr + "')"
-      db.each(sql, [], function(err, row) {
+      let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime(?)"
+      db.each(sql, [dateTimeStr], function(err, row) {
         row.eventStartTime = isoAndZonify(row.eventStartTime)
         let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionId:row.actionRowId} : null
         let both = {
@@ -347,8 +347,8 @@ class EndorserDatabase {
 
   actionClaimInsert(issuerDid, agentDid, jwtId, event) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO action_claim (jwtId, issuerDid, agentDid, eventRowId, eventOrgName, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, ?, datetime('" + event.startTime + "'))");
-      db.run(stmt, [jwtId, issuerDid, agentDid, event.id, event.orgName, event.name], function(err) {
+      var stmt = ("INSERT INTO action_claim (jwtId, issuerDid, agentDid, eventRowId, eventOrgName, eventName, eventStartTime) VALUES (?, ?, ?, ?, ?, ?, datetime(?))");
+      db.run(stmt, [jwtId, issuerDid, agentDid, event.id, event.orgName, event.name, event.startTime], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -590,7 +590,7 @@ class EndorserDatabase {
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, agentDid"
           + ", recipientDid, fulfillsId, fulfillsType, fulfillsPlanId"
           + ", confirmed, amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + " VALUES (?, ?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
@@ -902,11 +902,11 @@ class EndorserDatabase {
 
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime('" + entry.issuedAt + "'), ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
         [
-          entry.id, entry.issuer, entry.subject, entry.claimType, entry.claimContext, entry.claim,
+          entry.id, entry.issuedAt, entry.issuer, entry.subject, entry.claimType, entry.claimContext, entry.claim,
           entry.handleId, entry.claimEncoded, entry.jwtEncoded, entry.hashHex
         ],
         function(err) {
@@ -1105,7 +1105,7 @@ class EndorserDatabase {
       var stmt =
           "INSERT INTO offer_claim (jwtId, handleId, issuedAt, offeredByDid"
           + ", recipientDid, recipientPlanId, amount, unit, objectDescription"
-          + ", validThrough, fullClaim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ", validThrough, fullClaim) VALUES (?, ?, datetime(?), ?, ?, ?, ?, ?, ?, datetime(?), ?)"
       db.run(
         stmt,
         [
@@ -1274,7 +1274,7 @@ class EndorserDatabase {
 
   orgRoleInsert(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO org_role_claim (jwtId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, ?, ?, ?)");
+      var stmt = ("INSERT INTO org_role_claim (jwtId, issuerDid, orgName, roleName, startDate, endDate, memberDid) VALUES (?, ?, ?, ?, date(?), date(?), ?)");
       db.run(
         stmt,
         [
@@ -1305,10 +1305,10 @@ class EndorserDatabase {
   retrieveOrgRoleClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      let sql = "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate, r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId FROM org_role_claim r LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid WHERE r.orgName = ? AND r.roleName = ? AND (r.startDate IS NULL OR r.startDate <= date('" + onDateStr + "')) AND (r.endDate IS NULL OR date('" +  onDateStr + "') <= r.endDate)"
+      let sql = "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate, r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId FROM org_role_claim r LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid WHERE r.orgName = ? AND r.roleName = ? AND (r.startDate IS NULL OR r.startDate <= date(?)) AND (r.endDate IS NULL OR date(?) <= r.endDate)"
       db.each(
         sql,
-        [orgName, roleName],
+        [orgName, roleName, onDateStr, onDateStr],
         function(err, row) {
           let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, orgRoleRowId:row.orgRoleRowId} : null
           let both = {
@@ -1341,7 +1341,7 @@ class EndorserDatabase {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
           + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
@@ -1411,7 +1411,8 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
-          + ", name = ?, description = ?, image = ?, endTime = ?, startTime = ?"
+          + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
+          + ", startTime = datetime(?)"
           + ", resultDescription = ?, resultIdentifier = ?"
           + " WHERE handleId = ?"
       )
@@ -1446,7 +1447,7 @@ class EndorserDatabase {
       var stmt = (
         "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, handleId"
           + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
@@ -1516,7 +1517,8 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "UPDATE project_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
-          + ", name = ?, description = ?, image = ?, endTime = ?, startTime = ?"
+          + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
+          + ", startTime = datetime(?)"
           + ", resultDescription = ?, resultIdentifier = ?"
           + " WHERE handleId = ?"
       )
