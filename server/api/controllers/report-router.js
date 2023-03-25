@@ -384,9 +384,11 @@ export default express
  * @route GET /api/v2/report/gives
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} claimContext.query.optional - search description of item given
- * @param {string} recipientId.query.optional - gives for recipient
- * @param {string} fulfillsId.query.optional - gives that apply to a particular item (eg. an offer)
+ * @param {string} agentId.query.optional - issuing agent
+ * @param {string} handleId.query.optional - persistent handleId
+ * @param {string} recipientId.query.optional - recipient
+ * @param {string} fulfillsId.query.optional - for ones that fulfill a particular item (eg. an offer)
+ * @param {string} fulfillsType.query.optional - for ones that fulfill a particular type
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
@@ -430,9 +432,11 @@ export default express
  * @route GET /api/v2/report/offers
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} claimContext.query.optional - search description of item offered
- * @param {string} recipientPlanId.query.optional - get offers associated with plan
+ * @param {string} handleId.query.optional - persistent ID of offer
+ * @param {string} offeredByDid.query.optional - originator of offer
+ * @param {string} recipientPlanId.query.optional - plan which is recipient of offer
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
+ * @param {string} validThrough.query.optional - date up to which offers are valid
  * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */

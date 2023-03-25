@@ -8,6 +8,7 @@
   - deploy endorser-docs
   - count amount gives somewhere... change nonAmountGivenConfirmed to numberGivenConfirmed ?
   - boolean for conditions being me? (note about non-use of internalId)
+  - mobile - when confirming (eg. Agree in search) add handleId to the claim (eg. so Give confirmation works)
   - offer validThrough on server(?)
   - deploy server : run migration
 

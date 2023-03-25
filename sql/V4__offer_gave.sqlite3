@@ -5,7 +5,7 @@ ALTER TABLE project_claim RENAME COLUMN fullIri TO handleId;
 CREATE TABLE offer_claim (
        handleId TEXT PRIMARY KEY,
        jwtId TEXT,
-       issuedAt DATE,
+       issuedAt DATETIME,
 
        -- note that did:peer are 58 chars
        offeredByDid TEXT, -- global ID of the offering entity (issuer if empty)
@@ -28,7 +28,7 @@ CREATE TABLE offer_claim (
        -- an associated Give has been confirmed
        nonAmountGivenConfirmed INTEGER DEFAULT 0,
 
-       validThrough DATE,
+       validThrough DATETIME,
 
        objectDescription TEXT,
        fullClaim TEXT -- full claim JSON
@@ -42,7 +42,7 @@ CREATE INDEX offer_validThrough ON offer_claim(validThrough);
 CREATE TABLE give_claim (
        handleId TEXT PRIMARY KEY,
        jwtId TEXT,
-       issuedAt DATE,
+       issuedAt DATETIME,
 
        -- note that did:peer are 58 chars
        agentDid TEXT, -- global ID of the entity who gave the item

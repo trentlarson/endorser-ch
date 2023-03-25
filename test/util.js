@@ -183,6 +183,13 @@ module.exports = {
     //validThrough: '...', // date string
   },
 
+  claimPerson: {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "identifier": null, // supply DID
+    "seeks": "stuff",
+  },
+
   claimPlanAction: {
     "@context": "https://schema.org",
     "@type": "PlanAction",
@@ -207,11 +214,12 @@ module.exports = {
     "endTime": "2023-03"
   },
 
-  claimPerson: {
+  claimVote: {
     "@context": "https://schema.org",
-    "@type": "Person",
-    "identifier": null, // supply DID
-    "seeks": "stuff",
+    "@type": "VoteAction",
+    //"actionOption": "...", // supply option
+    //"candidate": { identifier: "..." }
+    "object": { "event": { "name": "Speaking Event", "startDate": "2023-03-25" } }
   },
 
   allDidsAreHidden: allDidsAreHidden,

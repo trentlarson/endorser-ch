@@ -393,3 +393,26 @@ describe('2 - Role Claims on Date', async () => {
      }))
 
 })
+
+describe('2 - Vote', async () => {
+
+  it('should place a vote', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimVote)
+    credObj.claim.actionOption = "Brene Brown"
+    credObj.iss = creds[5].did
+    const claimJwtEnc = await credentials[5].createVerification(credObj)
+
+    await request(Server)
+      .post('/api/claim')
+      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+      .send({"jwtEncoded": claimJwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+          console.log('r.body', r.body)
+        expect(r.status).that.equals(201)
+      })
+  }).timeout(5000)
+
+})
