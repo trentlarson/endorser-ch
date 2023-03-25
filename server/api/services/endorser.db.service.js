@@ -1362,7 +1362,15 @@ class EndorserDatabase {
       db.get(
         "SELECT * FROM plan_claim WHERE handleId = ?",
         [handleId],
-        function(err, row) { if (err) { reject(err) } else { resolve(row) } }
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row?.endTime) { row.endTime = isoAndZonify(row.endTime) }
+            if (row?.startTime) { row.startTime = isoAndZonify(row.startTime) }
+            resolve(row)
+          }
+        }
       )
     })
   }
@@ -1468,7 +1476,15 @@ class EndorserDatabase {
       db.get(
         "SELECT * FROM project_claim WHERE handleId = ?",
         [handleId],
-        function(err, row) { if (err) { reject(err) } else { resolve(row) } }
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row?.endTime) { row.endTime = isoAndZonify(row.endTime) }
+            if (row?.startTime) { row.startTime = isoAndZonify(row.startTime) }
+            resolve(row)
+          }
+        }
       )
     })
   }

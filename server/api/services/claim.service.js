@@ -631,8 +631,6 @@ class ClaimService {
       // We'll put the given times into the DB but only if they're valid dates.
       // This also helps when JS parses but DB datetime() would not.
       const validTime = new Date(claim.validThrough)
-      console.log('validTime', validTime)
-      console.log('validTime.getTime()', validTime.getTime())
       const validTimeStr =
         isNaN(validTime.getTime()) ? undefined : validTime.toISOString()
 
@@ -646,7 +644,7 @@ class ClaimService {
         amount: claim.includesObject?.amountOfThisGood,
         unit: claim.includesObject?.unitCode,
         objectDescription: claim.itemOffered?.description,
-        validThrough: validTime,
+        validThrough: validTimeStr,
         fullClaim: canonicalize(claim),
       }
       let offerId = await dbService.offerInsert(entry)

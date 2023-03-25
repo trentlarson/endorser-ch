@@ -162,9 +162,12 @@ describe('6 - Plans', () => {
 
   // note that this is similar to Project
 
-  let firstIdInternal
+  let firstIdInternal, planEndTime
 
   it('v2 insert plan without ID by first user', () => {
+    planEndTime = new Date(planWithoutIdBy1JwtObj.claim.endTime)
+    planEndTime.setMilliseconds(0)
+    console.log('planEndTime', planEndTime)
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planWithoutIdBy1JwtEnc})
@@ -191,6 +194,10 @@ describe('6 - Plans', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstIdExternal)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
+        console.log('r.body.endTime', r.body.endTime)
+        const dbTime = new Date(r.body.endTime)
+        console.log('planEndTime', planEndTime)
+        expect(dbTime.getTime()).that.equals(planEndTime.getTime())
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -480,7 +487,7 @@ describe('6 - Plans', () => {
 
 
 
-let firstOfferId, anotherProjectOfferId, offerId6
+let firstOfferId, anotherProjectOfferId, offerId6, validThroughDate
 
 describe('6 - check offer totals', () => {
 
@@ -496,6 +503,8 @@ describe('6 - check offer totals', () => {
       isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[2].did
+    validThroughDate = new Date()
+    credObj.claim.validThrough = validThroughDate.toISOString()
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
     const claimJwtEnc = await credentials[2].createVerification(credObj)
@@ -533,6 +542,11 @@ describe('6 - check offer totals', () => {
         expect(r.body.data[0].amountGiven).to.equal(0)
         expect(r.body.data[0].amountGivenConfirmed).to.equal(0)
         expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
+        // the sqlite DB truncates date milliseconds
+        const dbDate = new Date(r.body.data[0].validThrough)
+        const valDate = validThroughDate
+        valDate.setMilliseconds(0)
+        expect(dbDate.getTime()).to.equal(valDate.getTime())
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

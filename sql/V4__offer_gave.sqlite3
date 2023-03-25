@@ -1,8 +1,9 @@
 
-// There are a few changes to plan/project. We should baseline sometime.
-// Note also that we don't plan to use internalID, and endTime/startTime should be DATETIME.
+-- There are a few changes to plan/project. We should baseline sometime.
 ALTER TABLE plan_claim RENAME COLUMN fullIri TO handleId;
 ALTER TABLE project_claim RENAME COLUMN fullIri TO handleId;
+-- Note also: we aren't using and don't plan to use internalID,
+-- and endTime/startTime should be DATETIME type.
 
 CREATE TABLE offer_claim (
        handleId TEXT PRIMARY KEY,
