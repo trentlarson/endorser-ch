@@ -201,7 +201,7 @@ class ClaimService {
   }
 
   async checkOfferConfirms(
-    issuerDid, giveRecipientId, giveUnit, giveAmount,
+    issuerDid, issuedAt, giveRecipientId, giveUnit, giveAmount,
     giveFulfillsId, giveFulfillsTypeId, giveFulfillsPlanId,
     isOnlyConfirmation
   ) {
@@ -242,7 +242,8 @@ class ClaimService {
         }
         const amountToUpdate = isOnlyConfirmation ? 0 : (giveAmount || 0)
         await dbService.offerUpdateAmounts(
-          offer.handleId, amountToUpdate, confirmedAmount, confirmedNonAmount
+          offer.handleId, issuedAt, amountToUpdate, confirmedAmount,
+          confirmedNonAmount
         )
       }
     }
@@ -319,11 +320,20 @@ class ClaimService {
             }
           }
           if (confirmedByRecipient) {
-            await dbService.giveUpdateConfirmed(origGive.handleId)
+            const amount =
+              origClaim.amount && (origClaim.unit == origGive.unit)
+              // if an amount was sent with matching unit, let's add that amount
+              ? origClaim.amount
+              // otherwise, just take the original claim
+              : origGive.amount
+            await dbService.giveUpdateConfirmed(
+              origGive.handleId, amount, issuedAt
+            )
 
             // now check if any associated offer also needs updating
             await this.checkOfferConfirms(
-              issuerDid, origGive.recipientDid, origGive.unit, origGive.amount,
+              issuerDid, issuedAt, origGive.recipientDid,
+              origGive.unit, origGive.amount,
               origGive.fulfillsId, origGive.fulfillsType,
               origGive.fulfillPlansId, true
             )
@@ -497,6 +507,7 @@ class ClaimService {
       jwtId: jwtId,
       handleId: handleId,
       issuedAt: issuedAt,
+      updatedAt: issuedAt,
       agentDid: claim.agent?.identifier || issuerDid,
       recipientDid: claim.recipient?.identifier,
       fulfillsId: fulfillsId,
@@ -552,7 +563,7 @@ class ClaimService {
             await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim)
 
       this.checkOfferConfirms(
-        issuerDid, newGive.recipientDid, newGive.unit, newGive.amount,
+        issuerDid, issuedAt, newGive.recipientDid, newGive.unit, newGive.amount,
         newGive.fulfillsId, newGive.fulfillsType, newGive.fulfillsPlanId, false
       )
 
@@ -638,6 +649,7 @@ class ClaimService {
         jwtId: jwtId,
         handleId: handleId,
         issuedAt: issuedAt,
+        updatedAt: issuedAt,
         offeredByDid: claim.offeredBy?.identifier || issuerDid,
         recipientDid: claim.recipient?.identifier,
         recipientPlanId: planId,

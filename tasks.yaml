@@ -2,16 +2,14 @@
 
 - 04 time offered/given to projects :
 
-  - fix how offer (& give?) has ISO date formatting
 
-  - add 'isPartOf' to GiveAction for includesObject pieces when fulfilling an Offer
+  - count amount gives somewhere... change nonAmountGivenConfirmed to numberGivenConfirmed ?
+  - mobile - when confirming (eg. Agree in search) add handleId to the claim (eg. so Give confirmation works)
 
   - deploy endorser-docs
-  - count amount gives somewhere... change nonAmountGivenConfirmed to numberGivenConfirmed ?
   - boolean for conditions being me? (note about non-use of internalId)
-  - mobile - when confirming (eg. Agree in search) add handleId to the claim (eg. so Give confirmation works)
   - offer validThrough on server(?)
-  - deploy server : run migration
+  - deploy server : run migration, check date-times on plan_claim entries
 
   - warn about limited claims when they make claims
 

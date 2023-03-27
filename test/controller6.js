@@ -1127,7 +1127,7 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(3)
-        expect(r.body.data[0].confirmed).to.be.equal(0)
+        expect(r.body.data[0].amountConfirmed).to.be.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1176,7 +1176,7 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].confirmed).to.be.equal(0)
+        expect(r.body.data[0].amountConfirmed).to.be.equal(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1225,7 +1225,7 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].confirmed).to.be.equal(1)
+        expect(r.body.data[0].amountConfirmed).to.be.greaterThan(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1437,7 +1437,7 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].confirmed).to.be.equal(1)
+        expect(r.body.data[0].amountConfirmed).to.be.greaterThan(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

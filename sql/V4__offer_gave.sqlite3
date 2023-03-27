@@ -9,6 +9,7 @@ CREATE TABLE offer_claim (
        handleId TEXT PRIMARY KEY,
        jwtId TEXT,
        issuedAt DATETIME,
+       updatedAt DATETIME,
 
        -- note that did:peer are 58 chars
        offeredByDid TEXT, -- global ID of the offering entity (issuer if empty)
@@ -23,8 +24,8 @@ CREATE TABLE offer_claim (
        -- does not count any that have no amounts
        amountGiven REAL DEFAULT 0,
 
-       -- amount of Gives with same unit that have been confirmed
-       -- (see 'confirmed' in give_claim)
+       -- amount of Gives that have been confirmed for this offer with the same
+       -- unit (see 'confirmed' in give_claim)
        amountGivenConfirmed REAL DEFAULT 0,
 
        -- whether there are non-amount gives, where non-zero means
@@ -46,6 +47,7 @@ CREATE TABLE give_claim (
        handleId TEXT PRIMARY KEY,
        jwtId TEXT,
        issuedAt DATETIME,
+       updatedAt DATETIME,
 
        -- note that did:peer are 58 chars
        agentDid TEXT, -- global ID of the entity who gave the item
@@ -61,9 +63,11 @@ CREATE TABLE give_claim (
        unit TEXT,
        amount REAL DEFAULT 0,
 
-       -- non-zero if this Give has been confirmed
-       -- by the Give recipient or by the plan issuer or agent
-       confirmed REAL DEFAULT 0,
+       -- If giving an object with an amount, the amount of this Give with the
+       -- same unit that has been confirmed.
+       -- If giving without an "amount" object, just a 1 for confirmed.
+       -- Only if confirmed by the Give recipient or by plan issuer or agent.
+       amountConfirmed REAL DEFAULT 0,
 
        description TEXT,
        fullClaim TEXT -- full claim JSON
