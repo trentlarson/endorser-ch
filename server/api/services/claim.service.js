@@ -250,6 +250,8 @@ class ClaimService {
   }
 
   /**
+     @param origClaim is the claim contained inside the confirmation
+
      @return object with: {
        confirmId: NUMBER,
        actionClaimId: NUMBER,
@@ -303,47 +305,45 @@ class ClaimService {
         let result =
             await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr)
 
-        if (!origGive.confirmed) {
-          // mark the give as confirmed by recipient, if this is a recipient
-          let confirmedByRecipient = false
-          if (issuerDid == origGive.recipientDid) {
-            confirmedByRecipient = true
-          } else {
-            // check also for creator of plan
-            const planId = origGive.fulfillsPlanId
-            if (planId) {
-              const plan = await dbService.planInfoByHandleId(planId)
-              if (issuerDid == plan?.issuerDid
-                  || issuerDid == plan?.agentDid) {
-                confirmedByRecipient = true
-              }
+        // will mark the give as confirmed by recipient, if this is a recipient
+        let confirmedByRecipient = false
+        if (issuerDid == origGive.recipientDid) {
+          confirmedByRecipient = true
+        } else {
+          // check also for creator of plan
+          const planId = origGive.fulfillsPlanId
+          if (planId) {
+            const plan = await dbService.planInfoByHandleId(planId)
+            if (issuerDid == plan?.issuerDid
+                || issuerDid == plan?.agentDid) {
+              confirmedByRecipient = true
             }
           }
-          if (confirmedByRecipient) {
-            const amount =
-              origClaim.amount && (origClaim.unit == origGive.unit)
-              // if an amount was sent with matching unit, let's add that amount
-              ? origClaim.amount
-              // otherwise, just take the original claim
-              : origGive.amount
-            await dbService.giveUpdateConfirmed(
-              origGive.handleId, amount, issuedAt
-            )
-
-            // now check if any associated offer also needs updating
-            await this.checkOfferConfirms(
-              issuerDid, issuedAt, origGive.recipientDid,
-              origGive.unit, origGive.amount,
-              origGive.fulfillsId, origGive.fulfillsType,
-              origGive.fulfillPlansId, true
-            )
-
-          }
         }
+        if (confirmedByRecipient) {
+          const amount =
+            origClaim.object?.amount && (origClaim.object.unit == origGive.unit)
+            // if an amount was sent with matching unit, let's add that amount
+            ? origClaim.object.amount
+            // otherwise, just take the original claim, or 1
+            : (origGive.amount || 1)
 
-        return R.mergeLeft(result, embeddedResult)
+          await dbService.giveUpdateConfirmed(
+            origGive.handleId, amount, issuedAt
+          )
 
+          // now check if any associated offer also needs updating
+          await this.checkOfferConfirms(
+            issuerDid, issuedAt, origGive.recipientDid,
+            origGive.unit, origGive.amount,
+            origGive.fulfillsId, origGive.fulfillsType,
+            origGive.fulfillPlansId, true
+          )
+
+        }
       }
+
+      return R.mergeLeft(result, embeddedResult)
 
     } else if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
@@ -502,6 +502,7 @@ class ClaimService {
     }
 
     const byRecipient = issuerDid == claim.recipient?.identifier
+    const amountConfirmed = byRecipient ? (claim.object?.amountOfThisGood || 1) : 0
 
     let entry = {
       jwtId: jwtId,
@@ -516,7 +517,7 @@ class ClaimService {
       amount: claim.object?.amountOfThisGood,
       unit: claim.object?.unitCode,
       description: claim.description,
-      confirmed: byRecipient ? 1 : 0,
+      amountConfirmed: amountConfirmed,
       fullClaim: canonicalize(claim),
     }
     let giveId = await dbService.giveInsert(entry)

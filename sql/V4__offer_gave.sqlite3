@@ -25,11 +25,11 @@ CREATE TABLE offer_claim (
        amountGiven REAL DEFAULT 0,
 
        -- amount of Gives that have been confirmed for this offer with the same
-       -- unit (see 'confirmed' in give_claim)
+       -- unit (see 'amountConfirmed' in give_claim)
        amountGivenConfirmed REAL DEFAULT 0,
 
-       -- whether there are non-amount gives, where non-zero means
-       -- an associated Give has been confirmed
+       -- number of Gives with descriptions (ie. no object amount) that have
+       -- been confirmed by the recipient
        nonAmountGivenConfirmed INTEGER DEFAULT 0,
 
        validThrough DATETIME,

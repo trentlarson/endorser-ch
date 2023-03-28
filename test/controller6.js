@@ -1183,7 +1183,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('confirm a give by the original recipient', async () => {
+  it('confirm give #1 by the original recipient', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
@@ -1214,7 +1214,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('give confirmation worked', () => {
+  it('give confirmation set an amount confirmed', () => {
     return request(Server)
       .get(
         '/api/v2/report/gives?handleId='
@@ -1232,7 +1232,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('offer data now has a confirmed amount', () => {
+  it('offer data now also has a confirmed amount', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
       .set('Authorization', 'Bearer ' + pushTokens[2])

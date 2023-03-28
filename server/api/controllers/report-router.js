@@ -259,7 +259,7 @@ export default express
  * @property {string} fulfillsPlanId - handle ID of the plan, if the offer applies to one
  * @property {string} unit
  * @property {number} amount
- * @property {number} confirmed - amount of this that recipient has confirmed
+ * @property {number} amountConfirmed - amount of this that recipient has confirmed
  * @property {string} description
  * @property {object} fullClaim
  */

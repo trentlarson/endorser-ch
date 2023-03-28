@@ -598,7 +598,7 @@ class EndorserDatabase {
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
           entry.agentDid,
           entry.recipientDid, entry.fulfillsId, entry.fulfillsType,
-          entry.fulfillsPlanId, entry.confirmed,
+          entry.fulfillsPlanId, entry.amountConfirmed,
           entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
