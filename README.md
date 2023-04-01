@@ -398,6 +398,9 @@ User stories:
 - to do: show strong network; show networks with personal connection vs public DID; show fake network
 
 
+#### Test Data for Contacts
+
+[Here is a sample CSV for contacts](https://raw.githubusercontent.com/trentlarson/endorser-ch/master/test/sample-contacts.csv), with data taken from the tests.
 
 
 
