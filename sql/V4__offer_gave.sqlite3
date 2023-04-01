@@ -34,6 +34,9 @@ CREATE TABLE offer_claim (
 
        validThrough DATETIME,
 
+       -- whether all requirements are satisfied (boolean, 1 = satisfied)
+       requirementsMet INTEGER DEFAULT 1,
+
        objectDescription TEXT,
        fullClaim TEXT -- full claim JSON
 );

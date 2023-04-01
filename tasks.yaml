@@ -2,24 +2,15 @@
 
 - 04 time offered/given to projects :
 
+  - 01 strip out the "identifierVisibleToDids" when doing an agree (or give or others, maybe) - gotta move them out of the claim
 
-  - count amount gives somewhere... change nonAmountGivenConfirmed to numberGivenConfirmed ?
-  - mobile - when confirming (eg. Agree in search) add handleId to the claim (eg. so Give confirmation works)
-
-  - deploy endorser-docs
-  - boolean for conditions being me? (note about non-use of internalId)
-  - offer validThrough on server(?)
   - deploy server : run migration, check date-times on plan_claim entries
 
-  - warn about limited claims when they make claims
-
-  - offer totals tests for agents
   - allow searches by agent & recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
 
-  - change confirmationTemplate to have an object (rather than array)
+  - in tests - check offer totals for agents
+  - in tests - change confirmationTemplate to have an object (rather than array)
   - handle attempts to edit unsupported or multi-claim JWTs
-
-  - PWA time given
 
 - .2 "Attended" doesn't show a name but "Agreed" does
 - .3 Remove "Take"
@@ -29,6 +20,11 @@
   - migrate to "claimsByIssuerWithTypes" (on mobile?)
 
 - .2 change API docs with handles (eg. plan & project) to be "HANDLE_ID" in the endpoint definition
+
+- 08 I have been in a project, you see it, and I can share my contributions. :
+  - Allow giving to a project.
+  - Allow confirmations by project issuer or agent.
+  - Allow showing my contributions such that someone else can see if it's in their contact list.
 
 - 04 Allow MetaMask SSI Snap to create JWT VCs https://medium.com/@blockchainlabum/ssi-snap-new-release-did-key-and-did-pkh-ceramic-network-jwt-vc-official-dapp-d295e5e28cd7
 
@@ -94,6 +90,10 @@
 
   - on front page or notification, add upcoming commitments or recently triggered commitments (need "triggered" time?)
   - screens for plan offers & gives - offers total, offers to me, give total, recent gives, open offers, open gives
+
+  - 01 set IPHONEOS_DEPLOYMENT_TARGET to 11.0 for everything (since that's the lowest in XCode 14)
+
+  - warn about limited claims when they make claims
 
   - 05 handy contract app in endorser-mobile :
     - add contracts to app :
