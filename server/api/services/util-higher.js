@@ -74,7 +74,7 @@ async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
             }
           }
         }
-        // Using DIDs as keys doesn't make much sense in VCs. Oh, well.
+        // Using DIDs as keys doesn't make much sense in VCs. OK: hide 'em all.
         if (isDid(key)) {
           const newKey = HIDDEN_TEXT + '_' + i
           result[newKey] = result[key]

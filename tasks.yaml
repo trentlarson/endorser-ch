@@ -1,20 +1,12 @@
 ---
 
+- .2 mobile - "Attended" doesn't show a name but "Agreed" does
+
 - 04 time offered/given to projects :
 
-  - 01 strip out the "identifierVisibleToDids" when doing an agree (or give or others, maybe) - gotta move them out of the claim
-
   - deploy server : run migration, check date-times on plan_claim entries
-
-  - allow searches by agent & recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
-
   - in tests - check offer totals for agents
-  - in tests - change confirmationTemplate to have an object (rather than array)
   - handle attempts to edit unsupported or multi-claim JWTs
-
-- .2 "Attended" doesn't show a name but "Agreed" does
-- .3 Remove "Take"
-- .3 iPhone search doesn't allow full scrolling
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
   - migrate to "claimsByIssuerWithTypes" (on mobile?)
@@ -26,22 +18,26 @@
   - Allow confirmations by project issuer or agent.
   - Allow showing my contributions such that someone else can see if it's in their contact list.
 
+- 04 desktop version of mobile app (for Vermont)
+
 - 04 Allow MetaMask SSI Snap to create JWT VCs https://medium.com/@blockchainlabum/ssi-snap-new-release-did-key-and-did-pkh-ceramic-network-jwt-vc-official-dapp-d295e5e28cd7
 
 - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
 
 - 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
+- 01 allow searches by agent & recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
+
 - .2 mobile - remove duplicate background check
 
 - .5 mobile & server - change the registration from mobile to agent & participant .identifier (from agent.did), and look for others
 
-- 01 release :
+- 01 releases :
   - clean up Docker config (eg. NODE_ENV inside dotenv file)
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
 
-- 50 desktop version of mobile app (for Vermont)
+- .5 in tests - change confirmationTemplate to have an object (rather than array)
 
 - integrate with attest.sh
 
@@ -93,7 +89,8 @@
 
   - 01 set IPHONEOS_DEPLOYMENT_TARGET to 11.0 for everything (since that's the lowest in XCode 14)
 
-  - warn about limited claims when they make claims
+  - when they make claims, warn about limited number of claims
+  - when they make claims, warn about any hidden DIDs
 
   - 05 handy contract app in endorser-mobile :
     - add contracts to app :
