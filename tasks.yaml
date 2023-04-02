@@ -1,22 +1,19 @@
 ---
 
-- .2 mobile - "Attended" doesn't show a name but "Agreed" does
-
 - 04 time offered/given to projects :
 
   - deploy server : run migration, check date-times on plan_claim entries
   - in tests - check offer totals for agents
-  - handle attempts to edit unsupported or multi-claim JWTs
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
   - migrate to "claimsByIssuerWithTypes" (on mobile?)
 
-- .2 change API docs with handles (eg. plan & project) to be "HANDLE_ID" in the endpoint definition
-
 - 08 I have been in a project, you see it, and I can share my contributions. :
-  - Allow giving to a project.
   - Allow confirmations by project issuer or agent.
-  - Allow showing my contributions such that someone else can see if it's in their contact list.
+  - Allow showing my contributions such that someone else can see if it's in their contact list. :
+    - mobile - prompt for password & group & recipient, hash group, send to server :
+      - click to share, choose recipient DID, allow password, send to server
+      - refresh until we see a response
 
 - 04 desktop version of mobile app (for Vermont)
 
@@ -37,6 +34,7 @@
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
 
+- .5 handle attempts to edit unsupported or multi-claim JWTs
 - .5 in tests - change confirmationTemplate to have an object (rather than array)
 
 - integrate with attest.sh

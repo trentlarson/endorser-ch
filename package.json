@@ -31,7 +31,7 @@
     "express": "^4.16.4",
     "helmet": "^3.22.0",
     "luxon": "^1.12.0",
-    "node-cache": "^4.2.0",
+    "node-cache": "^5.1.2",
     "node-flywaydb": "^3.0.7",
     "pino": "^5.10.2",
     "ramda": "^0.26.1",

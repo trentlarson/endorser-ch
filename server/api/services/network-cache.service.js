@@ -9,7 +9,7 @@ const BLANK_URL = ""
 
 /**
   URL for each public DID, as an key-value map (... so let's hope there are never too many!)
-  These are inseted every time a public DID is requested from the DB.
+  These are inserted every time a public DID is requested from the DB.
 **/
 var UrlsForPublicDids = {}
 
