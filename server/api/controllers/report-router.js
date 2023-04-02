@@ -4,6 +4,7 @@ import * as R from 'ramda'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
 import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
+import {globalId} from "../services/util";
 
 class DbController {
 
@@ -39,13 +40,14 @@ class DbController {
   }
 
   getGivesForPlansPaged(req, res, next) {
-    const planIds = JSON.parse(req.query.planIds)
-    if (!Array.isArray(planIds)) {
+    const planIdsParam = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIdsParam)) {
       return res.status(400).json({
         error: "Parameter 'planIds' should be an array but got: "
-          + req.query.planIds
+          + req.query.planIdsParam
       }).end()
     }
+    const planIds = planIdsParam.map(globalId)
     dbService.givesForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>
@@ -80,7 +82,7 @@ class DbController {
   getGiveTotals(req, res, next) {
     const agentId = req.query.agentId
     const recipientId = req.query.recipientId
-    const planId = req.query.planId
+    const planId = globalId(req.query.planId)
     if (recipientId && recipientId != res.locals.tokenIssuer) {
       res.status(400).json({
         // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
@@ -111,10 +113,11 @@ class DbController {
   }
 
   getOffersForPlansPaged(req, res, next) {
-    const planIds = JSON.parse(req.query.planIds)
-    if (!Array.isArray(planIds)) {
-      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + req.query.planIds}).end()
+    const planIdsParam = JSON.parse(req.query.planIds)
+    if (!Array.isArray(planIdsParam)) {
+      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + planIdsParam}).end()
     }
+    const planIds = planIdsParam.map(globalId)
     dbService.offersForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>
@@ -148,7 +151,7 @@ class DbController {
 
   getOfferTotals(req, res, next) {
     const query = req.query
-    const planId = req.query.planId
+    const planId = globalId(req.query.planId)
     const recipientId = req.query.recipientId
     if (recipientId && recipientId != res.locals.tokenIssuer) {
       res.status(400).json({ error: "Request for recipient totals must be made by that recipient." }).end()

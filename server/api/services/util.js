@@ -19,7 +19,8 @@ const GLOBAL_ENTITY_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/entity/'
 
 const globalFromInternalIdentifier = (id) => GLOBAL_ENTITY_ID_IRI_PREFIX + id
 
-const globalId = (id) => isGlobalUri(id) ? id : globalFromInternalIdentifier(id)
+const globalId = (id) =>
+  !id || isGlobalUri(id) ? id : globalFromInternalIdentifier(id)
 
 /**
    Take KEY and a list of claims-and-confirmations for the same claim
