@@ -1051,7 +1051,14 @@ class ClaimService {
         const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
         if (prevEntry) {
           // There is a previous entry.
-          if (payload.iss == prevEntry.issuer || payload.iss == handleId) {
+          if (payloadClaim["@type"] != prevEntry.claimType) {
+            return Promise.reject(
+              { clientError: {
+                  message: `You cannot change the type of an existing entry.`
+                } }
+            )
+
+          } else if (payload.iss == prevEntry.issuer || payload.iss == handleId) {
             // The issuer is the same as the previous, or the issuer matches the global handle.
             // We're OK to continue.
           } else {

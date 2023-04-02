@@ -9,7 +9,7 @@ const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
 import { HIDDEN_TEXT } from '../server/api/services/util';
-import testUtil from './util'
+import testUtil, {INITIAL_DESCRIPTION} from './util'
 
 const expect = chai.expect
 
@@ -297,14 +297,14 @@ describe('6 - Plans', () => {
     planObj.claim.agent.identifier = creds[1].did
     planObj.claim.identifier = firstIdInternal
     planObj.claim.description = ENTITY_NEW_DESC
-    planObj.iss = creds[1].did
-    const planJwtEnc = await credentials[1].createVerification(planObj)
+    planObj.iss = creds[2].did
+    const planJwtEnc = await credentials[2].createVerification(planObj)
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.status).that.equals(201)
+        expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -319,6 +319,7 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -333,6 +334,7 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -347,6 +349,7 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -401,6 +404,24 @@ describe('6 - Plans', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+  it('v2 fail to update a plan with wrong type', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimOffer)
+    planObj.claim.agent = { identifier: creds[1].did }
+    planObj.claim.identifier = firstIdExternal
+    planObj.claim.itemOffered = { description: ENTITY_NEW_DESC }
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
 
   it('v2 insert of plan with external ID from different system', () => {
     return request(Server)
