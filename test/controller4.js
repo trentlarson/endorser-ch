@@ -19,7 +19,10 @@ const creds = testUtil.creds
 
 const credentials = R.map((c) => new Credentials(c), creds)
 
-const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+const pushTokenProms = R.map((c) =>
+  c.createVerification({ exp: testUtil.tomorrowEpoch }),
+  credentials
+)
 
 const claimOffer = {
   "@context": "https://schema.org",
@@ -28,7 +31,7 @@ const claimOffer = {
   issuedAt: '2022-02-15 19:28:00Z',
   includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' },
   offeredBy: { identifier: creds[0].did },
-  itemOffered: { isPartOf: { "@type": "PlanAction", identifier: null } },
+  itemOffered: { isPartOf: { "@type": "PlanAction", identifier: "external:some-fake-project" } },
   recipient: { identifier: creds[1].did },
 }
 
