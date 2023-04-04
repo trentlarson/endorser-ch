@@ -449,7 +449,7 @@ describe('1 - Util', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.headers['content-type'], /json/) // same as Content-Type check above
-       expect(JSON.stringify(r.body))
+       expect(JSON.stringify(r.body.data))
          .to.deep.equal('{"a":4,"b":[5,1,2,3,{"ba":1,"bb":2,"bc":3}],"c":{"ca":1,"cb":2}}')
      }))
 
