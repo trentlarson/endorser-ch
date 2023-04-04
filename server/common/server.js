@@ -116,7 +116,9 @@ export default class ExpressServer {
   constructor() {
     const root = path.normalize(`${__dirname}/../..`);
     app.set('appPath', `${root}client`);
-    app.use(bodyParser.json({ limit: '10kb' }));
+    // 10kb should be enough for each claim.
+    // Using 40kb to allow for about 500 hashes in contact correlation service.
+    app.use(bodyParser.json({ limit: '40kb' }));
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser(process.env.SESSION_SECRET));
     app.use(Express.static(`${root}/public`));
