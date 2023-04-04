@@ -6,14 +6,9 @@
   - in tests - check offer totals for agents
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
-  - migrate to "claimsByIssuerWithTypes" (on mobile?)
 
 - 08 I have been in a project, you see it, and I can share my contributions. :
   - Allow confirmations by project issuer or agent.
-  - Allow showing my contributions such that someone else can see if it's in their contact list. :
-    - mobile - prompt for password & group & recipient, hash group, send to server :
-      - click to share, choose recipient DID, allow password, send to server
-      - refresh until we see a response
 
 - 04 desktop version of mobile app (for Vermont)
 
