@@ -183,11 +183,11 @@ export default express
   .get('/whichDidsICanSee', dbController.getCanSeeDids)
 
 /**
- * Get all DIDs that can explicitly see this person.
- * Only includes explicit ones because we don't show everyone to those allowing '*' to see them.
+ * True if DID can explicitly see requestor.
+ * Does not check visibility in general, eg. requestor may be globally visible but not explicitly visible.
  *
  * @group reports on network - Visibility
- * @route GET /api/report/whichDidsCanSeeMe
+ * @route GET /api/report/canDidExplicitlySeeMe
  * @param {string} did.query.required
  * @returns boolean 200 - true if the DID can see the caller
  * @returns {Error} default - Unexpected error

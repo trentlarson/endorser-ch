@@ -6,6 +6,7 @@
   - in tests - check offer totals for agents
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
+- .5 release mobile app (and revisit Google account deletion)
 
 - 08 I have been in a project, you see it, and I can share my contributions. :
   - Allow confirmations by project issuer or agent.
