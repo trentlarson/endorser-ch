@@ -521,7 +521,6 @@ class ClaimService {
       fullClaim: canonicalize(claim),
     }
     let giveId = await dbService.giveInsert(entry)
-    l.trace(`${this.constructor.name} New give ${util.inspect(entry)}`)
     return entry
   }
 
@@ -568,6 +567,7 @@ class ClaimService {
         newGive.fulfillsId, newGive.fulfillsType, newGive.fulfillsPlanId, false
       )
 
+      l.trace(`${this.constructor.name} New give ${util.inspect(newGive)}`)
       return newGive
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -680,6 +680,7 @@ class ClaimService {
         memberDid: claim.member.member.identifier
       }
       let orgRoleId = await dbService.orgRoleInsert(entry)
+      l.trace(`${this.constructor.name} New org role ${orgRoleId} ${util.inspect(entry)}`)
       return { orgRoleId }
 
 
@@ -718,11 +719,13 @@ class ClaimService {
       if (planRecord == null) {
         // new record
         const planId = await dbService.planInsert(entry)
+        l.trace(`${this.constructor.name} New plan ${planId} ${util.inspect(entry)}`)
         return { handleId, recordsSavedForEdit: 1, planId }
 
       } else {
         // edit existing record
         const numUpdated = await dbService.planUpdate(entry)
+        l.trace(`${this.constructor.name} Edit plan ${util.inspect(entry)}`)
         return { handleId, recordsSavedForEdit: numUpdated }
       }
 
@@ -761,11 +764,13 @@ class ClaimService {
       if (projectRecord == null) {
         // new record
         const projectId = await dbService.projectInsert(entry)
+        l.trace(`${this.constructor.name} New project ${projectId} ${util.inspect(entry)}`)
         return { handleId, recordsSavedForEdit: 1, projectId }
 
       } else {
         // edit existing record
         const numUpdated = await dbService.projectUpdate(entry)
+        l.trace(`${this.constructor.name} Edit project ${util.inspect(entry)}`)
         return { handleId, recordsSavedForEdit: numUpdated }
       }
 
@@ -785,6 +790,7 @@ class ClaimService {
       }
 
       let registrationId = await dbService.registrationInsert(registration)
+      l.trace(`${this.constructor.name} New registration ${registrationId} ${util.inspect(registration)}`)
       return { registrationId }
 
     } else if (claim['@context'] === 'https://endorser.ch'
@@ -807,6 +813,7 @@ class ClaimService {
           }
 
       let tenureId = await dbService.tenureInsert(entry)
+      l.trace(`${this.constructor.name} New tenure ${tenureId} ${util.inspect(entry)}`)
       return { tenureId }
 
 
@@ -823,6 +830,7 @@ class ClaimService {
       }
 
       let voteId = await dbService.voteInsert(entry)
+      l.trace(`${this.constructor.name} New vote ${voteId} ${util.inspect(entry)}`)
       return { voteId }
 
 

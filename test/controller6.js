@@ -505,6 +505,37 @@ describe('6 - Plans', () => {
 
 
 
+describe('6 - data just for BVC', () => {
+
+  it('insert BVC plan', async () => {
+    // Now can create this JWT with the ID that was assigned.
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.name = "Bountiful Voluntaryist Community Activities"
+    planObj.claim.description = "We do random stuff together."
+    planObj.claim.startTime = "2017-11-25"
+    planObj.claim.endTime = undefined
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+})
+
+
+
+
+
+
+
 let firstOfferId, anotherProjectOfferId, offerId6, validThroughDate
 
 describe('6 - check offer totals', () => {

@@ -21,6 +21,11 @@ class ClaimController {
     ClaimService
       .fullJwtById(req.params.id, res.locals.tokenIssuer)
       .then(result => new Promise((resolve, reject) => {
+        if (!result) {
+          reject(
+            { error: { message: "No claim found with ID " + req.params.id } }
+          )
+        }
         hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
           .then(scrubbed => {
             let resultClaim = JSON.parse(result.claim)

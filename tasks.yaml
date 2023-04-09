@@ -2,7 +2,7 @@
 
 - 04 time offered/given to projects :
 
-  - deploy server : run migration, check date-times on plan_claim entries
+  - deploy server : run migration, check date-times on plan_claim entries, BVC plan claim
   - in tests - check offer totals for agents
 
 - .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)

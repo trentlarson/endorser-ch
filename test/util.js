@@ -195,7 +195,7 @@ module.exports = {
     "@type": "PlanAction",
     "agent": { identifier: null }, // supply DID for intiator of this plan
     "identifier": null, // supply plan ID
-    "name": "KickStarter for Time",
+    "name": "Kick Starting with Time",
     "description": INITIAL_DESCRIPTION,
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
@@ -207,7 +207,7 @@ module.exports = {
     "@type": "Project",
     "agent": { identifier: null }, // supply DID for intiator of this project
     "identifier": null, // supply project ID
-    "name": "KickStarter for Time",
+    "name": "Kick Starting with Time",
     "description": INITIAL_DESCRIPTION,
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
