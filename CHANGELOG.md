@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.9.0] - 2023-04-07
+## [1.9.0] - 2023-04-07 - a18f33307ac5e333f003a0bd6959388650f22b82
 
 ### Added
 - Search for contacts in common
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.6.0] - 2023-03-13
+## [1.6.0] - 2023-03-13 - f82be76be3e53df491dd9030351a30e42466f8ee
 
 ### Added
 - Offer & Give storage, with endpoints for totals and queries
