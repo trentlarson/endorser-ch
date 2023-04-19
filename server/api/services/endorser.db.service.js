@@ -502,14 +502,34 @@ class EndorserDatabase {
   }
   **/
 
-  confirmationInsert(issuer, jwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId) {
+  confirmationInsert(issuer, jwtId, origJwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO confirmation (jwtId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId) VALUES (?, ?, ?, ?, ?, ?)")
-      db.run(stmt, [jwtId, issuer, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
+      var stmt = (
+          "INSERT INTO confirmation (jwtId, issuer, origClaimJwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId)"
+          + " VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      db.run(stmt, [jwtId, issuer, origJwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
         if (err) {
           reject(err)
         } else {
           resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  // take JWT IDs and return all the issuer DIDs who have confirmed those claims
+  confirmersForClaims(claimJwtIds) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      const sql = "SELECT rowid, * FROM confirmation WHERE origClaimJwtid in (?)"
+      db.each(sql, claimJwtIds, function(err, row) {
+        data.push(row.issuer)
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
         }
       })
     })
@@ -1002,6 +1022,11 @@ class EndorserDatabase {
     })
   }
 
+  /**
+   *
+   * @param identifier
+   * @returns {Promise<unknown>} the JWT entry with no post-processing
+   */
   jwtLastByHandleIdRaw(identifier) {
     return new Promise((resolve, reject) => {
       db.get(

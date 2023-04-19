@@ -50,7 +50,7 @@ export default express
  * @param {String} eventOrgName.query.optional
  * @param {String} eventName.query.optional
  * @param {String} eventStartTime.query.optional
- * @returns {Array.object} 200 - many events (up to 50)
+ * @returns {array.object} 200 - many events (up to 50)
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

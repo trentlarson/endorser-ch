@@ -62,7 +62,7 @@ export default express
  * @param {String} orgName.query.optional
  * @param {String} name.query.optional
  * @param {String} startTime.query.optional
- * @returns {Array.object} 200 - many events (up to 50)
+ * @returns {array.object} 200 - many events (up to 50)
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -96,7 +96,7 @@ export default express
 /**
  * @typedef ActionClaimsConfirmations
  * @property {ActionClaim} action.required
- * @property {Array.Confirmation} confirmation.required
+ * @property {array.Confirmation} confirmation.required
  */
 
 /**
@@ -104,7 +104,7 @@ export default express
  * @group storage of events - Event storage
  * @route GET /api/event/actionClaimsAndConfirmations
  * @param {EventInput} event.query.required - the event data
- * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
+ * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -126,7 +126,7 @@ export default express
  * @group storage of events - Event storage
  * @route GET /api/event/{id}/actionClaimsAndConfirmations
  * @param {number} id.path.required - the ID of the event record to retrieve
- * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
+ * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

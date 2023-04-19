@@ -356,3 +356,159 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(5000)
 
 })
+
+describe('7 - Get Confirming IDs for Claims', () => {
+
+  let firstGiveRecordJwtId
+
+  it('insert a give for later confirmation', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.fulfills = undefined // remove unused field
+    credObj.claim.description = 'Got to sleep over without much trouble'
+    credObj.claim.recipient = { identifier: creds[2].did }
+    credObj.sub = creds[0].did
+    credObj.iss = creds[0].did
+    const claimJwtEnc = await credentials[0].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+              'Something went wrong, but nothing critial. Here is the error:',
+              r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        firstGiveRecordJwtId = r.body.success.jwtId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 0 confirmers back', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = {
+      jwtId: firstGiveRecordJwtId
+    }
+    credObj.sub = creds[2].did
+    credObj.iss = creds[1].did
+    const claimJwtEnc = await credentials[1].createVerification(credObj)
+
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .set('Authorization', pushTokens[0])
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+            .to.be.an('array')
+            .of.length(0)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('add a confirmation by someone else', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = {
+      jwtId: firstGiveRecordJwtId
+    }
+    credObj.sub = creds[0].did
+    credObj.iss = creds[1].did
+    const claimJwtEnc = await credentials[1].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critial. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 1 confirmer back', async () => {
+
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+            .to.be.an('array')
+            .of.length(1)
+        expect(r.body.data[0]).to.equal(creds[1].did)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  // add confirm by same person
+
+  // check for 1 confirmation
+
+  // check for a confirmation when confirmed with content (not handleId)?
+
+  // check for confirmations on mutliple claims
+
+  // Do I really want to send the IDs in a GET body?
+})
+
+describe('7 - Add Sample Pledge', () => {
+
+  it('user 0 accepts a pledge', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = {
+      "@context": "https://schema.org",
+      "@type": "AcceptAction",
+      "agent": { identifier: creds[0].did },
+      "object": "I am building a society based on giving, in ways that fulfill me.",
+    }
+    planObj.iss = creds[0].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+})

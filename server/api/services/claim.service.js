@@ -260,10 +260,40 @@ class ClaimService {
      }
        ... where confirmId is -1 if something went wrong, and all others are optional
    **/
-  async createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim) {
+  async createOneConfirmation(jwtId, issuerDid, issuedAt, confirmedClaim) {
 
     l.trace(`${this.constructor.name}.createOneConfirmation(${jwtId},`
-            + ` ${issuerDid}, ${util.inspect(origClaim)})`);
+            + ` ${issuerDid}, ${util.inspect(confirmedClaim)})`);
+
+    // if an Endorser.ch ID is supplied
+    // then load that and its internal JWT ID and ignore the other contents
+    let origClaim = confirmedClaim
+    let origClaimJwtId = null
+    if (origClaim['jwtId']) {
+      let origJwt = await dbService.jwtById(origClaim['jwtId'])
+      if (origJwt) {
+        origClaim = JSON.parse(origJwt.claim)
+        origClaimJwtId = origClaim.id
+      } else {
+        let embeddedResult = {
+          embeddedRecordError:
+            `This confirmation referenced some unknown jwtId so it will not be recorded.`
+        }
+        return embeddedResult
+      }
+    } else if (origClaim['handleId']) {
+      let origJwt = dbService.jwtLastByHandleId(origClaim['handleId'])
+      if (origJwt) {
+        origJwt = JSON.parse(origJwt.claim)
+        origClaimJwtId = origJwt.id
+      } else {
+        let embeddedResult = {
+          embeddedRecordError:
+              `This confirmation referenced some unknown handleId so it will not be recorded.`
+        }
+        return embeddedResult
+      }
+    }
 
     // since AgreeAction is from schema.org, the embedded claim is the same by default
     if (origClaim['@context'] == null) {
@@ -273,7 +303,7 @@ class ClaimService {
     if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'GiveAction') {
 
-      let origGive, embeddedResult = {}
+      let embeddedResult = {}, result = {}, origGive
 
       // find the original give
       const origId = origClaim.identifier || origClaim.handleId
@@ -295,15 +325,14 @@ class ClaimService {
             + ` When not referencing an existing record,`
             + ` just send a separate 'give' claim instead of a confirmation.`
         }
-        return embeddedResult
 
       } else {
 
         l.trace(`... createOneConfirm orig ID & give (${origId}, ${util.inspect(origGive)})`)
 
         let origClaimStr = canonicalize(origClaim)
-        let result =
-            await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr)
+        result =
+            await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr)
 
         // will mark the give as confirmed by recipient, if this is a recipient
         let confirmedByRecipient = false
@@ -341,6 +370,7 @@ class ClaimService {
           )
 
         }
+
       }
 
       return R.mergeLeft(result, embeddedResult)
@@ -377,7 +407,7 @@ class ClaimService {
       let origClaimStr = canonicalize(origClaim)
 
       let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, actionClaimId, null, null)
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, actionClaimId, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
               + ` for actionClaimId ${actionClaimId}`
              )
@@ -408,7 +438,7 @@ class ClaimService {
       let origClaimStr = canonicalize(origClaim)
 
       let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, tenureClaimId, null)
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, tenureClaimId, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for tenureClaimId ${tenureClaimId}`);
       return {confirmId:result, tenureClaimId}
@@ -442,7 +472,7 @@ class ClaimService {
       let origClaimStr = canonicalize(origClaim)
 
       let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, orgRoleClaimId)
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, null, orgRoleClaimId)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for orgRoleClaimId ${orgRoleClaimId}`
              )
@@ -468,7 +498,7 @@ class ClaimService {
       //   claim.[ agent | member.member | party | participant ].did
 
       let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimStr, null, null, null)
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for a generic confirmation`
              )

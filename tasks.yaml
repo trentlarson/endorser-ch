@@ -1,12 +1,17 @@
 ---
 
+- 01 fix presentation scan and redeploy
+
 - 04 time offered/given to projects :
+  - allow search on multiple terms
+  - show list of confirmations - via same approach as pledges? :
+    - add endpoint for confirmations from a list of claim IDs
+  - save & show projects of interest
+  - move confirmationInserts all to end of method
 
-  - deploy server : run migration, check date-times on plan_claim entries, BVC plan claim
-  - in tests - check offer totals for agents
+- 01 strange results when comparing common contacts repeatedly
 
-- .5 release endorser server (for API doc fixes, both setup and endpoint names; new values already inserted)
-- .5 release mobile app (and revisit Google account deletion)
+- .5 release mobile app (and revisit account deletion for Google)
 
 - 08 I have been in a project, you see it, and I can share my contributions. :
   - Allow confirmations by project issuer or agent.

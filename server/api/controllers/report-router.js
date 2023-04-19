@@ -39,6 +39,15 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  // get DIDs of those who have confirmed
+  getConfirmerIds(req, res) {
+    const claimJwtIds = req.body.claimJwtIds
+    dbService.confirmersForClaims(claimJwtIds)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json({ data: results }).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getGivesForPlansPaged(req, res, next) {
     const planIdsParam = JSON.parse(req.query.planIds)
     if (!Array.isArray(planIdsParam)) {
@@ -269,7 +278,7 @@ export default express
 
 /**
  * @typedef GiveArrayMaybeMoreBody
- * @property {Array.Offer} data (as many as allowed by our limit)
+ * @property {array.Offer} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
@@ -288,7 +297,7 @@ export default express
 
 /**
  * @typedef JwtArrayMaybeMoreBody
- * @property {Array.Jwt} data (as many as allowed by our limit)
+ * @property {array.Jwt} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
@@ -311,7 +320,7 @@ export default express
 
 /**
  * @typedef OfferArrayMaybeMoreBody
- * @property {Array.Offer} data (as many as allowed by our limit)
+ * @property {array.Offer} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
@@ -333,20 +342,9 @@ export default express
 
 /**
  * @typedef PlanArrayMaybeMoreBody
- * @property {Array.Plan} data (as many as allowed by our limit)
+ * @property {array.Plan} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
-
-/**
- * Check if current user can create a claim.
- *
- * @group reports - Reports (with paging)
- * @route GET /api/v2/report/canClaim
- * @returns {Object} 200 - 'data' boolean property tells whether this user is allowed to create a claim
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/canClaim', dbController.getCanClaim)
 
 /**
  * Get all claims for the query inputs, paginated, reverse-chronologically
@@ -379,6 +377,29 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)
+
+/**
+ * Check if current user can create a claim.
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/canClaim
+ * @returns {object} 200 - 'data' boolean property tells whether this user is allowed to create a claim
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/canClaim', dbController.getCanClaim)
+
+/**
+ * Retrieve all confirmers for a set of claims.
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/confirmers
+ * @param {array} claimJwtIds.body.required the JWT IDs whose confirmers I want to find
+ * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/confirmers', dbController.getConfirmerIds)
 
 /**
  * Search gives
@@ -422,7 +443,7 @@ export default express
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
- * @returns {Object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
+ * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -470,7 +491,7 @@ export default express
  * @param {string} planId.query.optional - handle ID of the plan which has received offers
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
  * @param {string} unit.query.optional - unit code to restrict amounts
- * @returns {Object} 200 - 'data' property with keys being units and values being the number amounts of total offers for them
+ * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total offers for them
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

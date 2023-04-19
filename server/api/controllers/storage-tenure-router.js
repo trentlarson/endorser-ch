@@ -34,7 +34,7 @@ export default express
  * Get many tenures
  * @group storage of tenures - Tenure storage
  * @route GET /api/tenure/
- * @returns {Array.object} 200 - many tenures (up to 50)
+ * @returns {array.object} 200 - many tenures (up to 50)
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

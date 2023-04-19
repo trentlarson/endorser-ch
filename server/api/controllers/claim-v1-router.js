@@ -138,7 +138,7 @@ export default express
  * Add a Claim JWT and insert claims into their own tables
  * @group claims v1 - Claim Recording (with limited feedback)
  * @route POST /api/claim
- * @param {EncodedJwt.model} jwt.body.required
+ * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 - internal ID of Claim JWT
  * @returns {Error} 400 - error
  */
@@ -154,7 +154,7 @@ export default express
  * @param {string} claimType.query.optional
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
- * @returns {Array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
+ * @returns {array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -194,14 +194,3 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/full/:id', claimController.getFullClaimById)
-
- /**
- * Add a Claim JWT raw, without any processing (not recommended)
- * @group claims v1 - Claim Recording
- * @route POST /api/claim/raw
- * @param {string} jwt.body.required
- * @returns {object} 200 - internal ID of Claim JWT
- * @returns {Error} 400 - error
- *
-  .post('/raw', claimController.create)
- */

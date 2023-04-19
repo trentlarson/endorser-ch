@@ -50,7 +50,7 @@ export default express
  * Add a Claim JWT (and insert claim data into their own tables for rapid searching)
  * @group claims - Claim Recording (with extended feedback)
  * @route POST /api/v2/claim
- * @param {EncodedJwt.model} jwt.body.required
+ * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 -
  * {
  * &nbsp; success:

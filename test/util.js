@@ -86,7 +86,7 @@ const CREDS = [
   { did: 'did:ethr:0xddd3ef4cf2900f048b01713d50f61d232c2731ee', privateKey: '39482d2c39e9def860cf9f48facfe67a16c45209ecfba9c12bfc5bf831d80dc6' }, // wild fish nuclear scheme bamboo large solid express already rookie hire jump add announce thank spoon law pull bless cancel outside plate allow admit
   { did: 'did:ethr:0xeeeb9589823e0baef3635726006e611da7a715b9', privateKey: 'cb4ad57b266a628eb0b7ff74754d661ce036420cd1335720f53c31b5e74c268d' }, // arrest claim way idea hat wrap execute girl noble task march web capital this thrive time small erupt public tortoise violin one forest abandon
   { did: 'did:ethr:0xffff7def6267bedac4bd8bb2fa9128e8698b3d2f', privateKey: '741cc1ad98494afd4a9b9219b678e213fd5a27f6dd7822350d011430b0018e6d' }, // history loyal voice arm upper energy night interest vacuum swap siren economy siren tomorrow kick gain possible disorder scan same move wheat artefact notice
-  ]
+]
 
 const CREDENTIALS = R.map((c) => new Credentials(c), CREDS)
 
@@ -125,6 +125,7 @@ module.exports = {
     "@type": "AgreeAction",
     "object": [
       // supply claims
+      // ... though best practice is to replace this array with a single claim
     ]
   },
 

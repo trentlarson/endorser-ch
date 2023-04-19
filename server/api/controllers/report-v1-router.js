@@ -176,7 +176,7 @@ export default express
  *
  * @group reports on network - Visibility
  * @route GET /api/report/whichDidsICanSee
- * @returns {Array.object} 200 - list of DIDs user can see
+ * @returns {array.object} 200 - list of DIDs user can see
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -211,7 +211,7 @@ export default express
  * @group reports v1 - Reports (with limited result counts)
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
  * @param {string} claimId.query.required - the ID of the claim
- * @returns {Array.String} 200 - issuers who have claimed or confirmed same claim
+ * @returns {array.String} 200 - issuers who have claimed or confirmed same claim
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -223,7 +223,7 @@ export default express
  * @group reports v1 - Reports
  * @route GET /api/report/actionClaimsAndConfirmationsSince
  * @param {datetime} date.query.optional - the date from which to show actionclaims
- * @returns {Array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
+ * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -236,7 +236,7 @@ export default express
  * @route GET /api/report/tenureClaimsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
- * @returns {Array.object} 200 - claimed tenures (up to 50)
+ * @returns {array.object} 200 - claimed tenures (up to 50)
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -249,7 +249,7 @@ export default express
  * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
- * @returns {Array.object} 200 - claimed tenures (up to 50)
+ * @returns {array.object} 200 - claimed tenures (up to 50)
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -263,7 +263,7 @@ export default express
  * @param {string} orgName.query.required
  * @param {string} roleName.query.required
  * @param {date} onDate.query.required
- * @returns {Array.object} 200 - claimed tenures (up to 50)
+ * @returns {array.object} 200 - claimed tenures (up to 50)
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -274,7 +274,7 @@ export default express
  *
  * @group reports v1 - Reports
  * @route GET /api/report/voteCounts
- * @returns {Array.object} 200 - { speaker, title, count }
+ * @returns {array.object} 200 - { speaker, title, count }
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

@@ -1,0 +1,4 @@
+
+ALTER TABLE confirmation ADD COLUMN origClaimJwtId TEXT;
+
+CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);

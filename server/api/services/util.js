@@ -4,7 +4,7 @@ const util = require('util')
 
 // the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
-const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token'
+const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token' // deprecated: use Authorization instead
 
 const ERROR_CODES = {
   CANNOT_REGISTER_TOO_SOON: 'CANNOT_REGISTER_TOO_SOON',

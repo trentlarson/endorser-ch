@@ -505,7 +505,7 @@ describe('6 - Plans', () => {
 
 
 
-describe('6 - data just for BVC', () => {
+describe('6 - item just for BVC, for testing', () => {
 
   it('insert BVC plan', async () => {
     // Now can create this JWT with the ID that was assigned.

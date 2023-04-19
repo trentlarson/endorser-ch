@@ -20,8 +20,8 @@ export default express
  * Get sorted version of any object (using the function used internally for generating preimages)
  * @group utils - Utils
  * @route GET /api/util/objectWithKeysSorted
- * @param {obj} object.query.optional - the object which to sort
- * @returns {Array.ActionClaimsConfirmations} 200 - { data: ...} containing an object with the order of all keys sorted
+ * @param {object} object.query.optional - the object which to sort
+ * @returns {array.ActionClaimsConfirmations} 200 - { data: ...} containing an object with the order of all keys sorted
  * @returns {Error} default - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
