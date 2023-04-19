@@ -8,6 +8,7 @@ const { Credentials } = require('uport-credentials')
 import { cacheContactList, getContactMatch, RESULT_NEED_DATA, RESULT_NO_MATCH }
   from "../server/api/services/contact-correlation.service"
 import Server from '../server'
+import { HIDDEN_TEXT } from '../server/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect
@@ -396,19 +397,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
 
   it('get 0 confirmers back', async () => {
 
-    const credObj = R.clone(testUtil.jwtTemplate)
-    credObj.claim = R.clone(testUtil.confirmationTemplate)
-    credObj.claim.object = {
-      jwtId: firstGiveRecordJwtId
-    }
-    credObj.sub = creds[2].did
-    credObj.iss = creds[1].did
-    const claimJwtEnc = await credentials[1].createVerification(credObj)
-
     return request(Server)
       .get('/api/v2/report/confirmers')
       .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
-      .set('Authorization', pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
         if (r.body.error) {
           console.log('Something went wrong. Here is the response body: ', r.body)
@@ -456,11 +448,31 @@ describe('7 - Get Confirming IDs for Claims', () => {
       })
   }).timeout(3000)
 
-  it('get 1 confirmer back', async () => {
-
+  it('get 1 confirmer back but cannot see them', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
       .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+            .to.be.an('array')
+            .of.length(1)
+        expect(r.body.data[0]).to.equal(HIDDEN_TEXT)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 1 confirmer back and can see them', async () => {
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
           console.log('Something went wrong. Here is the response body: ', r.body)

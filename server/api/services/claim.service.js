@@ -273,7 +273,7 @@ class ClaimService {
       let origJwt = await dbService.jwtById(origClaim['jwtId'])
       if (origJwt) {
         origClaim = JSON.parse(origJwt.claim)
-        origClaimJwtId = origClaim.id
+        origClaimJwtId = origJwt.id
       } else {
         let embeddedResult = {
           embeddedRecordError:
@@ -306,14 +306,24 @@ class ClaimService {
       let embeddedResult = {}, result = {}, origGive
 
       // find the original give
-      const origId = origClaim.identifier || origClaim.handleId
-      if (origId) {
-        const globalOrigId = globalId(origId)
+      if (origClaimJwtId) {
         const origGives =
-            await dbService.givesByParamsPaged({ handleId: globalOrigId })
-        l.trace(`... createOneConfirm origGive lookup gave ${util.inspect(origGives)}`)
+            await dbService.givesByParamsPaged({ jwtId: origClaimJwtId })
+        l.trace(`... createOneConfirm origGive lookup by jwtId gave ${util.inspect(origGives)}`)
         if (origGives.data.length > 0) {
           origGive = origGives.data[0]
+        }
+      } else {
+        const origFullId = origClaim.identifier || origClaim.handleId
+        if (origFullId) {
+          const globalOrigId = globalId(origFullId)
+          const origGives =
+              await dbService.givesByParamsPaged({ handleId: globalOrigId })
+          l.trace(`... createOneConfirm origGive lookup by full ID gave ${util.inspect(origGives)}`)
+          if (origGives.data.length > 0) {
+            origGive = origGives.data[0]
+            origClaimJwtId = origGive.jwtId
+          }
         }
       }
       if (!origGive) {
@@ -328,7 +338,11 @@ class ClaimService {
 
       } else {
 
-        l.trace(`... createOneConfirm orig ID & give (${origId}, ${util.inspect(origGive)})`)
+        // There are a couple of versions of the original claim:
+        // - origClaim is claim that was sent, or if an ID was sent then claim loaded from the DB jwt table
+        // - origGive is the Give record from the custom table
+
+        l.trace(`... createOneConfirm orig ID & give ${util.inspect(origGive)})`)
 
         let origClaimStr = canonicalize(origClaim)
         result =
