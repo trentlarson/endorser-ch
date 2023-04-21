@@ -381,7 +381,6 @@ class EndorserDatabase {
     })
   }
 
-  // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndAction(issuerDid, actionRowId) {
     return new Promise((resolve, reject) => {
       db.get(
@@ -435,7 +434,6 @@ class EndorserDatabase {
   }
   **/
 
-  // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndOrgRole(issuerDid, orgRoleRowId) {
     return new Promise((resolve, reject) => {
       db.get(
@@ -453,7 +451,6 @@ class EndorserDatabase {
     })
   }
 
-  // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndTenure(issuerDid, tenureRowId) {
     return new Promise((resolve, reject) => {
       db.get(
@@ -543,7 +540,8 @@ class EndorserDatabase {
   confirmersForClaims(claimJwtIds) {
     return new Promise((resolve, reject) => {
       var data = []
-      const sql = "SELECT rowid, * FROM confirmation WHERE origClaimJwtid in (?)"
+      const inListStr = claimJwtIds.map(value => "?").join(',')
+      const sql = "SELECT rowid, * FROM confirmation WHERE origClaimJwtid in (" + inListStr + ")"
       db.each(sql, claimJwtIds, function(err, row) {
         data.push(row.issuer)
       }, function(err, num) {

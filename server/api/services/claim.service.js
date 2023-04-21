@@ -499,13 +499,16 @@ class ClaimService {
 
     } else {
 
+      /**
       // check for duplicate
+      // ... someday, when we decide to index the whole claim or find something efficient
       const confirmation = await dbService.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
-      if (confirmation !== null) {
+      if (confirmation) {
         return Promise.reject(
           `Attempted to confirm a claim already confirmed in # ${confirmation.id}`
         )
       }
+      **/
 
       const origClaimStr = canonicalize(origClaim)
 

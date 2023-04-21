@@ -390,7 +390,7 @@ export default express
 .get('/canClaim', dbController.getCanClaim)
 
 /**
- * Retrieve all confirmers for a set of claims.
+ * Retrieve all confirmers for a set of claims. (Same as POST version, just like Elasticsearch.)
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/confirmers
@@ -400,6 +400,18 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get('/confirmers', dbController.getConfirmerIds)
+
+/**
+ * Retrieve all confirmers for a set of claims. (Same as GET version, just like Elasticsearch.)
+ *
+ * @group reports - Reports (with paging)
+ * @route POST /api/v2/report/confirmers
+ * @param {array} claimJwtIds.body.required the JWT IDs whose confirmers I want to find
+ * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.post('/confirmers', dbController.getConfirmerIds)
 
 /**
  * Search gives

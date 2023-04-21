@@ -362,10 +362,11 @@ describe('7 - Get Confirming IDs for Claims', () => {
 
   const newGive = R.clone(testUtil.claimGive)
   delete newGive.fulfills // remove unused field
+  newGive.agent = { identifier: creds[0].did }
   newGive.description = 'Got to sleep over without much trouble'
   newGive.recipient = { identifier: creds[2].did }
 
-  let firstGiveRecordJwtId
+  let firstGiveRecordJwtId, secondRecordJwtId
 
   it('insert a give for later confirmation', async () => {
 
@@ -384,13 +385,13 @@ describe('7 - Get Confirming IDs for Claims', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-              'Something went wrong, but nothing critical. Here is the error:',
-              r.body.success.embeddedRecordError
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
           )
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
-        firstGiveRecordJwtId = r.body.success.jwtId
+        firstGiveRecordJwtId = r.body.success.claimId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -444,6 +445,8 @@ describe('7 - Get Confirming IDs for Claims', () => {
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
+        expect(r.body.success.confirmations[0])
+          .does.not.have.property("embeddedRecordError")
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -491,7 +494,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       })
   }).timeout(3000)
 
-  it('try to add a duplicate confirmation', async () => {
+  it('fail to add a duplicate confirmation', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
@@ -517,6 +520,8 @@ describe('7 - Get Confirming IDs for Claims', () => {
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
+        expect(r.body.success.confirmations[0])
+          .has.property("embeddedRecordError")
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -544,8 +549,124 @@ describe('7 - Get Confirming IDs for Claims', () => {
       })
   }).timeout(3000)
 
+  it('add another confirmation', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = {
+      jwtId: firstGiveRecordJwtId
+    }
+    credObj.sub = creds[0].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.body.success.confirmations[0])
+          .does.not.have.property("embeddedRecordError")
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 2 confirmers back and can see them', async () => {
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+            .to.be.an('array')
+            .of.length(2)
+        expect(r.body.data[0]).to.equal(creds[1].did)
+        expect(r.body.data[1]).to.equal(creds[2].did)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('add yet another confirmation', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = {
+      jwtId: firstGiveRecordJwtId
+    }
+    credObj.sub = creds[0].did
+    credObj.iss = creds[5].did
+    const claimJwtEnc = await credentials[5].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.body.success.confirmations[0])
+            .does.not.have.property("embeddedRecordError")
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 3 confirmers back and can see some', async () => {
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+          .to.be.an('array')
+          .of.length(3)
+        expect(r.body.data[0]).to.equal(creds[1].did)
+        expect(r.body.data[1]).to.equal(creds[2].did)
+        expect(r.body.data[2]).to.equal(HIDDEN_TEXT)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   /**
    * Haven't written the logic for this... and it may never be necessary.
+   * In fact, it may not be desirable: events and land locations and roles are
+   * easy to make unique, but to algorithmically determine the right give
+   * record you'll have to compare many inputs. May be OK if only one found.
    *
 
   it('add a confirmation on content (not handleId)', async () => {
@@ -604,7 +725,117 @@ describe('7 - Get Confirming IDs for Claims', () => {
   *
   **/
 
-  // check for confirmations on multiple claims
+  it('get 3 confirmers back and can see some', async () => {
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+          .to.be.an('array')
+          .of.length(3)
+        expect(r.body.data[0]).to.equal(creds[1].did)
+        expect(r.body.data[1]).to.equal(creds[2].did)
+        expect(r.body.data[2]).to.equal(HIDDEN_TEXT)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('add some other random claim', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimPerson)
+    credObj.claim.identifier = creds[3].did
+    credObj.claim.description = "Gave a gift with kudos, publicly"
+    credObj.sub = creds[3].did
+    credObj.iss = creds[3].did
+    const claimJwtEnc = await credentials[3].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        secondRecordJwtId = r.body.success.claimId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('add a confirmation of that other random claim', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = {
+      jwtId: secondRecordJwtId
+    }
+    credObj.sub = creds[3].did
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.body.success.confirmations[0])
+            .does.not.have.property("embeddedRecordError")
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 4 confirmers back and can see some', async () => {
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId, secondRecordJwtId ] })
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        expect(r.body.data)
+          .to.be.an('array')
+          .of.length(4)
+        expect(r.body.data[0]).to.equal(creds[1].did)
+        expect(r.body.data[1]).to.equal(creds[2].did)
+        expect(r.body.data[2]).to.equal(HIDDEN_TEXT)
+        expect(r.body.data[3]).to.equal(creds[4].did)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
 
   // Do I really want to send the IDs in a GET body?
 })
@@ -612,15 +843,15 @@ describe('7 - Get Confirming IDs for Claims', () => {
 describe('7 - Add Sample Pledge', () => {
 
   it('user 0 accepts a pledge', async () => {
-    const planObj = R.clone(testUtil.jwtTemplate)
-    planObj.claim = {
+    const pledgeObj = R.clone(testUtil.jwtTemplate)
+    pledgeObj.claim = {
       "@context": "https://schema.org",
       "@type": "AcceptAction",
       "agent": { identifier: creds[0].did },
       "object": "I am building a society based on giving, in ways that fulfill me.",
     }
-    planObj.iss = creds[0].did
-    const planJwtEnc = await credentials[1].createVerification(planObj)
+    pledgeObj.iss = creds[0].did
+    const planJwtEnc = await credentials[1].createVerification(pledgeObj)
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwtEnc})
