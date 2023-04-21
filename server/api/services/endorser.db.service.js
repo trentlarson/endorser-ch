@@ -59,11 +59,18 @@ function constructWhere(params, allowedColumns, claimContents, contentColumn, ex
   }
 
   if (claimContents && contentColumn) {
-    if (whereClause.length > 0) {
-      whereClause += " AND"
+    // allow multiple words
+    const terms = claimContents.split(" ")
+    for (const term of terms) {
+      const trimmed = term.trim()
+      if (trimmed.length > 0) {
+        if (whereClause.length > 0) {
+          whereClause += " AND"
+        }
+        whereClause += " INSTR(lower(" + contentColumn + "), lower(?))"
+        paramArray.push(trimmed)
+      }
     }
-    whereClause += " INSTR(lower(" + contentColumn + "), lower(?))"
-    paramArray.push(claimContents)
   }
 
   if (excludeConfirmations) {

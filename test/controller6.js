@@ -642,7 +642,7 @@ describe('6 - check offer totals', () => {
 
   it('find offer in search', () => {
     return request(Server)
-      .get('/api/v2/report/offers?claimContents=groom')
+      .get('/api/v2/report/offers?claimContents=groom%20horse')
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {

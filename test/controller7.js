@@ -837,7 +837,6 @@ describe('7 - Get Confirming IDs for Claims', () => {
       })
   }).timeout(3000)
 
-  // Do I really want to send the IDs in a GET body?
 })
 
 describe('7 - Add Sample Pledge', () => {
