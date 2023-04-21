@@ -1000,7 +1000,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1108,7 +1108,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1142,7 +1142,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1205,7 +1205,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1254,7 +1254,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1324,7 +1324,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1394,7 +1394,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }
@@ -1447,7 +1447,7 @@ describe('6 - check give totals', () => {
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
           console.log(
-            'Something went wrong, but nothing critial. Here is the error:',
+            'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
         }

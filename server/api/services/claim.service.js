@@ -190,12 +190,12 @@ class ClaimService {
             return Promise.all(updates)
           })
           .catch(e => {
-            l.error(e, "Got error while saving hashes, with this toString(): " + e)
+            l.error(e, "Got error while saving hashes: " + e)
             return Promise.reject(e)
           })
       })
       .catch(e => {
-        l.error(e, "Got error while retrieving unchained claims, with this toString(): " + e)
+        l.error(e, "Got error while retrieving unchained claims: " + e)
         return Promise.reject(e)
       })
   }
@@ -266,7 +266,7 @@ class ClaimService {
             + ` ${issuerDid}, ${util.inspect(confirmedClaim)})`);
 
     // if an Endorser.ch ID is supplied
-    // then load that and its internal JWT ID and ignore the other contents
+    // then load that and its internal JWT ID and ignore the other confirmedClaim contents
     let origClaim = confirmedClaim
     let origClaimJwtId = null
     if (origClaim['jwtId']) {
@@ -275,7 +275,7 @@ class ClaimService {
         origClaim = JSON.parse(origJwt.claim)
         origClaimJwtId = origJwt.id
       } else {
-        let embeddedResult = {
+        const embeddedResult = {
           embeddedRecordError:
             `This confirmation referenced some unknown jwtId so it will not be recorded.`
         }
@@ -287,11 +287,20 @@ class ClaimService {
         origJwt = JSON.parse(origJwt.claim)
         origClaimJwtId = origJwt.id
       } else {
-        let embeddedResult = {
+        const embeddedResult = {
           embeddedRecordError:
               `This confirmation referenced some unknown handleId so it will not be recorded.`
         }
         return embeddedResult
+      }
+    }
+    if (origClaimJwtId) {
+      // If this is already explicitly confirmed by this person, reject as a duplicate.
+      const previous = await dbService.confirmationByIssuerAndJwtId(issuerDid, origClaimJwtId)
+      if (previous) {
+        return { embeddedRecordError:
+          `Attempted to confirm a claim already confirmed in JWT ${previous.jwtId}`
+        }
       }
     }
 
@@ -387,7 +396,7 @@ class ClaimService {
 
       }
 
-      return R.mergeLeft(result, embeddedResult)
+      return R.mergeLeft({ confirmationId: result }, embeddedResult)
 
     } else if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
@@ -398,7 +407,7 @@ class ClaimService {
         startTime: origClaim.event.startTime
       })
       if (events.length === 0) {
-        return Promise.reject(new Error("Attempted to confirm action at an unrecorded event."))
+        return Promise.reject("Attempted to confirm action at an unrecorded event.")
       }
 
       // agent.did is for legacy data, some still in mobile app
@@ -406,7 +415,7 @@ class ClaimService {
 
       let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
       if (actionClaimId === null) {
-        return Promise.reject(new Error("Attempted to confirm an unrecorded action."))
+        return Promise.reject("Attempted to confirm an unrecorded action.")
       }
 
       // check for duplicate
@@ -414,7 +423,7 @@ class ClaimService {
       let confirmation = await dbService.confirmationByIssuerAndAction(issuerDid, actionClaimId)
       if (confirmation !== null) {
         return Promise.reject(
-          new Error(`Attempted to confirm an action already confirmed in # ${confirmation.id}`)
+          `Attempted to confirm an action already confirmed in ${confirmation.jwtId}`
         )
       }
 
@@ -425,7 +434,7 @@ class ClaimService {
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
               + ` for actionClaimId ${actionClaimId}`
              )
-      return {confirmId:result, actionClaimId}
+      return {confirmationId:result, actionClaimId}
 
 
     } else if (origClaim['@context'] === 'https://endorser.ch'
@@ -437,7 +446,7 @@ class ClaimService {
       let tenureClaimId =
           await dbService.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
       if (tenureClaimId === null) {
-        return Promise.reject(new Error("Attempted to confirm an unrecorded tenure."))
+        return Promise.reject("Attempted to confirm an unrecorded tenure.")
       }
 
       // check for duplicate
@@ -445,7 +454,7 @@ class ClaimService {
       let confirmation = await dbService.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
       if (confirmation !== null) {
         return Promise.reject(
-          new Error(`Attempted to confirm a tenure already confirmed in # ${confirmation.id}`)
+          `Attempted to confirm a tenure already confirmed in ${confirmation.jwtId}`
         )
       }
 
@@ -455,7 +464,7 @@ class ClaimService {
           await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, tenureClaimId, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for tenureClaimId ${tenureClaimId}`);
-      return {confirmId:result, tenureClaimId}
+      return {confirmationId:result, tenureClaimId}
 
 
     } else if (isContextSchemaOrg(origClaim['@context'])
@@ -471,7 +480,7 @@ class ClaimService {
             origClaim.member.endDate, origClaim.member.member.identifier
           )
       if (orgRoleClaimId === null) {
-        return Promise.reject(new Error("Attempted to confirm an unrecorded orgRole."))
+        return Promise.reject("Attempted to confirm an unrecorded orgRole.")
       }
 
       // check for duplicate
@@ -479,7 +488,7 @@ class ClaimService {
       let confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
       if (confirmation !== null) {
         return Promise.reject(
-          new Error(`Attempted to confirm a orgRole already confirmed in # ${confirmation.id}`)
+          `Attempted to confirm a orgRole already confirmed in ${confirmation.jwtId}`
         )
       }
 
@@ -490,7 +499,7 @@ class ClaimService {
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for orgRoleClaimId ${orgRoleClaimId}`
              )
-      return {confirmId:result, orgRoleClaimId}
+      return {confirmationId:result, orgRoleClaimId}
 
 
     } else {
@@ -499,7 +508,7 @@ class ClaimService {
       let confirmation = await dbService.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) {
         return Promise.reject(
-          new Error(`Attempted to confirm a claim already confirmed in # ${confirmation.id}`)
+          `Attempted to confirm a claim already confirmed in # ${confirmation.id}`
         )
       }
 
@@ -516,7 +525,7 @@ class ClaimService {
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for a generic confirmation`
              )
-      return {confirmId:result}
+      return {confirmationId:result}
 
     }
   }
@@ -584,21 +593,19 @@ class ClaimService {
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (var claim of origClaim) {
-            recordings.push(
-              await this.createOneConfirmation(jwtId, issuerDid, issuedAt, claim)
-                .catch(console.log)
-            )
+            // this must await (see note above)
+            const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, claim)
+                .catch(e => { embeddedRecordError: e })
+            recordings.push(conf)
           }
         } else if (origClaim) {
-          recordings.push(
-            await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim)
-              .catch(console.log)
-          )
+          // this must await (see note above)
+          const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim)
+            .catch(e => { embeddedRecordError: e })
+          recordings.push(conf)
         }
       }
-      l.trace('Added confirmations', recordings)
-      let confirmations = await recordings
-      return { confirmations }
+      return { confirmations: recordings }
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'GiveAction') {
@@ -630,7 +637,7 @@ class ClaimService {
       if (!claim.event) {
         l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no event info.`)
         return Promise.reject(
-          new Error("Attempted to record a JoinAction claim with no event info.")
+          "Attempted to record a JoinAction claim with no event info."
         )
       }
 
@@ -661,8 +668,7 @@ class ClaimService {
         let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
         if (actionClaimId) {
           return Promise.reject(
-            new Error("Same user attempted to record an action claim that already exists with ID "
-                      + actionClaimId)
+            "Same user attempted to record an action claim that already exists with ID " + actionClaimId
           )
         }
 
@@ -889,7 +895,8 @@ class ClaimService {
         let origClaim = claim['originalClaim']
         if (origClaim) {
           recordings.push(
-            await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log)
+            await this.createOneConfirmation(jwtId, issuerDid, origClaim)
+              .catch(e => { embeddedRecordError: e })
           )
         }
       }
@@ -901,7 +908,8 @@ class ClaimService {
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (var origClaim of origClaims) {
             recordings.push(
-              await this.createOneConfirmation(jwtId, issuerDid, origClaim).catch(console.log)
+              await this.createOneConfirmation(jwtId, issuerDid, origClaim)
+                .catch(e => { embeddedRecordError: e })
             )
           }
         }

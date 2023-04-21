@@ -399,6 +399,23 @@ class EndorserDatabase {
     })
   }
 
+  confirmationByIssuerAndJwtId(issuerDid, origClaimJwtId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT rowid, * FROM confirmation WHERE issuer = ? AND origClaimJwtId = ?",
+        [issuerDid, origClaimJwtId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else if (row) {
+            resolve({id:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer})
+          } else {
+            resolve(null)
+          }
+        })
+    })
+  }
+
   confirmationByIssuerAndOrigClaim(issuerDid, claim) {
     return new Promise((resolve, reject) => {
       db.get(
