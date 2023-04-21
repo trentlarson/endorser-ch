@@ -11,6 +11,14 @@ This repo is an API for creating and querying claims in privacy-preserving ways.
 Requires node v14+
 
 * You can use [asdf](https://asdf-vm.com) with this project.
+* ... or [tea](tea.xyz)
+
+#### Dependencies
+
+| Project      | Version  |
+|--------------|----------|
+| nodejs.org   | ^16.18.0 |
+| npmjs.com    | ^9.1.3   |
 
 ```shell
 # install dependencies
