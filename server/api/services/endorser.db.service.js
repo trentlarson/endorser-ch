@@ -225,13 +225,13 @@ class EndorserDatabase {
     })
   }
 
-  actionClaimIdByDidEventId(agentDid, eventId) {
+  actionClaimByDidEventId(agentDid, eventId) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT rowid FROM action_claim WHERE agentDid = ? AND eventRowId = ?",
+        "SELECT rowid, * FROM action_claim WHERE agentDid = ? AND eventRowId = ?",
         [agentDid, eventId],
         function(err, row) {
-          if (err) { reject(err) } else if (row) { resolve(row.rowid) } else { resolve(null) }
+          if (err) { reject(err) } else { resolve(row) }
         })
     })
   }
@@ -416,6 +416,7 @@ class EndorserDatabase {
     })
   }
 
+  /** inefficient: searches full claim
   confirmationByIssuerAndOrigClaim(issuerDid, claim) {
     return new Promise((resolve, reject) => {
       db.get(
@@ -432,6 +433,7 @@ class EndorserDatabase {
         })
     })
   }
+  **/
 
   // this can be replaced by confirmationByIssuerAndOrigClaim
   confirmationByIssuerAndOrgRole(issuerDid, orgRoleRowId) {
@@ -469,6 +471,7 @@ class EndorserDatabase {
     })
   }
 
+  /** inefficient: searches full claim
   confirmationsByClaim(claimStr) {
     return new Promise((resolve, reject) => {
       var data = []
@@ -484,6 +487,7 @@ class EndorserDatabase {
       })
     })
   }
+  **/
 
   /** see notes on previous usage in jwt.service.js
   confirmationsByActionClaim(actionRowId) {
@@ -1341,14 +1345,14 @@ class EndorserDatabase {
     })
   }
 
-  orgRoleClaimIdByOrgAndDates(orgName, roleName, startDate, endDate, memberDid) {
+  orgRoleClaimByOrgAndDates(orgName, roleName, startDate, endDate, memberDid) {
     return new Promise((resolve, reject) => {
       const startDateSql = startDate ? " AND startDate = date('" + startDate + "')" : ""
       const endDateSql = endDate ? " AND endDate = date('" + endDate + "')" : ""
       db.get(
-        "SELECT rowid FROM org_role_claim WHERE orgName = ? AND roleName = ?" + startDateSql + endDateSql + " AND memberDid = ?",
+        "SELECT rowid, * FROM org_role_claim WHERE orgName = ? AND roleName = ?" + startDateSql + endDateSql + " AND memberDid = ?",
         [orgName, roleName, memberDid],
-        function(err, row) { if (err) { reject(err) } else { resolve(row?.rowid) } })
+        function(err, row) { if (err) { reject(err) } else { resolve(row) } })
     })
   }
 
@@ -1361,7 +1365,13 @@ class EndorserDatabase {
   retrieveOrgRoleClaimsAndConfirmationsOnDate(orgName, roleName, onDateStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      let sql = "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate, r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId FROM org_role_claim r LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid WHERE r.orgName = ? AND r.roleName = ? AND (r.startDate IS NULL OR r.startDate <= date(?)) AND (r.endDate IS NULL OR date(?) <= r.endDate)"
+      let sql =
+        "SELECT r.rowid AS rid, r.orgName, r.roleName, r.startDate, r.endDate,"
+        + " r.memberDid, c.rowid AS cid, c.issuer AS confirmDid, c.orgRoleRowId"
+        + " FROM org_role_claim r"
+        + " LEFT JOIN confirmation c ON c.orgRoleRowId = r.rowid"
+        + " WHERE r.orgName = ? AND r.roleName = ?"
+        + " AND (r.startDate IS NULL OR r.startDate <= date(?)) AND (r.endDate IS NULL OR date(?) <= r.endDate)"
       db.each(
         sql,
         [orgName, roleName, onDateStr, onDateStr],
@@ -1769,18 +1779,16 @@ class EndorserDatabase {
     })
   }
 
-  tenureClaimIdByPartyAndGeoShape(partyDid, polygon) {
+  tenureClaimByPartyAndGeoShape(partyDid, polygon) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT rowid FROM tenure_claim WHERE partyDid = ? AND polygon = ?",
+        "SELECT rowid, * FROM tenure_claim WHERE partyDid = ? AND polygon = ?",
         [partyDid, polygon],
         function(err, row) {
           if (err) {
             reject(err)
-          } else if (row) {
-            resolve(row.rowid)
           } else {
-            resolve(null)
+            resolve(row)
           }
         })
     })

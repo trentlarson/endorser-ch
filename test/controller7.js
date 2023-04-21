@@ -360,15 +360,17 @@ describe('7 - Selected Contact Correlation', () => {
 
 describe('7 - Get Confirming IDs for Claims', () => {
 
+  const newGive = R.clone(testUtil.claimGive)
+  delete newGive.fulfills // remove unused field
+  newGive.description = 'Got to sleep over without much trouble'
+  newGive.recipient = { identifier: creds[2].did }
+
   let firstGiveRecordJwtId
 
   it('insert a give for later confirmation', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
-    credObj.claim = R.clone(testUtil.claimGive)
-    credObj.claim.fulfills = undefined // remove unused field
-    credObj.claim.description = 'Got to sleep over without much trouble'
-    credObj.claim.recipient = { identifier: creds[2].did }
+    credObj.claim = R.clone(newGive)
     credObj.sub = creds[0].did
     credObj.iss = creds[0].did
     const claimJwtEnc = await credentials[0].createVerification(credObj)
@@ -542,13 +544,67 @@ describe('7 - Get Confirming IDs for Claims', () => {
       })
   }).timeout(3000)
 
-  // add confirm by same person
+  /**
+   * Haven't written the logic for this... and it may never be necessary.
+   *
 
-  // check for 1 confirmation
+  it('add a confirmation on content (not handleId)', async () => {
 
-  // check for a confirmation when confirmed with content (not handleId)?
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = R.clone(newGive)
+    credObj.sub = creds[3].did
+    credObj.iss = creds[3].did
+    const claimJwtEnc = await credentials[3].createVerification(credObj)
 
-  // check for confirmations on mutliple claims
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+              'Something went wrong, but nothing critical. Here is the error:',
+              r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('get 2 confirmers back and can see them', async () => {
+    return request(Server)
+      .get('/api/v2/report/confirmers')
+      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(200)
+        console.log('confirmers', r.body)
+        expect(r.body.data)
+            .to.be.an('array')
+            .of.length(2)
+        expect(r.body.data[0]).to.equal(creds[1].did)
+        expect(r.body.data[1]).to.equal(creds[2].did)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  *
+  **/
+
+  // check for confirmations on multiple claims
 
   // Do I really want to send the IDs in a GET body?
 })

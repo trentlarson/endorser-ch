@@ -85,10 +85,9 @@ class ClaimService {
 
   async byQuery(params) {
     l.trace(`${this.constructor.name}.byQuery(${util.inspect(params)})`);
-    var resultData
-    resultData = await dbService.jwtsByParams(params)
-    let result = resultData.map(j => {
-      let thisOne = {
+    const resultData = await dbService.jwtsByParams(params)
+    const result = resultData.map(j => {
+      const thisOne = {
         id: j.id, issuer: j.issuer, issuedAt: j.issuedAt, subject: j.subject,
         claimContext: j.claimContext, claimType: j.claimType,
         claim: JSON.parse(j.claim), handleId: j.handleId
@@ -116,11 +115,8 @@ class ClaimService {
     if (!jwtClaim) {
       return []
     } else {
-      let confirmations = await dbService.confirmationsByClaim(jwtClaim.claim)
-      let allDids = R.append(
-        jwtClaim.issuer,
-        R.map((c)=>c.issuer, confirmations)
-      )
+      let confirmers = await dbService.confirmersForClaims([claimId])
+      let allDids = R.append(jwtClaim.issuer, confirmers)
       return R.uniq(allDids)
     }
   }
@@ -168,12 +164,12 @@ class ClaimService {
       .then(idAndClaimArray => {
         return dbService.jwtLastMerkleHash()
           .then(hashHexArray => {
-            var seedHex = ""
+            let seedHex = ""
             if (hashHexArray.length > 0) {
               seedHex = hashHexArray[0].hashChainHex
             }
-            var updates = []
-            var latestHashChainHex = seedHex
+            const updates = []
+            let latestHashChainHex = seedHex
             for (let idAndClaim of idAndClaimArray) {
               latestHashChainHex = hashChain(latestHashChainHex, [idAndClaim])
               if (idAndClaim.hashHex === null) {
@@ -401,7 +397,7 @@ class ClaimService {
     } else if (isContextSchemaOrg(origClaim['@context'])
         && origClaim['@type'] === 'JoinAction') {
 
-      var events = await dbService.eventsByParams({
+      const events = await dbService.eventsByParams({
         orgName: origClaim.event.organizer.name,
         name: origClaim.event.name,
         startTime: origClaim.event.startTime
@@ -411,26 +407,26 @@ class ClaimService {
       }
 
       // agent.did is for legacy data, some still in mobile app
-      let agentDid = origClaim.agent?.identifier || origClaim.agent?.did
+      const agentDid = origClaim.agent?.identifier || origClaim.agent?.did
 
-      let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
-      if (actionClaimId === null) {
+      const actionClaim = await dbService.actionClaimByDidEventId(agentDid, events[0].id)
+      if (!actionClaim?.rowid) {
         return Promise.reject("Attempted to confirm an unrecorded action.")
       }
+      const actionClaimJwtId = origClaimJwtId || actionClaim.jwtId
 
       // check for duplicate
-      // this can be replaced by confirmationByIssuerAndOrigClaim
-      let confirmation = await dbService.confirmationByIssuerAndAction(issuerDid, actionClaimId)
+      const confirmation = await dbService.confirmationByIssuerAndAction(issuerDid, actionClaim.rowid)
       if (confirmation !== null) {
         return Promise.reject(
           `Attempted to confirm an action already confirmed in ${confirmation.jwtId}`
         )
       }
 
-      let origClaimStr = canonicalize(origClaim)
+      const origClaimStr = canonicalize(origClaim)
 
-      let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, actionClaimId, null, null)
+      const result =
+          await dbService.confirmationInsert(issuerDid, jwtId, actionClaimJwtId, origClaimStr, actionClaim.rowid, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
               + ` for actionClaimId ${actionClaimId}`
              )
@@ -441,27 +437,26 @@ class ClaimService {
                && origClaim['@type'] === 'Tenure') {
 
       // party.did is for legacy data, some still in mobile app
-      let partyDid = origClaim.party?.identifier || origClaim.party?.did
+      const partyDid = origClaim.party?.identifier || origClaim.party?.did
 
-      let tenureClaimId =
-          await dbService.tenureClaimIdByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
-      if (tenureClaimId === null) {
+      const tenureClaim = await dbService.tenureClaimByPartyAndGeoShape(partyDid, origClaim.spatialUnit.geo.polygon)
+      if (!tenureClaim?.rowid) {
         return Promise.reject("Attempted to confirm an unrecorded tenure.")
       }
+      const tenureClaimJwtId = origClaimJwtId || tenureClaim.jwtId
 
       // check for duplicate
-      // this can be replaced by confirmationByIssuerAndOrigClaim
-      let confirmation = await dbService.confirmationByIssuerAndTenure(issuerDid, tenureClaimId)
-      if (confirmation !== null) {
+      const confirmation = await dbService.confirmationByIssuerAndTenure(issuerDid, tenureClaim.rowid)
+      if (confirmation) {
         return Promise.reject(
           `Attempted to confirm a tenure already confirmed in ${confirmation.jwtId}`
         )
       }
 
-      let origClaimStr = canonicalize(origClaim)
+      const origClaimStr = canonicalize(origClaim)
 
-      let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, tenureClaimId, null)
+      const result =
+          await dbService.confirmationInsert(issuerDid, jwtId, tenureClaimJwtId, origClaimStr, null, tenureClaim.rowid, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for tenureClaimId ${tenureClaimId}`);
       return {confirmationId:result, tenureClaimId}
@@ -474,28 +469,28 @@ class ClaimService {
                && origClaim.member.member
                && origClaim.member.member.identifier) {
 
-      let orgRoleClaimId =
-          await dbService.orgRoleClaimIdByOrgAndDates(
-            origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
-            origClaim.member.endDate, origClaim.member.member.identifier
+      const orgRoleClaim =
+          await dbService.orgRoleClaimByOrgAndDates(
+              origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
+              origClaim.member.endDate, origClaim.member.member.identifier
           )
-      if (orgRoleClaimId === null) {
+      if (!orgRoleClaim?.rowid) {
         return Promise.reject("Attempted to confirm an unrecorded orgRole.")
       }
+      const orgRoleClaimJwtId = origClaimJwtId || orgRoleClaim.jwtId
 
       // check for duplicate
-      // this can be replaced by confirmationByIssuerAndOrigClaim
-      let confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaimId)
-      if (confirmation !== null) {
+      const confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaim.rowid)
+      if (confirmation) {
         return Promise.reject(
           `Attempted to confirm a orgRole already confirmed in ${confirmation.jwtId}`
         )
       }
 
-      let origClaimStr = canonicalize(origClaim)
+      const origClaimStr = canonicalize(origClaim)
 
-      let result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, null, orgRoleClaimId)
+      const result =
+          await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, null, null, orgRoleClaim.rowid)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for orgRoleClaimId ${orgRoleClaimId}`
              )
@@ -505,14 +500,14 @@ class ClaimService {
     } else {
 
       // check for duplicate
-      let confirmation = await dbService.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
+      const confirmation = await dbService.confirmationByIssuerAndOrigClaim(issuerDid, origClaim)
       if (confirmation !== null) {
         return Promise.reject(
           `Attempted to confirm a claim already confirmed in # ${confirmation.id}`
         )
       }
 
-      let origClaimStr = canonicalize(origClaim)
+      const origClaimStr = canonicalize(origClaim)
 
       // If we choose to add the subject, it's found in these places (as of today):
       //   claim.[ agent | member.member | party | participant ].identifier
@@ -520,7 +515,7 @@ class ClaimService {
       //   The "did" version is for legacy data, maybe still in mobile app.
       //   claim.[ agent | member.member | party | participant ].did
 
-      let result =
+      const result =
           await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for a generic confirmation`
@@ -592,7 +587,7 @@ class ClaimService {
         if (Array.isArray(origClaim)) {
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
-          for (var claim of origClaim) {
+          for (let claim of origClaim) {
             // this must await (see note above)
             const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, claim)
                 .catch(e => { embeddedRecordError: e })
@@ -641,9 +636,9 @@ class ClaimService {
         )
       }
 
-      var event
-      var orgName = claim.event.organizer && claim.event.organizer.name
-      var events =
+      let event
+      const orgName = claim.event.organizer && claim.event.organizer.name
+      const events =
           await dbService.eventsByParams({
             orgName:orgName, name:claim.event.name, startTime:claim.event.startTime
           })
@@ -665,10 +660,10 @@ class ClaimService {
           )
         }
 
-        let actionClaimId = await dbService.actionClaimIdByDidEventId(agentDid, events[0].id)
-        if (actionClaimId) {
+        const actionClaim = await dbService.actionClaimByDidEventId(agentDid, events[0].id)
+        if (actionClaim) {
           return Promise.reject(
-            "Same user attempted to record an action claim that already exists with ID " + actionClaimId
+            "Same user attempted to record an action claim that already exists with ID " + actionClaim.rowid
           )
         }
 
@@ -889,10 +884,10 @@ class ClaimService {
 
       // this is for "legacy Confirmation" and can be deprecated; see AgreeAction
 
-      var recordings = []
+      const recordings = []
 
       { // handle a single claim
-        let origClaim = claim['originalClaim']
+        const origClaim = claim['originalClaim']
         if (origClaim) {
           recordings.push(
             await this.createOneConfirmation(jwtId, issuerDid, origClaim)
@@ -902,11 +897,11 @@ class ClaimService {
       }
 
       { // handle multiple claims
-        let origClaims = claim['originalClaims']
+        const origClaims = claim['originalClaims']
         if (origClaims) {
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
-          for (var origClaim of origClaims) {
+          for (let origClaim of origClaims) {
             recordings.push(
               await this.createOneConfirmation(jwtId, issuerDid, origClaim)
                 .catch(e => { embeddedRecordError: e })
@@ -954,9 +949,9 @@ class ClaimService {
         }
       }
 
-      var recordings = []
+      let recordings = []
       { // handle multiple claims
-        for (var subClaim of claim) {
+        for (let subClaim of claim) {
           recordings.push(
             this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, subClaim)
           )
@@ -975,8 +970,8 @@ class ClaimService {
     }
 
     // now record all the "sees" relationships to the issuer
-    var netRecords = []
-    for (var did of allDidsInside(claim)) {
+    const netRecords = []
+    for (let did of allDidsInside(claim)) {
       netRecords.push(addCanSee(did, issuerDid))
     }
     // since addCanSee doesn't return anything, this is a list of nulls
