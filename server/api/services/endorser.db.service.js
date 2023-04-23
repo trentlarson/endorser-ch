@@ -547,8 +547,8 @@ class EndorserDatabase {
   confirmersForClaims(claimEntryIds) {
     return new Promise((resolve, reject) => {
       var data = []
-      const inListStr = claimEntryIds.map(value => "?").join(',')
-      const sql = "SELECT rowid, * FROM confirmation WHERE origClaimJwtid in (" + inListStr + ")"
+      const inListStr = claimEntryIds.map(x => "?").join(',')
+      const sql = "SELECT rowid, * FROM confirmation WHERE origClaimJwtId in (" + inListStr + ")"
       db.each(sql, claimEntryIds, function(err, row) {
         data.push(row.issuer)
       }, function(err, num) {
