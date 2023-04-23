@@ -68,7 +68,7 @@ class ClaimController {
       return;
     }
     ClaimService
-      .createWithClaimRecord(req.body.jwtEncoded, res.locals.tokenIssuer)
+      .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => {
         const result = r.claimId
@@ -136,7 +136,7 @@ export default express
 
 /**
  * Add a Claim JWT and insert claims into their own tables
- * @group claims v1 - Claim Recording (with limited feedback)
+ * @group claims v1 - Claim Entry (with limited feedback)
  * @route POST /api/claim
  * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 - internal ID of Claim JWT
@@ -147,7 +147,7 @@ export default express
 
 /**
  * Get many Claim JWTs
- * @group claims v1 - Claim Recording
+ * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
@@ -162,9 +162,9 @@ export default express
 
 /**
  * Get a Claim JWT
- * @group claims v1 - Claim Recording
+ * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim/{id}
- * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
+ * @param {string} id.path.required - the ID of the Claim JWT entry to retrieve
  * @returns {object} 200 - Claim JWT if it exists, otherwise 404
  * @returns {Error} 400 - error
  */
@@ -174,10 +174,10 @@ export default express
 /**
  * Get most recent "entity" (claim that matches an handle ID)
  *
- * @group claims v1 - Claim Recording
+ * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim/byHandle/{id}
  * @param {string} id.params.required - the persistent "entity" handle ID
- * @returns {Jwt} 200 - the claim record with the most recent changes for that handle ID
+ * @returns {Jwt} 200 - the Claim JWT entry with the most recent changes for that handle ID
  * @returns {''} 404 - if nothing found
  * @returns {Error} default - Unexpected error
  */
@@ -186,9 +186,9 @@ export default express
 
 /**
  * Get a Claim JWT with full encoding
- * @group claims v1 - Claim Recording
+ * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim/full/{id}
- * @param {string} id.path.required - the ID of the Claim JWT record to retrieve
+ * @param {string} id.path.required - the ID of the Claim JWT entry to retrieve
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
  * @returns {Error} 400 - error
  */

@@ -11,7 +11,7 @@ class Controller {
       return;
     }
     ClaimService
-      .createWithClaimRecord(req.body.jwtEncoded, res.locals.tokenIssuer)
+      .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => {
         const result = { success: r }
@@ -48,7 +48,7 @@ export default express
 
 /**
  * Add a Claim JWT (and insert claim data into their own tables for rapid searching)
- * @group claims - Claim Recording (with extended feedback)
+ * @group claims - Claim Entry (with extended feedback)
  * @route POST /api/v2/claim
  * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 -
@@ -59,7 +59,7 @@ export default express
  * &nbsp;&nbsp;&nbsp; clientMessage: string,
  * &nbsp;&nbsp;&nbsp; embeddedRecordError: object,
  * &nbsp;&nbsp;&nbsp; handleId: string, // ID for permanent reference, potentially based on input
- * &nbsp;&nbsp;&nbsp; recordsSavedForEdit: number,
+ * &nbsp;&nbsp;&nbsp; recordsSavedForEdit: number, // number of associated records saved for later editing
  * &nbsp;&nbsp;&nbsp; actionId || orgRoleId || registrationId || tenureId || voteId: number,
  * &nbsp;&nbsp;&nbsp; confirmations: { confirmId: number }
  * &nbsp; },

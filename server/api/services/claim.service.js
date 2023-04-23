@@ -575,7 +575,7 @@ class ClaimService {
     return entry
   }
 
-  async createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim) {
+  async createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -930,7 +930,7 @@ class ClaimService {
 
   }
 
-  async createEmbeddedClaimRecords(jwtId, issuerDid, issuedAt, handleId, claim) {
+  async createEmbeddedClaimEntries(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
@@ -956,7 +956,7 @@ class ClaimService {
       { // handle multiple claims
         for (let subClaim of claim) {
           recordings.push(
-            this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, subClaim)
+            this.createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, subClaim)
           )
         }
       }
@@ -968,7 +968,7 @@ class ClaimService {
     } else {
       // it's not an array
       embeddedResults =
-        await this.createEmbeddedClaimRecord(jwtId, issuerDid, issuedAt, handleId, claim)
+        await this.createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim)
       l.trace(`${this.constructor.name} created an embedded claim record.`)
     }
 
@@ -1028,7 +1028,7 @@ class ClaimService {
      - id of claim
      - extra info for other created data, eg. planId if one was generated
    **/
-  async createWithClaimRecord(jwtEncoded, authIssuerId) {
+  async createWithClaimEntry(jwtEncoded, authIssuerId) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
@@ -1177,7 +1177,7 @@ class ClaimService {
       //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
 
       let embedded =
-          await this.createEmbeddedClaimRecords(
+          await this.createEmbeddedClaimEntries(
             jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim
           )
           .catch(err => {

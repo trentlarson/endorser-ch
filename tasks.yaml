@@ -1,15 +1,16 @@
 ---
 
-- 01 fix presentation scan and redeploy
+- 01 fix presentation scan and redeploy :
+  - doesn't show claim details on final screen
 
 - 04 time offered/given to projects :
-  - allow search on multiple terms
-  - show list of confirmations - via same approach as pledges? :
-    - add endpoint for confirmations from a list of claim IDs
+  - show list of confirmations - via same approach as pledges?
   - save & show projects of interest
   - move confirmationInserts all to end of method
 
 - 01 strange results when comparing common contacts repeatedly
+  - some strangeness when I keep checking
+  - check both, then close second one's modal, then recheck and it shows a modal rather than the result
 
 - .5 release mobile app (and revisit account deletion for Google)
 
@@ -158,8 +159,6 @@
   - .5 add rejections?
   - .5 add TradeAction? - BTC for food?
 
-  - 02 real presentation (not just VC), fixing presentation QR codes that are too big
-
   - .5 restore checkbox in ConfirmOthers
   - .5 remove the useState copies of all the appStore values
 
@@ -195,7 +194,7 @@
 
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
     - 04 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - .5 fix verifiable presentation format (doesn't have verifiableCredential)
+  - 01 validate verifiable presentation signatures, content, etc
   - .2 allow copying a presentation (eg. for emailing)
   - .5 show credential contents (and allow browsing)
   - .5 test where cacList has a linked confirmation
@@ -306,7 +305,7 @@
     - and fill it
   - remove jwt.claimEncoded
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
-- 01 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimRecord result)
+- 01 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimEntry result)
 - 01 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
 - 02 gotta report errors to user
   - eg. repeated or failed confirmations so should see mix of successes and errors

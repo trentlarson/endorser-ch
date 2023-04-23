@@ -23,7 +23,7 @@ describe('Running Script', () => {
           const promises = []
           for (let i = 0; i < results.data.length; i++) {
             const thisDatum = results.data[i]
-            // This part is pulled from JwtService.createWithClaimRecord
+            // This part is pulled from JwtService.createWithClaimEntry
             promises.push(
               JwtService.decodeAndVerifyJwt(thisDatum.jwtEncoded).then(result => {
                 const {payload, header, signature, data, doc, authenticators, issuer} = result
