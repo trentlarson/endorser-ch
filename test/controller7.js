@@ -5,7 +5,13 @@ import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
-import { cacheContactList, getContactMatch, RESULT_NEED_DATA }
+import {
+  cacheContactList,
+  clearContactCaches,
+  getContactMatch,
+  RESULT_NEED_APPROVAL,
+  RESULT_NEED_DATA,
+}
   from "../server/api/services/contact-correlation.service"
 import Server from '../server'
 import { HIDDEN_TEXT } from '../server/api/services/util';
@@ -51,41 +57,61 @@ it('contact lists can match', () => {
   expect(getContactMatch(user2, user1)).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user1, user3)).to.deep.equal({data: RESULT_NEED_DATA})
 
+  // various errors for repeated input
+  expect(cacheContactList(user1, user2, user1ContactsHashed))
+    .with.property('error')
+    .with.property('message')
+  expect(cacheContactList(user2, user1, user1ContactsHashed))
+      .with.property('error')
+      .with.property('message')
+
+  // clear caches
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: true})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: true})
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NEED_DATA})
+
   // non-match for lack of matches
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(cacheContactList(user1, user2, user1ContactsHashed)).to.deep.equal({data: RESULT_NEED_DATA})
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(cacheContactList(user2, user1, user2Contacts1Hashed)).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user2, user1)).to.deep.equal({data: RESULT_NO_MATCH})
 
   // non-match w/ bad password
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: true})
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(cacheContactList(user2, user1, user2Contacts3Hashed)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(cacheContactList(user1, user2, user1ContactsHashed)).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user2, user1)).to.deep.equal({data: RESULT_NO_MATCH})
 
   // now get match
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: true})
   expect(cacheContactList(user1, user2, user1ContactsHashed)).to.deep.equal({data: RESULT_NEED_DATA})
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
 
   // user 1 still gets match if user2 removes match immediately
-  expect(cacheContactList(user2, user1, user2Contacts1Hashed)).to.deep.equal({data: RESULT_NEED_DATA})
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: true})
+  expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal({data: RESULT_NEED_DATA})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(cacheContactList(user1, user2, user1ContactsHashed)).to.deep.equal({data: {matches: [matchingContactDid]}})
   expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
-  expect(cacheContactList(user2, user1, [])).to.deep.equal({data: RESULT_NEED_DATA})
+  expect(cacheContactList(user2, user1, [])).with.property('error').with.property('message')
   expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
-
-  // both get no matches if they remove
-  expect(cacheContactList(user1, user2, [])).to.deep.equal({data: RESULT_NO_MATCH})
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
-  expect(getContactMatch(user2, user1)).to.deep.equal({data: RESULT_NO_MATCH})
 
   // multiple matches work
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: true}) // user1 is already cleared
   expect(cacheContactList(user1, user2, user2Contacts1Hashed)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal(
     { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
@@ -94,14 +120,14 @@ it('contact lists can match', () => {
     { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
   )
   expect(getContactMatch(user2, user1)).to.deep.equal(
-      { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+    { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
   )
   // now repeat, just to show results are still there
   expect(getContactMatch(user1, user2)).to.deep.equal(
-      { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+    { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
   )
   expect(getContactMatch(user2, user1)).to.deep.equal(
-      { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+    { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
   )
 })
 
@@ -113,6 +139,19 @@ const creds = testUtil.creds
 const credentials = R.map((c) => new Credentials(c), creds)
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+
+const callPostAndExpect = (endpoint, tokenIndex, result) =>{
+  return request(Server)
+    .post(endpoint)
+    .set('Authorization', 'Bearer ' + pushTokens[tokenIndex])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body).to.deep.equal(result)
+      expect(r.status).that.equals(200)
+    })
+    .catch(err => Promise.reject(err))
+}
+
 
 let pushTokens
 
@@ -196,6 +235,16 @@ describe('7 - Selected Contact Correlation', () => {
       .catch(err => Promise.reject(err))
   }).timeout(5000)
 
+  it('user 1 asks to clear caches for round 2', async () => {
+    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    return callPostAndExpect(endpoint, 1, {success: RESULT_NEED_APPROVAL})
+  }).timeout(5000)
+
+  it('user 2 asks to clear caches for round 2', async () => {
+    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    return callPostAndExpect(endpoint, 2, {success: true})
+  }).timeout(5000)
+
   it('user 2 sends some non-matching contact hashes', async () => {
     return request(Server)
       .post(
@@ -235,7 +284,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
-        expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
+        expect(r.body).to.deep.equal({data: RESULT_NEED_DATA})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
@@ -266,6 +315,16 @@ describe('7 - Selected Contact Correlation', () => {
         expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
       })
       .catch(err => Promise.reject(err))
+  }).timeout(5000)
+
+  it('user 1 asks to clear caches for round 3', async () => {
+    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    return callPostAndExpect(endpoint, 1, {success: RESULT_NEED_APPROVAL})
+  }).timeout(5000)
+
+  it('user 2 asks to clear caches for round 3', async () => {
+    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    return callPostAndExpect(endpoint, 2, {success: true})
   }).timeout(5000)
 
   it('user 1 sends contact hashes one more time', async () => {
@@ -336,20 +395,9 @@ describe('7 - Selected Contact Correlation', () => {
       .catch(err => Promise.reject(err))
   }).timeout(5000)
 
-  it('user 2 clears out contact hashes', async () => {
-    return request(Server)
-      .post(
-        '/api/util/cacheContactList?counterparty='
-        + encodeURIComponent(creds[1].did)
-      )
-      .set('Authorization', 'Bearer ' + pushTokens[2])
-      .send({ contactHashes: [] })
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.status).that.equals(201)
-        expect(r.body).to.deep.equal({data: RESULT_NEED_DATA})
-      })
-      .catch(err => Promise.reject(err))
+  it('user 2 asks to clear caches for round 4', async () => {
+    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    return callPostAndExpect(endpoint, 2, {success: RESULT_NEED_APPROVAL})
   }).timeout(5000)
 
   it('user 1 still gets old match (until cache clears)', async () => {

@@ -5,6 +5,7 @@
 
 - 04 time offered/given to projects :
   - show list of confirmations - via same approach as pledges?
+  - allow to show a single matching contact
   - save & show projects of interest
   - move confirmationInserts all to end of method
 
