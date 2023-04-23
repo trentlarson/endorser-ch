@@ -129,6 +129,24 @@ it('contact lists can match', () => {
   expect(getContactMatch(user2, user1)).to.deep.equal(
     { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
   )
+
+  // single, randomized match works
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: true})
+  expect(cacheContactList(user1, user2, user2Contacts1Hashed, true)).to.deep.equal({data: RESULT_NEED_DATA})
+  expect(cacheContactList(user2, user1, user2Contacts2Hashed).data.matches[0])
+    .to.be.oneOf([user2Contacts1Hashed[0], user2Contacts1Hashed[1]])
+  expect(getContactMatch(user1, user2).data.matches).with.length(1)
+  expect(getContactMatch(user1, user2).data.matches[0])
+    .to.be.oneOf([user2Contacts1Hashed[0], user2Contacts1Hashed[1]])
+  expect(getContactMatch(user2, user1).data.matches[0])
+    .to.be.oneOf([user2Contacts1Hashed[0], user2Contacts1Hashed[1]])
+  // now repeat, just to show results are still there
+  expect(getContactMatch(user1, user2).data.matches[0])
+      .to.be.oneOf([user2Contacts1Hashed[0], user2Contacts1Hashed[1]])
+  expect(getContactMatch(user2, user1).data.matches[0])
+      .to.be.oneOf([user2Contacts1Hashed[0], user2Contacts1Hashed[1]])
+
 })
 
 

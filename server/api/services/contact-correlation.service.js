@@ -1,12 +1,14 @@
 import NodeCache from 'node-cache'
 import R from 'ramda'
 
-// For pair of ID 1 + ID 2, the array of contact hashes sent
-const ContactsSentCache = new NodeCache({ stdTTL: 2 * 60 })
-// For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), the matching contacts
-const ContactMatchCache = new NodeCache({ stdTTL: 2 * 60 })
 // For pair of ID 1 + ID 2, true iff the other party wants to clear the cache
 const ContactInfoEraseCache = new NodeCache({ stdTTL: 2 * 60 })
+// For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), the matching contacts
+const ContactMatchCache = new NodeCache({ stdTTL: 2 * 60 })
+// For pair of ID 1 + ID 2, the array of contact hashes sent
+const ContactsSentCache = new NodeCache({ stdTTL: 2 * 60 })
+// For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), true if a user requested a single randomized match
+const UserRequestedSingleMatch = new NodeCache({ stdTTL: 2 * 60 })
 
 export const RESULT_NEED_DATA = 'NEED_SOURCE_DATA_SETS'
 export const RESULT_NEED_APPROVAL = 'NEED_COUNTERPARTY_APPROVAL'
@@ -29,6 +31,8 @@ function wrapMatches(matches) {
  *
  * @param user1 current user
  * @param user2 counterparty user who we're checking against
+ * @param user1ContactHashes array of encoded hashes to compare
+ * @param onlyMatchOne if true, only return one randomized match
  * @param contactHashes array of encoded hashes to compare
 
  If counterparty has sent their list, matching contacts are returned:
@@ -42,7 +46,7 @@ function wrapMatches(matches) {
  - 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
 
  */
-export function cacheContactList(user1, user2, user1ContactHashes) {
+export function cacheContactList(user1, user2, user1ContactHashes, onlyMatchOne) {
   const contactHashes = user1ContactHashes || []
 
   /**
@@ -61,15 +65,19 @@ export function cacheContactList(user1, user2, user1ContactHashes) {
     return { error: { message: 'You already sent a set of data. To erase, use "clear" endpoint.' } }
   }
 
-  const otherCheckKeyPair = user2 + user1
+  if (onlyMatchOne && !UserRequestedSingleMatch.get(matchKey)) {
+    UserRequestedSingleMatch.set(matchKey, onlyMatchOne)
+  }
 
+  const otherCheckKeyPair = user2 + user1
   const otherList = ContactsSentCache.get(otherCheckKeyPair)
   if (otherList) {
-    const overlap = R.intersection(contactHashes, otherList)
+    let overlap = R.intersection(contactHashes, otherList)
 
-    // This is for a single, random match.
-    //const index = Math.floor(Math.random() * overlap.length)
-    //const match = overlap.length ? overlap[index] : null
+    if (overlap.length > 0 && UserRequestedSingleMatch.get(matchKey)) {
+      const index = Math.floor(Math.random() * overlap.length)
+      overlap = [overlap[index]]
+    }
 
     ContactMatchCache.set(matchKey, overlap)
     ContactsSentCache.del(myCheckKeyPair)
@@ -111,11 +119,12 @@ export function clearContactCaches(user1, user2) {
   const matchKey = getMatchKey(user1, user2)
   if (ContactInfoEraseCache.get(otherCheckKeyPair)) {
     // the other party has already requested to clear the cache
-    ContactsSentCache.del(myCheckKeyPair)
-    ContactsSentCache.del(otherCheckKeyPair)
-    ContactMatchCache.del(matchKey)
     ContactInfoEraseCache.del(myCheckKeyPair)
     ContactInfoEraseCache.del(otherCheckKeyPair)
+    ContactMatchCache.del(matchKey)
+    ContactsSentCache.del(myCheckKeyPair)
+    ContactsSentCache.del(otherCheckKeyPair)
+    UserRequestedSingleMatch.del(matchKey)
     return { success: true }
   } else {
     // the other party hasn't requested to clear the cache
