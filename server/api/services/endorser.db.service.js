@@ -544,12 +544,12 @@ class EndorserDatabase {
   }
 
   // take JWT IDs and return all the issuer DIDs who have confirmed those claims
-  confirmersForClaims(claimJwtIds) {
+  confirmersForClaims(claimEntryIds) {
     return new Promise((resolve, reject) => {
       var data = []
-      const inListStr = claimJwtIds.map(value => "?").join(',')
+      const inListStr = claimEntryIds.map(value => "?").join(',')
       const sql = "SELECT rowid, * FROM confirmation WHERE origClaimJwtid in (" + inListStr + ")"
-      db.each(sql, claimJwtIds, function(err, row) {
+      db.each(sql, claimEntryIds, function(err, row) {
         data.push(row.issuer)
       }, function(err, num) {
         if (err) {

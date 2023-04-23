@@ -41,8 +41,8 @@ class DbController {
 
   // get DIDs of those who have confirmed
   getConfirmerIds(req, res) {
-    const claimJwtIds = req.body.claimJwtIds
-    dbService.confirmersForClaims(claimJwtIds)
+    const claimEntryIds = req.body.claimEntryIds
+    dbService.confirmersForClaims(claimEntryIds)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json({ data: results }).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -394,7 +394,7 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/confirmers
- * @param {array} claimJwtIds.body.required the JWT IDs whose confirmers I want to find
+ * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
  * @returns {Error} 400 - error
  */
@@ -406,7 +406,7 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route POST /api/v2/report/confirmers
- * @param {array} claimJwtIds.body.required the JWT IDs whose confirmers I want to find
+ * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
  * @returns {Error} 400 - error
  */

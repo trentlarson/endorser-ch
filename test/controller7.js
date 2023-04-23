@@ -402,7 +402,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
 
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
         if (r.body.error) {
@@ -456,7 +456,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 1 confirmer back but cannot see them', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .then(r => {
         if (r.body.error) {
           console.log('Something went wrong. Here is the response body: ', r.body)
@@ -476,7 +476,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 1 confirmer back and can see them', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
@@ -531,7 +531,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 1 confirmer back and can see them', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
@@ -586,7 +586,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 2 confirmers back and can see them', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
@@ -642,7 +642,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 3 confirmers back and can see some', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
@@ -702,7 +702,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 2 confirmers back and can see them', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
@@ -728,7 +728,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 3 confirmers back and can see some', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
@@ -816,7 +816,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
   it('get 4 confirmers back and can see some', async () => {
     return request(Server)
       .get('/api/v2/report/confirmers')
-      .send({ claimJwtIds: [ firstGiveRecordJwtId, secondRecordJwtId ] })
+      .send({ claimEntryIds: [ firstGiveRecordJwtId, secondRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         if (r.body.error) {
