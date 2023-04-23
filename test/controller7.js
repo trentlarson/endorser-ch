@@ -813,9 +813,43 @@ describe('7 - Get Confirming IDs for Claims', () => {
       })
   }).timeout(3000)
 
+  it('add a confirmation of that other random claim by someone from first claim', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.confirmationTemplate)
+    credObj.claim.object = {
+      jwtId: secondRecordJwtId
+    }
+    credObj.sub = creds[3].did
+    credObj.iss = creds[2].did
+    const claimJwtEnc = await credentials[2].createVerification(credObj)
+
+    return request(Server)
+        .post('/api/v2/claim')
+        .send({jwtEncoded: claimJwtEnc})
+        .then(r => {
+          if (r.body.error) {
+            console.log('Something went wrong. Here is the response body: ', r.body)
+            return Promise.reject(r.body.error)
+          } else if (r.body.success.embeddedRecordError) {
+            console.log(
+                'Something went wrong, but nothing critical. Here is the error:',
+                r.body.success.embeddedRecordError
+            )
+          }
+          expect(r.headers['content-type'], /json/)
+          expect(r.body.success.handleId).to.be.a('string')
+          expect(r.body.success.confirmations[0])
+              .does.not.have.property("embeddedRecordError")
+          expect(r.status).that.equals(201)
+        }).catch((err) => {
+          return Promise.reject(err)
+        })
+  }).timeout(3000)
+
   it('get 4 confirmers back and can see some', async () => {
     return request(Server)
-      .get('/api/v2/report/confirmers')
+      .post('/api/v2/report/confirmers')
       .send({ claimEntryIds: [ firstGiveRecordJwtId, secondRecordJwtId ] })
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
@@ -847,7 +881,7 @@ describe('7 - Add Sample Pledge', () => {
       "@context": "https://schema.org",
       "@type": "AcceptAction",
       "agent": { identifier: creds[0].did },
-      "object": "I am building a society based on giving, in ways that fulfill me.",
+      "object": "I am building a giving society, in ways that fulfill me.",
     }
     pledgeObj.iss = creds[0].did
     const planJwtEnc = await credentials[1].createVerification(pledgeObj)

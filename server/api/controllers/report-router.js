@@ -3,6 +3,7 @@ import * as R from 'ramda'
 
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
+import ClaimService from '../services/claim.service'
 import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
 import {globalId} from "../services/util";
 
@@ -36,15 +37,6 @@ class DbController {
       }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
-      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
-  }
-
-  // get DIDs of those who have confirmed
-  getConfirmerIds(req, res) {
-    const claimEntryIds = req.body.claimEntryIds
-    dbService.confirmersForClaims(claimEntryIds)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
-      .then(results => { res.json({ data: results }).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
@@ -247,6 +239,18 @@ class DbController {
 }
 let dbController = new DbController();
 
+class ServiceController {
+  // get DIDs of those who have confirmed the given claim entries
+  getConfirmerIds(req, res) {
+    const claimEntryIds = req.body.claimEntryIds
+    ClaimService.retrieveConfirmersForClaimsEntryIds(claimEntryIds)
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => { res.json({ data: results }).end() })
+        .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+}
+let serviceController = new ServiceController();
+
 export default express
   .Router()
   .all('*', function (req, res, next) {
@@ -399,7 +403,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get('/confirmers', dbController.getConfirmerIds)
+.get('/confirmers', serviceController.getConfirmerIds)
 
 /**
  * Retrieve all confirmers for a set of claims. (Same as GET version, just like Elasticsearch.)
@@ -411,7 +415,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.post('/confirmers', dbController.getConfirmerIds)
+.post('/confirmers', serviceController.getConfirmerIds)
 
 /**
  * Search gives

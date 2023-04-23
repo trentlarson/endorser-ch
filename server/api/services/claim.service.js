@@ -245,6 +245,11 @@ class ClaimService {
     }
   }
 
+  async retrieveConfirmersForClaimsEntryIds(claimEntryIds) {
+    const allConfirmers = await dbService.confirmersForClaims(claimEntryIds)
+    return R.uniq(allConfirmers)
+  }
+
   /**
      @param origClaim is the claim contained inside the confirmation
 
