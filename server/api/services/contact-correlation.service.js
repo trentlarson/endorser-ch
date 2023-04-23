@@ -3,11 +3,12 @@ import R from 'ramda'
 
 // For pair of ID 1 + ID 2, the array of contact hashes sent
 const ContactsSharedCache = new NodeCache({ stdTTL: 2 * 60 })
-// For pair of ID1+ID2 or ID2+ID1 (alphabetic order), the matching contact
+// For pair of ID1+ID2 or ID2+ID1 (alphabetic order), the matching contacts
 const ContactMatchCache = new NodeCache({ stdTTL: 2 * 60 })
+// For pair of ID 1 + ID 2, true iff the other party wants to clear the cache
+const ContactInfoEraseCache = new NodeCache({ stdTTL: 2 * 60 })
 
 export const RESULT_NEED_DATA = 'NEED_COUNTERPARTY_DATA'
-export const RESULT_NO_MATCH = 'NO_MATCH'
 
 /**
  *
@@ -15,18 +16,12 @@ export const RESULT_NO_MATCH = 'NO_MATCH'
  * @param user2
  * @returns key that is the same even if arguments are switched
  */
-function getMatchKeyPair(user1, user2) {
+function getMatchKey(user1, user2) {
   return user1 < user2 ? user1 + user2 : user2 + user1
 }
 
-function wrapResult(result) {
-  if (result === undefined) {
-    return { data: RESULT_NEED_DATA() }
-  } else if (result === null) {
-    return { data: RESULT_NO_MATCH }
-  } else {
-    return { data: { match: result } }
-  }
+function wrapMatches(matches) {
+  return { data: { matches: matches } }
 }
 
 /**
@@ -36,17 +31,16 @@ function wrapResult(result) {
  * @param contactHashes array of encoded hashes to compare
 
  If counterparty has sent their list:
- - if there was a match, a randomly-selected matching contact is returned:
-   { data: { match: '...' } }
- - if there was no match, null is returned:
-   { data: 'NO_MATCH' }
+ - if there was a match, matching contacts are returned:
+   { data: { matches: ['...'] } }
+ - if there was no match, an empty array is returned:
+   { data: { matches: [] } }
  If counterparty hasn't sent their list, the list will be saved for later
  retrieval and this is returned:
    { data: 'NEED_COUNTERPARTY_DATA' }
 
  In other words, these results in a { data: ... } value have these meanings:
  - { match: "..." }: this is the match chosen
- - 'NO_MATCH': no match was found between the two lists
  - 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
 
  */
@@ -70,14 +64,11 @@ export function cacheContactList(user1, user2, user1ContactHashes) {
   if (otherList) {
     // obviously this will overwrite any match
     const overlap = R.intersection(contactHashes, otherList)
-    const index = Math.floor(Math.random() * overlap.length)
-    const match = overlap.length ? overlap[index] : null
-    ContactMatchCache.set(getMatchKeyPair(user1, user2), match)
-    if (match == null) {
-      return { data: RESULT_NO_MATCH }
-    } else {
-      return { data: { match: match } }
-    }
+    // This is for a single, random match.
+    //const index = Math.floor(Math.random() * overlap.length)
+    //const match = overlap.length ? overlap[index] : null
+    ContactMatchCache.set(getMatchKey(user1, user2), overlap)
+    return wrapMatches(overlap)
   }
 
   // the counterparty doesn't have a list so store this one
@@ -92,12 +83,10 @@ export function cacheContactList(user1, user2, user1ContactHashes) {
  *   (if there weren't two lists sent earlier)
  */
 export function getContactMatch(user1, user2) {
-  const result = ContactMatchCache.get(getMatchKeyPair(user1, user2))
+  const result = ContactMatchCache.get(getMatchKey(user1, user2))
   if (result === undefined) {
     return { data: RESULT_NEED_DATA }
-  } else if (result === null) {
-    return { data: RESULT_NO_MATCH }
   } else {
-    return { data: { match: result } }
+    return wrapMatches(result)
   }
 }

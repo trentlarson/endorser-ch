@@ -2,7 +2,10 @@ import * as express from 'express'
 import R from 'ramda'
 import { withKeysSorted } from '../services/util'
 import ClaimService from '../services/claim.service'
-import { cacheContactList, getContactMatch } from "../services/contact-correlation.service";
+import {
+  cacheContactList,
+  getContactMatch,
+} from "../services/contact-correlation.service";
 
 export default express
   .Router()
@@ -45,15 +48,15 @@ export default express
   )
 
 /**
- * Update the lookup cache for this service
+ * Update the contact lookup cache for this user & their counterparty
+ *
  * @group utils - Utils
  * @route POST /api/util/correlateContacts
  * @param {string} counterparty.query.required - the other party with whom to compare
  * @param {Array<string>} contactHashes.body.required
  * @returns 201 - { data: ... } with:
  * - "NEED_COUNTERPARTY_DATA" if counterparty hasn't sent theirs
- * - "NO_MATCH" if there was no match
- * - { match: ... } with the match if there was a match
+ * - { matches: [...] } with any matching IDs, possibly empty
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -66,21 +69,21 @@ export default express
   )
 
 /**
- * Update the lookup cache for this service
+ * Retrieve the matching contacts for this user & their counterparty
+ *
  * @group utils - Utils
  * @route GET /api/util/getContactMatch
  * @param {string} counterparty.query.required - the other party with whom to compare
  * @returns 200 - { data: ... } with
  * - "NEED_COUNTERPARTY_DATA" if counterparty hasn't sent theirs
- * - "NO_MATCH" if there was no match
- * - { match: ... } with the match if there was a match
+ * - { matches: [...] } with any matching IDs, possibly empty
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get(
-    '/getContactMatch',
-    (req, res) => {
-      const result = getContactMatch(res.locals.tokenIssuer, req.query.counterparty)
-      res.status(200).json(result).end()
-    }
-)
+  .get(
+      '/getContactMatch',
+      (req, res) => {
+        const result = getContactMatch(res.locals.tokenIssuer, req.query.counterparty)
+        res.status(200).json(result).end()
+      }
+  )

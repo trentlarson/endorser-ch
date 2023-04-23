@@ -5,13 +5,14 @@ import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
-import { cacheContactList, getContactMatch, RESULT_NEED_DATA, RESULT_NO_MATCH }
+import { cacheContactList, getContactMatch, RESULT_NEED_DATA }
   from "../server/api/services/contact-correlation.service"
 import Server from '../server'
 import { HIDDEN_TEXT } from '../server/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect
+const RESULT_NO_MATCH = { matches: [] }
 
 const hashDidWithPass = (pass) => (did) => {
   const hash = crypto.createHash('sha256');
@@ -67,22 +68,41 @@ it('contact lists can match', () => {
   // now get match
   expect(cacheContactList(user1, user2, user1ContactsHashed)).to.deep.equal({data: RESULT_NEED_DATA})
   expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
-  expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal({data: {match: matchingContactDid} })
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: {match: matchingContactDid} })
-  expect(getContactMatch(user2, user1)).to.deep.equal({data: {match: matchingContactDid} })
+  expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal({data: {matches: [matchingContactDid]} })
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
+  expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
 
   // user 1 still gets match if user2 removes match immediately
   expect(cacheContactList(user2, user1, user2Contacts1Hashed)).to.deep.equal({data: RESULT_NEED_DATA})
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: {match: matchingContactDid} })
-  expect(getContactMatch(user2, user1)).to.deep.equal({data: {match: matchingContactDid} })
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
+  expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(cacheContactList(user2, user1, [])).to.deep.equal({data: RESULT_NEED_DATA})
-  expect(getContactMatch(user1, user2)).to.deep.equal({data: {match: matchingContactDid} })
-  expect(getContactMatch(user2, user1)).to.deep.equal({data: {match: matchingContactDid} })
+  expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
+  expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
 
   // both get no matches if they remove
   expect(cacheContactList(user1, user2, [])).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user1, user2)).to.deep.equal({data: RESULT_NO_MATCH})
   expect(getContactMatch(user2, user1)).to.deep.equal({data: RESULT_NO_MATCH})
+
+  // multiple matches work
+  expect(cacheContactList(user1, user2, user2Contacts1Hashed)).to.deep.equal({data: RESULT_NEED_DATA})
+  expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal(
+    { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+  )
+  expect(getContactMatch(user1, user2)).to.deep.equal(
+    { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+  )
+  expect(getContactMatch(user2, user1)).to.deep.equal(
+      { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+  )
+  // now repeat, just to show results are still there
+  expect(getContactMatch(user1, user2)).to.deep.equal(
+      { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+  )
+  expect(getContactMatch(user2, user1)).to.deep.equal(
+      { data: { matches: [user2Contacts1Hashed[0], user2Contacts1Hashed[1]] } }
+  )
 })
 
 
@@ -275,7 +295,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(201)
-        expect(r.body).to.deep.equal({data: {match: matchingContactDid}})
+        expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
@@ -287,7 +307,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).to.equal(200)
-        expect(r.body).to.deep.equal({data: {match: matchingContactDid}})
+        expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
@@ -299,7 +319,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
-        expect(r.body).to.deep.equal({data: {match: matchingContactDid}})
+        expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
@@ -311,7 +331,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
-        expect(r.body).to.deep.equal({data: {match: matchingContactDid}})
+        expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
@@ -339,7 +359,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
-        expect(r.body).to.deep.equal({data: {match: matchingContactDid}})
+        expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
@@ -351,7 +371,7 @@ describe('7 - Selected Contact Correlation', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
-        expect(r.body).to.deep.equal({data: {match: matchingContactDid}})
+        expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
   }).timeout(5000)
