@@ -57,7 +57,7 @@ export default express
  * @param {Array<string>} contactHashes.body.required
  * @param {boolean} onlyOneMatch.body.optional - if true, only return the first match
  * @returns 201 - { data: ... } with:
- * - "NEED_SOURCE_DATA_SETS" if counterparty hasn't sent theirs
+ * - "NEED_COUNTERPARTY_DATA" if counterparty hasn't sent theirs
  * - { matches: [...] } with any matching IDs, possibly empty
  * @returns {Error} 500 - Unexpected error
  */
@@ -82,7 +82,7 @@ export default express
  * @route GET /api/util/getContactMatch
  * @param {string} counterparty.query.required - the other party with whom to compare
  * @returns 200 - { data: ... } with one of these values:
- * - "NEED_SOURCE_DATA_SETS" if we haven't sent ours or counterparty hasn't sent theirs
+ * - "NEED_COUNTERPARTY_DATA" if we haven't sent ours or counterparty hasn't sent theirs
  * - { matches: [...] } with any matching IDs, possibly empty
  * @returns {Error} 500 - Unexpected error
  */
