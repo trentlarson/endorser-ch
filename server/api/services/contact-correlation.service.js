@@ -24,8 +24,12 @@ function getMatchKey(user1, user2) {
   return user1 < user2 ? user1 + user2 : user2 + user1
 }
 
-function wrapMatches(matches) {
-  return { data: { matches: matches } }
+function wrapMatches(matches, matchKey) {
+  const result = { data: { matches: matches } }
+  if (UserRequestedSingleMatch.get(matchKey)) {
+    result.data.onlyOneMatch = true
+  }
+  return result
 }
 
 /**
@@ -83,7 +87,7 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
     ContactMatchCache.set(matchKey, overlap)
     ContactsSentCache.del(myCheckKeyPair)
     ContactsSentCache.del(otherCheckKeyPair)
-    return wrapMatches(overlap)
+    return wrapMatches(overlap, matchKey)
   } else {
     // the counterparty hasn't sent a list yet, so store this one
     ContactsSentCache.set(myCheckKeyPair, contactHashes)
@@ -98,11 +102,12 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
  * or {data: 'NEED_COUNTERPARTY_DATA'} if there is no match yet
  */
 export function getContactMatch(user1, user2) {
-  const result = ContactMatchCache.get(getMatchKey(user1, user2))
+  const matchKey = getMatchKey(user1, user2)
+  const result = ContactMatchCache.get(matchKey)
   if (result === undefined) {
     return { data: RESULT_NEED_DATA }
   } else {
-    return wrapMatches(result)
+    return wrapMatches(result, matchKey)
   }
 }
 

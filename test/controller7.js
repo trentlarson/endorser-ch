@@ -131,6 +131,7 @@ it('contact lists can match', () => {
   expect(getContactMatch(user2, user1)).to.deep.equal(
     { data: { matches: user2ContactsHashedMatching } }
   )
+  expect(getContactMatch(user2, user1).data.onlyOneMatch).to.be.undefined
 
   // single, randomized match works
   expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
@@ -145,6 +146,7 @@ it('contact lists can match', () => {
   // now repeat, just to show results are still there
   expect(getContactMatch(user1, user2).data.matches[0]).to.be.oneOf(user2ContactsHashedMatching)
   expect(getContactMatch(user2, user1).data.matches[0]).to.be.oneOf(user2ContactsHashedMatching)
+  expect(getContactMatch(user2, user1).data.onlyOneMatch).to.be.true
 
 })
 
@@ -475,6 +477,7 @@ describe('7 - Selected Contact Correlation', () => {
       .then(r => {
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: {matches: user2ContactsHashedMatching}})
+        expect(r.body.data.onlyOneMatch).to.be.undefined
       })
       .catch(err => Promise.reject(err))
   }).timeout(3000)
@@ -518,6 +521,7 @@ describe('7 - Selected Contact Correlation', () => {
         expect(r.status).that.equals(201)
         expect(r.body.data.matches).to.have.lengthOf(1)
         expect(r.body.data.matches[0]).to.be.oneOf(user2ContactsHashedMatching)
+        expect(r.body.data.onlyOneMatch).to.be.true
       })
       .catch(err => Promise.reject(err))
   }).timeout(3000)

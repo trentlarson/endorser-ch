@@ -59,6 +59,7 @@ export default express
  * @returns 201 - { data: ... } with:
  * - "NEED_COUNTERPARTY_DATA" if counterparty hasn't sent theirs
  * - { matches: [...] } with any matching IDs, possibly empty
+ * Also: note that data.onlyOneMatch is true if we only returned one of the matches chosen at random.
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -84,6 +85,7 @@ export default express
  * @returns 200 - { data: ... } with one of these values:
  * - "NEED_COUNTERPARTY_DATA" if we haven't sent ours or counterparty hasn't sent theirs
  * - { matches: [...] } with any matching IDs, possibly empty
+ * Also: note that data.onlyOneMatch is true if we only returned one of the matches chosen at random.
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
