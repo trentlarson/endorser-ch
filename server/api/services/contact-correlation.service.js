@@ -10,7 +10,7 @@ const ContactsSentCache = new NodeCache({ stdTTL: 2 * 60 })
 // For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), true iff a user requested a single randomized match
 const UserRequestedSingleMatch = new NodeCache({ stdTTL: 2 * 60 })
 
-export const RESULT_NEED_DATA = 'NEED_SOURCE_DATA_SETS'
+export const RESULT_NEED_DATA = 'NEED_COUNTERPARTY_DATA'
 export const RESULT_NEED_APPROVAL = 'NEED_COUNTERPARTY_APPROVAL'
 export const RESULT_CLEARED = 'CACHES_CLEARED'
 
