@@ -412,6 +412,7 @@ export default express
  * @route POST /api/v2/report/confirmers
  * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
+ * ... and, yes, a 200 is weird for a POST, but this is just for convenience and a GET is recommended anyway
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

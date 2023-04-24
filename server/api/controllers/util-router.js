@@ -53,8 +53,9 @@ export default express
  *
  * @group utils - Utils
  * @route POST /api/util/correlateContacts
- * @param {string} counterparty.query.required - the other party with whom to compare
+ * @param {string} counterparty.query.required - the other party with whom to compare (also acceptable in the body)
  * @param {Array<string>} contactHashes.body.required
+ * @param {boolean} onlyOneMatch.body.optional - if true, only return the first match
  * @returns 201 - { data: ... } with:
  * - "NEED_SOURCE_DATA_SETS" if counterparty hasn't sent theirs
  * - { matches: [...] } with any matching IDs, possibly empty
@@ -64,7 +65,12 @@ export default express
   .post(
     '/cacheContactList',
     (req, res) => {
-      const result = cacheContactList(res.locals.tokenIssuer, req.query.counterparty, req.body.contactHashes)
+      const counterpartyId = req.query.counterparty || req.body.counterparty
+      const result =
+        cacheContactList(
+          res.locals.tokenIssuer, counterpartyId,
+          req.body.contactHashes, req.body.onlyOneMatch
+        )
       res.status(201).json(result).end()
     }
   )
@@ -82,27 +88,28 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get(
-      '/getContactMatch',
-      (req, res) => {
-        const result = getContactMatch(res.locals.tokenIssuer, req.query.counterparty)
-        res.status(200).json(result).end()
-      }
+    '/getContactMatch',
+    (req, res) => {
+      const result = getContactMatch(res.locals.tokenIssuer, req.query.counterparty)
+      res.status(200).json(result).end()
+    }
   )
 
 /**
  * Ask to clear out the contact caches
  *
  * @group utils - Utils
- * @route GET /api/util/clearContactCaches
- * @param {string} counterparty.query.required - the other party with whom to compare
- * @returns 200 - { data: result } with result of true if the cache was cleared with this request
+ * @route DELETE /api/util/clearContactCaches
+ * @param {string} counterparty.query.required - the other party with whom to compare (also acceptable in the body)
+ * @returns 200 - { data: result } with result of "CACHES_CLEARED" if the cache was cleared with this request
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post(
+  .delete(
     '/clearContactCaches',
     (req, res) => {
-      const result = clearContactCaches(res.locals.tokenIssuer, req.query.counterparty)
+      const counterpartyId = req.query.counterparty || req.body.counterparty
+      const result = clearContactCaches(res.locals.tokenIssuer, counterpartyId)
       res.status(200).json(result).end()
     }
   )

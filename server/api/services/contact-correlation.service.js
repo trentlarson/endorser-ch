@@ -7,11 +7,12 @@ const ContactInfoEraseCache = new NodeCache({ stdTTL: 2 * 60 })
 const ContactMatchCache = new NodeCache({ stdTTL: 2 * 60 })
 // For pair of ID 1 + ID 2, the array of contact hashes sent
 const ContactsSentCache = new NodeCache({ stdTTL: 2 * 60 })
-// For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), true if a user requested a single randomized match
+// For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), true iff a user requested a single randomized match
 const UserRequestedSingleMatch = new NodeCache({ stdTTL: 2 * 60 })
 
 export const RESULT_NEED_DATA = 'NEED_SOURCE_DATA_SETS'
 export const RESULT_NEED_APPROVAL = 'NEED_COUNTERPARTY_APPROVAL'
+export const RESULT_CLEARED = 'CACHES_CLEARED'
 
 /**
  *
@@ -32,7 +33,7 @@ function wrapMatches(matches) {
  * @param user1 current user
  * @param user2 counterparty user who we're checking against
  * @param user1ContactHashes array of encoded hashes to compare
- * @param onlyMatchOne if true, only return one randomized match
+ * @param onlyOneMatch if true, only return one randomized match
  * @param contactHashes array of encoded hashes to compare
 
  If counterparty has sent their list, matching contacts are returned:
@@ -46,7 +47,7 @@ function wrapMatches(matches) {
  - 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
 
  */
-export function cacheContactList(user1, user2, user1ContactHashes, onlyMatchOne) {
+export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch) {
   const contactHashes = user1ContactHashes || []
 
   /**
@@ -65,8 +66,8 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyMatchOne)
     return { error: { message: 'You already sent a set of data. To erase, use "clear" endpoint.' } }
   }
 
-  if (onlyMatchOne && !UserRequestedSingleMatch.get(matchKey)) {
-    UserRequestedSingleMatch.set(matchKey, onlyMatchOne)
+  if (onlyOneMatch && !UserRequestedSingleMatch.get(matchKey)) {
+    UserRequestedSingleMatch.set(matchKey, onlyOneMatch)
   }
 
   const otherCheckKeyPair = user2 + user1
@@ -125,7 +126,7 @@ export function clearContactCaches(user1, user2) {
     ContactsSentCache.del(myCheckKeyPair)
     ContactsSentCache.del(otherCheckKeyPair)
     UserRequestedSingleMatch.del(matchKey)
-    return { success: true }
+    return { success: RESULT_CLEARED }
   } else {
     // the other party hasn't requested to clear the cache
     ContactInfoEraseCache.set(myCheckKeyPair, true)
