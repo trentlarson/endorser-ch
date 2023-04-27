@@ -193,9 +193,19 @@ before(async () => {
 
 describe('7 - Selected Contact Correlation', () => {
 
+  it('anonymous request fails', async () => {
+    return request(Server)
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(401)
+      })
+      .catch(err => Promise.reject(err))
+  }).timeout(3000)
+
   it('user 1 gets no results', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -208,7 +218,7 @@ describe('7 - Selected Contact Correlation', () => {
   it('user 1 sends contact hashes', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -222,7 +232,7 @@ describe('7 - Selected Contact Correlation', () => {
 
   it('user 1 still gets no results', async () => {
     return request(Server)
-        .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
+        .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
         .set('Authorization', 'Bearer ' + pushTokens[1])
         .expect('Content-Type', /json/)
         .then(r => {
@@ -239,7 +249,7 @@ describe('7 - Selected Contact Correlation', () => {
 
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[1].did)
       )
       .set('Authorization', 'Bearer ' + basicJwtEnc)
@@ -254,7 +264,7 @@ describe('7 - Selected Contact Correlation', () => {
 
   it('user 1 gets no match', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -265,19 +275,19 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(3000)
 
   it('user 1 asks to clear caches for round 2', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
     return deleteAndExpect(endpoint, 1, {success: RESULT_NEED_APPROVAL})
   }).timeout(3000)
 
   it('user 2 asks to clear caches for round 2', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
     return deleteAndExpect(endpoint, 2, {success: RESULT_CLEARED})
   }).timeout(3000)
 
   it('user 2 sends some non-matching contact hashes', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[1].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -293,7 +303,7 @@ describe('7 - Selected Contact Correlation', () => {
   it('user 1 sends contact hashes for totally different user', async () => {
     return request(Server)
       .post(
-          '/api/util/cacheContactList?counterparty='
+          '/api/userUtil/cacheContactList?counterparty='
           + encodeURIComponent(creds[4].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -308,7 +318,7 @@ describe('7 - Selected Contact Correlation', () => {
 
   it('user 1 still gets undefined match with user 2', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -321,7 +331,7 @@ describe('7 - Selected Contact Correlation', () => {
   it('user 1 sends contact hashes for user 2', async () => {
     return request(Server)
       .post(
-          '/api/util/cacheContactList?counterparty='
+          '/api/userUtil/cacheContactList?counterparty='
           + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -336,7 +346,7 @@ describe('7 - Selected Contact Correlation', () => {
 
   it('user 1 gets no match again', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -347,19 +357,19 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(3000)
 
   it('user 1 asks to clear caches for round 3', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
     return deleteAndExpect(endpoint, 1, {success: RESULT_NEED_APPROVAL})
   }).timeout(3000)
 
   it('user 2 asks to clear caches for round 3', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
     return deleteAndExpect(endpoint, 2, {success: RESULT_CLEARED})
   }).timeout(3000)
 
   it('user 1 sends contact hashes one more time', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -375,7 +385,7 @@ describe('7 - Selected Contact Correlation', () => {
   it('user 2 sends contact hashes one more time', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[1].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -389,13 +399,13 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(3000)
 
   it('user 1 gets a match', async () => {
-    const sql = '/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did)
+    const sql = '/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did)
     return getAndExpect(sql, 1, { data: {matches: [matchingContactDid]}})
   }).timeout(3000)
 
   it('user 2 gets a match', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -407,7 +417,7 @@ describe('7 - Selected Contact Correlation', () => {
 
   it('user 2 still gets a match', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -418,13 +428,13 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(3000)
 
   it('user 2 asks to clear caches for round 4', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
     return deleteAndExpect(endpoint, 2, {success: RESULT_NEED_APPROVAL})
   }).timeout(3000)
 
   it('user 1 still gets old match (until cache clears)', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -436,7 +446,7 @@ describe('7 - Selected Contact Correlation', () => {
 
   it('user 2 still gets old match (until cache clears)', async () => {
     return request(Server)
-      .get('/api/util/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
+      .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -447,14 +457,14 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(3000)
 
   it('user 1 asks to clear caches for round 5 (and gets it because user 2 asked earlier)', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
     return deleteAndExpect(endpoint, 1, {success: RESULT_CLEARED})
   }).timeout(3000)
 
   it('user 1 sends contact hashes for multiple matches', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty=' + encodeURIComponent(creds[2].did)
+        '/api/userUtil/cacheContactList?counterparty=' + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user2Contacts1Hashed })
@@ -469,7 +479,7 @@ describe('7 - Selected Contact Correlation', () => {
   it('user 2 sends contact hashes for multiple matches', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty=' + encodeURIComponent(creds[1].did)
+        '/api/userUtil/cacheContactList?counterparty=' + encodeURIComponent(creds[1].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({ contactHashes: user2Contacts2Hashed })
@@ -483,19 +493,19 @@ describe('7 - Selected Contact Correlation', () => {
   }).timeout(3000)
 
   it('user 1 asks to clear caches for round 6', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
     return deleteAndExpect(endpoint, 1, {success: RESULT_NEED_APPROVAL})
   }).timeout(3000)
 
   it('user 2 asks to clear caches for round 6', async () => {
-    const endpoint = '/api/util/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[1].did)
     return deleteAndExpect(endpoint, 2, {success: RESULT_CLEARED})
   }).timeout(3000)
 
   it('user 1 sends contact hashes for multiple matches but only wants 1 match', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -511,7 +521,7 @@ describe('7 - Selected Contact Correlation', () => {
   it('user 2 sends contact hashes for multiple matches', async () => {
     return request(Server)
       .post(
-        '/api/util/cacheContactList?counterparty='
+        '/api/userUtil/cacheContactList?counterparty='
         + encodeURIComponent(creds[1].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])

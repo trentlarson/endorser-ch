@@ -9,6 +9,7 @@ import planRouter from     './api/controllers/storage-project-router';
 import tenureRouter from   './api/controllers/storage-tenure-router';
 
 import utilRouter from     './api/controllers/util-router';
+import utilUserRouter from './api/controllers/util-user-router';
 
 
 export default function routes(app) {
@@ -18,6 +19,7 @@ export default function routes(app) {
   app.use('/api/reportAll', reportV2Router) // deprecate after mobile is updated
   app.use('/api/report', reportRouter)
   app.use('/api/util', utilRouter)
+  app.use('/api/userUtil', utilUserRouter)
 
   app.use('/api/action', actionRouter)
   app.use('/api/event', eventRouter)
