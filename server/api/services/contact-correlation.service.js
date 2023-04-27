@@ -41,6 +41,7 @@ function wrapMatches(matches, matchKey) {
  * @param user1ContactHashes array of encoded hashes to compare
  * @param onlyOneMatch if true, only return one randomized match
  * @param contactHashes array of encoded hashes to compare
+ * @returns {object}
 
  If counterparty has sent their list, matching contacts are returned:
    `{ data: { matches: ['...', '...', ...] } }` (where matches may be an empty array)
@@ -48,9 +49,11 @@ function wrapMatches(matches, matchKey) {
  retrieval and this is returned:
    `{ data: 'NEED_COUNTERPARTY_DATA' }`
 
- In other words, these results in a { data: ... } value have these meanings:
- - { match: ["..."] }: this are the matches
+ In other words, the following results in a { data: ... } value have these meanings:
+ - { matches: ["..."] }: this are the matches
  - 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
+
+ If there is an error, the result is: { error: { message: '...' } }
 
  */
 export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch) {
@@ -100,8 +103,10 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
 /**
  * @param user1
  * @param user2
- * @returns {data: {matches: ['....']}} with matches
- * or {data: 'NEED_DATA'} if there is no match yet
+ * @returns
+ * {data: {matches: ['....']}} with matches
+ * or {data: 'NEED_DATA'} if both parties haven't sent their data yet
+ * Also: note that data.onlyOneMatch will be true if we only returned one of the matches chosen at random.
  */
 export function getContactMatch(user1, user2) {
   const matchKey = getMatchKey(user1, user2)
@@ -120,9 +125,14 @@ export function getContactMatch(user1, user2) {
  * @param user1
  * @param user2
  * @returns
- * { success: true } if this request triggered clearing the caches
+ * { success: CODE } if this request triggered clearing the caches
  *   (which is the side-effect of this function)
- * otherwise, returns { success: 'NEED_COUNTERPARTY_APPROVAL' }
+ * where CODE is one of:
+ * - 'ALL_CACHES_CLEARED' to mean all caches were cleared
+ * - 'ONE_CACHE_CLEARED' to mean only this user's cache was cleared
+ *
+ * ... otherwise, returns { success: 'NEED_COUNTERPARTY_APPROVAL' }
+ * to note that this request has been recorded but we need the other party to approve
  */
 export function clearContactCaches(user1, user2) {
   const myCheckKeyPair = user1 + user2
@@ -138,7 +148,7 @@ export function clearContactCaches(user1, user2) {
     UserRequestedSingleMatch.del(matchKey)
     return {success: RESULT_ALL_CLEARED}
   } else if (!ContactMatchCache.get(matchKey)
-             && !ContactsSentCache.get(myCheckKeyPair)) {
+             && !ContactsSentCache.get(otherCheckKeyPair)) {
     // the other party hasn't sent a list yet, so just clear the cache
     ContactInfoEraseCache.del(myCheckKeyPair)
     ContactsSentCache.del(myCheckKeyPair)

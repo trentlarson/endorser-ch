@@ -106,8 +106,8 @@ it('contact lists can match', () => {
   expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_NEED_APPROVAL})
   expect(clearContactCaches(user2, user1)).to.deep.equal({success: RESULT_ALL_CLEARED})
   expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
-  expect(clearContactCaches(user2, user1)).to.deep.equal({success: RESULT_NEED_APPROVAL})
   expect(cacheContactList(user1, user2, user1ContactsHashed)).to.deep.equal({data: {matches: [matchingContactDid]}})
+  expect(clearContactCaches(user2, user1)).to.deep.equal({success: RESULT_NEED_APPROVAL})
   expect(getContactMatch(user1, user2)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
   expect(cacheContactList(user2, user1, [])).with.property('error').with.property('message')
@@ -115,7 +115,7 @@ it('contact lists can match', () => {
   expect(getContactMatch(user2, user1)).to.deep.equal({data: {matches: [matchingContactDid]} })
 
   // multiple matches work
-  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_ALL_CLEARED}) // user1 is already cleared
+  expect(clearContactCaches(user1, user2)).to.deep.equal({success: RESULT_ALL_CLEARED}) // other user is already cleared
   expect(cacheContactList(user1, user2, user2Contacts1Hashed)).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
   expect(cacheContactList(user2, user1, user2Contacts2Hashed)).to.deep.equal(
     { data: { matches: user2ContactsHashedMatching } }

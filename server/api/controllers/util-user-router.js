@@ -25,10 +25,20 @@ export default express
  * @param {string} counterparty.query.required - the other party with whom to compare (also acceptable in the body)
  * @param {Array<string>} contactHashes.body.required
  * @param {boolean} onlyOneMatch.body.optional - if true, only return the first match
- * @returns 201 - { data: ... } with:
- * - "NEED_COUNTERPARTY_DATA" if counterparty hasn't sent theirs
- * - { matches: [...] } with any matching IDs, possibly empty
- * Also: note that data.onlyOneMatch is true if we only returned one of the matches chosen at random.
+ * @returns 201 -
+ *
+ *  If counterparty has sent their list, matching contacts are returned:
+ *    `{ data: { matches: ['...', '...', ...] } }` (where matches may be an empty array)
+ *  If counterparty hasn't sent their list, the list will be saved for later
+ *  retrieval and this is returned:
+ *    `{ data: 'NEED_COUNTERPARTY_DATA' }`
+ *
+ *  In other words, the following results in a { data: ... } value have these meanings:
+ *  - { matches: ["..."] }: this are the matches
+ *  - 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
+ *
+ *  If there is an error, the result is: { error: { message: '...' } }
+ *
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -55,10 +65,10 @@ export default express
  * @group utils - Utils
  * @route GET /api/util/getContactMatch
  * @param {string} counterparty.query.required - the other party with whom to compare
- * @returns 200 - { data: ... } with one of these values:
- * - "NEED_COUNTERPARTY_DATA" if we haven't sent ours or counterparty hasn't sent theirs
- * - { matches: [...] } with any matching IDs, possibly empty
- * Also: note that data.onlyOneMatch is true if we only returned one of the matches chosen at random.
+ * @returns 200 -
+ * {data: {matches: ['....']}} with matches
+ * or {data: 'NEED_DATA'} if both parties haven't sent their data yet
+ * Also: note that data.onlyOneMatch will be true if we only returned one of the matches chosen at random.
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -76,7 +86,16 @@ export default express
  * @group utils - Utils
  * @route DELETE /api/util/clearContactCaches
  * @param {string} counterparty.query.required - the other party with whom to compare (also acceptable in the body)
- * @returns 200 - { data: result } with result of "CACHES_CLEARED" if the cache was cleared with this request
+ * @returns 200 -
+ * { success: CODE } if this request triggered clearing the caches
+ * (which is the side-effect of this function)
+ * where CODE is one of:
+ * - 'ALL_CACHES_CLEARED' to mean all caches were cleared
+ * - 'ONE_CACHE_CLEARED' to mean only this user's cache was cleared
+ *
+ * ... otherwise, returns { success: 'NEED_COUNTERPARTY_APPROVAL' }
+ * to note that this request has been recorded but we need the other party to approve
+ *
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
