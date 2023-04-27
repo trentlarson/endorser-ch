@@ -10,9 +10,11 @@ const ContactsSentCache = new NodeCache({ stdTTL: 2 * 60 })
 // For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), true iff a user requested a single randomized match
 const UserRequestedSingleMatch = new NodeCache({ stdTTL: 2 * 60 })
 
-export const RESULT_NEED_DATA = 'NEED_COUNTERPARTY_DATA'
+export const RESULT_ALL_CLEARED = 'ALL_CACHES_CLEARED'
 export const RESULT_NEED_APPROVAL = 'NEED_COUNTERPARTY_APPROVAL'
-export const RESULT_CLEARED = 'CACHES_CLEARED'
+export const RESULT_NEED_COUNTERPARTY_DATA = 'NEED_COUNTERPARTY_DATA'
+export const RESULT_NEED_DATA = 'NEED_DATA'
+export const RESULT_ONE_CLEARED = 'ONE_CACHE_CLEARED'
 
 /**
  *
@@ -65,9 +67,9 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
   const myCheckKeyPair = user1 + user2
   if (ContactMatchCache.get(matchKey)) {
     // the match has already been found, so just return that
-    return { error: { message: 'Match was already found. Use retrieval endpoint.' } }
+    return { error: { message: 'Data was already sent. To see the results, use the retrieval function.' } }
   } else if (ContactsSentCache.get(myCheckKeyPair)) {
-    return { error: { message: 'You already sent a set of data. To erase, use "clear" endpoint.' } }
+    return { error: { message: 'You already sent a set of data. To erase it, use the "clear" function.' } }
   }
 
   if (onlyOneMatch && !UserRequestedSingleMatch.get(matchKey)) {
@@ -91,7 +93,7 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
   } else {
     // the counterparty hasn't sent a list yet, so store this one
     ContactsSentCache.set(myCheckKeyPair, contactHashes)
-    return { data: RESULT_NEED_DATA }
+    return { data: RESULT_NEED_COUNTERPARTY_DATA }
   }
 }
 
@@ -99,7 +101,7 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
  * @param user1
  * @param user2
  * @returns {data: {matches: ['....']}} with matches
- * or {data: 'NEED_COUNTERPARTY_DATA'} if there is no match yet
+ * or {data: 'NEED_DATA'} if there is no match yet
  */
 export function getContactMatch(user1, user2) {
   const matchKey = getMatchKey(user1, user2)
@@ -112,6 +114,9 @@ export function getContactMatch(user1, user2) {
 }
 
 /**
+ * Need this in case there are no matches, so the users can start over.
+ * But it has to be agreed so that one cannot see results and clear to hide them.
+ *
  * @param user1
  * @param user2
  * @returns
@@ -131,7 +136,13 @@ export function clearContactCaches(user1, user2) {
     ContactsSentCache.del(myCheckKeyPair)
     ContactsSentCache.del(otherCheckKeyPair)
     UserRequestedSingleMatch.del(matchKey)
-    return { success: RESULT_CLEARED }
+    return {success: RESULT_ALL_CLEARED}
+  } else if (!ContactMatchCache.get(matchKey)
+             && !ContactsSentCache.get(myCheckKeyPair)) {
+    // the other party hasn't sent a list yet, so just clear the cache
+    ContactInfoEraseCache.del(myCheckKeyPair)
+    ContactsSentCache.del(myCheckKeyPair)
+    return { success: RESULT_ONE_CLEARED }
   } else {
     // the other party hasn't requested to clear the cache
     ContactInfoEraseCache.set(myCheckKeyPair, true)
