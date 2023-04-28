@@ -1,6 +1,8 @@
 import NodeCache from 'node-cache'
 import R from 'ramda'
 
+import log from '../../common/logger'
+
 // For pair of ID 1 + ID 2, true iff the other party wants to clear the cache
 const ContactInfoEraseCache = new NodeCache({ stdTTL: 2 * 60 })
 // For pair of ID1+ID2 or ID2+ID1 (in alphabetic order), the matching contacts
@@ -11,9 +13,11 @@ const ContactsSentCache = new NodeCache({ stdTTL: 2 * 60 })
 const UserRequestedSingleMatch = new NodeCache({ stdTTL: 2 * 60 })
 
 export const RESULT_ALL_CLEARED = 'ALL_CACHES_CLEARED'
+export const RESULT_ERROR_TRY_RESET = 'ERROR_TRY_RESET'
 export const RESULT_NEED_APPROVAL = 'NEED_COUNTERPARTY_APPROVAL'
+export const RESULT_NEED_BOTH_USER_DATA = 'NEED_BOTH_USER_DATA'
 export const RESULT_NEED_COUNTERPARTY_DATA = 'NEED_COUNTERPARTY_DATA'
-export const RESULT_NEED_DATA = 'NEED_DATA'
+export const RESULT_NEED_THIS_USER_DATA = 'NEED_THIS_USER_DATA'
 export const RESULT_ONE_CLEARED = 'ONE_CACHE_CLEARED'
 
 /**
@@ -68,6 +72,13 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
 
   const matchKey = getMatchKey(user1, user2)
   const myCheckKeyPair = user1 + user2
+  log.debug(`
+    contact-correlation cacheContactList(${user1}, ${user2}),
+    match? ${!!ContactMatchCache.get(matchKey)},
+    my sent? ${!!ContactsSentCache.get(myCheckKeyPair)},
+    other sent? ${!!ContactsSentCache.get(user2 + user1)},
+    single? ${!!UserRequestedSingleMatch.get(matchKey)}
+  `);
   if (ContactMatchCache.get(matchKey)) {
     // the match has already been found, so just return that
     return { error: { message: 'Data was already sent. To see the results, use the retrieval function.' } }
@@ -104,15 +115,37 @@ export function cacheContactList(user1, user2, user1ContactHashes, onlyOneMatch)
  * @param user1
  * @param user2
  * @returns
- * {data: {matches: ['....']}} with matches
- * or {data: 'NEED_DATA'} if both parties haven't sent their data yet
+ * matches as: {data: {matches: ['....']}}
+ * or, since there are no matches: {data: CODE}
+ * ... where CODE is one of:
+ * - 'NEED_BOTH_USER_DATA'
+ * - 'NEED_THIS_USER_DATA'
+ * - 'NEED_COUNTERPARTY_DATA'
+ *
  * Also: note that data.onlyOneMatch will be true if we only returned one of the matches chosen at random.
  */
 export function getContactMatch(user1, user2) {
   const matchKey = getMatchKey(user1, user2)
   const result = ContactMatchCache.get(matchKey)
-  if (result === undefined) {
-    return { data: RESULT_NEED_DATA }
+  log.debug(`
+    contact-correlation getContactMatch(${user1}, ${user2}),
+    match? ${!!result}
+  `);
+  if (!result) {
+    const myCheckKeyPair = user1 + user2
+    const otherCheckKeyPair = user2 + user1
+    if (!ContactsSentCache.get(myCheckKeyPair)
+        && !ContactsSentCache.get(otherCheckKeyPair)) {
+      return { data: RESULT_NEED_BOTH_USER_DATA }
+    } else if (!ContactsSentCache.get(myCheckKeyPair)) {
+      return { data: RESULT_NEED_THIS_USER_DATA }
+    } else if (!ContactsSentCache.get(otherCheckKeyPair)) {
+      return { data: RESULT_NEED_COUNTERPARTY_DATA }
+    } else {
+      // this should never happen, where both parties have sent their data but
+      // there is no match array at all
+      return { data: RESULT_ERROR_TRY_RESET }
+    }
   } else {
     return wrapMatches(result, matchKey)
   }
@@ -138,6 +171,12 @@ export function clearContactCaches(user1, user2) {
   const myCheckKeyPair = user1 + user2
   const otherCheckKeyPair = user2 + user1
   const matchKey = getMatchKey(user1, user2)
+  log.debug(`
+    contact-correlation clearContactCache(${user1}, ${user2}),
+     other? ${!!ContactInfoEraseCache.get(otherCheckKeyPair)}
+     no match? ${!ContactMatchCache.get(matchKey)},
+     not sent? ${!ContactsSentCache.get(otherCheckKeyPair)}
+  `);
   if (ContactInfoEraseCache.get(otherCheckKeyPair)) {
     // the other party has already requested to clear the cache
     ContactInfoEraseCache.del(myCheckKeyPair)

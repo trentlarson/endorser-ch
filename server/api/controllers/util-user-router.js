@@ -20,8 +20,8 @@ export default express
 /**
  * Update the contact lookup cache for this user & their counterparty
  *
- * @group utils - Utils
- * @route POST /api/util/correlateContacts
+ * @group user utils - User Utils
+ * @route POST /api/userUtil/cacheContactList
  * @param {string} counterparty.query.required - the other party with whom to compare (also acceptable in the body)
  * @param {Array<string>} contactHashes.body.required
  * @param {boolean} onlyOneMatch.body.optional - if true, only return the first match
@@ -34,8 +34,8 @@ export default express
  *    `{ data: 'NEED_COUNTERPARTY_DATA' }`
  *
  *  In other words, the following results in a { data: ... } value have these meanings:
- *  - { matches: ["..."] }: this are the matches
- *  - 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
+ *    * { matches: ["..."] }: this are the matches
+ *    * 'NEED_COUNTERPARTY_DATA': the counterparty hasn't sent a match, so this data is stored
  *
  *  If there is an error, the result is: { error: { message: '...' } }
  *
@@ -62,13 +62,19 @@ export default express
 /**
  * Retrieve the matching contacts for this user & their counterparty
  *
- * @group utils - Utils
- * @route GET /api/util/getContactMatch
+ * @group user utils - User Utils
+ * @route GET /api/userUtil/getContactMatch
  * @param {string} counterparty.query.required - the other party with whom to compare
  * @returns 200 -
- * {data: {matches: ['....']}} with matches
- * or {data: 'NEED_DATA'} if both parties haven't sent their data yet
+ * matches as: {data: {matches: ['....']}}
+ * or, since there are no matches: {data: CODE}
+ * ... where CODE is one of:
+ *   * 'NEED_BOTH_USER_DATA'
+ *   * 'NEED_THIS_USER_DATA'
+ *   * 'NEED_COUNTERPARTY_DATA'
+ *
  * Also: note that data.onlyOneMatch will be true if we only returned one of the matches chosen at random.
+ *
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -83,15 +89,15 @@ export default express
 /**
  * Ask to clear out the contact caches
  *
- * @group utils - Utils
- * @route DELETE /api/util/clearContactCaches
+ * @group user utils - User Utils
+ * @route DELETE /api/userUtil/clearContactCaches
  * @param {string} counterparty.query.required - the other party with whom to compare (also acceptable in the body)
  * @returns 200 -
  * { success: CODE } if this request triggered clearing the caches
- * (which is the side-effect of this function)
- * where CODE is one of:
- * - 'ALL_CACHES_CLEARED' to mean all caches were cleared
- * - 'ONE_CACHE_CLEARED' to mean only this user's cache was cleared
+ * (which is the side&ndash;effect of this function)
+ * ... where CODE is one of:
+ *   * 'ALL_CACHES_CLEARED' to mean all caches were cleared
+ *   * 'ONE_CACHE_CLEARED' to mean only this user's cache was cleared
  *
  * ... otherwise, returns { success: 'NEED_COUNTERPARTY_APPROVAL' }
  * to note that this request has been recorded but we need the other party to approve
