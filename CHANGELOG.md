@@ -15,10 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [1.10.0] - 2023-04-26
+
+### Added
+- Search for contacts in common from a pool of confirmers of server-hosted claims.
+
+
+
+
 ## [1.9.0] - 2023-04-07 - a18f33307ac5e333f003a0bd6959388650f22b82
 
 ### Added
-- Search for contacts in common
+- Search for contacts in common from all contacts
 
 
 

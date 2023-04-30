@@ -45,7 +45,9 @@ Debug: `npm run dev:debug`
 
 Run on Docker:
 
-* Update changelog, tag the release, and set ENDORSER_VERSION to that tag.
+* Update CHANGELOG.md & package.json and tag the release.
+
+* Set ENDORSER_VERSION to that tag and run the following:
 
 ```
 export ENDORSER_VERSION=release-1.1.35
@@ -55,9 +57,9 @@ docker build -t endorser-ch:$ENDORSER_VERSION --build-arg ENDORSER_VERSION .
 docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database --name endorser-ch --env-file $PATH/.env -e APP_DB_FILE=/mnt/database/endorser-ch-dev.sqlite3 -e NODE_ENV=dev endorser-ch:$ENDORSER_VERSION
 ```
 
-Run on another domain:
+When running on another domain (other than EndorserSearch.com):
 
-You probably want to edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
+* You should edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
 
 
 
@@ -68,6 +70,8 @@ You probably want to edit the .env SERVICE_ID with the value people should suppl
 You can use the test server APIs at [https://test.endorser.ch:8000](https://test.endorser.ch:8000)
 
 Run the local automated tests and build sample data with this: `./test/test.sh`
+
+* Note that this sometimes fails without reason and a rerun works, especially on "Load Claims Incrementally". (Network issue with infura.io?)
 
 * That creates a sample DB file ../endorser-ch-test-local.sqlite3 which you may then use as baseline data for running in dev mode by copying to ../endorser-ch-dev.sqlite3
 

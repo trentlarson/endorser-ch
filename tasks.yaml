@@ -1,13 +1,16 @@
 ---
 
-- 01 fix presentation scan and redeploy :
-  - doesn't show claim details on final screen
-
 - 04 time offered/given to projects :
+  - fix when iOS button text is shifted too far right
+  - fix unable to scroll to bottom of list on Android subfeed
   - show list of confirmations - via same approach as pledges?
-  - allow to show a single matching contact
+    - allow to show a single matching contact
+    - check for matching against yourself, blank inputs, etc
+  - deploy : migrate
   - save & show projects of interest
   - move confirmationInserts all to end of method
+
+- 01 update react-native (since 0.69 is lowest supported and Yoga.cpp gets a compile error)
 
 - 01 strange results when comparing common contacts repeatedly
   - some strangeness when I keep checking
