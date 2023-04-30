@@ -45,7 +45,7 @@ Debug: `npm run dev:debug`
 
 Run on Docker:
 
-* Update CHANGELOG.md & package.json and tag the release.
+* Update CHANGELOG.md & package.json, then tag the release.
 
 * Set ENDORSER_VERSION to that tag and run the following:
 

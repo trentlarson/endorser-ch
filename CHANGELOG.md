@@ -9,16 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Retrieval of confirming IDs from list of claim IDs
 
 
 
-
-## [1.10.0] - 2023-04-26
+## [2.0.0] - 2023-04-26
 
 ### Added
 - Search for contacts in common from a pool of confirmers of server-hosted claims.
+
+### Removed
+- The common-contact endpoints (introduced in 1.9.0) have radically changed.
 
 
 
