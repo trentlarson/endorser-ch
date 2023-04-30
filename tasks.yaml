@@ -6,6 +6,7 @@
   - show list of confirmations - via same approach as pledges?
     - allow to show a single matching contact
     - check for matching against yourself, blank inputs, etc
+    - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
   - deploy : migrate
   - save & show projects of interest
   - move confirmationInserts all to end of method

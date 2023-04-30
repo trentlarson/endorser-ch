@@ -67,7 +67,7 @@ When running on another domain (other than EndorserSearch.com):
 
 ## Test It
 
-You can use the test server APIs at [https://test.endorser.ch:8000](https://test.endorser.ch:8000)
+#### Automated tests
 
 Run the local automated tests and build sample data with this: `./test/test.sh`
 
@@ -81,6 +81,13 @@ any real JWT validity checking, including expiration. (This may be changed when
 I figure out how to validate JWTs without being online. It is accomplished with
 the `process.env.NODE_ENV === 'test-local'` code currently only found in
 server/api/services/claim.service.js )
+
+
+
+
+#### Test server
+
+You can use the test server APIs at [https://test.endorser.ch:8000](https://test.endorser.ch:8000)
 
 
 
@@ -161,30 +168,6 @@ curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://tes
 
 
 
-#### V2 Queries
-
-As you can see from the [Swagger docs](https://endorser.ch:3000), there are reports with "v2" in the URL and these include paging that will retrieve more than just the most recent matches (currently 50). These endpoints return an object with a "data" property that contains all the results, and then a "hitLimit" property that tells whether there may be more results:
-
-```
-{
-  "data": [...],
-  "hitLimit": true
-}
-```
-
-Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter.
-
-For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next batch that goes further in the past (excluding that one):
-
-```
-curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
-```
-
-
-
-
-
-
 #### Old basic sample
 
 Let's create some claims. First, we'll create a claim of attendance. Here's the payload structure:
@@ -256,6 +239,50 @@ curl 'http://localhost:3000/api/report/tenureClaimsAndConfirmationsAtPoint?lat=4
 curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-Type: application/json" -H "Uport-Push-Token: $UPORT_PUSH_TOKEN" -d '{"url":"http://IgniteCommunity.org"}'
 
 ```
+
+
+
+
+## APIs
+
+We have [Swagger docs on production](https://endorser.ch:3000).
+
+... but note that these are created by hand and may not be up to date with the latest code.
+(I hope to automatically generate these from the code in the future so that both planned & existing APIs are available.)
+
+
+#### V2 endpoints
+
+More recent endpoints, especially the ones under the "api/v2" path, return an object with "data" (for GETs)
+or "success" (for POSTs), or alternatively "error" when there is a problem.
+
+#### V2 GET results
+
+The reports with "v2" in the URL include paging that will retrieve more than just the most recent matches (currently 50).
+These endpoints return an object with a "data" property that contains all the results,
+and then a "hitLimit" property that tells whether there may be more results:
+
+```
+{
+  "data": [...],
+  "hitLimit": true
+}
+```
+
+Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter.
+
+For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next batch that goes further in the past (excluding that one):
+
+```
+curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
+```
+
+
+#### V2 POST results
+
+These endpoints return a "success" property, possibly with some data.
+
+
 
 
 
@@ -415,6 +442,17 @@ User stories:
 [Here is a sample CSV for contacts](https://raw.githubusercontent.com/trentlarson/endorser-ch/master/test/sample-contacts.csv), with data taken from the tests.
 
 
+#### Debug the tests
+
+... though I just saw this in the docs and I don't really know what it means.
+
+```shell
+./test/test.sh :debug
+```
+
+
+
+
 
 
 ## Metrics
@@ -539,13 +577,6 @@ DB Settings:
 - `NODE_ENV` is used to determine the DB file if `APP_DB_FILE` is not set (see conf/flyway.js)
 
 
-
-
-Debug the tests (though I don't know what that means):
-
-```shell
-./test/test.sh :debug
-```
 
 
 
