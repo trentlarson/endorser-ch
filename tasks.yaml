@@ -1,43 +1,38 @@
 ---
 
-- 04 time offered/given to projects :
-  - fix when iOS button text is shifted too far right
-  - fix unable to scroll to bottom of list on Android subfeed
-  - show list of confirmations - via same approach as pledges?
-    - allow to show a single matching contact
+- libsodium problem - try copying only x86 .o file
+
+- 01 fixes :
+  - make claim-driven contact-matching work :
+    - add confirmationInserts by content (hash?) to make it so that confirmations are discoverable
     - check for matching against yourself, blank inputs, etc
-    - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
-  - deploy : migrate
-  - save & show projects of interest
-  - move confirmationInserts all to end of method
+    - .3 bug - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
+  - .1 fix when iOS button text is shifted too far right
+  - .3 created a new identity and it was able to see my ID on a test server
+  - .1 bug - on key creation while the thing is spinning, it has a message saying to click something
+  - move confirmationInsert calls to end of method?
+  - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
+
 
 - 01 update react-native (since 0.69 is lowest supported and Yoga.cpp gets a compile error)
+- 02 bring libs up-to-date
 
-- 01 strange results when comparing common contacts repeatedly
-  - some strangeness when I keep checking
-  - check both, then close second one's modal, then recheck and it shows a modal rather than the result
+- 02 save & show projects of interest
 
-- .5 release mobile app (and revisit account deletion for Google)
+- 04 time given to projects - front-page shortcuts?
 
 - 08 I have been in a project, you see it, and I can share my contributions. :
   - Allow confirmations by project issuer or agent.
 
-- 04 desktop version of mobile app (for Vermont)
-
 - 04 Allow MetaMask SSI Snap to create JWT VCs https://medium.com/@blockchainlabum/ssi-snap-new-release-did-key-and-did-pkh-ceramic-network-jwt-vc-official-dapp-d295e5e28cd7
-
-- 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
 
 - 01 disallow search results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
 
 - 01 allow searches by agent & recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
 
-- .2 mobile - remove duplicate background check
-
 - .5 mobile & server - change the registration from mobile to agent & participant .identifier (from agent.did), and look for others
 
-- 01 releases :
-  - clean up Docker config (eg. NODE_ENV inside dotenv file)
+- 01 environments :
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
 
@@ -46,26 +41,20 @@
 
 - integrate with attest.sh
 
-- 02 bring libs up-to-date
-
 - 04 mobile - link contacts to phone contacts
 
 - 02 backup & restore all data (incl private data, contacts)
 
-- 04 fix local - 'yarn run ios' (compile error, Xcode works)
-
 - .5 do limiting based on ULID and not timestamp (and change timestamp from int to string)
+- 01 switch time check to work off JWT ID in registration & claim
 
 - .2 add search for all my issued claims
 
 - .5 remove the open-ended search capability (ie generic claim.service getByQuery)
-
-- 01 switch time check to work off JWT ID in registration & claim
-
-- 02 store claim column as canonical (possibly migrating), remove claimEncoded, add claimHash, add claimObfuHash
-
 - 01 mark some endpoints as experimental (eg. open-ended JWT search)
 - .5 disable open-ended JWT search endpoint
+
+- 02 store claim column as canonical (possibly migrating), remove claimEncoded, add claimHash, add claimObfuHash
 
 - 01 add endpoint for license
 
@@ -73,15 +62,11 @@
 
 - 02 create chain hex on each claim insertion, or run a regular process to create it
 
-- .5 update endorser-ch website (eg. for scenario links)
-
 - 02 add password hash algorithm to settings (and make task to allow update) id:migrate-pass-from-sha1
 
 - 04 revocation
 
 - 01 run load test, especially for - claimContents search, confirmations-by-claim retrieval
-
-- 01 bump dependencies
 
 - 01 type:bug bad error message on expired JWT (see search on local, logged-in server)
 
@@ -91,6 +76,8 @@
 
   - on front page or notification, add upcoming commitments or recently triggered commitments (need "triggered" time?)
   - screens for plan offers & gives - offers total, offers to me, give total, recent gives, open offers, open gives
+
+  - .2 avoid duplicate run of background check (especially on Android)
 
   - 01 set IPHONEOS_DEPLOYMENT_TARGET to 11.0 for everything (since that's the lowest in XCode 14)
 
@@ -338,7 +325,6 @@
 - 01 in confirmation, check whether it really is a JoinAction
 - 01 try-catch around jwt.service resolveAuthenticator when not connected to internet
 - 01 report page - who has the most activity for a time range
-- desktop app:
-  - get initial build on MacOS
 
 - x 01 mobile: requiresOffers & requiresOfferAmount
+- x 04 desktop version of mobile app (for Vermont)
