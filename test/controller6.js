@@ -193,6 +193,7 @@ describe('6 - Plans', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstIdExternal)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
+        expect(r.body.url).that.equals("https://example.com/plan/111")
         const dbTime = new Date(r.body.endTime)
         expect(dbTime.getTime()).that.equals(planEndTime.getTime())
       }).catch((err) => {
@@ -1095,6 +1096,7 @@ describe('6 - check give totals', () => {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
     }
     credObj.claim.description = 'Found new homeschooling friends'
+    credObj.provider = [{ "type": "GiveAction", "identifier": firstGiveRecordHandleId }]
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
     const claimJwtEnc = await credentials[2].createVerification(credObj)

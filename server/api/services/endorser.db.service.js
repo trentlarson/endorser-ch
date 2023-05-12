@@ -1411,13 +1411,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
-          + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?)"
+          + ", name, description, image, endTime, startTime,"
+          + " resultDescription, resultIdentifier, url"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier,
+        entry.resultDescription, entry.resultIdentifier, entry.url,
       ], function(err) {
         if (err) {
           reject(err)
@@ -1457,7 +1458,7 @@ class EndorserDatabase {
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
-      ['image'],
+      ['image', 'url'],
       'description',
       ['endTime', 'startTime'],
       params,
@@ -1477,7 +1478,7 @@ class EndorserDatabase {
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
-      ['image'],
+      ['image', 'url'],
       'description',
       ['endTime', 'startTime'],
       { issuerDid },
@@ -1492,13 +1493,13 @@ class EndorserDatabase {
         "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
           + ", startTime = datetime(?)"
-          + ", resultDescription = ?, resultIdentifier = ?"
+          + ", resultDescription = ?, resultIdentifier = ?, url = ?"
           + " WHERE handleId = ?"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier, entry.handleId
+        entry.resultDescription, entry.resultIdentifier, entry.url, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
           resolve()
@@ -1525,13 +1526,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, handleId"
-          + ", name, description, image, endTime, startTime, resultDescription, resultIdentifier"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?)"
+          + ", name, description, image, endTime, startTime,"
+          + " resultDescription, resultIdentifier, url"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier,
+        entry.resultDescription, entry.resultIdentifier, entry.url,
       ], function(err) {
         if (err) {
           reject(err)
@@ -1571,7 +1573,7 @@ class EndorserDatabase {
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
-      ['image'],
+      ['image', 'url'],
       'description',
       ['endTime', 'startTime'],
       params,
@@ -1591,7 +1593,7 @@ class EndorserDatabase {
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
        'resultDescription', 'resultIdentifier'],
-      ['image'],
+      ['image', 'url'],
       'description',
       ['endTime', 'startTime'],
       { issuerDid },
@@ -1606,13 +1608,13 @@ class EndorserDatabase {
         "UPDATE project_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
           + ", startTime = datetime(?)"
-          + ", resultDescription = ?, resultIdentifier = ?"
+          + ", resultDescription = ?, resultIdentifier = ?, url = ?"
           + " WHERE handleId = ?"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier, entry.handleId
+        entry.resultDescription, entry.resultIdentifier, entry.url, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
           resolve()

@@ -201,6 +201,7 @@ module.exports = {
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
     "endTime": "2023-03-31T07:07:07Z",
+    "url": "https://example.com/plan/111",
   },
 
   claimProjectAction: {
@@ -213,6 +214,7 @@ module.exports = {
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
     "endTime": "2023-03-31T07:07:07Z",
+    "url": "https://example.com/project/111",
   },
 
   claimVote: {

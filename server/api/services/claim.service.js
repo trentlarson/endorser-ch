@@ -766,6 +766,7 @@ class ClaimService {
         startTime: startTimeStr,
         resultDescription: claim.resultDescription,
         resultIdentifier: claim.resultIdentifier,
+        url: claim.url,
       }
 
       let planRecord = await dbService.planInfoByHandleId(handleId)
@@ -811,6 +812,7 @@ class ClaimService {
         startTime: startTimeStr,
         resultDescription: claim.resultDescription,
         resultIdentifier: claim.resultIdentifier,
+        url: claim.url,
       }
 
       let projectRecord = await dbService.projectInfoByHandleId(handleId)
