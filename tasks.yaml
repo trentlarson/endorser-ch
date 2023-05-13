@@ -1,23 +1,27 @@
 ---
 
-- libsodium problem - try copying only x86 .o file
-
 - 01 fixes :
+  - add GiveAction links to previous ones, a la providers - record them, list them in results :
+    - remember to filter the historical by same handleId
+  - 01 allow edit of GiveAction & Offer, adjusting totals
+  - .1 mobile - add myself to list of contacts to pick (ie. for GiveAction recipient)
+  - .1 mobile - fix when iOS button text is shifted too far right
+  - .1 mobile - on claim server result, only copy the ID (not including "Endorser.ch ID"; only iOS?)
+  - .1 bug - mobile - on key creation while the thing is spinning, it has a message saying to click something
+  - move confirmationInsert calls to end of method?
+  - .1 bug - mobile - after creating an identity, on Initialize screen the "Export" button crashes (since Export screen is in a different tab set)
   - make claim-driven contact-matching work :
-    - add confirmationInserts by content (hash?) to make it so that confirmations are discoverable
+    - hash original claim for searches later
     - check for matching against yourself, blank inputs, etc
     - .3 bug - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
-  - .1 fix when iOS button text is shifted too far right
-  - .3 created a new identity and it was able to see my ID on a test server
-  - .1 bug - on key creation while the thing is spinning, it has a message saying to click something
-  - move confirmationInsert calls to end of method?
   - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
+  - .1 publish endorser-docs
 
+- 01 mobile - next release requires more on-device testing
 
-- 01 update react-native (since 0.69 is lowest supported and Yoga.cpp gets a compile error)
-- 02 bring libs up-to-date
+- 02 bring many libs up-to-date
 
-- 02 save & show projects of interest
+- 02 mobile - save & show projects of interest
 
 - 04 time given to projects - front-page shortcuts?
 
@@ -113,7 +117,7 @@
   - .5 When someone pulls up search results where some DIDs are hidden, the first time it shows a blank value but then an immediate search will show the did:none:HIDDEN. (On Android, at least, emulator and device.)
   - check the "Please provide SecretBox", which I first noticed in 6.2.93 (went away, now seen on Android 101ce)
 
-  - .5 allow edit of a claim (currently allowed in contracts)
+  - .5 allow edit of a claim before submitting (currently allowed in contracts)
   - 01 allow choosing notification filter (eg. only ones with DIDs, none)... pause for a month?
   - .5 fix (i) info icon on Search -> Search Yours next to Filter
   - 01 fix individual who isn't able to access their seed
@@ -311,11 +315,9 @@
 - 01 usability - fade out the confirmation button when pushed
 - 08 have someone audit use of uport.pushToken
 - 02 tests - see above; duplicate JWT data; ACACs by different times; no claim in JWT
-- 04 add Typescript
 - 02 DID validation check adds seconds to the tests (see timeout(3000)) so find a faster validation
 - 01 make record IDs into hashes not sequentially increasing numbers
 - 01 write migration to remove claimEncoded column
-- 08 neo4j?
 - 02 fix & enable the "should hide DIDs" tests in controller.js
 - 02 show message when user rejects a claim
 - 01 optimize whoDoesRequestorSeeWhoCanSeeObject rather than 2 awaits
@@ -325,6 +327,9 @@
 - 01 in confirmation, check whether it really is a JoinAction
 - 01 try-catch around jwt.service resolveAuthenticator when not connected to internet
 - 01 report page - who has the most activity for a time range
+
+- 08 add Typescript
+- 64 Follow OIP protocol when sending edits to previous claims.
 
 - x 01 mobile: requiresOffers & requiresOfferAmount
 - x 04 desktop version of mobile app (for Vermont)

@@ -1,12 +1,14 @@
 
-CREATE TABLE give_provider (
-  giveId TEXT, -- jwtId of the GiveAction which has this as a provider
-  providerId TEXT, -- jwtId of the provider claim
-  providerType TEXT -- eg. 'Person', 'Organization', 'GiveAction'
-);
-CREATE INDEX give_provider_give ON give_provider(giveId);
-CREATE INDEX give_provider_provider ON give_provider(providerId);
+-- see README.md in this directory for explanations
 
 ALTER TABLE plan_claim ADD COLUMN url TEXT;
 
 ALTER TABLE project_claim ADD COLUMN url TEXT;
+
+CREATE TABLE give_provider (
+  giveHandleId TEXT,
+  providerHandleId TEXT,
+  providerType TEXT
+);
+CREATE INDEX give_provider_give ON give_provider(giveHandleId);
+CREATE INDEX give_provider_provider ON give_provider(providerHandleId);

@@ -576,7 +576,37 @@ class ClaimService {
       amountConfirmed: amountConfirmed,
       fullClaim: canonicalize(claim),
     }
-    let giveId = await dbService.giveInsert(entry)
+
+    let giveRecord = await dbService.giveInfoByHandleId(handleId)
+    if (giveRecord == null) {
+      // new record
+      let giveId = await dbService.giveInsert(entry)
+    } else {
+      // edit existing record
+      entry.updatedAt = new Date().toISOString()
+      await dbService.giveUpdate(entry)
+      // ... and delete providers
+      await dbService.giveProviderDelete(handleId)
+    }
+
+    // now save any providers
+    let providers = claim.provider
+    if (providers) {
+      if (!Array.isArray(providers)) {
+        providers = [providers]
+      }
+      for (const provider of providers) {
+        if (provider.identifier) {
+          const fullId = globalId(provider.identifier)
+          await dbService.giveProviderInsert({
+            giveHandleId: handleId,
+            providerHandleId: fullId,
+            providerType: provider['@type']
+          })
+        }
+      }
+    }
+
     return entry
   }
 

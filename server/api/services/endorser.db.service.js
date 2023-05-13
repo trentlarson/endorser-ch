@@ -630,6 +630,24 @@ class EndorserDatabase {
    * Give
    **/
 
+  giveInfoByHandleId(handleId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+          "SELECT * FROM give_claim WHERE handleId = ?",
+          [handleId],
+          function(err, row) {
+            if (err) {
+              reject(err)
+            } else {
+              if (row?.issuedAt) { row.issuedAt = isoAndZonify(row.issuedAt) }
+              if (row?.updatedAt) { row.updatedAt = isoAndZonify(row.updatedAt) }
+              resolve(row)
+            }
+          }
+      )
+    })
+  }
+
   giveInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
@@ -780,6 +798,33 @@ class EndorserDatabase {
     })
   }
 
+  giveUpdate(entry) {
+    return new Promise((resolve, reject) => {
+      var stmt = (
+          "UPDATE give_claim set jwtId = ?"
+          + ", issuedAt = datetime(?), updatedAt = datetime(?)"
+          + ", agentDid = ?, recipientDid = ?"
+          + ", fulfillsId = ?, fulfillsType = ?, fulfillsPlanId = ?"
+          + ", unit = ?, amount = ?"
+          + ", description = ?, fullClaim = ?"
+          + " WHERE handleId = ?"
+      )
+      db.run(stmt, [
+        entry.jwtId, entry.issuedAt, entry.updatedAt,
+        entry.agentDid, entry.recipientDid,
+        entry.fulfillsId, entry.fulfillsType, entry.fulfillsPlanId,
+        entry.unit, entry.amount, entry.description, entry.fullClaim,
+        entry.handleId,
+      ], function(err) {
+        if (!err && this.changes === 1) {
+          resolve()
+        } else {
+          reject("Expected to update 1 give row but updated " + this.changes + " with error: " + err)
+        }
+      })
+    })
+  }
+
   giveUpdateConfirmed(handleId, amount, updatedTime) {
     return new Promise((resolve, reject) => {
       var stmt =
@@ -791,6 +836,77 @@ class EndorserDatabase {
         function(err) { if (err) { reject(err) } else { resolve(this.changes) } })
     })
   }
+
+
+
+
+
+
+
+
+
+
+
+  /****************************************************************
+   * Give_Provider, a join table between gives & their providers
+   **/
+
+  giveProviderInsert(entry) {
+    return new Promise((resolve, reject) => {
+      var stmt = (
+        "INSERT INTO give_provider"
+        + " (giveHandleId, providerHandleId, providerType)"
+        + " VALUES (?, ?, ?)"
+      );
+      db.run(
+        stmt,
+        [entry.giveHandleId, entry.providerHandleId, entry.providerType],
+        function(err) {
+          if (err) { reject(err) } else { resolve(this.lastID) }
+        })
+    })
+  }
+
+  /**
+   *
+   * @param giveHandleId
+   * @param afterId
+   * @param beforeId
+   * @returns { data, hitLimit }
+   */
+  giveProviderClaims(giveHandleId, afterIdInput, beforeIdInput) {
+    const afterId = afterIdInput ? ' AND jwtId > ' + afterIdInput : ''
+    const beforeId = beforeIdInput ? ' AND jwtId < ' + beforeIdInput : ''
+    const whereClause =
+      ' LEFT JOIN give_provider'
+      + ' ON give_provider.providerHandleId = jwt.handleId'
+      + ' WHERE give_provider.giveHandleId = ?'
+      + ' AND give_provider.providerHandleId IS NOT NULL'
+      + afterId
+      + beforeId
+    return this.jwtsByWhere(whereClause, [giveHandleId]).then(jwts => {
+      const result = { data: jwts }
+      if (jwts.length === DEFAULT_LIMIT) {
+        result["hitLimit"] = true
+      }
+      return result
+    })
+  }
+
+  giveProviderDelete(giveId) {
+    return new Promise((resolve, reject) => {
+      var stmt = "DELETE FROM give_provider WHERE giveHandleId = ?";
+      db.run(
+        stmt,
+        [giveId],
+        function(err) {
+          if (err) { reject(err) } else { resolve() }
+        })
+    })
+  }
+
+
+
 
 
 
@@ -870,6 +986,37 @@ class EndorserDatabase {
     })
   }
 
+  jwtsByWhere(whereClause, whereParams) {
+    return new Promise((resolve, reject) => {
+      let data = [], rowErr
+      const sql =
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim,"
+        + " handleId, hashHex, hashChainHex FROM jwt"
+        + whereClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
+      //console.log('jwtsByWhere params & sql: ', whereParams, sql)
+      db.each(
+        // don't include things like claimEncoded & jwtEncoded because they contain all info (not hidden later)
+        sql,
+        whereParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            data.push({
+              id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
+              claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
+              handleId: row.handleId,
+              hashHex:row.hashHex, hashChainHex:row.hashChainHex
+            })
+          }
+        },
+        function(err, num) {
+          if (rowErr || err) { reject(rowErr || err) } else { resolve(data) }
+        })
+    })
+  }
+
   /**
      Similar to jwtsByParamsPaged, but:
      - returns Promise of array of the results
@@ -889,24 +1036,7 @@ class EndorserDatabase {
       'claim',
       excludeConfirmations
     )
-    return new Promise((resolve, reject) => {
-      var data = []
-      db.each(
-        // don't include things like claimEncoded & jwtEncoded because they contain all info (not hidden later)
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, hashHex, hashChainHex FROM jwt" + where.clause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
-        where.params,
-        function(err, row) {
-          row.issuedAt = isoAndZonify(row.issuedAt)
-          data.push({
-            id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
-            claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
-            handleId: row.handleId,
-            hashHex:row.hashHex, hashChainHex:row.hashChainHex
-          })
-        }, function(err, num) {
-          if (err) { reject(err) } else { resolve(data) }
-        })
-    })
+    return this.jwtsByWhere(where.clause, where.params)
   }
 
   /**
@@ -1530,17 +1660,17 @@ class EndorserDatabase {
           + " resultDescription, resultIdentifier, url"
           + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?)"
       )
-      db.run(stmt, [
-        entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
-        entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.resultDescription, entry.resultIdentifier, entry.url,
-      ], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(this.lastID)
+      db.run(
+        stmt,
+        [
+          entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
+          entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+          entry.resultDescription, entry.resultIdentifier, entry.url,
+        ],
+        function(err) {
+          if (err) { reject(err) } else { resolve(this.lastID) }
         }
-      })
+      )
     })
   }
 
@@ -1632,22 +1762,23 @@ class EndorserDatabase {
 
 
 
+
+
   /****************************************************************
    * Registration
    **/
 
   registrationInsert(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO registration (did, agent, epoch, jwtId, maxRegs, maxClaims) VALUES (?, ?, ?, ?, ?, ?)");
+      var stmt = (
+        "INSERT OR IGNORE INTO registration"
+        + " (did, agent, epoch, jwtId, maxRegs, maxClaims)"
+        + " VALUES (?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
         [entry.did, entry.agent, entry.epoch, entry.jwtId, entry.maxRegs, entry.maxClaims],
         function(err) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this.lastID)
-          }
+          if (err) { reject(err) } else { resolve(this.lastID) }
         })
     })
   }

@@ -80,6 +80,20 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getGiveProviders(req, res, next) {
+    const giveHandleId = req.query.giveHandleId
+    dbService.giveProviderClaims(giveHandleId)
+      .then(results => ({
+        data: results.data.map(
+          datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getGiveTotals(req, res, next) {
     const agentId = req.query.agentId
     const recipientId = req.query.recipientId
@@ -264,6 +278,12 @@ export default express
  **/
 
 /**
+ * @typedef IdAndType
+ * @property {string} id
+ * @property {string} type
+ */
+
+/**
  * @typedef Give
  * @property {string} jwtId
  * @property {string} handleId
@@ -278,6 +298,8 @@ export default express
  * @property {number} amountConfirmed - amount of this that recipient has confirmed
  * @property {string} description
  * @property {object} fullClaim
+ * @property {array.IdAndType} providers, where id is the handle ID of the provider; can be sent as inputs, but are retrieved through different endpoints
+ * @see /giveProviders
  */
 
 /**
@@ -342,6 +364,7 @@ export default express
  * @property {datetime} startTime
  * @property {string} resultDescription
  * @property {string} resultIdentifier
+ * @property {string} url
  */
 
 /**
@@ -391,7 +414,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get('/canClaim', dbController.getCanClaim)
+  .get('/canClaim', dbController.getCanClaim)
 
 /**
  * Retrieve all confirmers for a set of claims. (Same as POST version, just like Elasticsearch.)
@@ -403,7 +426,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get('/confirmers', serviceController.getConfirmerIds)
+  .get('/confirmers', serviceController.getConfirmerIds)
 
 /**
  * Retrieve all confirmers for a set of claims. (Same as GET version, just like Elasticsearch.)
@@ -416,7 +439,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.post('/confirmers', serviceController.getConfirmerIds)
+  .post('/confirmers', serviceController.getConfirmerIds)
 
 /**
  * Search gives
@@ -430,7 +453,9 @@ export default express
  * @param {string} recipientId.query.optional - recipient
  * @param {string} fulfillsId.query.optional - for ones that fulfill a particular item (eg. an offer)
  * @param {string} fulfillsType.query.optional - for ones that fulfill a particular type
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
+ *  reverse chronologically; 'hitLimit' boolean property if there may be more;
+ *  but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -444,11 +469,25 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
+ *   reverse chronologically; 'hitLimit' boolean property if there may be more;
+ *   but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/givesForPlans', dbController.getGivesForPlansPaged)
+
+/**
+ * Get give data including providers
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/giveProviders
+ * @param {string} giveHandleId.query.optional - the jwtId of the give entry
+ * @returns {array.Give} 200 - 'data' property with each of the providers with known types
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/giveProviders', dbController.getGiveProviders)
 
 /**
  * Get totals of gives
