@@ -872,7 +872,8 @@ class EndorserDatabase {
    * @param giveHandleId
    * @param afterId
    * @param beforeId
-   * @returns { data, hitLimit }
+   * @returns { data, hitLimit } ... but note that there may be duplicates
+   * because there some claims may have updated a provider (ie. same handleId)
    */
   giveProviderClaims(giveHandleId, afterIdInput, beforeIdInput) {
     const afterId = afterIdInput ? ' AND jwtId > ' + afterIdInput : ''

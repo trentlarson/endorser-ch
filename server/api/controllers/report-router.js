@@ -84,6 +84,11 @@ class DbController {
     const giveHandleId = req.query.giveHandleId
     dbService.giveProviderClaims(giveHandleId)
       .then(results => ({
+        // remove earlier duplicates from edits to the same handleId
+        data: R.uniqWith(R.eqBy(R.prop('handleId')), results.data),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => ({
         data: results.data.map(
           datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)
         ),

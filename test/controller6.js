@@ -1173,7 +1173,7 @@ describe('6 - check give totals', () => {
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
     }
-    credObj.claim.description = 'Found new homeschooling friends who jam'
+    credObj.claim.description = 'Found more homeschooling friends who jam'
     credObj.claim.provider = [
       { "@type": "GiveAction", "identifier": firstGiveRecordHandleId },
       { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
@@ -1236,7 +1236,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('provider retrieval works for multiple', () => {
+  it('provider retrieval works for multiple providers', () => {
     return request(Server)
       .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -1273,7 +1273,7 @@ describe('6 - check give totals', () => {
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
     }
-    credObj.claim.description = 'Found new homeschooling friends who jam'
+    credObj.claim.description = 'Found more homeschooling friends who jam'
     credObj.claim.provider = [
       { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
     ]
@@ -1303,7 +1303,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('provider retrieval works for multiple & updated', () => {
+  it('provider retrieval works for one updated', () => {
     return request(Server)
       .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -1571,6 +1571,9 @@ describe('6 - check give totals', () => {
     credObj.claim.recipient = { identifier: creds[1].did }
     credObj.claim.fulfills.identifier = offerId6
     credObj.claim.description = 'First-graders & snowboarding & horses?'
+    credObj.claim.provider = [
+      { "@type": "GiveAction", "identifier": thirdGiveRecordHandleId },
+    ]
     delete credObj.claim.object
     credObj.sub = creds[2].did
     credObj.iss = creds[1].did
@@ -1628,6 +1631,27 @@ describe('6 - check give totals', () => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].amountConfirmed).to.be.greaterThan(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('provider retrieval works for a provider that was updated', () => {
+    return request(Server)
+      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(giveRecordHandleId6))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+
+        expect(r.body.data[0].claim.description).to.equal('Found more homeschooling friends who jam')
+        expect(r.body.data[0].claimType).to.equal('GiveAction')
+        expect(r.body.data[0].handleId).to.equal(thirdGiveRecordHandleId)
+        expect(r.body.data[0].issuer).to.equal(creds[2].did)
+        expect(r.body.data[0].issuedAt).to.be.not.null
+        expect(r.body.data[0].subject).to.equal(creds[2].did)
+
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
