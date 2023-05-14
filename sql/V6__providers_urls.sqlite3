@@ -7,8 +7,7 @@ ALTER TABLE project_claim ADD COLUMN url TEXT;
 
 CREATE TABLE give_provider (
   giveHandleId TEXT,
-  providerHandleId TEXT,
-  providerType TEXT
+  providerHandleId TEXT
 );
 CREATE INDEX give_provider_give ON give_provider(giveHandleId);
 CREATE INDEX give_provider_provider ON give_provider(providerHandleId);

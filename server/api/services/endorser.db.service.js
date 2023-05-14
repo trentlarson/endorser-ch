@@ -855,12 +855,12 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT INTO give_provider"
-        + " (giveHandleId, providerHandleId, providerType)"
-        + " VALUES (?, ?, ?)"
+        + " (giveHandleId, providerHandleId)"
+        + " VALUES (?, ?)"
       );
       db.run(
         stmt,
-        [entry.giveHandleId, entry.providerHandleId, entry.providerType],
+        [entry.giveHandleId, entry.providerHandleId],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
         })

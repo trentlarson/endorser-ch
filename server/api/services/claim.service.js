@@ -600,8 +600,7 @@ class ClaimService {
           const fullId = globalId(provider.identifier)
           await dbService.giveProviderInsert({
             giveHandleId: handleId,
-            providerHandleId: fullId,
-            providerType: provider['@type']
+            providerHandleId: fullId
           })
         }
       }

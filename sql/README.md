@@ -63,7 +63,6 @@ CREATE TABLE give_claim (
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction which has this as a provider
     providerHandleId TEXT, -- handleId of the provider claim
-    providerType TEXT -- eg. 'Person', 'Organization', 'GiveAction', 'PlanAction'
 );
 
 CREATE TABLE jwt (
