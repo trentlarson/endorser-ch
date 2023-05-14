@@ -1,9 +1,8 @@
 ---
 
 - 01 fixes :
-  - add GiveAction links to previous ones, a la providers - record them, list them in results :
-    - remember to filter the historical by same handleId
-  - 01 allow edit of GiveAction & Offer, adjusting totals
+  - .3 deploy server
+  - 01 add input for provider on a gift, select person or project or give; allow copy from search? allow choice from recent search results?
   - .1 mobile - add myself to list of contacts to pick (ie. for GiveAction recipient)
   - .1 mobile - fix when iOS button text is shifted too far right
   - .1 mobile - on claim server result, only copy the ID (not including "Endorser.ch ID"; only iOS?)
@@ -15,7 +14,8 @@
     - check for matching against yourself, blank inputs, etc
     - .3 bug - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
   - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
-  - .1 publish endorser-docs
+  - .1 publish endorser-docs (eg. provider)
+  - 01 allow edit of GiveAction & Offer, adjusting totals
 
 - 01 mobile - next release requires more on-device testing
 

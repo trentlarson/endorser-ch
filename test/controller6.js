@@ -156,7 +156,7 @@ before(async () => {
 
 })
 
-let firstIdExternal, secondIdExternal
+let firstPlanIdExternal, secondPlanIdExternal
 
 describe('6 - Plans', () => {
 
@@ -176,7 +176,7 @@ describe('6 - Plans', () => {
         expect(r.body.success.claimId).to.be.a('string')
         expect(r.body.success.handleId).to.be.a('string')
         expect(r.body.success.recordsSavedForEdit).to.equal(1)
-        firstIdExternal = r.body.success.handleId
+        firstPlanIdExternal = r.body.success.handleId
         firstIdInternal = r.body.success.claimId
       }).catch((err) => {
         return Promise.reject(err)
@@ -191,7 +191,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
         expect(r.body.url).that.equals("https://example.com/plan/111")
         const dbTime = new Date(r.body.endTime)
@@ -240,7 +240,7 @@ describe('6 - Plans', () => {
 
   it('access raw plan claim by first user, by external ID', () => {
     return request(Server)
-      .get('/api/claim/byHandle/' + encodeURIComponent(firstIdExternal))
+      .get('/api/claim/byHandle/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -255,13 +255,13 @@ describe('6 - Plans', () => {
 
   it('access plan by first user, by external ID', () => {
     return request(Server)
-      .get('/api/plan/' + encodeURIComponent(firstIdExternal))
+      .get('/api/plan/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -285,7 +285,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(HIDDEN_TEXT)
         expect(r.body.issuerDid).that.equals(HIDDEN_TEXT)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -319,7 +319,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
@@ -334,7 +334,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
@@ -343,13 +343,13 @@ describe('6 - Plans', () => {
 
   it('access same plan by first person, by full external ID, still getting initial plan', () => {
     return request(Server)
-      .get('/api/plan/' + encodeURIComponent(firstIdExternal))
+      .get('/api/plan/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
@@ -361,7 +361,7 @@ describe('6 - Plans', () => {
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimPlanAction)
     planObj.claim.agent.identifier = creds[1].did
-    planObj.claim.identifier = firstIdExternal
+    planObj.claim.identifier = firstPlanIdExternal
     planObj.claim.description = ENTITY_NEW_DESC
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
@@ -384,7 +384,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
-        expect(r.body.handleId).that.equals(firstIdExternal)
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(ENTITY_NEW_DESC)
       }).catch((err) => {
         return Promise.reject(err)
@@ -393,7 +393,7 @@ describe('6 - Plans', () => {
 
   it('access raw updated plan claim by first user, by external ID', () => {
     return request(Server)
-      .get('/api/claim/byHandle/' + encodeURIComponent(firstIdExternal))
+      .get('/api/claim/byHandle/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -410,7 +410,7 @@ describe('6 - Plans', () => {
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimOffer)
     planObj.claim.agent = { identifier: creds[1].did }
-    planObj.claim.identifier = firstIdExternal
+    planObj.claim.identifier = firstPlanIdExternal
     planObj.claim.itemOffered = { description: ENTITY_NEW_DESC }
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
@@ -430,7 +430,7 @@ describe('6 - Plans', () => {
       .send({jwtEncoded: planWithExtFullBy1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
-        secondIdExternal = r.body.success.handleId
+        secondPlanIdExternal = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -444,7 +444,7 @@ describe('6 - Plans', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(2)
-        expect(r.body.data[1].handleId).to.equal(firstIdExternal)
+        expect(r.body.data[1].handleId).to.equal(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -550,7 +550,7 @@ describe('6 - check offer totals', () => {
     }
     credObj.claim.itemOffered = {
       description: 'Groom the horses',
-      isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
+      isPartOf: { '@type': 'PlanAction', identifier: firstPlanIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[2].did
     validThroughDate = new Date()
@@ -586,7 +586,7 @@ describe('6 - check offer totals', () => {
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].offeredByDid).to.equal(creds[2].did)
         expect(r.body.data[0].recipientDid).to.be.null
-        expect(r.body.data[0].recipientPlanId).to.equal(firstIdExternal)
+        expect(r.body.data[0].recipientPlanId).to.equal(firstPlanIdExternal)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(1)
         expect(r.body.data[0].amountGiven).to.equal(0)
@@ -629,7 +629,7 @@ describe('6 - check offer totals', () => {
 
   it('offer totals are correct', () => {
     return request(Server)
-      .get('/api/v2/report/offerTotals?planId=' + firstIdExternal)
+      .get('/api/v2/report/offerTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -648,7 +648,7 @@ describe('6 - check offer totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].recipientPlanId).that.equals(firstIdExternal)
+        expect(r.body.data[0].recipientPlanId).that.equals(firstPlanIdExternal)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -664,7 +664,7 @@ describe('6 - check offer totals', () => {
     }
     credObj.claim.itemOffered = {
       description: 'Take dogs for a walk',
-      isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
+      isPartOf: { '@type': 'PlanAction', identifier: firstPlanIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[2].did
     credObj.sub = creds[2].did
@@ -697,7 +697,7 @@ describe('6 - check offer totals', () => {
     }
     credObj.claim.itemOffered = {
       description: 'Feed cats',
-      isPartOf: { '@type': 'PlanAction', identifier: firstIdExternal }
+      isPartOf: { '@type': 'PlanAction', identifier: firstPlanIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[3].did
     credObj.sub = creds[3].did
@@ -723,7 +723,7 @@ describe('6 - check offer totals', () => {
 
   it('offer totals are correct after offer #3', () => {
     return request(Server)
-      .get('/api/v2/report/offerTotals?planId=' + firstIdExternal)
+      .get('/api/v2/report/offerTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -739,7 +739,7 @@ describe('6 - check offer totals', () => {
     return request(Server)
       .get(
         '/api/v2/report/offersForPlans?planIds='
-          + encodeURIComponent(JSON.stringify([firstIdExternal]))
+          + encodeURIComponent(JSON.stringify([firstPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
@@ -761,7 +761,7 @@ describe('6 - check offer totals', () => {
     }
     credObj.claim.itemOffered = {
       description: 'Fleece sheep',
-      isPartOf: { '@type': 'PlanAction', identifier: secondIdExternal }
+      isPartOf: { '@type': 'PlanAction', identifier: secondPlanIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[4].did
     credObj.sub = creds[4].did
@@ -790,7 +790,7 @@ describe('6 - check offer totals', () => {
     return request(Server)
       .get(
         '/api/v2/report/offersForPlans?planIds='
-          + encodeURIComponent(JSON.stringify([firstIdExternal]))
+          + encodeURIComponent(JSON.stringify([firstPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
@@ -807,7 +807,7 @@ describe('6 - check offer totals', () => {
     return request(Server)
       .get(
         '/api/v2/report/offersForPlans?planIds='
-          + encodeURIComponent(JSON.stringify([firstIdExternal, secondIdExternal]))
+          + encodeURIComponent(JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[5])
       .expect('Content-Type', /json/)
@@ -829,7 +829,7 @@ describe('6 - check offer totals', () => {
     }
     credObj.claim.itemOffered = {
       description: 'Help with church performance night',
-      isPartOf: { '@type': 'PlanAction', identifier: secondIdExternal }
+      isPartOf: { '@type': 'PlanAction', identifier: secondPlanIdExternal }
     }
     credObj.claim.offeredBy.identifier = creds[4].did
     credObj.sub = creds[4].did
@@ -855,7 +855,7 @@ describe('6 - check offer totals', () => {
 
   it('offer totals are correct after offer #5', () => {
     return request(Server)
-      .get('/api/v2/report/offerTotals?planId=' + secondIdExternal)
+      .get('/api/v2/report/offerTotals?planId=' + secondPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1059,7 +1059,7 @@ describe('6 - check give totals', () => {
 
   it('give totals are correct', () => {
     return request(Server)
-      .get('/api/v2/report/giveTotals?planId=' + firstIdExternal)
+      .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1206,7 +1206,7 @@ describe('6 - check give totals', () => {
 
   it('give totals are correct for second plan', () => {
     return request(Server)
-      .get('/api/v2/report/giveTotals?planId=' + secondIdExternal)
+      .get('/api/v2/report/giveTotals?planId=' + secondPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1222,7 +1222,7 @@ describe('6 - check give totals', () => {
     return request(Server)
       .get(
         '/api/v2/report/givesForPlans?planIds='
-          + encodeURIComponent(JSON.stringify([firstIdExternal, secondIdExternal]))
+          + encodeURIComponent(JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
@@ -1572,6 +1572,7 @@ describe('6 - check give totals', () => {
     credObj.claim.fulfills.identifier = offerId6
     credObj.claim.description = 'First-graders & snowboarding & horses?'
     credObj.claim.provider = [
+      { "@type": "PlanAction", "identifier": firstPlanIdExternal },
       { "@type": "GiveAction", "identifier": thirdGiveRecordHandleId },
     ]
     delete credObj.claim.object
@@ -1643,7 +1644,7 @@ describe('6 - check give totals', () => {
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data).to.be.an('array').of.length(2)
 
         expect(r.body.data[0].claim.description).to.equal('Found more homeschooling friends who jam')
         expect(r.body.data[0].claimType).to.equal('GiveAction')
@@ -1651,6 +1652,13 @@ describe('6 - check give totals', () => {
         expect(r.body.data[0].issuer).to.equal(creds[2].did)
         expect(r.body.data[0].issuedAt).to.be.not.null
         expect(r.body.data[0].subject).to.equal(creds[2].did)
+
+        expect(r.body.data[1].claim.agent.identifier).to.equal(creds[1].did)
+        expect(r.body.data[1].claim.description).to.equal(ENTITY_NEW_DESC)
+        expect(r.body.data[1].claimType).to.equal('PlanAction')
+        expect(r.body.data[1].handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[1].issuer).to.equal(creds[1].did)
+        expect(r.body.data[1].issuedAt).to.be.not.null
 
         expect(r.status).that.equals(200)
       }).catch((err) => {
