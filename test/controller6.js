@@ -1666,4 +1666,71 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
+  let giveRecordHandleId7
+
+  it('insert give #7 to record a trade', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.recipient = { identifier: creds[1].did }
+    credObj.claim.fulfills["@type"] = "TradeAction"
+    delete credObj.claim.fulfills.identifier
+    credObj.claim.fulfills.isPartOf = { identifier: firstPlanIdExternal }
+    credObj.claim.description = 'Trading the ginger chews'
+    credObj.claim.object.amountOfThisGood = 3
+    credObj.claim.object.unitCode = 'USD'
+    credObj.sub = creds[2].did
+    credObj.iss = creds[1].did
+    const claimJwtEnc = await credentials[1].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        giveRecordHandleId7 = r.body.success.handleId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give totals after #7 are correct with a default request', () => {
+    return request(Server)
+      .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('object')
+        expect(r.body.data).to.deep.equal({ "HUR": 2 })
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('give totals after #7 are correct when including trades', () => {
+    return request(Server)
+        .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal + '&includeTrades=true')
+        .set('Authorization', 'Bearer ' + pushTokens[2])
+        .expect('Content-Type', /json/)
+        .then(r => {
+          expect(r.body.data).to.be.an('object')
+          expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 3 })
+          expect(r.status).that.equals(200)
+        }).catch((err) => {
+          return Promise.reject(err)
+        })
+  }).timeout(3000)
+
 })

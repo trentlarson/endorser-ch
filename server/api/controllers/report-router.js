@@ -101,6 +101,7 @@ class DbController {
 
   getGiveTotals(req, res, next) {
     const agentId = req.query.agentId
+    const includeTrades = req.query.includeTrades
     const recipientId = req.query.recipientId
     const planId = globalId(req.query.planId)
     if (recipientId && recipientId != res.locals.tokenIssuer) {
@@ -117,7 +118,7 @@ class DbController {
       const afterId = req.query.afterId
       const beforeId = req.query.beforeId
       const unit = req.query.unit
-      dbService.giveTotals(agentId, recipientId, planId, unit, afterId, beforeId)
+      dbService.giveTotals(agentId, recipientId, planId, unit, includeTrades, afterId, beforeId)
         .then(results => { res.json(results).end() })
         .catch(err => {
           if (err == MUST_FILTER_TOTALS_ERROR) {
@@ -483,7 +484,7 @@ export default express
   .get('/givesForPlans', dbController.getGivesForPlansPaged)
 
 /**
- * Get give data including providers
+ * Get providers for a particular give
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveProviders
@@ -492,7 +493,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get('/giveProviders', dbController.getGiveProviders)
+  .get('/giveProviders', dbController.getGiveProviders)
 
 /**
  * Get totals of gives
@@ -501,6 +502,7 @@ export default express
  * @route GET /api/v2/report/giveTotals
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} includeTrades.query.optional - doesn't include trades by default, so set this to 'true' to include them
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts

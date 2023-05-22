@@ -536,24 +536,49 @@ class ClaimService {
   async createGive(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     let fulfillsId = claim.fulfills?.identifier
-    let fulfillsType
+    let fulfillsClaim = claim.fulfills
     if (fulfillsId) {
-      fulfillsId = globalId(fulfillsId)
-      fulfillsType = claim.fulfills['@type']
+      const idAsHandle = globalId(fulfillsId)
+      const loadedFulfillsObj = await dbService.jwtLastByHandleIdRaw(idAsHandle)
+      if (loadedFulfillsObj) {
+        fulfillsClaim = JSON.parse(loadedFulfillsObj.claim)
+      }
     }
 
+    let fulfillsType = fulfillsClaim?.['@type']
+
+    // now want to record if this is a part of a PlanAction, so
+    // look through fulfills and it's parent to see if any are a PlanAction
     let fulfillsPlanId
-    // look for the most applicable Plan
     if (fulfillsType == 'PlanAction') {
       fulfillsPlanId = globalId(fulfillsId)
-    } else {
-      let fulfillsObj = await dbService.jwtLastByHandleIdRaw(fulfillsId)
-      let fulfillsClaim = fulfillsObj ? JSON.parse(fulfillsObj.claim) : null
-      l.trace(`Give Creation checking fulfillClaim ${util.inspect(fulfillsClaim)}`)
-      if (fulfillsClaim?.itemOffered?.isPartOf
-          && fulfillsClaim.itemOffered.isPartOf['@type'] == 'PlanAction') {
-        fulfillsPlanId =
-          globalId(fulfillsClaim.itemOffered.isPartOf.identifier)
+    }
+    if (!fulfillsPlanId) {
+      // now look for Plan in parentage, ie isPartOf and itemOffered.isPartOf
+
+      let fulfillsClaimParent = fulfillsClaim?.isPartOf
+      if (fulfillsClaimParent?.identifier) {
+        const idAsHandle = globalId(fulfillsClaimParent.identifier)
+        const loadedFulfillsObj = await dbService.jwtLastByHandleIdRaw(idAsHandle)
+        if (loadedFulfillsObj) {
+          fulfillsClaimParent = JSON.parse(loadedFulfillsObj.claim)
+        }
+      }
+      if (fulfillsClaimParent?.['@type'] == 'PlanAction') {
+        fulfillsPlanId = globalId(fulfillsClaimParent.identifier)
+      }
+    }
+    if (!fulfillsPlanId) {
+      let fulfillsClaimParent = fulfillsClaim?.itemOffered?.isPartOf
+      if (fulfillsClaimParent?.identifier) {
+        const idAsHandle = globalId(fulfillsClaimParent.identifier)
+        const loadedFulfillsObj = await dbService.jwtLastByHandleIdRaw(idAsHandle)
+        if (loadedFulfillsObj) {
+          fulfillsClaimParent = JSON.parse(loadedFulfillsObj.claim)
+        }
+      }
+      if (fulfillsClaimParent?.['@type'] == 'PlanAction') {
+        fulfillsPlanId = globalId(fulfillsClaimParent.identifier)
       }
     }
 
