@@ -1673,8 +1673,8 @@ describe('6 - check give totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.recipient = { identifier: creds[1].did }
-    credObj.claim.fulfills["@type"] = "TradeAction"
     delete credObj.claim.fulfills.identifier
+    credObj.claim.fulfills["@type"] = "TradeAction"
     credObj.claim.fulfills.isPartOf = { identifier: firstPlanIdExternal }
     credObj.claim.description = 'Trading the ginger chews'
     credObj.claim.object.amountOfThisGood = 3

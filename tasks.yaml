@@ -2,23 +2,25 @@
 
 - 01 fixes :
   - .5 allow some registrations the next day/week
-  - .1 mobile - add myself to list of contacts to pick (ie. for GiveAction recipient)
+  - .3 fix limits message when they are restricted in the first time period
   - .1 mobile - fix when iOS button text is shifted too far right
   - .1 mobile - on claim server result, only copy the ID (not including "Endorser.ch ID"; only iOS?)
-  - 01 allow edit of Plan
   - .1 bug - mobile - on key creation while the thing is spinning, it has a message saying to click something
   - move confirmationInsert calls to end of method?
   - .1 bug - mobile - after creating an identity, on Initialize screen the "Export" button crashes (since Export screen is in a different tab set)
   - make claim-driven contact-matching work :
-    - hash original claim for searches later
+    - hash original claim for searches later -- the right way, without discoverable nonce
     - check for matching against yourself, blank inputs, etc
     - .3 bug - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
   - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
-  - .1 publish endorser-docs (eg. provider)
-  - .5 allow edit of a claim before submitting (currently allowed in contracts)
-  - 01 allow edit of GiveAction & Offer, adjusting totals
+  - change giveTotals "includeTrades" flag into "excludeTrades" or "donationsOnly" flag
+
+- 01 allow edit of GiveAction & Offer, adjusting totals
 
 - 01 mobile - next release requires more on-device testing
+
+- 01 allow edit of Plan
+- 01 add DonateAction the same as Give, with a flag on give_claim for trade (vs donation)
 
 - 02 bring many libs up-to-date
 
@@ -184,7 +186,7 @@
   - .2 change claim & issuer to not be blank when there is no verifiedResponse
   - .5 move Search All results to separate page, and let us apply TakeAction or AgreeAction
   - 02 when there's a network error, the error message is delayed (so seems like nothing happened)
-    - check all network & DB calls & then calls for error handlingp
+    - check all network & DB calls & then calls for error handling
     - handle errors if server is inaccessible
   - .5 clear the contact TextInput boxes after hitting "Create"
   - .5 remove didManagerFind call from ConfirmOthers without causing an error
