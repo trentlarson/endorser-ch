@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const sqlite3 = require('sqlite3').verbose()
 const ulidx = require('ulidx')
 const ulid = ulidx.monotonicFactory()
@@ -927,12 +928,14 @@ class EndorserDatabase {
    **/
 
   buildJwtEntry(payload, id, handleId, claim, claimStr, claimEncoded, jwtEncoded) {
-    let issuedAt = new Date(payload.iat * 1000).toISOString()
-    let issuer = payload.iss
-    let subject = payload.sub
-    let claimContext = claim['@context']
-    let claimType = claim['@type']
-    let hashHex = util.hashedClaimWithHashedDids({id:id, claim:claimStr})
+    const issuedAt = new Date(payload.iat * 1000).toISOString()
+    const issuer = payload.iss
+    const subject = payload.sub
+    const claimContext = claim['@context']
+    const claimType = claim['@type']
+    // 144 bits, base64 >= 128 bits with all character space (no padding chars)
+    const hashNonce = crypto.randomBytes(18).toString('base64')
+    const hashHex = util.hashedClaimWithHashedDids({nonce: hashNonce, claim: claimStr})
     return {
       id: id,
       issuedAt: issuedAt,
@@ -944,6 +947,7 @@ class EndorserDatabase {
       claimEncoded: claimEncoded,
       handleId: handleId,
       jwtEncoded: jwtEncoded,
+      hashNonce: hashNonce,
       hashHex: hashHex
     }
   }
@@ -1086,12 +1090,14 @@ class EndorserDatabase {
 
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex) VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      var stmt =
+        "INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex, hashNonce)"
+        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       db.run(
         stmt,
         [
           entry.id, entry.issuedAt, entry.issuer, entry.subject, entry.claimType, entry.claimContext, entry.claim,
-          entry.handleId, entry.claimEncoded, entry.jwtEncoded, entry.hashHex
+          entry.handleId, entry.claimEncoded, entry.jwtEncoded, entry.hashHex, entry.hashNonce
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
@@ -1226,14 +1232,14 @@ class EndorserDatabase {
     })
   }
 
-  jwtClaimsAndIdsUnmerkled() {
+  jwtClaimsAndNoncesUnmerkled() {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT id, claim, hashHex FROM jwt WHERE hashChainHex is null ORDER BY id",
+        "SELECT id, claim, hashHex, hashNonce FROM jwt WHERE hashChainHex is null ORDER BY id",
         [],
         function(err, row) {
-          data.push({id:row.id, claim:row.claim, hashHex:row.hashHex})
+          data.push({id:row.id, claim:row.claim, hashHex:row.hashHex, hashNonce:row.hashNonce})
         }, function(err, num) {
           if (err) { reject(err) } else { resolve(data) }
         });

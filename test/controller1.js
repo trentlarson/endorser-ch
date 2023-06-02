@@ -4,6 +4,7 @@
 import chai from 'chai'
 import chaiAsPromised from "chai-as-promised"
 import chaiString from 'chai-string'
+import crypto from 'crypto'
 import request from 'supertest'
 import { DateTime } from 'luxon'
 import R from 'ramda'
@@ -459,25 +460,57 @@ describe('1 - Util', () => {
     const someObj1 = {a: 1, b: 2}
     const someObj2 = {a: 1, b: addr0}
     const someObj3 = {a: "gabba", b: [addr6]}
+    const nonce1 = "yD/looCdBKTIi8m6YP6MJC+U"
+    const nonce2 = "rqGRCPn2yJXI5wM/LWqirOl2"
+    const nonce3 = "/tV/c+DndHXQBsbEx2hx5spy"
+
+    /**
+     *
+    const addr0Hash =
+      crypto.createHash('sha256')
+        .update(nonce2 + addr0)
+        .digest('hex')
+    const someObj2WithHashAddr = {a: 1, b: "did:none:hashed:" + addr0Hash}
+    const someObj2Hash =
+      crypto.createHash('sha256')
+        .update(JSON.stringify(someObj2WithHashAddr))
+        .digest('hex')
+    // "a4449502e2da50ab486c8cecac48b64b16e28b46ad86d392a8652e010baa75b6"
+    console.log('someObj2Hash', someObj2Hash)
+     *
+     **/
+
+    const addr6Hash =
+     crypto.createHash('sha256')
+       .update(nonce3 + addr6)
+       .digest('hex')
+    const someObj3WithHashAddr = {a: "gabba", b: ["did:none:hashed:" + addr6Hash]}
+    const someObj3Hash =
+      crypto.createHash('sha256')
+        .update(JSON.stringify(someObj3WithHashAddr))
+        .digest('hex')
+    // "c3a64570f50c6da73f38b6213bdb66e1552693549b6f0ec4f7eb8a64c8e1f7c3"
+    console.log('someObj3Hash', someObj3Hash)
+
     expect(hashChain("", [])).to.equal("")
-    expect(hashChain("", [{id:0, claim:"{}"}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
-    // hash("") = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    expect(hashChain("", [{nonce:nonce1, claim:"{}"}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
+
     // hash(JSON.stringify(someObj1)) = "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
     // hash("" + hash(JSON.stringify(someObj1))) = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
     const chainedHashSomeObj1 = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
-    expect(hashChain("", [{id:0, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
-    // show that a change in the ID doesn't matter if there are no DIDs
-    expect(hashChain("", [{id:1, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
-    // hash(JSON.stringify(hashDids(1,someObj2))) = "f2da40ddc822ffca426e4709538a437b2fc5c796382b8b2cebb5f5aca7cced79"
-    expect(hashChain(chainedHashSomeObj1, [{id:1, claim:JSON.stringify(someObj2)}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
-    // show that a change in the ID matters if there are DIDs
-    expect(hashChain(chainedHashSomeObj1, [{id:99, claim:JSON.stringify(someObj2)}])).to.equal("8249a3e8e88b9fa8d2c18c4c35d8cf82b117d4aef6ac72df3c9564f04f380322")
+    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
+    // show that a change in the nonce doesn't matter if there are no DIDs
+    expect(hashChain("", [{nonce:nonce2, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
 
-    // now an entire chain of size 2
-    expect(hashChain("", [{id:0, claim:JSON.stringify(someObj1)}, {id:1, claim:JSON.stringify(someObj2)}])).to.equal("7bd239936317756890da61250955971afa2ba2cff49dd883d034b5f429d74733")
+    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("1a395a0eb2270c50292060c855ab754ad5853854578fd984c90120949214ba5c")
+    // show that a change in the ID matters if there are DIDs
+    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce3, claim:JSON.stringify(someObj2)}])).to.not.equal("1a395a0eb2270c50292060c855ab754ad5853854578fd984c90120949214ba5c")
+
+    // show that it's the same as a 2-item chain
+    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("1a395a0eb2270c50292060c855ab754ad5853854578fd984c90120949214ba5c")
+
     // now an entire chain of size 3
-    // hash(JSON.stringify(hashDids("abc",someObj3))) = "114c2b2db1f316658255764303c5cd8d6025fdd9d6088bfdbf39285c673f584b"
-    expect(hashChain("", [{id:0, claim:JSON.stringify(someObj1)}, {id:1, claim:JSON.stringify(someObj2)}, {id:"abc", claim:JSON.stringify(someObj3)}])).to.equal("8b47201c5a6d8f5f772f922027f4e736fa4b971f677c561dd8dc25b73ab643c4")
+    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}, {nonce:nonce3, claim:JSON.stringify(someObj3)}])).to.equal("1b7ec2c6c0f86d8abf99fc5fa31b5133e9f79e3ce332b20ee7aad4387bf9007e")
   })
 
 })
@@ -561,7 +594,7 @@ describe('1 - Claim', () => {
             .to.endsWith('Signature invalid for JWT')
         })
     }
-  }).timeout(5000)
+  }).timeout(3000)
 
   it('should add a new action claim', () =>
      request(Server)

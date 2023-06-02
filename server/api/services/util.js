@@ -137,37 +137,39 @@ function allDidsInside(input) {
   }
 }
 
-function hashSeedAndDid(seed, did) {
-  const hash = crypto.createHash('sha256');
-  hash.update(seed + "|" + did)
+function hashNonceAndDid(nonce, did) {
+  const hash = crypto.createHash('sha256')
+  hash.update(nonce + did)
   return hash.digest('hex')
 }
 
 // return the input with all DIDs hashed
-function replaceDidsWithHashes(id, input) {
+function replaceDidsWithHashes(nonce, input) {
   if (Object.prototype.toString.call(input) === "[object String]") {
     if (isDid(input)) {
-      return "did:none:hashed:" + hashSeedAndDid(id, input)
+      return "did:none:hashed:" + hashNonceAndDid(nonce, input)
     } else {
       return input
     }
   } else if (input instanceof Object) {
-    return R.map(value => replaceDidsWithHashes(id, value))(input)
+    return R.map(value => replaceDidsWithHashes(nonce, value))(input)
   } else {
     return input
   }
 }
 
-function claimWithHashedDids(idAndClaim) {
-  return replaceDidsWithHashes(idAndClaim.id, JSON.parse(idAndClaim.claim))
+function claimWithHashedDids(nonceAndClaimStr) {
+  return JSON.stringify(
+    replaceDidsWithHashes(nonceAndClaimStr.nonce, JSON.parse(nonceAndClaimStr.claim))
+  )
 }
 
 /**
- @param idAndClaim is { "id": String, "claim": Stringified JSON }
- @return hashed & hex-formatted JSON string where all DIDs are hashed via hashSeedAndDid
+ @param idAndClaim is { "nonce": String, "claim": Stringified JSON }
+ @return hashed & hex-formatted JSON string where all DIDs are hashed via hashNonceAndDid
  **/
-function hashedClaimWithHashedDids(idAndClaim) {
-  const claimStr = JSON.stringify(claimWithHashedDids(idAndClaim))
+function hashedClaimWithHashedDids(nonceAndClaimStr) {
+  const claimStr = claimWithHashedDids(nonceAndClaimStr)
   const hash = crypto.createHash('sha256');
   hash.update(claimStr)
   let result = hash.digest('hex')
@@ -184,8 +186,12 @@ function hashPreviousAndNext(prev, next) {
   return result
 }
 
-function hashChain(seed, idAndClaimList) {
-  return R.reduce((prev, idAndClaim) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(idAndClaim)), seed, idAndClaimList)
+function hashChain(seed, nonceAndClaimStrList) {
+  return R.reduce(
+    (prev, nonceAndClaimStr) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStr)),
+    seed,
+    nonceAndClaimStrList
+  )
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier, globalId, hashChain, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, isGlobalUri, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier, globalId, hashChain, hashedClaimWithHashedDids, hashNonceAndDid, HIDDEN_TEXT, isDid, isGlobalUri, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

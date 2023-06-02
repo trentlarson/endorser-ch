@@ -77,7 +77,8 @@ CREATE TABLE jwt (
     claimEncoded TEXT,
     jwtEncoded TEXT,
     hashHex VARCHAR(64),
-    hashChainHex VARCHAR(64)
+    hashChainHex VARCHAR(64),
+    hashNonce VARCHAR(24) -- randomized 18 bytes, base64-encoded
 );
 
 CREATE TABLE network (

@@ -160,8 +160,8 @@ class ClaimService {
   }
 
   async merkleUnmerkled() {
-    return dbService.jwtClaimsAndIdsUnmerkled()
-      .then(idAndClaimArray => {
+    return dbService.jwtClaimsAndNoncesUnmerkled()
+      .then(nonceAndClaimStrArray => {
         return dbService.jwtLastMerkleHash()
           .then(hashHexArray => {
             let seedHex = ""
@@ -170,17 +170,17 @@ class ClaimService {
             }
             const updates = []
             let latestHashChainHex = seedHex
-            for (let idAndClaim of idAndClaimArray) {
-              latestHashChainHex = hashChain(latestHashChainHex, [idAndClaim])
-              if (idAndClaim.hashHex === null) {
+            for (let nonceAndClaimStr of nonceAndClaimStrArray) {
+              latestHashChainHex = hashChain(latestHashChainHex, [nonceAndClaimStr])
+              if (nonceAndClaimStr.hashHex === null) {
                 l.error(
                   "Found entries without a hashed claim, indicating some"
                   + " problem when inserting jwt records. Will create."
                 )
-                idAndClaim.hashHex = hashedClaimWithHashedDids(idAndClaim)
+                nonceAndClaimStr.hashHex = hashedClaimWithHashedDids(nonceAndClaimStr)
               }
               updates.push(dbService.jwtSetMerkleHash(
-                idAndClaim.id, idAndClaim.hashHex, latestHashChainHex
+                nonceAndClaimStr.id, nonceAndClaimStr.hashHex, latestHashChainHex
               ))
             }
             return Promise.all(updates)

@@ -17,9 +17,9 @@ ALTER TABLE tenure_claim   RENAME jwtRowId TO jwtId;
 ALTER TABLE vote_claim     RENAME jwtRowId TO jwtId;
 ```
 
-... then exit and `cp sql-by-hand/V7__jwt-ulid.js .` and:
+... then exit and `cp sql-by-hand/V1.1__jwt-ulid.js .` and:
 
-NODE_ENV=... node V7__jwt-ulid.js
+NODE_ENV=... node V1.1__jwt-ulid.js
 
 ... then repeat the sqlite3 command and:
 
