@@ -468,29 +468,29 @@ describe('1 - Util', () => {
      *
     const addr0Hash =
       crypto.createHash('sha256')
-        .update(nonce2 + addr0)
+        .update(addr0 + nonce2)
         .digest('hex')
     const someObj2WithHashAddr = {a: 1, b: "did:none:hashed:" + addr0Hash}
     const someObj2Hash =
       crypto.createHash('sha256')
         .update(JSON.stringify(someObj2WithHashAddr))
         .digest('hex')
-    // "a4449502e2da50ab486c8cecac48b64b16e28b46ad86d392a8652e010baa75b6"
+    // "da751d154b3f18d30c4b0285b8e7d1659ef73d8af1b46443f37c631c8fa0aa29"
     console.log('someObj2Hash', someObj2Hash)
-     *
-     **/
 
     const addr6Hash =
      crypto.createHash('sha256')
-       .update(nonce3 + addr6)
+       .update(addr6 + nonce3)
        .digest('hex')
     const someObj3WithHashAddr = {a: "gabba", b: ["did:none:hashed:" + addr6Hash]}
     const someObj3Hash =
       crypto.createHash('sha256')
         .update(JSON.stringify(someObj3WithHashAddr))
         .digest('hex')
-    // "c3a64570f50c6da73f38b6213bdb66e1552693549b6f0ec4f7eb8a64c8e1f7c3"
+    // "82dbc917e03a716ac2cf5fcc05b402bea8613bd39fbdfdcb9047d13213f76d53"
     console.log('someObj3Hash', someObj3Hash)
+     *
+     */
 
     expect(hashChain("", [])).to.equal("")
     expect(hashChain("", [{nonce:nonce1, claim:"{}"}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
@@ -502,15 +502,15 @@ describe('1 - Util', () => {
     // show that a change in the nonce doesn't matter if there are no DIDs
     expect(hashChain("", [{nonce:nonce2, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
 
-    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("1a395a0eb2270c50292060c855ab754ad5853854578fd984c90120949214ba5c")
+    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
     // show that a change in the ID matters if there are DIDs
-    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce3, claim:JSON.stringify(someObj2)}])).to.not.equal("1a395a0eb2270c50292060c855ab754ad5853854578fd984c90120949214ba5c")
+    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce3, claim:JSON.stringify(someObj2)}])).to.not.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
 
     // show that it's the same as a 2-item chain
-    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("1a395a0eb2270c50292060c855ab754ad5853854578fd984c90120949214ba5c")
+    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
 
     // now an entire chain of size 3
-    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}, {nonce:nonce3, claim:JSON.stringify(someObj3)}])).to.equal("1b7ec2c6c0f86d8abf99fc5fa31b5133e9f79e3ce332b20ee7aad4387bf9007e")
+    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}, {nonce:nonce3, claim:JSON.stringify(someObj3)}])).to.equal("fda5be5b91b8f306cffdce22993cdaa176896167a63351d07e6970b041dfc2d4")
   })
 
 })

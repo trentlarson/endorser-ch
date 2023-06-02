@@ -139,7 +139,7 @@ function allDidsInside(input) {
 
 function hashNonceAndDid(nonce, did) {
   const hash = crypto.createHash('sha256')
-  hash.update(nonce + did)
+  hash.update(did + nonce)
   return hash.digest('hex')
 }
 
