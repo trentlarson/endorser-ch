@@ -1,5 +1,6 @@
 import base64url from 'base64url'
 import canonicalize from 'canonicalize'
+import crypto from 'crypto'
 import didJwt from 'did-jwt'
 import { Resolver } from 'did-resolver'
 import { DateTime } from 'luxon'
@@ -355,9 +356,11 @@ class ClaimService {
         l.trace(`... createOneConfirm orig ID & give ${util.inspect(origGive)})`)
 
         let origClaimStr = canonicalize(origClaim)
-        result =
-            await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr)
+        let origClaimCanonHashBase64 =
+          crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
+        result =
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, origClaimCanonHashBase64)
         // will mark the give as confirmed by recipient, if this is a recipient
         let confirmedByRecipient = false
         if (issuerDid == origGive.recipientDid) {
@@ -429,9 +432,11 @@ class ClaimService {
       }
 
       const origClaimStr = canonicalize(origClaim)
+      let origClaimCanonHashBase64 =
+          crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
       const result =
-          await dbService.confirmationInsert(issuerDid, jwtId, actionClaimJwtId, origClaimStr, actionClaim.rowid, null, null)
+          await dbService.confirmationInsert(issuerDid, jwtId, actionClaimJwtId, origClaimStr, origClaimCanonHashBase64, actionClaim.rowid, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
               + ` for actionClaimId ${actionClaimId}`
              )
@@ -459,9 +464,11 @@ class ClaimService {
       }
 
       const origClaimStr = canonicalize(origClaim)
+      let origClaimCanonHashBase64 =
+          crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
       const result =
-          await dbService.confirmationInsert(issuerDid, jwtId, tenureClaimJwtId, origClaimStr, null, tenureClaim.rowid, null)
+          await dbService.confirmationInsert(issuerDid, jwtId, tenureClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, tenureClaim.rowid, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for tenureClaimId ${tenureClaimId}`);
       return {confirmationId:result, tenureClaimId}
@@ -493,9 +500,11 @@ class ClaimService {
       }
 
       const origClaimStr = canonicalize(origClaim)
+      let origClaimCanonHashBase64 =
+          crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
       const result =
-          await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, null, null, orgRoleClaim.rowid)
+          await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, orgRoleClaim.rowid)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for orgRoleClaimId ${orgRoleClaimId}`
              )
@@ -516,6 +525,8 @@ class ClaimService {
       **/
 
       const origClaimStr = canonicalize(origClaim)
+      let origClaimCanonHashBase64 =
+          crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
       // If we choose to add the subject, it's found in these places (as of today):
       //   claim.[ agent | member.member | party | participant ].identifier
@@ -524,12 +535,11 @@ class ClaimService {
       //   claim.[ agent | member.member | party | participant ].did
 
       const result =
-          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, null, null, null)
+          await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for a generic confirmation`
              )
       return {confirmationId:result}
-
     }
   }
 
@@ -652,13 +662,13 @@ class ClaimService {
           for (let claim of origClaim) {
             // this must await (see note above)
             const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, claim)
-                .catch(e => { embeddedRecordError: e })
+                .catch(e => ({ embeddedRecordError: e }))
             recordings.push(conf)
           }
         } else if (origClaim) {
           // this must await (see note above)
           const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim)
-            .catch(e => { embeddedRecordError: e })
+            .catch(e => ({ embeddedRecordError: e }))
           recordings.push(conf)
         }
       }
@@ -955,7 +965,7 @@ class ClaimService {
         if (origClaim) {
           recordings.push(
             await this.createOneConfirmation(jwtId, issuerDid, origClaim)
-              .catch(e => { embeddedRecordError: e })
+              .catch(e => ({ embeddedRecordError: e }))
           )
         }
       }
@@ -968,7 +978,7 @@ class ClaimService {
           for (let origClaim of origClaims) {
             recordings.push(
               await this.createOneConfirmation(jwtId, issuerDid, origClaim)
-                .catch(e => { embeddedRecordError: e })
+                .catch(e => ({ embeddedRecordError: e }))
             )
           }
         }

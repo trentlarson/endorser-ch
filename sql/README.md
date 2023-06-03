@@ -18,10 +18,11 @@ CREATE TABLE confirmation (
     jwtId CHARACTER(26),
     issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     origClaim TEXT,
+    origClaimCanonHashBase64 VARCHAR(44), -- base64 sha256 hash of the canonicalized claim
+    origClaimJwtId TEXT,
     actionRowId BIGINT,
     tenureRowId INTEGER,
-    orgRoleRowId INTEGER,
-    origClaimJwtId TEXT
+    orgRoleRowId INTEGER
 );
 
 CREATE TABLE event (
@@ -74,6 +75,7 @@ CREATE TABLE jwt (
     claimType VARCHAR(60),
     claimContext VARCHAR(60),
     claim TEXT,
+    claimCanonHashBase64 VARCHAR(64), -- base64 sha256 hash of the canonicalized claim
     claimEncoded TEXT,
     jwtEncoded TEXT,
     hashHex VARCHAR(64),

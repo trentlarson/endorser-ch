@@ -474,7 +474,7 @@ describe('1 - Util', () => {
     const someObj2Hash =
       crypto.createHash('sha256')
         .update(JSON.stringify(someObj2WithHashAddr))
-        .digest('hex')
+        .digest('base64')
     // "da751d154b3f18d30c4b0285b8e7d1659ef73d8af1b46443f37c631c8fa0aa29"
     console.log('someObj2Hash', someObj2Hash)
 
@@ -525,7 +525,8 @@ describe('1 - Claim', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(404)
-      }))
+      })
+  )
 
   it('should get no claims', () =>
      request(Server)
@@ -536,7 +537,8 @@ describe('1 - Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(0)
-     }))
+     })
+  )
 
   it('should get a 404 for an invalid claim number', () =>
      request(Server)
@@ -544,7 +546,8 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(400)
        expect(r.status).that.equals(404)
-     }))
+     })
+  )
 
   it('should fail to claim with bad JWT: "Unexpected end of data"', () => {
     const headerPayload = pushTokens[3].substring(0, pushTokens[3].lastIndexOf('.') + 1)
@@ -605,7 +608,8 @@ describe('1 - Claim', () => {
        expect(r.body).to.be.a('string')
        firstId = r.body
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
   // All these 5000 waits are due to JWT verify, and the time doubled with ethr-did-resolver v6.
   // Each verification takes 1-1.8 seconds (sometimes over 2) and it verifies the push token and the claim.
 
@@ -679,7 +683,8 @@ describe('1 - Claim', () => {
        expect(r.body).to.be.a('string')
        firstConfirmationClaimId = r.body
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
 
   it('should get 3 claims', () =>
      request(Server)
@@ -742,7 +747,8 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
 
   it('should add yet another new claim', () =>
      request(Server)
@@ -753,7 +759,8 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
 
   it('should get a set of action claims & one confirmation', () =>
      request(Server)
@@ -824,7 +831,8 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
 
   it('should add another new confirmation', () =>
     request(Server)
@@ -835,7 +843,8 @@ describe('1 - Claim', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(5000)
+      })
+  ).timeout(5000)
 
   it('should register user 3', () =>
     request(Server)
@@ -846,7 +855,8 @@ describe('1 - Claim', () => {
       .then(r => {
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
-      })).timeout(5000)
+      })
+  ).timeout(5000)
 
   it('should successfully add a second confirmation by someone else', () =>
      request(Server)
@@ -857,7 +867,8 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
 
   it('should see DID #1', () =>
      request(Server)
@@ -869,7 +880,8 @@ describe('1 - Claim', () => {
          .to.be.an('array')
          .to.include.members([creds[1].did])
        expect(r.status).that.equals(200)
-     })).timeout(3000) // weird that a single push-token JWT verification will take > 2 seconds - ug
+     })
+  ).timeout(3000) // weird that a single push-token JWT verification will take > 2 seconds - ug
 
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
@@ -880,7 +892,8 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(r.body).to.be.a('string')
        expect(r.status).that.equals(201)
-     })).timeout(5000)
+     })
+  ).timeout(5000)
 
   it('should retrieve the debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)

@@ -10,6 +10,7 @@
 
  */
 
+const canoncalize = require('canonicalize')
 const crypto = require("crypto");
 const sqlite3 = require('sqlite3').verbose()
 const dbInfo = require('./conf/flyway.js')
@@ -17,7 +18,7 @@ const db = new sqlite3.Database(dbInfo.fileLoc)
 
 var errResult = []
 db.each(
-  "SELECT id FROM jwt WHERE hashNonce IS null",
+  "SELECT id, claim FROM jwt",
   function(err, row) {
 
     if (err) {
@@ -25,11 +26,13 @@ db.each(
     } else if (row == null) {
       console.log('Error in select: null',)
     } else {
-      var stmt = 'UPDATE jwt SET hashNonce = ? where id = ?'
+      var stmt = 'UPDATE jwt SET claimCanonHashBase64 = ?, hashNonce = ? where id = ?'
+      var claimStr = canonicalize(JSON.parse(row.claim))
+      var claimHash = crypto.createHash('sha256').update(JSON.stringify(claimStr)).digest('base64')
       var nonce = crypto.randomBytes(18).toString('base64')
       db.run(
         stmt,
-        [nonce, row.id],
+        [claimHash, nonce, row.id],
         function (err2) {
           if (err) {
             console.log('Update to ' + row.id + ' error:', err)

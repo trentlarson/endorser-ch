@@ -528,19 +528,24 @@ class EndorserDatabase {
   }
   **/
 
-  confirmationInsert(issuer, jwtId, origJwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId) {
+  confirmationInsert(issuer, jwtId, origJwtId, origClaim, origClaimCanonHashBase64, actionRowId, tenureRowId, orgRoleRowId) {
     return new Promise((resolve, reject) => {
       var stmt = (
-          "INSERT INTO confirmation (jwtId, issuer, origClaimJwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId)"
-          + " VALUES (?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO confirmation"
+          + " (jwtId, issuer, origClaimJwtId, origClaim, origClaimCanonHashBase64, actionRowId, tenureRowId, orgRoleRowId)"
+          + " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      db.run(stmt, [jwtId, issuer, origJwtId, origClaim, actionRowId, tenureRowId, orgRoleRowId], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(this.lastID)
+      db.run(
+        stmt,
+        [jwtId, issuer, origJwtId, origClaim, origClaimCanonHashBase64, actionRowId, tenureRowId, orgRoleRowId],
+        function(err) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this.lastID)
+          }
         }
-      })
+      )
     })
   }
 
@@ -927,15 +932,28 @@ class EndorserDatabase {
    * JWT
    **/
 
+  /**
+   *
+   * @param payload
+   * @param id
+   * @param handleId
+   * @param claim
+   * @param claimStr a canonicalized string of the claim
+   * @param claimEncoded
+   * @param jwtEncoded
+   * @returns {{claimContext, string, hashNonce: string, subject: string, claim, id: string, issuedAt: ISO date string, handleId: string, jwtEncoded: string, issuer: string, hashHex: string, claimEncoded: string}}
+   */
   buildJwtEntry(payload, id, handleId, claim, claimStr, claimEncoded, jwtEncoded) {
-    const issuedAt = new Date(payload.iat * 1000).toISOString()
-    const issuer = payload.iss
-    const subject = payload.sub
+    const claimCanonHash =
+      crypto.createHash('sha256').update(claimStr).digest('base64')
     const claimContext = claim['@context']
     const claimType = claim['@type']
     // 144 bits, base64 >= 128 bits with all character space (no padding chars)
     const hashNonce = crypto.randomBytes(18).toString('base64')
     const hashHex = util.hashedClaimWithHashedDids({nonce: hashNonce, claim: claimStr})
+    const issuedAt = new Date(payload.iat * 1000).toISOString()
+    const issuer = payload.iss
+    const subject = payload.sub
     return {
       id: id,
       issuedAt: issuedAt,
@@ -944,6 +962,7 @@ class EndorserDatabase {
       claimContext: claimContext,
       claimType: claimType,
       claim: claimStr,
+      claimCanonHashBase64: claimCanonHash,
       claimEncoded: claimEncoded,
       handleId: handleId,
       jwtEncoded: jwtEncoded,
