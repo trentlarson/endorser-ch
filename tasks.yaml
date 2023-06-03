@@ -2,7 +2,7 @@
 
 - 01 fixes :
   - .5 include unguessable hash
-    - deploy - backup DB, run migration, clear hashes & chain hexes, run V7.1, hit endpoint /api/util/updateHashChain
+    - deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain
   - .5 allow some registrations the next day/week, separate Gives from others
   - .3 fix limits message when they are restricted in the first time period
   - .1 mobile - fix when iOS button text is shifted too far right
