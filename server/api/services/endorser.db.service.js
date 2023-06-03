@@ -1110,13 +1110,14 @@ class EndorserDatabase {
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
-        "INSERT INTO jwt (id, issuedAt, issuer, subject, claimType, claimContext, claim, handleId, claimEncoded, jwtEncoded, hashHex, hashNonce)"
-        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimCanonHashBase64, claimContext, claimEncoded, claimType, handleId, hashHex, hashNonce, jwtEncoded)"
+        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       db.run(
         stmt,
         [
-          entry.id, entry.issuedAt, entry.issuer, entry.subject, entry.claimType, entry.claimContext, entry.claim,
-          entry.handleId, entry.claimEncoded, entry.jwtEncoded, entry.hashHex, entry.hashNonce
+          entry.id, entry.issuedAt, entry.issuer, entry.subject,
+          entry.claim, entry.claimCanonHashBase64, entry.claimContext, entry.claimEncoded, entry.claimType,
+          entry.handleId, entry.hashHex, entry.hashNonce, entry.jwtEncoded
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }

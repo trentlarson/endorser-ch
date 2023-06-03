@@ -10,7 +10,7 @@
 
  */
 
-const canoncalize = require('canonicalize')
+const canonicalize = require('canonicalize')
 const crypto = require("crypto");
 const sqlite3 = require('sqlite3').verbose()
 const dbInfo = require('./conf/flyway.js')
@@ -28,7 +28,7 @@ db.each(
     } else {
       var stmt = 'UPDATE jwt SET claimCanonHashBase64 = ?, hashNonce = ? where id = ?'
       var claimStr = canonicalize(JSON.parse(row.claim))
-      var claimHash = crypto.createHash('sha256').update(JSON.stringify(claimStr)).digest('base64')
+      var claimHash = crypto.createHash('sha256').update(claimStr).digest('base64')
       var nonce = crypto.randomBytes(18).toString('base64')
       db.run(
         stmt,
