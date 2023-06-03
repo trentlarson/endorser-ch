@@ -941,7 +941,7 @@ class EndorserDatabase {
    * @param claimStr a canonicalized string of the claim
    * @param claimEncoded
    * @param jwtEncoded
-   * @returns {{claimContext, string, hashNonce: string, subject: string, claim, id: string, issuedAt: ISO date string, handleId: string, jwtEncoded: string, issuer: string, hashHex: string, claimEncoded: string}}
+   * @returns {{claim: string, claimCanonHashBase64: string, claimContext: string, claimEncoded: string, claimType: string, handleId: string, hashHex: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, subject: string}}
    */
   buildJwtEntry(payload, id, handleId, claim, claimStr, claimEncoded, jwtEncoded) {
     const claimCanonHash =
@@ -955,19 +955,19 @@ class EndorserDatabase {
     const issuer = payload.iss
     const subject = payload.sub
     return {
+      claim: claimStr,
+      claimCanonHashBase64: claimCanonHash,
+      claimContext: claimContext,
+      claimEncoded: claimEncoded,
+      claimType: claimType,
+      handleId: handleId,
+      hashHex: hashHex,
+      hashNonce: hashNonce,
       id: id,
       issuedAt: issuedAt,
       issuer: issuer,
-      subject: subject,
-      claimContext: claimContext,
-      claimType: claimType,
-      claim: claimStr,
-      claimCanonHashBase64: claimCanonHash,
-      claimEncoded: claimEncoded,
-      handleId: handleId,
       jwtEncoded: jwtEncoded,
-      hashNonce: hashNonce,
-      hashHex: hashHex
+      subject: subject,
     }
   }
 
