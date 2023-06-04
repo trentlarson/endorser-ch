@@ -142,7 +142,7 @@ const confirmBvcFor0By3JwtProm = credentials[3].createVerification(confirmBvcFor
 
 const confirmBvcForConfirm0By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcForConfirm0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
-confirmBvcForConfirm0By1JwtObj.claim.object.push(R.clone(confirmBvcFor0By0JwtObj))
+confirmBvcForConfirm0By1JwtObj.claim.object.push(R.clone(confirmBvcFor0By0JwtObj.claim))
 confirmBvcForConfirm0By1JwtObj.sub = creds[0].did
 const confirmBvcForConfirm0By1JwtProm = credentials[0].createVerification(confirmBvcForConfirm0By1JwtObj)
 
@@ -1159,15 +1159,21 @@ describe('1 - Event', () => {
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
-  it('should not add a confirmation of a confirmation', () =>
+  it('should warn when adding a confirmation of a confirmation', () =>
      request(Server)
-     .post('/api/claim')
+     .post('/api/v2/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
      .send({"jwtEncoded": confirmBvcForConfirm0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       // It creates a JWT record but not a new confirmation.
-       expect(r.body).to.be.a('string')
+       // It creates a JWT record but warns about this usage.
+       expect(r.body)
+         .to.be.an('object')
+         .that.has.property('success')
+         .that.has.property('confirmations')
+         .to.be.an('array')
+       expect(r.body.success.confirmations[0])
+         .that.has.property('embeddedRecordWarning')
        expect(r.status).that.equals(201)
      })).timeout(5000)
 

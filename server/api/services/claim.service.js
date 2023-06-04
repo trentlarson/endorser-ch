@@ -534,12 +534,20 @@ class ClaimService {
       //   The "did" version is for legacy data, maybe still in mobile app.
       //   claim.[ agent | member.member | party | participant ].did
 
-      const result =
+      const resultId =
           await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, null)
+      const result = { confirmationId: resultId }
+      if (origClaim['@type'] === 'AgreeAction') {
+        result.embeddedRecordWarning =
+          "This claim has AgreeAction with an embedded AgreeAction, which is probably not what is wanted."
+          + " AgreeActions make most sense to directly confirm other statements, not to confirm confirmations."
+      }
+
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for a generic confirmation`
              )
-      return {confirmationId:result}
+
+      return result
     }
   }
 
