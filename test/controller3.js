@@ -49,6 +49,13 @@ claim_Carpentry_For3_By4_JwtObj.iss = creds[4].did
 claim_Carpentry_For3_By4_JwtObj.sub = creds[3].did
 const claim_Carpentry_For3_By4_JwtProm = credentials[4].createVerification(claim_Carpentry_For3_By4_JwtObj)
 
+const confirm_Carpentry_For3_By0_JwtObj = R.clone(testUtil.jwtTemplate)
+confirm_Carpentry_For3_By0_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirm_Carpentry_For3_By0_JwtObj.claim.object.push(R.clone(claim_Carpentry_For3))
+confirm_Carpentry_For3_By0_JwtObj.iss = creds[0].did
+confirm_Carpentry_For3_By0_JwtObj.sub = creds[3].did
+const confirm_Carpentry_For3_By0_JwtProm = credentials[0].createVerification(confirm_Carpentry_For3_By0_JwtObj)
+
 const confirm_Carpentry_For3_By4_JwtObj = R.clone(testUtil.jwtTemplate)
 confirm_Carpentry_For3_By4_JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirm_Carpentry_For3_By4_JwtObj.claim.object.push(R.clone(claim_Carpentry_For3))
@@ -122,6 +129,7 @@ const confirm_Carpentry_For7_By4_JwtProm = credentials[4].createVerification(con
 let pushTokens,
     claim_Carpentry_For0_By0_JwtEnc,
     claim_Carpentry_For3_By4_JwtEnc,
+    confirm_Carpentry_For3_By0_JwtEnc,
     confirm_Carpentry_For3_By4_JwtEnc,
     confirm_Carpentry_For3_By5_JwtEnc,
     confirm_Carpentry_For3_By6_JwtEnc,
@@ -140,6 +148,7 @@ before(async () => {
   await Promise.all([
     claim_Carpentry_For0_By0_JwtProm,
     claim_Carpentry_For3_By4_JwtProm,
+    confirm_Carpentry_For3_By0_JwtProm,
     confirm_Carpentry_For3_By4_JwtProm,
     confirm_Carpentry_For3_By5_JwtProm,
     confirm_Carpentry_For3_By6_JwtProm,
@@ -152,6 +161,7 @@ before(async () => {
     [
       claim_Carpentry_For0_By0_JwtEnc,
       claim_Carpentry_For3_By4_JwtEnc,
+      confirm_Carpentry_For3_By0_JwtEnc,
       confirm_Carpentry_For3_By4_JwtEnc,
       confirm_Carpentry_For3_By5_JwtEnc,
       confirm_Carpentry_For3_By6_JwtEnc,
@@ -269,6 +279,7 @@ describe('3 - Skills', () => {
      })
   ).timeout(5000)
 
+  it('confirm 3 with carpentry skills by 0', () => postClaim(0, confirm_Carpentry_For3_By0_JwtEnc)).timeout(5000)
   it('confirm 3 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For3_By4_JwtEnc)).timeout(5000)
   it('confirm 3 with carpentry skills by 5', () => postClaim(5, confirm_Carpentry_For3_By5_JwtEnc)).timeout(5000)
   it('confirm 3 with carpentry skills by 6', () => postClaim(6, confirm_Carpentry_For3_By6_JwtEnc)).timeout(5000)
