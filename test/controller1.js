@@ -144,7 +144,7 @@ const confirmBvcForConfirm0By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmBvcForConfirm0By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmBvcForConfirm0By1JwtObj.claim.object.push(R.clone(confirmBvcFor0By0JwtObj.claim))
 confirmBvcForConfirm0By1JwtObj.sub = creds[0].did
-const confirmBvcForConfirm0By1JwtProm = credentials[0].createVerification(confirmBvcForConfirm0By1JwtObj)
+const confirmBvcForConfirm0By1JwtProm = credentials[1].createVerification(confirmBvcForConfirm0By1JwtObj)
 
 
 
@@ -1162,7 +1162,7 @@ describe('1 - Event', () => {
   it('should warn when adding a confirmation of a confirmation', () =>
      request(Server)
      .post('/api/v2/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
      .send({"jwtEncoded": confirmBvcForConfirm0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
