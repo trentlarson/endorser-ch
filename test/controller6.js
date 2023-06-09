@@ -1672,6 +1672,7 @@ describe('6 - check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.agent = { identifier: creds[2].did }
     credObj.claim.recipient = { identifier: creds[1].did }
     delete credObj.claim.fulfills.identifier
     credObj.claim.fulfills["@type"] = "TradeAction"
