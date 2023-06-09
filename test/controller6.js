@@ -409,7 +409,7 @@ describe('6 - Plans', () => {
   it('v2 fail to update a plan with wrong type', async () => {
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimOffer)
-    planObj.claim.agent = { identifier: creds[1].did }
+    planObj.claim.offeredBy = { identifier: creds[1].did }
     planObj.claim.identifier = firstPlanIdExternal
     planObj.claim.itemOffered = { description: ENTITY_NEW_DESC }
     planObj.iss = creds[1].did
@@ -552,7 +552,7 @@ describe('6 - check offer totals', () => {
       description: 'Groom the horses',
       isPartOf: { '@type': 'PlanAction', identifier: firstPlanIdExternal }
     }
-    credObj.claim.offeredBy.identifier = creds[2].did
+    credObj.claim.offeredBy = { identifier: creds[2].did }
     validThroughDate = new Date()
     credObj.claim.validThrough = validThroughDate.toISOString()
     credObj.sub = creds[2].did
@@ -666,7 +666,7 @@ describe('6 - check offer totals', () => {
       description: 'Take dogs for a walk',
       isPartOf: { '@type': 'PlanAction', identifier: firstPlanIdExternal }
     }
-    credObj.claim.offeredBy.identifier = creds[2].did
+    credObj.claim.offeredBy = { identifier: creds[2].did }
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
     const claimJwtEnc = await credentials[2].createVerification(credObj)
@@ -699,7 +699,7 @@ describe('6 - check offer totals', () => {
       description: 'Feed cats',
       isPartOf: { '@type': 'PlanAction', identifier: firstPlanIdExternal }
     }
-    credObj.claim.offeredBy.identifier = creds[3].did
+    credObj.claim.offeredBy = { identifier: creds[3].did }
     credObj.sub = creds[3].did
     credObj.iss = creds[3].did
     const claimJwtEnc = await credentials[3].createVerification(credObj)
@@ -763,7 +763,7 @@ describe('6 - check offer totals', () => {
       description: 'Fleece sheep',
       isPartOf: { '@type': 'PlanAction', identifier: secondPlanIdExternal }
     }
-    credObj.claim.offeredBy.identifier = creds[4].did
+    credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
     const claimJwtEnc = await credentials[4].createVerification(credObj)
@@ -831,7 +831,7 @@ describe('6 - check offer totals', () => {
       description: 'Help with church performance night',
       isPartOf: { '@type': 'PlanAction', identifier: secondPlanIdExternal }
     }
-    credObj.claim.offeredBy.identifier = creds[4].did
+    credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
     const claimJwtEnc = await credentials[4].createVerification(credObj)
