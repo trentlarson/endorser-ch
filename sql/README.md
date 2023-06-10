@@ -74,12 +74,12 @@ CREATE TABLE jwt (
     subject VARCHAR(100),
     claimType VARCHAR(60),
     claimContext VARCHAR(60),
-    claim TEXT,
+    claim TEXT, -- text of the JSON for the claim
     claimCanonHashBase64 VARCHAR(64), -- base64 sha256 hash of the canonicalized claim
-    claimEncoded TEXT,
-    jwtEncoded TEXT,
-    hashHex VARCHAR(64),
-    hashChainHex VARCHAR(64),
+    claimEncoded TEXT, -- base64 encoding of the canonicalized claim
+    jwtEncoded TEXT, -- the full original JWT
+    hashHex VARCHAR(64), -- a hash constructed to allow selective disclosure but to avoid correlation (using hashNonce)
+    hashChainHex VARCHAR(64), -- merkle tree of hashHex values
     hashNonce VARCHAR(24) -- randomized 18 bytes, base64-encoded
 );
 
