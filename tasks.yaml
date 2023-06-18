@@ -2,7 +2,6 @@
 tasks:
 
 - 01 fixes :
-  - console.logs
   - change giveTotals "includeTrades" flag into "excludeTrades" or "donationsOnly" flag
   - deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain :
     - API, uport-demo, LivesOfGifts
@@ -340,4 +339,4 @@ tasks:
 - x 04 desktop version of mobile app (for Vermont)
 
 log:
-- mobile - ensure every try & fetch have a catch
+- mobile - ensure every try & fetch have a catch, and every console.log is appropriate
