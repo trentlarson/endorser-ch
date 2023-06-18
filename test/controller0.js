@@ -17,8 +17,7 @@ describe('0 - Setup', () => {
     })
       .then((res) => {
         // Now make them as registered last month so that they can register others
-        const yesterday = DateTime.utc().minus({ month: 1 })
-        const yesterdayEpoch = Math.floor(yesterday.valueOf() / 1000)
+        const yesterdayEpoch = DateTime.utc().minus({ month: 1 }).toSeconds()
         dbService.registrationUpdateIssueDateForTests(testUtil.creds[0].did, yesterdayEpoch)
       })
   )
