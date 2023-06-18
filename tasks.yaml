@@ -2,7 +2,6 @@
 tasks:
 
 - 01 fixes :
-  - change giveTotals "includeTrades" flag into "excludeTrades" or "donationsOnly" flag
   - deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain :
     - API, uport-demo, LivesOfGifts
 

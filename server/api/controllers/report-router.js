@@ -498,11 +498,17 @@ export default express
 /**
  * Get totals of gives
  *
+ * I agonized over the includeTrades. There's a perspective that, by default, this endpoint should retrieve all the give
+ * activity. However, the vision of this service is to focus on the Give Economy, and not the Trade Economy, and so the
+ * default behavior is to focus only on the gives. I'm only including the possibility for trades to be included because
+ * this service is still fairly open-ended and we'll allow that use-case for now; this flag will allow us to detect
+ * other uses and provide helpful messages if we stop supporting this kind of usage in the future.
+ *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveTotals
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} includeTrades.query.optional - doesn't include trades by default, so set this to 'true' to include them
+ * @param {string} includeTrades.query.optional - doesn't include trades by default, so set this to 'true' to include them -- see above for more details on this design
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
