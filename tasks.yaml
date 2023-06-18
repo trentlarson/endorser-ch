@@ -1,12 +1,9 @@
 ---
 
 - 01 fixes :
-  - .5 include unguessable hash
-    - deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain
-  - .5 allow some registrations the next day/week, separate Gives from others
   - .3 fix limits message when they are restricted in the first time period
-  - .1 mobile - fix when iOS button text is shifted too far right
   - .1 mobile - on claim server result, only copy the ID (not including "Endorser.ch ID"; only iOS?)
+  - .2 bug - mobile - test server as myself, search projects, check first, see spinning
   - .1 bug - mobile - on key creation while the thing is spinning, it has a message saying to click something
   - move confirmationInsert calls to end of method?
   - .1 bug - mobile - after creating an identity, on Initialize screen the "Export" button crashes (since Export screen is in a different tab set)
@@ -16,6 +13,13 @@
     - .3 bug - when a match has been done, a change in the password by one party will make the results "Unknown" to them (but changing it back makes them visible)
   - 01 mobile - ensure every try has a catch, every fetch is await (or a return?), maybe build test delay for all network calls
   - change giveTotals "includeTrades" flag into "excludeTrades" or "donationsOnly" flag
+  - .5 allow some registrations the next day/week, separate Gives from others
+    - update registration message
+  - deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain
+    - API, uport-demo, LivesOfGifts
+
+- 01 get group & others to sign new pledge(s)
+- .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
 
 - 01 allow edit of GiveAction & Offer, adjusting totals
 

@@ -62,7 +62,7 @@ describe('5 - Registration', () => {
 
   it('check that cannot insert too many registrations', async () => {
     // bump up claims so that it doesn't get caught by claims limit (only reg limit)
-    await dbService.registrationUpdateMaxClaims(creds[0].did, 123)
+    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 123)
     await request(Server)
       .post('/api/claim')
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -73,7 +73,7 @@ describe('5 - Registration', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-    await dbService.registrationUpdateMaxClaims(creds[0].did, 122)
+    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 122)
   }).timeout(5000)
 
   it('check that cannot register too soon', async () => {
@@ -136,8 +136,8 @@ describe('5 - Registration', () => {
   ).timeout(3000)
 
   it('bump User 0 abilities (since it is often used for test servers)', async () => {
-    await dbService.registrationUpdateMaxClaims(creds[0].did, 10000)
-    await dbService.registrationUpdateMaxRegs(creds[0].did, 1000)
+    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 10000)
+    await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 1000)
   }).timeout(3000)
 
 })

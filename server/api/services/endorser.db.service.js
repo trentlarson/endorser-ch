@@ -1849,7 +1849,10 @@ class EndorserDatabase {
     })
   }
 
-  registrationUpdateMaxClaims(issuer, maxClaims) {
+  /**
+   * only for testing
+   */
+  registrationUpdateMaxClaimsForTests(issuer, maxClaims) {
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE registration SET maxClaims = ? WHERE did = ?");
       db.run(stmt, [maxClaims, issuer], function(err) {
@@ -1866,7 +1869,10 @@ class EndorserDatabase {
     })
   }
 
-  registrationUpdateMaxRegs(issuer, maxRegs) {
+  /**
+   * only for testing
+   */
+  registrationUpdateMaxRegsForTests(issuer, maxRegs) {
     return new Promise((resolve, reject) => {
       var stmt = ("UPDATE registration SET maxRegs = ? WHERE did = ?");
       db.run(stmt, [maxRegs, issuer], function(err) {
@@ -1882,6 +1888,28 @@ class EndorserDatabase {
       })
     })
   }
+
+  /**
+   * only for testing
+   */
+  registrationUpdateIssueDateForTests(issuer, epoch) {
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE registration SET epoch = ? WHERE did = ?");
+      db.run(stmt, [epoch, issuer], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          if (this.changes === 1) {
+            resolve()
+          } else {
+            reject("Expected to update 1 registration row but updated " + this.changes)
+          }
+        }
+      })
+    })
+  }
+
+
 
 
 

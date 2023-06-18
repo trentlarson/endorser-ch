@@ -352,7 +352,6 @@ describe('2 - Role Claims on Date', async () => {
     num => {
       const thisNum = num + 5
       it('should register user ' + thisNum, async () => {
-        if (thisNum === 8) await dbService.registrationUpdateMaxRegs(creds[0].did, 12)
         await request(Server)
           .post('/api/claim')
           .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -362,7 +361,8 @@ describe('2 - Role Claims on Date', async () => {
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
           })
-        if (thisNum === 9) await dbService.registrationUpdateMaxRegs(creds[0].did, 10)
+        if (thisNum === 8) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 12)
+        if (thisNum === 9) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 10)
       }).timeout(5000)
     },
     5

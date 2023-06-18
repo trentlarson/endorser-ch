@@ -126,7 +126,7 @@ class ClaimService {
     const registered = await dbService.registrationByDid(requestorDid)
     if (registered) {
       const startOfMonthDate = DateTime.utc().startOf('month')
-      const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
+      const startOfMonthEpoch = startOfMonthDate.toSeconds()
       const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
       const startOfWeekString = startOfWeekDate.toISO()
       const result = {
@@ -1149,8 +1149,29 @@ class ClaimService {
     const payloadClaim = this.extractClaim(payload)
     if (payloadClaim) {
       if (isEndorserRegistrationClaim(payloadClaim)) {
-        const startOfMonthDate = DateTime.utc().startOf('month')
-        const startOfMonthEpoch = Math.floor(startOfMonthDate.valueOf() / 1000)
+
+        // disallow registering the same day they got registered
+        const registeredDate = DateTime.fromSeconds(registered.epoch)
+        if (DateTime.now().hasSame(registeredDate, 'day')) {
+          return Promise.reject({ clientError: {
+              message: `You cannot register anyone on the same day you got registered.`,
+              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
+            }})
+        }
+
+        // during the first month, disallow registering more than one per day
+        const startOfDayEpoch = DateTime.utc().startOf('day').toSeconds()
+        const regCountToday = await dbService.registrationCountByAfter(payload.iss, startOfDayEpoch)
+        if (DateTime.now().hasSame(registeredDate, 'month')
+            && regCountToday > 0) {
+          return Promise.reject({ clientError: {
+            message: `You can only register one person per day during the first month.`,
+            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+          }})
+        }
+
+        // disallow registering above the monthly limit
+        const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
         const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
         // 0 shouldn't mean DEFAULT
         const maxAllowedRegs =
@@ -1161,16 +1182,6 @@ class ClaimService {
               + ` Contact an administrator for a higher limit.`,
             code: ERROR_CODES.OVER_REGISTRATION_LIMIT
           }})
-        }
-
-        const startOfWeekEpoch = Math.floor(startOfWeekDate.valueOf() / 1000)
-        if (registered.epoch > startOfWeekEpoch) {
-          return Promise.reject(
-            { clientError: {
-              message: `You cannot register others the same week you got registered.`,
-              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
-            } }
-          )
         }
       }
 

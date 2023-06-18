@@ -129,7 +129,7 @@ describe('4 - Load Claims Incrementally', () => {
   ).timeout(3000)
 
   it('insert many, many claims', async () => {
-    await dbService.registrationUpdateMaxClaims(creds[0].did, 124)
+    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 124)
 
     return Promise.all(
       manyClaimsJwtEnc.map((jwtEnc) => {
