@@ -393,7 +393,7 @@ User stories:
   - run test/test.sh (can quit after first set of tests for a quick, non-network validation)
   - run: NODE_ENV=test-local npm run dev
 
-- in uport-demo
+- in mobile app
   - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
 
   - run: `npm run build && npm run start`
@@ -418,7 +418,7 @@ User stories:
 
   - show voting results
     - see votes on search screen Call Endpoint with:
-      /api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood Cryptography Club&roleName=President&onDate=2019-06-18
+      /api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-06-18
     - processed to see votes
       R.map(o=>{return {did:o.did, roles:R.map(role=>{return {votes:role.confirmations.length, roleName:role.orgRole.roleName}})(o.orgRoles)}})(searchResults)
       ... and 2 results, three for hidden and two for 332
@@ -434,7 +434,26 @@ User stories:
     - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
     - in tenure claim, go to see how there's now a reachable path to find out the other owner
 
-- to do: show strong network; show networks with personal connection vs public DID; show fake network
+- using data generated from tests
+
+  - Users #2 & #3 want to find any common contact.
+
+  - See some records & confirmations.
+    - search on "give"
+    - confirmed by me: user #2: see 0 gave 2 hours, confirmed by connections
+    - hidden & linked: user #3: see ? gave 3 USD, not-visible is visible to others
+
+  - User #2 wants to verify skills of user #3
+    - find my own claim: user #3: search for carpentry, use second to last in list
+
+
+This will help visualize the network from the test data:
+
+* Get from DB: `select "{source:'" || substring(subject, 12, 1) || "', target:'" || substring(object, 12, 1) || "', type: 'suit'},"  from network;`
+
+* Go to https://observablehq.com/@d3/mobile-patent-suits and substitute that data into the 'links' variable, wrapped in '[]'.
+
+* See the network links at the top.
 
 
 #### Test Data for Contacts

@@ -359,8 +359,10 @@ class ClaimService {
         let origClaimCanonHashBase64 =
           crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
+        // note that this insert is repeated in each case, so might be consolidatable
         result =
           await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, origClaimCanonHashBase64)
+
         // will mark the give as confirmed by recipient, if this is a recipient
         let confirmedByRecipient = false
         if (issuerDid == origGive.recipientDid) {
@@ -435,6 +437,7 @@ class ClaimService {
       let origClaimCanonHashBase64 =
           crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
+      // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, actionClaimJwtId, origClaimStr, origClaimCanonHashBase64, actionClaim.rowid, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
@@ -467,6 +470,7 @@ class ClaimService {
       let origClaimCanonHashBase64 =
           crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
+      // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, tenureClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, tenureClaim.rowid, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
@@ -503,6 +507,7 @@ class ClaimService {
       let origClaimCanonHashBase64 =
           crypto.createHash('sha256').update(origClaimStr).digest('base64')
 
+      // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, orgRoleClaim.rowid)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
@@ -534,6 +539,7 @@ class ClaimService {
       //   The "did" version is for legacy data, maybe still in mobile app.
       //   claim.[ agent | member.member | party | participant ].did
 
+      // note that this insert is repeated in each case, so might be consolidatable
       const resultId =
           await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, null)
       const result = { confirmationId: resultId }
