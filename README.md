@@ -43,9 +43,11 @@ echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser
 
 Debug: `npm run dev:debug`
 
-Run on Docker:
+Release:
 
 * Update CHANGELOG.md & package.json, then tag the release.
+
+Run on Docker:
 
 * Set ENDORSER_VERSION to that tag and run the following:
 

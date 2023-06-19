@@ -12,7 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [2.0.0] - 2023-04-26
+## [3.0.0] - 2023-05-14
+
+### Added
+- Ability to register one person a day starting the day after registration.
+
+### Changed
+- Incompatible change: the hash for each entry is now based on a nonce. This requires a DB migration.
+
+
+
+
+## [2.1.0] - 2023-05-14 - b495e02bf97bcca95f78c847ff18ae9ad3fb3620
+
+### Added
+- Providers in GiveActions
+- Plan & project URLs
+
+
+
+
+## [2.0.0] - 2023-04-26 - d65ca268d16d437b622b1d527cd5f9bf7e8fed7a
 
 ### Added
 - Search for contacts in common from a pool of confirmers of server-hosted claims.

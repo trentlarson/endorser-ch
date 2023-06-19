@@ -1,9 +1,8 @@
 ---
 tasks:
 
-- 01 fixes :
-  - deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain :
-    - API, uport-demo, LivesOfGifts
+- deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain :
+  - API, uport-demo, LivesOfGifts
 
 - 01 get group & others to sign new pledge(s)
 - .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
@@ -338,4 +337,4 @@ tasks:
 - x 04 desktop version of mobile app (for Vermont)
 
 log:
-- mobile - ensure every try & fetch have a catch, and every console.log is appropriate
+- mobile - ensure every try & fetch have a catch, and every console.log is appropriate done:2023-06-18
