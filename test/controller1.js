@@ -12,7 +12,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import { allDidsInside, calcBbox, hashChain, HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, nonceHashChain, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
 import testUtil from './util'
 
@@ -454,7 +454,30 @@ describe('1 - Util', () => {
          .to.deep.equal('{"a":4,"b":[5,1,2,3,{"ba":1,"bb":2,"bc":3}],"c":{"ca":1,"cb":2}}')
      }))
 
-  it('should create correct hash chains', () => {
+  it('should create correct claim hash chains', () => {
+    const addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
+    const someObj1 = {a: 1, b: 2}
+    const someObj2 = {a: 1, b: addr0}
+
+    expect(claimHashChain("", [])).to.equal("")
+
+    // crypto.createHash('sha256').update("" + crypto.createHash('sha256').update('{}').digest('base64')).digest('base64')
+    //   = 'w34YiVcBFVEdwgL203VPgOa69RkU8rt9pniyje2RoFs='
+    expect(claimHashChain("", ["{}"])).to.equal("w34YiVcBFVEdwgL203VPgOa69RkU8rt9pniyje2RoFs=")
+
+    // crypto.createHash('sha256').update("" + crypto.createHash('sha256').update('{"a":1,"b":2}').digest('base64')).digest('base64')
+    //   = '6myJt1PzGgzheZ90XXRLdsRV3glO8FLycKXe/o1OnA4='
+    const chainedHashSomeObj1 = "6myJt1PzGgzheZ90XXRLdsRV3glO8FLycKXe/o1OnA4="
+    expect(claimHashChain("", [JSON.stringify(someObj1)])).to.equal(chainedHashSomeObj1)
+
+    // crypto.createHash('sha256').update(chainedHashSomeObj1 + crypto.createHash('sha256').update(JSON.stringify(someObj2)).digest('base64')).digest('base64')
+    //   = 'U8hUSILfXzjmRlQrfzS34+/P2WcqKpBq731r7OnLIVU='
+    const chainedHashSomeObj2 = "U8hUSILfXzjmRlQrfzS34+/P2WcqKpBq731r7OnLIVU="
+    expect(claimHashChain(chainedHashSomeObj1, [JSON.stringify(someObj2)])).to.equal(chainedHashSomeObj2)
+    expect(claimHashChain("", [JSON.stringify(someObj1), JSON.stringify(someObj2)])).to.equal(chainedHashSomeObj2)
+  })
+
+  it('should create correct nonce hash chains -- may be unused', () => {
     const addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
     const addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
     const someObj1 = {a: 1, b: 2}
@@ -465,6 +488,7 @@ describe('1 - Util', () => {
     const nonce3 = "/tV/c+DndHXQBsbEx2hx5spy"
 
     /**
+     * emulating hashedClaimWithHashedDids
      *
     const addr0Hash =
       crypto.createHash('sha256')
@@ -492,25 +516,29 @@ describe('1 - Util', () => {
      *
      */
 
-    expect(hashChain("", [])).to.equal("")
-    expect(hashChain("", [{nonce:nonce1, claim:"{}"}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
+    expect(nonceHashChain("", [])).to.equal("")
+    // crypto.createHash('sha256').update(crypto.createHash('sha256').update('{}').digest('hex')).digest('hex')
+    //   = 'b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495'
+    expect(nonceHashChain("", [{nonce:nonce1, claim:"{}"}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
 
-    // hash(JSON.stringify(someObj1)) = "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
-    // hash("" + hash(JSON.stringify(someObj1))) = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
+    // crypto.createHash('sha256').update('{"a":1,"b":2}').digest('hex')
+    //   = '43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777'
+    // crypto.createHash('sha256').update(crypto.createHash('sha256').update('{"a":1,"b":2}').digest('hex')).digest('hex')
+    //   = '5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac'
     const chainedHashSomeObj1 = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
-    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
+    expect(nonceHashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
     // show that a change in the nonce doesn't matter if there are no DIDs
-    expect(hashChain("", [{nonce:nonce2, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
+    expect(nonceHashChain("", [{nonce:nonce2, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
 
-    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
+    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
     // show that a change in the ID matters if there are DIDs
-    expect(hashChain(chainedHashSomeObj1, [{nonce:nonce3, claim:JSON.stringify(someObj2)}])).to.not.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
+    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce3, claim:JSON.stringify(someObj2)}])).to.not.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
 
     // show that it's the same as a 2-item chain
-    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
+    expect(nonceHashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
 
     // now an entire chain of size 3
-    expect(hashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}, {nonce:nonce3, claim:JSON.stringify(someObj3)}])).to.equal("fda5be5b91b8f306cffdce22993cdaa176896167a63351d07e6970b041dfc2d4")
+    expect(nonceHashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}, {nonce:nonce3, claim:JSON.stringify(someObj3)}])).to.equal("fda5be5b91b8f306cffdce22993cdaa176896167a63351d07e6970b041dfc2d4")
   })
 
 })

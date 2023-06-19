@@ -11,9 +11,8 @@ import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 import l from '../../common/logger'
 import { dbService } from './endorser.db.service'
 import {
-  allDidsInside, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX,
-  globalFromInternalIdentifier, globalId,
-  hashChain, isDid, isGlobalUri, hashedClaimWithHashedDids, HIDDEN_TEXT,
+  allDidsInside, calcBbox, claimHashChain,
+  ERROR_CODES, globalFromInternalIdentifier, globalId, isGlobalUri,
 } from './util';
 import { addCanSee } from './network-cache.service'
 
@@ -161,27 +160,33 @@ class ClaimService {
   }
 
   async merkleUnmerkled() {
-    return dbService.jwtClaimsAndNoncesUnmerkled()
-      .then(nonceAndClaimStrArray => {
+    return dbService.jwtClaimsAndHashesUnmerkled()
+      .then(hashAndClaimStrArray => {
         return dbService.jwtLastMerkleHash()
           .then(hashHexArray => {
             let seedHex = ""
             if (hashHexArray.length > 0) {
-              seedHex = hashHexArray[0].hashChainHex
+              seedHex = hashHexArray[0].hashChainB64
             }
             const updates = []
-            let latestHashChainHex = seedHex
-            for (let nonceAndClaimStr of nonceAndClaimStrArray) {
-              latestHashChainHex = hashChain(latestHashChainHex, [nonceAndClaimStr])
-              if (nonceAndClaimStr.hashHex === null) {
+            let latesthashChainB64 = seedHex
+            for (let hashAndClaimStr of hashAndClaimStrArray) {
+              const canon = canonicalize(JSON.parse(hashAndClaimStr.claim))
+              latesthashChainB64 = claimHashChain(latesthashChainB64, [canon])
+              if (hashAndClaimStr.claimCanonHashBase64 === null) {
                 l.error(
-                  "Found entries without a hashed claim, indicating some"
-                  + " problem when inserting jwt records. Will create."
+                  "Found entry " + hashAndClaimStr.id + " without a hashed claim. Will create."
                 )
-                nonceAndClaimStr.hashHex = hashedClaimWithHashedDids(nonceAndClaimStr)
+                if (canon !== hashAndClaimStr.claim) {
+                    l.error(
+                      "Found entry " + hashAndClaimStr.id + " with a claim that is not canonicalized."
+                    )
+                }
+                hashAndClaimStr.claimCanonHashBase64 =
+                  crypto.createHash('sha256').update(canon).digest('base64')
               }
               updates.push(dbService.jwtSetMerkleHash(
-                nonceAndClaimStr.id, nonceAndClaimStr.hashHex, latestHashChainHex
+                hashAndClaimStr.id, hashAndClaimStr.claimCanonHashBase64, latesthashChainB64
               ))
             }
             return Promise.all(updates)
@@ -1253,9 +1258,9 @@ class ClaimService {
       }
 
       const claimStr = canonicalize(payloadClaim)
-      const claimEncoded = base64url.encode(claimStr)
+      const claimCanonBase64 = base64url.encode(claimStr)
       const jwtEntry = dbService.buildJwtEntry(
-        payload, jwtId, handleId, payloadClaim, claimStr, claimEncoded, jwtEncoded
+        payload, jwtId, handleId, payloadClaim, claimStr, claimCanonBase64, jwtEncoded
       )
       const jwtRowId =
           await dbService.jwtInsert(jwtEntry)

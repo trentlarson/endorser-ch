@@ -1,7 +1,11 @@
 
 -- see README.md in this directory for explanations
 
-ALTER TABLE confirmation ADD origClaimCanonHashBase64 VARCHAR(44);
+ALTER TABLE confirmation ADD origClaimCanonHashBase64 CHARACTER(44);
 
-ALTER TABLE jwt ADD claimCanonHashBase64 VARCHAR(44);
-ALTER TABLE jwt ADD hashNonce VARCHAR(24);
+ALTER TABLE jwt RENAME claimEncoded TO claimCanonBase64;
+ALTER TABLE jwt RENAME hashHex TO claimCanonHashBase64;
+ALTER TABLE jwt RENAME hashChainHex TO hashChainB64;
+
+ALTER TABLE jwt ADD hashNonce CHARACTER(24);
+ALTER TABLE jwt ADD nonceHashHex CHARACTER(64);

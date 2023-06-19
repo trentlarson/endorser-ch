@@ -166,7 +166,7 @@ function claimWithHashedDids(nonceAndClaimStr) {
 
 /**
  @param idAndClaim is { "nonce": String, "claim": Stringified JSON }
- @return hashed & hex-formatted JSON string where all DIDs are hashed via hashNonceAndDid
+ @return hex-encoded hashed JSON string where all DIDs are hashed via hashNonceAndDid
  **/
 function hashedClaimWithHashedDids(nonceAndClaimStr) {
   const claimStr = claimWithHashedDids(nonceAndClaimStr)
@@ -177,21 +177,37 @@ function hashedClaimWithHashedDids(nonceAndClaimStr) {
   return result
 }
 
-function hashPreviousAndNext(prev, next) {
+function hashPreviousAndNext(prev, next, encoding) {
   const hash = crypto.createHash('sha256');
   hash.update(prev)
   hash.update(next)
-  let result = hash.digest('hex')
+  let result = hash.digest(encoding)
   //console.log("hash(", prev, "+", next, ") =", result)
   return result
 }
 
-function hashChain(seed, nonceAndClaimStrList) {
+// return hex of the latest merkle root of nonceHashHex values
+function nonceHashChain(seed, nonceAndClaimStrList) {
   return R.reduce(
-    (prev, nonceAndClaimStr) => hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStr)),
+    (prev, nonceAndClaimStr) =>
+      hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStr), 'hex'),
     seed,
     nonceAndClaimStrList
   )
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier, globalId, hashChain, hashedClaimWithHashedDids, hashNonceAndDid, HIDDEN_TEXT, isDid, isGlobalUri, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+// return hex of the latest merkle root of base64'd hashed claim strings (which probably should be canonical)
+function claimHashChain(seed, claimStrList) {
+  return R.reduce(
+    (prev, claimStr) =>
+      hashPreviousAndNext(
+        prev,
+        crypto.createHash('sha256').update(claimStr).digest('base64'),
+        'base64'
+      ),
+    seed,
+    claimStrList
+  )
+}
+
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

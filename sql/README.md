@@ -18,7 +18,7 @@ CREATE TABLE confirmation (
     jwtId CHARACTER(26),
     issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     origClaim TEXT,
-    origClaimCanonHashBase64 VARCHAR(44), -- base64 sha256 hash of the canonicalized claim
+    origClaimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
     origClaimJwtId TEXT,
     actionRowId BIGINT,
     tenureRowId INTEGER,
@@ -74,13 +74,13 @@ CREATE TABLE jwt (
     subject VARCHAR(100),
     claimType VARCHAR(60),
     claimContext VARCHAR(60),
-    claim TEXT, -- text of the JSON for the claim
-    claimCanonHashBase64 VARCHAR(64), -- base64 sha256 hash of the canonicalized claim
-    claimEncoded TEXT, -- base64 encoding of the canonicalized claim
+    claim TEXT, -- canonical text of the JSON for the claim (but was it directly from the JWT at first?)
+    claimCanonBase64 TEXT, -- base64 encoding of the canonicalized claim
+    claimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
+    hashChainB64 CHARACTER(64), -- merkle tree of claimCanonHashBase64 values
+    hashNonce CHARACTER(24) -- randomized 18 bytes (currently base64-encoded), kept private, used for nonceHashHex
     jwtEncoded TEXT, -- the full original JWT
-    hashHex VARCHAR(64), -- a hash constructed to allow selective disclosure but to avoid correlation (using hashNonce)
-    hashChainHex VARCHAR(64), -- merkle tree of hashHex values
-    hashNonce VARCHAR(24) -- randomized 18 bytes, base64-encoded
+    nonceHashHex CHARACTER(64), -- hex of hash constructed with hashNonce to allow selective disclosure but to avoid correlation
 );
 
 CREATE TABLE network (
