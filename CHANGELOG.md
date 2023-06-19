@@ -12,13 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.0.0] - 2023-05-14
+## [3.1.0] - 2023-05-19
+
+### Changed
+- Incompatible change: there is a hash for each entry is now based on a nonce. This requires a DB migration.
+- There is a hash for each entry based on a nonce.
 
 ### Added
 - Ability to register one person a day starting the day after registration.
 
-### Changed
-- Incompatible change: the hash for each entry is now based on a nonce. This requires a DB migration.
 
 
 

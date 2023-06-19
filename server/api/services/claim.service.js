@@ -12,7 +12,7 @@ import l from '../../common/logger'
 import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, claimHashChain,
-  ERROR_CODES, globalFromInternalIdentifier, globalId, isGlobalUri,
+  ERROR_CODES, globalFromInternalIdentifier, globalId, hashedClaimWithHashedDids, isGlobalUri,
 } from './util';
 import { addCanSee } from './network-cache.service'
 
@@ -177,16 +177,28 @@ class ClaimService {
                 l.error(
                   "Found entry " + hashAndClaimStr.id + " without a hashed claim. Will create."
                 )
-                if (canon !== hashAndClaimStr.claim) {
-                    l.error(
-                      "Found entry " + hashAndClaimStr.id + " with a claim that is not canonicalized."
-                    )
-                }
                 hashAndClaimStr.claimCanonHashBase64 =
                   crypto.createHash('sha256').update(canon).digest('base64')
+                if (canon !== hashAndClaimStr.claim) {
+                  l.error(
+                    "Found entry " + hashAndClaimStr.id + " with a claim that is not canonicalized."
+                  )
+                }
+                if (hashAndClaimStr.nonceHashHex == null) {
+                  l.error(
+                    "Found entry " + hashAndClaimStr.id + " without a nonceHashHex. Will set it."
+                  )
+                  hashAndClaimStr.nonceHashHex = hashedClaimWithHashedDids({
+                    nonce: hashAndClaimStr.nonce,
+                    claim: canon,
+                  })
+                }
               }
               updates.push(dbService.jwtSetMerkleHash(
-                hashAndClaimStr.id, hashAndClaimStr.claimCanonHashBase64, latesthashChainB64
+                hashAndClaimStr.id,
+                hashAndClaimStr.claimCanonHashBase64,
+                latesthashChainB64,
+                hashAndClaimStr.nonceHashHex
               ))
             }
             return Promise.all(updates)

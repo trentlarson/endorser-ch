@@ -1256,10 +1256,16 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT id, claim, claimCanonHashBase64, hashNonce FROM jwt WHERE hashChainB64 is null ORDER BY id",
+        "SELECT id, claim, claimCanonHashBase64, hashNonce, nonceHashHex FROM jwt WHERE hashChainB64 is null ORDER BY id",
         [],
         function(err, row) {
-          data.push({id:row.id, claim:row.claim, claimCanonHashBase64:row.claimCanonHashBase64})
+          data.push({
+            id: row.id,
+            claim: row.claim,
+            claimCanonHashBase64: row.claimCanonHashBase64,
+            hashNonce: row.hashNonce,
+            nonceHashHex: row.nonceHashHex
+          })
         }, function(err, num) {
           if (err) { reject(err) } else { resolve(data) }
         });
@@ -1288,10 +1294,10 @@ class EndorserDatabase {
   }
   **/
 
-  jwtSetMerkleHash(jwtId, claimCanonHashBase64, hashChainB64) {
+  jwtSetMerkleHash(jwtId, claimCanonHashBase64, hashChainB64, nonceHashHex) {
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET claimCanonHashBase64 = ?, hashChainB64 = ? WHERE id = ?");
-      db.run(stmt, [claimCanonHashBase64, hashChainB64, jwtId], function(err) {
+      var stmt = ("UPDATE jwt SET claimCanonHashBase64 = ?, hashChainB64 = ?, nonceHashHex = ? WHERE id = ?");
+      db.run(stmt, [claimCanonHashBase64, hashChainB64, nonceHashHex, jwtId], function(err) {
         if (err) {
           reject(err)
         } else {
