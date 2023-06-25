@@ -9,17 +9,14 @@ const credentials = testUtil.credentials
 
 describe('0 - Setup', () => {
 
-  it('should register initial user', () =>
+  it('should register initial user', () => {
+    // pretend they were registered last month so they can register everyone
+    const lastMonthEpoch = DateTime.utc().minus({ month: 1 }).toSeconds();
     dbService.registrationInsert({
       did: testUtil.creds[0].did,
-      epoch: DateTime.utc().toSeconds(),
+      epoch: lastMonthEpoch,
       maxRegs: 16,
     })
-      .then((res) => {
-        // Now make them as registered last month so that they can register others
-        const yesterdayEpoch = DateTime.utc().minus({ month: 1 }).toSeconds()
-        dbService.registrationUpdateIssueDateForTests(testUtil.creds[0].did, yesterdayEpoch)
-      })
-  )
+  })
 
 })

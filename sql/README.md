@@ -168,8 +168,8 @@ CREATE TABLE project_claim (
 );
 
 CREATE TABLE registration (
-    did CHARACTER(100) PRIMARY KEY, -- DID of the confirming entity; did:peer are 58 chars
-    agent CHARACTER(100), -- DID of the confirming entity; did:peer are 58 chars
+    did CHARACTER(100) PRIMARY KEY, -- DID of the registered entity; did:peer are 58 chars
+    agent CHARACTER(100), -- DID of the registering entity; did:peer are 58 chars
     epoch INTEGER, -- unix epoch seconds
     jwtId CHARACTER(26),
     maxRegs INTEGER, -- allowed registrations per time period

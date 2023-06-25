@@ -1,14 +1,14 @@
 /**
  This script will add a nonce to all records without one.
 
- In sqlite3, run this: UPDATE jwt SET hashHex = null, hashChainHex = null;
+ In sqlite3, run this: UPDATE jwt SET claimCanonHashBase64 = null, hashChainB64 = null;
 
  ... then exit and run this:
 
  cp sql-by-hand/V7.1__jwt-nonce.js .
- NODE_ENV=... node V7.1__jwt-nonce.js
+ NODE_ENV=... APP_DB_FILE=... node V7.1__jwt-nonce.js
 
- ... then hit the endpoint /api/util/updateHashChain
+ ... then POST to the endpoint /api/util/updateHashChain
 
  */
 

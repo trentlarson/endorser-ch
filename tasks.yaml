@@ -1,15 +1,10 @@
 ---
 tasks:
 
-- deploy - backup DB, run migration, clear chain hexes, run V7.1, hit endpoint /api/util/updateHashChain :
-  - API, uport-demo, LivesOfGifts
-
 - 01 get group & others to sign new pledge(s)
 - .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
 
 - 01 allow edit of GiveAction & Offer, adjusting totals
-
-- 01 mobile - next release requires more on-device testing
 
 - 01 allow edit of Plan
 - 01 add DonateAction the same as Give, with a flag on give_claim for trade (vs donation)
@@ -82,7 +77,7 @@ tasks:
   - 02 screens for plan offers & gives - offers total, offers to me, give total, recent gives, open offers, open gives
   - 08 on front page or notification, add upcoming commitments or recently triggered commitments (need "triggered" time?)
 
-  - .1 bug - on key import, it takes time but doesn't spin
+  - .3 bug - on ReportFeed & MyCredentials search results, the window is too small on the test Android and cuts the last item(s); change to list like regular search
 
   - .2 avoid duplicate run of background check (especially on Android)
 
