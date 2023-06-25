@@ -2,6 +2,12 @@
 tasks:
 
 - 01 get group & others to sign new pledge(s)
+  - page with new pledge
+  - page with CEO pledge linking to that
+
+- download my data and the ones I can see from others
+  -
+
 - .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
 
 - 01 allow edit of GiveAction & Offer, adjusting totals
@@ -18,6 +24,8 @@ tasks:
 
 - 08 I have been in a project, you see it, and I can share my contributions. :
   - Allow confirmations by project issuer or agent.
+
+- 02 add "olderThanId" and "newerThanId" and start to replace "afterId" and "beforeId"
 
 - 04 Allow MetaMask SSI Snap to create JWT VCs https://medium.com/@blockchainlabum/ssi-snap-new-release-did-key-and-did-pkh-ceramic-network-jwt-vc-official-dapp-d295e5e28cd7
 

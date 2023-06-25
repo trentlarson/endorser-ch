@@ -576,7 +576,7 @@ class ClaimService {
 
   async createGive(jwtId, issuerDid, issuedAt, handleId, claim) {
 
-    let fulfillsId = claim.fulfills?.identifier
+    const fulfillsId = claim.fulfills?.identifier
     let fulfillsClaim = claim.fulfills
     if (fulfillsId) {
       const idAsHandle = globalId(fulfillsId)
@@ -626,7 +626,7 @@ class ClaimService {
     const byRecipient = issuerDid == claim.recipient?.identifier
     const amountConfirmed = byRecipient ? (claim.object?.amountOfThisGood || 1) : 0
 
-    let entry = {
+    const entry = {
       jwtId: jwtId,
       handleId: handleId,
       issuedAt: issuedAt,
@@ -643,7 +643,7 @@ class ClaimService {
       fullClaim: canonicalize(claim),
     }
 
-    let giveRecord = await dbService.giveInfoByHandleId(handleId)
+    const giveRecord = await dbService.giveInfoByHandleId(handleId)
     if (giveRecord == null) {
       // new record
       let giveId = await dbService.giveInsert(entry)
@@ -684,9 +684,9 @@ class ClaimService {
 
       l.trace('Adding AgreeAction confirmation', claim)
 
-      let recordings = []
+      const recordings = []
       {
-        let origClaim = claim['object']
+        const origClaim = claim['object']
         if (Array.isArray(origClaim)) {
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
@@ -723,7 +723,7 @@ class ClaimService {
                && claim['@type'] === 'JoinAction') {
 
       // agent.did is for legacy data, some still in the mobile app
-      let agentDid = claim.agent?.identifier || claim.agent?.did
+      const agentDid = claim.agent?.identifier || claim.agent?.did
 
       if (!agentDid) {
         l.error(`Error in ${this.constructor.name}: JoinAction for ${jwtId} has no agent DID.`)
@@ -747,7 +747,7 @@ class ClaimService {
           })
 
       if (events.length === 0) {
-        let eventId = await dbService.eventInsert(orgName, claim.event.name, claim.event.startTime)
+        const eventId = await dbService.eventInsert(orgName, claim.event.name, claim.event.startTime)
         event = {
           id:eventId, orgName:orgName, name:claim.event.name, startTime:claim.event.startTime
         }
@@ -772,7 +772,7 @@ class ClaimService {
 
       }
 
-      let actionId = await dbService.actionClaimInsert(issuerDid, agentDid, jwtId, event)
+      const actionId = await dbService.actionClaimInsert(issuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
       return { actionId }
 
@@ -794,7 +794,7 @@ class ClaimService {
       const validTimeStr =
         isNaN(validTime.getTime()) ? undefined : validTime.toISOString()
 
-      let entry = {
+      const entry = {
         jwtId: jwtId,
         handleId: handleId,
         issuedAt: issuedAt,
@@ -808,7 +808,7 @@ class ClaimService {
         validThrough: validTimeStr,
         fullClaim: canonicalize(claim),
       }
-      let offerId = await dbService.offerInsert(entry)
+      const offerId = await dbService.offerInsert(entry)
       l.trace(`${this.constructor.name} New offer ${offerId} ${util.inspect(entry)}`)
       return { offerId }
 
@@ -818,7 +818,7 @@ class ClaimService {
                && claim.member['@type'] === 'OrganizationRole'
                && claim.member.member.identifier) {
 
-      let entry = {
+      const entry = {
         jwtId: jwtId,
         issuerDid: issuerDid,
         orgName: claim.name,
@@ -827,7 +827,7 @@ class ClaimService {
         endDate: claim.member.endDate,
         memberDid: claim.member.member.identifier
       }
-      let orgRoleId = await dbService.orgRoleInsert(entry)
+      const orgRoleId = await dbService.orgRoleInsert(entry)
       l.trace(`${this.constructor.name} New org role ${orgRoleId} ${util.inspect(entry)}`)
       return { orgRoleId }
 
@@ -838,7 +838,7 @@ class ClaimService {
       // note that this is similar to Project
 
       // agent.did is for legacy data, some still in the mobile app
-      let agentDid = claim.agent?.identifier || claim.agent?.did
+      const agentDid = claim.agent?.identifier || claim.agent?.did
 
       // We'll put the given times into the DB but only if they're valid dates.
       // This also helps when JS parses but DB datetime() would not.
@@ -864,7 +864,7 @@ class ClaimService {
         url: claim.url,
       }
 
-      let planRecord = await dbService.planInfoByHandleId(handleId)
+      const planRecord = await dbService.planInfoByHandleId(handleId)
       if (planRecord == null) {
         // new record
         const planId = await dbService.planInsert(entry)
@@ -884,7 +884,7 @@ class ClaimService {
       // note that this is similar to PlanAction
 
       // agent.did is for legacy data, some still in the mobile app
-      let agentDid = claim.agent?.identifier || claim.agent?.did
+      const agentDid = claim.agent?.identifier || claim.agent?.did
 
       // We'll put the given times into the DB but only if they're valid dates.
       // This also helps when JS parses but DB datetime() would not.
@@ -910,7 +910,7 @@ class ClaimService {
         url: claim.url,
       }
 
-      let projectRecord = await dbService.projectInfoByHandleId(handleId)
+      const projectRecord = await dbService.projectInfoByHandleId(handleId)
       if (projectRecord == null) {
         // new record
         const projectId = await dbService.projectInsert(entry)
@@ -927,19 +927,27 @@ class ClaimService {
     } else if (isEndorserRegistrationClaim(claim)) {
 
       // agent.did is for legacy data, some still in the mobile app
-      let agentDid = claim.agent?.identifier || claim.agent?.did
+      const agentDid = claim.agent?.identifier || claim.agent?.did || issuerDid
+
+      if (agentDid != null && agentDid !== issuerDid) {
+        return { embeddedRecordError: "You cannot claim an agent other than yourself as registrar." }
+      }
 
       // participant.did is for legacy data, some still in the mobile app
-      let participantDid = claim.participant?.identifier || claim.participant?.did
+      const participantDid = claim.participant?.identifier || claim.participant?.did
 
-      let registration = {
+      if (!participantDid) {
+        return { embeddedRecordError: "You did not send a participant's identifier for registration." }
+      }
+
+      const registration = {
         did: participantDid,
         agent: agentDid,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
       }
 
-      let registrationId = await dbService.registrationInsert(registration)
+      const registrationId = await dbService.registrationInsert(registration)
       l.trace(`${this.constructor.name} New registration ${registrationId} ${util.inspect(registration)}`)
       return { registrationId }
 
@@ -947,10 +955,10 @@ class ClaimService {
                && claim['@type'] === 'Tenure') {
 
       // party.did is for legacy data, some still in the mobile app
-      let partyDid = claim.party?.identifier || claim.party?.did
+      const partyDid = claim.party?.identifier || claim.party?.did
 
-      let bbox = calcBbox(claim.spatialUnit.geo.polygon)
-      let entry =
+      const bbox = calcBbox(claim.spatialUnit.geo.polygon)
+      const entry =
           {
             jwtId: jwtId,
             issuerDid: issuerDid,
@@ -962,7 +970,7 @@ class ClaimService {
             maxLat: bbox.maxLat
           }
 
-      let tenureId = await dbService.tenureInsert(entry)
+      const tenureId = await dbService.tenureInsert(entry)
       l.trace(`${this.constructor.name} New tenure ${tenureId} ${util.inspect(entry)}`)
       return { tenureId }
 
@@ -970,7 +978,7 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'VoteAction') {
 
-      let entry = {
+      const entry = {
         jwtId: jwtId,
         issuerDid: issuerDid,
         actionOption: claim.actionOption,
@@ -979,7 +987,7 @@ class ClaimService {
         eventStartTime: claim.object.event.startDate,
       }
 
-      let voteId = await dbService.voteInsert(entry)
+      const voteId = await dbService.voteInsert(entry)
       l.trace(`${this.constructor.name} New vote ${voteId} ${util.inspect(entry)}`)
       return { voteId }
 
@@ -1017,7 +1025,7 @@ class ClaimService {
       l.trace(`${this.constructor.name} Created ${recordings.length}`
               + ` confirmations & network records.`, recordings)
 
-      let confirmations = await Promise.all(recordings)
+      const confirmations = await Promise.all(recordings)
       return { confirmations }
 
     } else {
