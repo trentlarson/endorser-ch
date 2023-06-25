@@ -5,9 +5,6 @@ tasks:
   - page with new pledge
   - page with CEO pledge linking to that
 
-- download my data and the ones I can see from others
-  -
-
 - .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
 
 - 01 allow edit of GiveAction & Offer, adjusting totals

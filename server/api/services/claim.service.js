@@ -143,7 +143,7 @@ class ClaimService {
       return result
     } else {
       return Promise.reject({
-        clientError: { message: 'Rate limits are only available to existing users.',
+        clientError: { message: 'Rate limits are only available to registered users.',
                        code: ERROR_CODES.UNREGISTERED_USER }
       })
     }
