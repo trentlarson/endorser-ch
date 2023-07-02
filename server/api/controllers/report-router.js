@@ -221,7 +221,6 @@ class DbController {
   }
 
   getPlansByLocationPaged(req, res, next) {
-    console.log("getPlansByLocationPaged", req.query)
     const minLocLat = Number.parseFloat(req.query.minLocLat)
     const maxLocLat = Number.parseFloat(req.query.maxLocLat)
     const westLocLon = Number.parseFloat(req.query.westLocLon)
@@ -253,6 +252,19 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getProjectsByLocationPaged(req, res, next) {
+    const minLocLat = Number.parseFloat(req.query.minLocLat)
+    const maxLocLat = Number.parseFloat(req.query.maxLocLat)
+    const westLocLon = Number.parseFloat(req.query.westLocLon)
+    const eastLocLon = Number.parseFloat(req.query.eastLocLon)
+    dbService.projectsByLocationPaged(
+      minLocLat, maxLocLat, westLocLon, eastLocLon, req.query.afterId, req.query.beforeId
+    )
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
