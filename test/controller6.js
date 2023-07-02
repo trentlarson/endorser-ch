@@ -193,7 +193,6 @@ describe('6 - Plans', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
-        console.log('r.body', r.body)
         expect(r.body.locLat).that.equals(testUtil.claimPlanAction.location.geo.latitude)
         expect(r.body.locLon).that.equals(testUtil.claimPlanAction.location.geo.longitude)
         expect(r.body.url).that.equals("https://example.com/plan/111")
@@ -203,6 +202,42 @@ describe('6 - Plans', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+  it('fail to retrieve plan without matching a location', () => {
+    return request(Server)
+      .get('/api/v2/report/plansByLocation?'
+        + 'minLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude + 1)
+        + '&maxLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude + 2)
+        + '&westLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 1)
+        + '&eastLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 2)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        console.log('r.body', r.body)
+        expect(r.body.data?.length).that.equals(0)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('fail to retrieve plan without matching a location', () => {
+    return request(Server)
+      .get('/api/v2/report/plansByLocation?'
+        + 'minLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude - 1)
+        + '&maxLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude + 1)
+        + '&westLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude - 1)
+        + '&eastLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 1)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        console.log('r.body', r.body)
+        expect(r.body.data?.length).that.equals(1)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  })
 
   it('v2 insert of bad plan by first user', () => {
     return request(Server)

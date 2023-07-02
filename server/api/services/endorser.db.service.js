@@ -1572,6 +1572,9 @@ class EndorserDatabase {
 
 
 
+
+
+
   /****************************************************************
    * Plan
    **/
@@ -1657,6 +1660,55 @@ class EndorserDatabase {
       afterIdInput,
       beforeIdInput
     )
+  }
+
+  /**
+   * Working with WGS 84 coordinates & kilometers
+   *
+   * @param lat degrees latitude
+   * @param lon degrees longitude
+   * @param afterIdInput
+   * @param beforeIdInput
+   * @returns {Promise<unknown>}
+   */
+  plansByLocationPaged(minLat, maxLat, westLon, eastLon, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      const params = [minLat, maxLat, westLon, eastLon]
+      let sql = (
+        "SELECT rowid, * FROM plan_claim"
+          + " WHERE"
+          + " (locLat BETWEEN ? AND ?)"
+          + " AND (locLon BETWEEN ? AND ?)"
+      )
+      if (afterIdInput) {
+        params.push(afterIdInput)
+        sql += " AND rowid >= ?"
+      }
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND rowid <= ?"
+      }
+
+      sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
+
+      const data = []
+      console.log("plansByLocationPaged sql: " + sql, params)
+      db.each(sql, params, function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          if (row.endTime) { row.endTime = isoAndZonify(row.endTime) }
+          if (row.startTime) { row.startTime = isoAndZonify(row.startTime) }
+          data.push(row)
+        }
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
   }
 
   planUpdate(entry) {

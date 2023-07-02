@@ -3,7 +3,5 @@
 
 ALTER TABLE plan_claim ADD COLUMN locLat REAL;
 ALTER TABLE plan_claim ADD COLUMN locLon REAL;
-ALTER TABLE plan_claim ADD COLUMN locRadiusMeters REAL;
 ALTER TABLE project_claim ADD COLUMN locLat REAL;
 ALTER TABLE project_claim ADD COLUMN locLon REAL;
-ALTER TABLE project_claim ADD COLUMN locRadiusMeters REAL;

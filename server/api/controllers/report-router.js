@@ -220,6 +220,20 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getPlansByLocationPaged(req, res, next) {
+    console.log("getPlansByLocationPaged", req.query)
+    const minLocLat = Number.parseFloat(req.query.minLocLat)
+    const maxLocLat = Number.parseFloat(req.query.maxLocLat)
+    const westLocLon = Number.parseFloat(req.query.westLocLon)
+    const eastLocLon = Number.parseFloat(req.query.eastLocLon)
+    dbService.plansByLocationPaged(
+      minLocLat, maxLocLat, westLocLon, eastLocLon, req.query.afterId, req.query.beforeId
+    )
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getAllProjectsPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -600,3 +614,20 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByIssuer', dbController.getPlansByIssuerPaged)
+
+/**
+ * Get all plans that have a location in the bbox specified, paginated, reverse-chronologically
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/plansByLocation
+ * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
+ * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
+ * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/plansByLocation', dbController.getPlansByLocationPaged)

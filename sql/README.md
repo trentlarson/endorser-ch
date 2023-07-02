@@ -149,7 +149,6 @@ CREATE TABLE plan_claim (
     startTime DATE, -- should be DATETIME, but luckily it stores times already
     locLat REAL, -- approximate WGS 84 latitude (we don't request precision)
     locLon REAL, -- approximate WGS 84 longitude (we don't request precision)
-    locRadiusMeters REAL, -- approximate radius in meters (we don't request precision) -- unused
     resultDescription TEXT,
     resultIdentifier TEXT,
     url TEXT
@@ -168,7 +167,6 @@ CREATE TABLE project_claim (
     startTime DATE, -- should be DATETIME, but luckily it stores times already
     locLat REAL, -- approximate WGS 84 latitude (we don't request precision)
     locLon REAL, -- approximate WGS 84 longitude (we don't request precision)
-    locRadiusMeters REAL, -- approximate radius in meters (we don't request precision) -- unused
     resultDescription TEXT,
     resultIdentifier TEXT,
     url TEXT
