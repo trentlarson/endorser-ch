@@ -1580,13 +1580,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
-          + ", name, description, image, endTime, startTime,"
+          + ", name, description, image, endTime, startTime, locLat, locLon,"
           + " resultDescription, resultIdentifier, url"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+        entry.locLat, entry.locLon,
         entry.resultDescription, entry.resultIdentifier, entry.url,
       ], function(err) {
         if (err) {
@@ -1626,6 +1627,7 @@ class EndorserDatabase {
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
+       'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['image', 'url'],
       'description',
@@ -1646,6 +1648,7 @@ class EndorserDatabase {
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
+       'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['image', 'url'],
       'description',
@@ -1695,15 +1698,16 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO project_claim (jwtId, issuerDid, agentDid, handleId"
-          + ", name, description, image, endTime, startTime,"
+          + ", name, description, image, endTime, startTime, locLat, locLon,"
           + " resultDescription, resultIdentifier, url"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?)"
       )
       db.run(
         stmt,
         [
           entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
           entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+          entry.locLat, entry.locLon,
           entry.resultDescription, entry.resultIdentifier, entry.url,
         ],
         function(err) {
@@ -1741,6 +1745,7 @@ class EndorserDatabase {
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
+       'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['image', 'url'],
       'description',
@@ -1761,6 +1766,7 @@ class EndorserDatabase {
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
        'name', 'description', 'endTime', 'startTime',
+       'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['image', 'url'],
       'description',

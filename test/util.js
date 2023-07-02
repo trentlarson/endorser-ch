@@ -201,6 +201,7 @@ module.exports = {
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
     "endTime": "2023-03-31T07:07:07Z",
+    "location": { "geo": { "@type": "GeoCoordinates", "latitude": 40.883944, "longitude": -111.884787 } },
     "url": "https://example.com/plan/111",
   },
 
@@ -214,6 +215,7 @@ module.exports = {
     "image": "https://live.staticflickr.com/2853/9194403742_c8297b965b_b.jpg",
     "startTime": "2022-07",
     "endTime": "2023-03-31T07:07:07Z",
+    "location": { "geo": { "@type": "GeoCoordinates", "latitude": 40.883944, "longitude": -111.884787 } },
     "url": "https://example.com/project/111",
   },
 

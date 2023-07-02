@@ -141,12 +141,15 @@ CREATE TABLE plan_claim (
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
     agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
     handleId TEXT,
-    internalId TEXT, -- unused
+    -- internalId TEXT, -- unused
     name TEXT,
     description TEXT,
     image TEXT,
     endTime DATE, -- should be DATETIME, but luckily it stores times already
     startTime DATE, -- should be DATETIME, but luckily it stores times already
+    locLat REAL, -- approximate WGS 84 latitude (we don't request precision)
+    locLon REAL, -- approximate WGS 84 longitude (we don't request precision)
+    locRadiusMeters REAL, -- approximate radius in meters (we don't request precision) -- unused
     resultDescription TEXT,
     resultIdentifier TEXT,
     url TEXT
@@ -157,14 +160,18 @@ CREATE TABLE project_claim (
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
     agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
     handleId TEXT,
-    internalId TEXT, -- unused
+    -- internalId TEXT, -- unused
     name TEXT,
     description TEXT,
     image TEXT,
     endTime DATE, -- should be DATETIME, but luckily it stores times already
     startTime DATE, -- should be DATETIME, but luckily it stores times already
+    locLat REAL, -- approximate WGS 84 latitude (we don't request precision)
+    locLon REAL, -- approximate WGS 84 longitude (we don't request precision)
+    locRadiusMeters REAL, -- approximate radius in meters (we don't request precision) -- unused
     resultDescription TEXT,
-    resultIdentifier TEXT
+    resultIdentifier TEXT,
+    url TEXT
 );
 
 CREATE TABLE registration (
@@ -183,9 +190,9 @@ CREATE TABLE tenure_claim (
     -- see https://schema.org/GeoShape basically contents of a WKT Polygon
     polygon TEXT,
     -- all WGS 84 (lat/long)
-    westLon REAL,
+    westLon REAL, -- westernmost longitude
     minLat REAL,
-    eastLon REAL,
+    eastLon REAL, -- easternmost longitude
     maxLat REAL
 );
 

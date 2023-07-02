@@ -463,6 +463,44 @@ class ClaimService {
       return {confirmationId:result, actionClaimId}
 
 
+    } else if (isContextSchemaOrg(origClaim['@context'])
+        && origClaim['@type'] === 'Organization'
+        && origClaim.member
+        && origClaim.member['@type'] === 'OrganizationRole'
+        && origClaim.member.member
+        && origClaim.member.member.identifier) {
+
+      const orgRoleClaim =
+          await dbService.orgRoleClaimByOrgAndDates(
+              origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
+              origClaim.member.endDate, origClaim.member.member.identifier
+          )
+      if (!orgRoleClaim?.rowid) {
+        return Promise.reject("Attempted to confirm an unrecorded orgRole.")
+      }
+      const orgRoleClaimJwtId = origClaimJwtId || orgRoleClaim.jwtId
+
+      // check for duplicate
+      const confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaim.rowid)
+      if (confirmation) {
+        return Promise.reject(
+            `Attempted to confirm a orgRole already confirmed in ${confirmation.jwtId}`
+        )
+      }
+
+      const origClaimStr = canonicalize(origClaim)
+      let origClaimCanonHashBase64 =
+          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+
+      // note that this insert is repeated in each case, so might be consolidatable
+      const result =
+          await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, orgRoleClaim.rowid)
+      l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
+          + ` added for orgRoleClaimId ${orgRoleClaimId}`
+      )
+      return {confirmationId:result, orgRoleClaimId}
+
+
     } else if (origClaim['@context'] === 'https://endorser.ch'
                && origClaim['@type'] === 'Tenure') {
 
@@ -493,44 +531,6 @@ class ClaimService {
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
               + ` added for tenureClaimId ${tenureClaimId}`);
       return {confirmationId:result, tenureClaimId}
-
-
-    } else if (isContextSchemaOrg(origClaim['@context'])
-               && origClaim['@type'] === 'Organization'
-               && origClaim.member
-               && origClaim.member['@type'] === 'OrganizationRole'
-               && origClaim.member.member
-               && origClaim.member.member.identifier) {
-
-      const orgRoleClaim =
-          await dbService.orgRoleClaimByOrgAndDates(
-              origClaim.name, origClaim.member.roleName, origClaim.member.startDate,
-              origClaim.member.endDate, origClaim.member.member.identifier
-          )
-      if (!orgRoleClaim?.rowid) {
-        return Promise.reject("Attempted to confirm an unrecorded orgRole.")
-      }
-      const orgRoleClaimJwtId = origClaimJwtId || orgRoleClaim.jwtId
-
-      // check for duplicate
-      const confirmation = await dbService.confirmationByIssuerAndOrgRole(issuerDid, orgRoleClaim.rowid)
-      if (confirmation) {
-        return Promise.reject(
-          `Attempted to confirm a orgRole already confirmed in ${confirmation.jwtId}`
-        )
-      }
-
-      const origClaimStr = canonicalize(origClaim)
-      let origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
-
-      // note that this insert is repeated in each case, so might be consolidatable
-      const result =
-          await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, orgRoleClaim.rowid)
-      l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
-              + ` added for orgRoleClaimId ${orgRoleClaimId}`
-             )
-      return {confirmationId:result, orgRoleClaimId}
 
 
     } else {
@@ -849,6 +849,17 @@ class ClaimService {
       const endTimeStr =
         isNaN(endTime.getTime()) ? undefined : endTime.toISOString()
 
+      let latitude
+      if (claim.location?.geo?.['@type'] == 'GeoCoordinates'
+          && claim.location?.geo?.latitude) {
+        latitude = claim.location.geo.latitude
+      }
+      let longitude
+      if (claim.location?.geo?.['@type'] == 'GeoCoordinates'
+          && claim.location?.geo?.longitude) {
+        longitude = claim.location.geo.longitude
+      }
+
       const entry = {
         jwtId: jwtId,
         agentDid: agentDid,
@@ -859,6 +870,8 @@ class ClaimService {
         image: claim.image,
         endTime: endTimeStr,
         startTime: startTimeStr,
+        locLat: latitude,
+        locLon: longitude,
         resultDescription: claim.resultDescription,
         resultIdentifier: claim.resultIdentifier,
         url: claim.url,
