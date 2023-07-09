@@ -214,7 +214,6 @@ describe('6 - Plans', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
-        console.log('r.body', r.body)
         expect(r.body.data?.length).that.equals(0)
       }).catch((err) => {
         return Promise.reject(err)
@@ -232,7 +231,6 @@ describe('6 - Plans', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .expect('Content-Type', /json/)
       .then(r => {
-        console.log('r.body', r.body)
         expect(r.body.data?.length).that.equals(1)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1134,7 +1132,9 @@ describe('6 - check give totals', () => {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
     }
     credObj.claim.description = 'Found new homeschooling friends'
-    credObj.claim.provider = { "@type": "GiveAction", "identifier": firstGiveRecordHandleId }
+    credObj.claim.provider = {
+      "@type": "GiveAction", "identifier": firstGiveRecordHandleId
+    }
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
     const claimJwtEnc = await credentials[2].createVerification(credObj)
@@ -1201,6 +1201,48 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
+  }).timeout(3000)
+
+  it('provider retrieval by wrong one gets none', () => {
+    return request(Server)
+      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('provider-gives retrieval gets one', () => {
+    return request(Server)
+      .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(firstGiveRecordHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].fullClaim.description).to.equal('Found new homeschooling friends')
+        expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
+        expect(r.body.data[0].issuedAt).to.be.not.null
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('provider-gives retrieval by wrong one gets none', () => {
+    return request(Server)
+        .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(secondGiveRecordHandleId))
+        .set('Authorization', 'Bearer ' + pushTokens[2])
+        .expect('Content-Type', /json/)
+        .then(r => {
+          expect(r.body.data).to.be.an('array').of.length(0)
+          expect(r.status).that.equals(200)
+        }).catch((err) => {
+          return Promise.reject(err)
+        })
   }).timeout(3000)
 
   it('insert give #3', async () => {
@@ -1313,7 +1355,7 @@ describe('6 - check give totals', () => {
     }
     credObj.claim.description = 'Found more homeschooling friends who jam'
     credObj.claim.provider = [
-      { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
+      { "@type": "GiveAction", "identifier": firstGiveRecordHandleId },
     ]
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1349,13 +1391,30 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
 
-        expect(r.body.data[0].claim.description).to.equal('Found new homeschooling friends')
+        expect(r.body.data[0].claim.description).to.equal('Had so much fun that we danced')
         expect(r.body.data[0].claimType).to.equal('GiveAction')
-        expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
+        expect(r.body.data[0].handleId).to.equal(firstGiveRecordHandleId)
         expect(r.body.data[0].issuer).to.equal(creds[2].did)
         expect(r.body.data[0].issuedAt).to.be.not.null
         expect(r.body.data[0].subject).to.equal(creds[2].did)
 
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('provider-gives retrieval gets two', () => {
+    return request(Server)
+      .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(firstGiveRecordHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(2)
+        expect(r.body.data[0].fullClaim.description).to.equal('Found more homeschooling friends who jam')
+        expect(r.body.data[0].handleId).to.equal(thirdGiveRecordHandleId)
+        expect(r.body.data[0].issuedAt).to.be.not.null
+        expect(r.body.data[1].handleId).to.equal(secondGiveRecordHandleId)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

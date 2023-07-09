@@ -891,8 +891,8 @@ class EndorserDatabase {
     const whereClause =
       ' LEFT JOIN give_provider'
       + ' ON give_provider.providerHandleId = jwt.handleId'
-      + ' WHERE give_provider.giveHandleId = ?'
-      + ' AND give_provider.providerHandleId IS NOT NULL'
+      + ' WHERE give_provider.providerHandleId IS NOT NULL'
+      + ' AND give_provider.giveHandleId = ?'
       + afterId
       + beforeId
     return this.jwtsByWhere(whereClause, [giveHandleId]).then(jwts => {
@@ -902,6 +902,59 @@ class EndorserDatabase {
       }
       return result
     })
+  }
+
+  /**
+   *
+   * @param providerHandleId
+   * @param afterIdInput
+   * @param beforeIdInput
+   * @returns { data, hitLimit } the Give records that gave credit to this provider
+   */
+  givesProvidedBy(providerHandleId, afterIdInput, beforeIdInput) {
+    const afterId = afterIdInput ? ' AND jwtId > ' + afterIdInput : ''
+    const beforeId = beforeIdInput ? ' AND jwtId < ' + beforeIdInput : ''
+    const sql =
+        'SELECT * FROM give_claim'
+        + ' LEFT JOIN give_provider'
+        + ' ON give_provider.giveHandleId = give_claim.handleId'
+        + ' WHERE give_provider.giveHandleId IS NOT NULL'
+        + ' AND give_provider.providerHandleId = ?'
+        + afterId
+        + beforeId
+        + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+
+    console.log('sql', sql, providerHandleId)
+    let data = [], rowErr
+    return new Promise((resolve, reject) => {
+      db.each(
+        sql,
+        [providerHandleId],
+        function (err, row) {
+          console.log('got one', row, err)
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            row.updatedAt = isoAndZonify(row.updatedAt)
+            data.push(row)
+          }
+        },
+        function (err, num) {
+          if (rowErr || err) {
+            reject(rowErr || err)
+          } else {
+            const result = { data: data }
+            if (data.length === DEFAULT_LIMIT) {
+              result["hitLimit"] = true
+            }
+            console.log('returning result', result)
+            resolve(result)
+          }
+        }
+      )
+    })
+
   }
 
   giveProviderDelete(giveId) {
@@ -1694,7 +1747,6 @@ class EndorserDatabase {
       sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
 
       const data = []
-      console.log("plansByLocationPaged sql: " + sql, params)
       db.each(sql, params, function(err, row) {
         if (err) {
           reject(err)
@@ -1863,7 +1915,6 @@ class EndorserDatabase {
       sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
 
       const data = []
-      console.log("plansByLocationPaged sql: " + sql, params)
       db.each(sql, params, function(err, row) {
         if (err) {
           reject(err)

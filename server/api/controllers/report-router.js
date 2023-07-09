@@ -99,6 +99,21 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getGivesProvidedBy(req, res, next) {
+    const providerId = globalId(req.query.providerId)
+    console.log("givesProvidedBy: providerId: " + providerId)
+    dbService.givesProvidedBy(providerId, req.query.afterId, req.query.beforeId)
+      .then(results => ({
+        data: results.data.map(datum =>
+            R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+        ),
+        hitLimit: results.hitLimit,
+      }))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getGiveTotals(req, res, next) {
     const agentId = req.query.agentId
     const includeTrades = req.query.includeTrades
@@ -336,7 +351,7 @@ export default express
 
 /**
  * @typedef GiveArrayMaybeMoreBody
- * @property {array.Offer} data (as many as allowed by our limit)
+ * @property {array.Give} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
@@ -500,7 +515,7 @@ export default express
  * @route GET /api/v2/report/givesForPlans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} planIds.query.optional - handle ID of the plan which has received gives
+ * @param {string} planIds.query.optional - JSON.stringified array with handle IDs of the plans which have received gives
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
  *   reverse chronologically; 'hitLimit' boolean property if there may be more;
  *   but note that the `providers` property of each entry is not populated
@@ -508,6 +523,22 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/givesForPlans', dbController.getGivesForPlansPaged)
+
+/**
+ * Get gives provided by this provider
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/givesProvidedBy
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} providerId.query.optional - handle ID of the provider which may have helped with gives
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
+ *   reverse chronologically; 'hitLimit' boolean property if there may be more;
+ *   but note that the `providers` property of each entry is not populated
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/givesProvidedBy', dbController.getGivesProvidedBy)
 
 /**
  * Get providers for a particular give

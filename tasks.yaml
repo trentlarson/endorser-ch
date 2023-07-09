@@ -8,8 +8,10 @@ tasks:
 - .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
 
 - 01 allow edit of GiveAction & Offer, adjusting totals
+- .5 double-check that the GiveAction "fulfills" and "recipient" save correctly when to a PlanAction
 
 - 01 allow edit of Plan
+- .2 allow a POST for givesForPlans (just like the GET)
 - 01 add DonateAction the same as Give, with a flag on give_claim for trade (vs donation)
 
 - 02 bring many libs up-to-date
