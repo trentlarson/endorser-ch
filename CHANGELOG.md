@@ -12,7 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.1.0] - 2023-05-19
+## [3.3.0] - 2023-07-09
+
+### Added
+- Endpoint for the 'give' records which have a particular provider
+
+
+
+
+
+## [3.2.0] - 2023-07-02 - 7ea354c3e3f19fbfea0070d05ea53a57f3edf93e
+
+### Added
+- Storage and endpoint for physical location of a plan/project
+
+
+
+
+
+## [3.1.0] - 2023-05-19 - a021cb9906f85a61f782d67b38ca321b4b4a25e3
 
 ### Changed
 - Incompatible change: there is a hash for each entry is now based on a nonce. This requires a DB migration.
