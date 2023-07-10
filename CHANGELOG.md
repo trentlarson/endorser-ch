@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.3.0] - 2023-07-09
+## [3.3.0] - 2023-07-09 - f9834e5c2fc396d6a712a0aef0be1322f7a2ea8b
 
 ### Added
 - Endpoint for the 'give' records which have a particular provider
