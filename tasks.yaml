@@ -1,6 +1,8 @@
 ---
 tasks:
 
+- .5 fix the plansByLocation endpoint to exclude beforeId & afterId
+
 - 01 get group & others to sign new pledge(s)
   - page with new pledge
   - page with CEO pledge linking to that
