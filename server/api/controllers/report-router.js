@@ -101,7 +101,6 @@ class DbController {
 
   getGivesProvidedBy(req, res, next) {
     const providerId = globalId(req.query.providerId)
-    console.log("givesProvidedBy: providerId: " + providerId)
     dbService.givesProvidedBy(providerId, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>

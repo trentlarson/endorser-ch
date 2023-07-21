@@ -924,14 +924,12 @@ class EndorserDatabase {
         + beforeId
         + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
 
-    console.log('sql', sql, providerHandleId)
     let data = [], rowErr
     return new Promise((resolve, reject) => {
       db.each(
         sql,
         [providerHandleId],
         function (err, row) {
-          console.log('got one', row, err)
           if (err) {
             rowErr = err
           } else {
@@ -948,7 +946,6 @@ class EndorserDatabase {
             if (data.length === DEFAULT_LIMIT) {
               result["hitLimit"] = true
             }
-            console.log('returning result', result)
             resolve(result)
           }
         }
@@ -1737,11 +1734,11 @@ class EndorserDatabase {
       )
       if (afterIdInput) {
         params.push(afterIdInput)
-        sql += " AND rowid >= ?"
+        sql += " AND rowid > ?"
       }
       if (beforeIdInput) {
         params.push(beforeIdInput)
-        sql += " AND rowid <= ?"
+        sql += " AND rowid < ?"
       }
 
       sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
@@ -1905,11 +1902,11 @@ class EndorserDatabase {
       )
       if (afterIdInput) {
         params.push(afterIdInput)
-        sql += " AND rowid >= ?"
+        sql += " AND rowid > ?"
       }
       if (beforeIdInput) {
         params.push(beforeIdInput)
-        sql += " AND rowid <= ?"
+        sql += " AND rowid < ?"
       }
 
       sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
