@@ -2,10 +2,8 @@
 tasks:
 
 - .2 make sure specific-feed (eg. Options) box for android doesn't go off the screen (eg. on test phone)
-- .5 check why a new hashChainB64 resulted in a different value from those generated earlier
 
 - .5 add a potential arbitrary message on "check limits" endpoint
-  - api.endorser.ch - requires different host for HTTPS
 - 01 give full result if the claim was made by the issuer (even if issuer cannot see others)
 
 - 01 get group & others to sign new pledge(s)
