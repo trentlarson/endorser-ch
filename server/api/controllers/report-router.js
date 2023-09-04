@@ -399,14 +399,15 @@ export default express
 /**
  * @typedef Plan
  * @property {string} jwtId
- * @property {string} issuerDid
  * @property {string} agentDid
- * @property {string} handleId
- * @property {string} name
  * @property {string} description
- * @property {string} image
- * @property {string} endTime
  * @property {datetime} endTime
+ * @property {string} image
+ * @property {string} issuerDid
+ * @property {string} handleId
+ * @property {float} locLat
+ * @property {float} locLon
+ * @property {string} name
  * @property {datetime} startTime
  * @property {string} resultDescription
  * @property {string} resultIdentifier
@@ -431,7 +432,7 @@ export default express
  * @param {string} claimType.query.optional
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
- * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with matching array of Jwt entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -445,7 +446,7 @@ export default express
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
- * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with array of Jwt claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -499,7 +500,7 @@ export default express
  * @param {string} recipientId.query.optional - recipient
  * @param {string} fulfillsId.query.optional - for ones that fulfill a particular item (eg. an offer)
  * @param {string} fulfillsType.query.optional - for ones that fulfill a particular type
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries,
  *  reverse chronologically; 'hitLimit' boolean property if there may be more;
  *  but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
@@ -515,7 +516,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - JSON.stringified array with handle IDs of the plans which have received gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries,
  *   reverse chronologically; 'hitLimit' boolean property if there may be more;
  *   but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
@@ -531,7 +532,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} providerId.query.optional - handle ID of the provider which may have helped with gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching entries,
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries,
  *   reverse chronologically; 'hitLimit' boolean property if there may be more;
  *   but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
@@ -586,7 +587,7 @@ export default express
  * @param {string} recipientPlanId.query.optional - plan which is recipient of offer
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
  * @param {string} validThrough.query.optional - date up to which offers are valid
- * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -600,7 +601,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received offers
- * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -638,7 +639,7 @@ export default express
  * @param {string} endTime.query.optional
  * @param {string} startTime.query.optional
  * @param {string} resultIdentifier.query.optional
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -651,7 +652,7 @@ export default express
  * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -668,7 +669,7 @@ export default express
  * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

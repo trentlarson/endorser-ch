@@ -908,6 +908,17 @@ class ClaimService {
       const endTimeStr =
         isNaN(endTime.getTime()) ? undefined : endTime.toISOString()
 
+      let latitude
+      if (claim.location?.geo?.['@type'] == 'GeoCoordinates'
+          && claim.location?.geo?.latitude) {
+        latitude = claim.location.geo.latitude
+      }
+      let longitude
+      if (claim.location?.geo?.['@type'] == 'GeoCoordinates'
+          && claim.location?.geo?.longitude) {
+        longitude = claim.location.geo.longitude
+      }
+
       const entry = {
         jwtId: jwtId,
         agentDid: agentDid,
@@ -918,6 +929,8 @@ class ClaimService {
         image: claim.image,
         endTime: endTimeStr,
         startTime: startTimeStr,
+        locLat: latitude,
+        locLon: longitude,
         resultDescription: claim.resultDescription,
         resultIdentifier: claim.resultIdentifier,
         url: claim.url,

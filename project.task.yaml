@@ -1,8 +1,15 @@
 ---
 tasks:
 
-- .2 make sure specific-feed (eg. Options) box for android doesn't go off the screen (eg. on test phone)
+- mobile:
+  - .2 make sure specific-feed (eg. Options) box for android doesn't go off the screen (eg. on test phone)
+  - .2 check that the Give text description is correct, eg. "You" aren't default when giver is blank
+  - 01 allow edit of GiveAction & Offer, adjusting totals
+  - 02 mobile - add Project claims
+  - 02 mobile - save & show projects of interest
+  - 04 mobile - link contacts to phone contacts
 
+- .2 remove port from Base URL at top of API docs https://api.endorser.ch/api-docs/
 - .5 add a potential arbitrary message on "check limits" endpoint
 - 01 give full result if the claim was made by the issuer (even if issuer cannot see others)
 
@@ -12,7 +19,6 @@ tasks:
 
 - .5 update uport-demo - add warranty, and remove old files (both old JS docs and copies of endorser-docs)
 
-- 01 allow edit of GiveAction & Offer, adjusting totals
 - .5 double-check that the GiveAction "fulfills" and "recipient" save correctly when to a PlanAction
 
 - 01 allow edit of Plan
@@ -20,9 +26,6 @@ tasks:
 - 01 add DonateAction the same as Give, with a flag on give_claim for trade (vs donation)
 
 - 02 bring many libs up-to-date
-
-- 02 mobile - add Project claims
-- 02 mobile - save & show projects of interest
 
 - 04 time given to projects - front-page shortcuts?
 
@@ -48,8 +51,6 @@ tasks:
 - .5 in tests - change confirmationTemplate to have an object (rather than array)
 
 - integrate with attest.sh
-
-- 04 mobile - link contacts to phone contacts
 
 - 02 backup & restore all data (incl private data, contacts)
 
