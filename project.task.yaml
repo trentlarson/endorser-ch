@@ -2,12 +2,15 @@
 tasks:
 
 - mobile:
+
+  - Why does "matching contacts" screen show as blank when doing a search and then going to "find common contacts"?
+  - 01 validate verifiable presentation signatures, content, etc
   - .2 make sure specific-feed (eg. Options) box for android doesn't go off the screen (eg. on test phone)
-  - .2 check that the Give text description is correct, eg. "You" aren't default when giver is blank
   - 01 allow edit of GiveAction & Offer, adjusting totals
   - 02 mobile - add Project claims
   - 02 mobile - save & show projects of interest
   - 04 mobile - link contacts to phone contacts
+  - 02 mobile - update all searches for pagination, eg. /api/claim calls
 
 - .2 remove port from Base URL at top of API docs https://api.endorser.ch/api-docs/
 - .5 add a potential arbitrary message on "check limits" endpoint
@@ -200,7 +203,6 @@ tasks:
 
   - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
     - 04 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
-  - 01 validate verifiable presentation signatures, content, etc
   - .2 allow copying a presentation (eg. for emailing)
   - .5 show credential contents (and allow browsing)
   - .5 test where cacList has a linked confirmation
