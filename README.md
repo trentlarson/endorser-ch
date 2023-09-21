@@ -478,67 +478,88 @@ This will help visualize the network from the test data:
 
 ## Metrics
 
-```
+```shell
 mkdir metrics
 cd metrics
 
-# If you like asdf:
-#asdf local nodejs 16.18.0
-#asdf local yarn 1.22.19
+# Use Node & NPM/Yarn
+# ... with tea:
+#tea +nodejs.org +pnpm.io sh
 
-yarn add bent ramda
+mkdir node_modules # so it doesn't search in parent directories
+pnpm add bent ramda
 
 // This is just if you want to get private data. (See below, too.)
-#yarn add @veramo/did-jwt
+#pnpm add did-jwt@5.12.4
 
-node
+node --experimental-modules
 
 // The rest is inside your node CLI.
-let getServer = () => { return 'http://localhost:3000' }
+//let getServer = () => { return 'http://localhost:3000' }
+let getServer = () => { return 'https://api.endorser.ch' }
 const bent = require('bent')
+const fs = require('node:fs')
 
 // These are just if you want to get private data. (See below, too.)
 //const OWNER_DID = 'OWNER_DID'
 //const OWNER_PRIVATE_KEY_HEX = 'OWNER_PRIVATE_KEY_HEX'
-//const didJwt = require('did-jwt')
+//const didJwt = await import('did-jwt')
 
 // 'count' returns { data: [...], maybeMoreAfter: 'ID' }
 let count = async (moreBefore) => {
   let options = { "Content-Type": "application/json" }
-  /**
+  /**/
   // These are just if you want to get private data.
   const nowEpoch = Math.floor(Date.now() / 1000)
   const endEpoch = nowEpoch + 60
   const tokenPayload = { exp: endEpoch, iat: nowEpoch, iss: OWNER_DID }
   const signer = didJwt.SimpleSigner(OWNER_PRIVATE_KEY_HEX)
   const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: OWNER_DID, signer })
-  options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt })
-  **/
+  options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt }, options)
+  /**/
   const getJson = bent('json', options)
   return getJson(getServer() + '/api/v2/report/claims?beforeId=' + moreBefore)
 }
 const R = require('ramda')
-let all = async () => {
-  let total = []
+let all = []
+let fillAll = async () => {
   let moreBefore = 'Z'
   do {
     const result = await count(moreBefore)
-    total = R.concat(total, result.data)
+    all = R.concat(all, result.data)
     moreBefore = result.hitLimit ? result.data[result.data.length - 1].id : ''
-    console.log(total.length, moreBefore, '...')
+    console.log(all.length, moreBefore, '...')
   } while (moreBefore)
-  console.log('Grand total:', total.length)
-  const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), total)
+  console.log('Grand total:', all.length)
+  const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), all)
   const grouped = R.groupBy(i => i.month, totalSum)
   const table = R.map(i => i.length, grouped)
 
   // output grouped totals
-  //console.log('Grouped:', JSON.stringify(table, null, 2))
+  console.log('Grouped:', JSON.stringify(table, null, 2))
 
   // output each row in CSV format
-  total.map(record => console.log(record.issuedAt.substring(0, 7), ",", record.claimType))
+  //all.map(record => console.log(record.issuedAt.substring(0, 7), ",", record.claimType))
 }
-await all()
+await fillAll()
+
+// write months & types to CSV
+all.map(record => fs.appendFileSync('metrics.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + '\n'))
+
+// write months and issuer DIDs to CSV
+all.map(record => fs.appendFileSync('metrics-issuer.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.issuer + '\n'))
+
+
+// write months and number of unique DIDs
+let monthUniqDids = R.uniq(R.map(record => record.issuedAt.substring(0, 7) + ',' + record.issuer, all))
+let monthUniqDidsStripped = R.sortBy(pair => pair[0], R.toPairs(R.countBy(k => k.substring(0,7), monthUniqDids)))
+R.map((pair) => fs.appendFileSync('metrics-uniq-issuer.csv', pair[0] + ',' + pair[1] + '\n'), monthUniqDidsStripped)
+
+// write months and number of hidden DIDs
+let monthHiddenDids = R.countBy(R.identity, R.map(rec => rec.issuedAt.substring(0, 7), R.filter(rec => rec.issuer === 'did:none:HIDDEN', all)))
+let monthHiddenDidsSorted = R.sortBy(pair => pair[0], R.toPairs(monthHiddenDids))
+R.map((pair) => fs.appendFileSync('metrics-hidden-issuer.csv', pair[0] + ',' + pair[1] + '\n'), monthHiddenDidsSorted)
+
 ```
 
 
