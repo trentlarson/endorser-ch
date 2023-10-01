@@ -1,20 +1,28 @@
 ---
 tasks:
 
+- allow Gives for free (ie. without registration)
+- add Lives of Gifts project
+
 - mobile:
 
+  - Allow "Record Delivery" when I am the recipient of an offer
+  - Allow pasting of a contract
+  - Show paid amounts from an offer
   - Why does "matching contacts" screen show as blank when doing a search and then going to "find common contacts"?
   - 01 validate verifiable presentation signatures, content, etc
   - .2 make sure specific-feed (eg. Options) box for android doesn't go off the screen (eg. on test phone)
+  - .1 allow recipient of offer to mark an offer as delivered
   - 01 allow edit of GiveAction & Offer, adjusting totals
-  - 02 mobile - add Project claims
-  - 02 mobile - save & show projects of interest
-  - 04 mobile - link contacts to phone contacts
-  - 02 mobile - update all searches for pagination, eg. /api/claim calls
+  - 02 add Project claims
+  - 02 save & show projects of interest
+  - 04 link contacts to phone contacts
+  - 02 update all searches for pagination, eg. /api/claim calls
 
 - .2 remove port from Base URL at top of API docs https://api.endorser.ch/api-docs/
 - .5 add a potential arbitrary message on "check limits" endpoint
 - 01 give full result if the claim was made by the issuer (even if issuer cannot see others)
+- 01 fix swagger to show return types; doing this in express-swagger-generator before returning the swaggerObject will show the model definition in the endpoint - swaggerObject.paths['/api/v2/claim'].post.responses['200'].schema = { '$ref':'#/definitions/JwtArrayMaybeMoreBody' }
 
 - 01 get group & others to sign new pledge(s)
   - page with new pledge

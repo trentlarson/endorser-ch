@@ -247,6 +247,23 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getPlanFulfilledBy(req, res, next) {
+    const handleId = req.query.planHandleId
+    console.log("getPlanFulfilledBy", handleId)
+    dbService.planFulfilledBy(handleId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getPlanFulfillersTo(req, res, next) {
+    const handleId = req.query.planHandleId
+    dbService.planFulfillersTo(handleId)
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getAllProjectsPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -402,6 +419,8 @@ export default express
  * @property {string} agentDid
  * @property {string} description
  * @property {datetime} endTime
+ * @property {boolean} fulfillsLinkConfirmed
+ * @property {string} fulfillsPlanId
  * @property {string} image
  * @property {string} issuerDid
  * @property {string} handleId
@@ -415,9 +434,9 @@ export default express
  */
 
 /**
- * @typedef PlanArrayMaybeMoreBody
- * @property {array.Plan} data (as many as allowed by our limit)
- * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ * @typedef PlanWithFulfilledLinkConfirmation
+ * @property {Plan} data (as many as allowed by our limit)
+ * @property {boolean} fullfilledLinkConfirmed true when the link between plans has been confirmed by both
  */
 
 /**
@@ -550,7 +569,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/giveProviders', dbController.getGiveProviders)
+  .get('/providersToGive', dbController.getGiveProviders)
 
 /**
  * Get totals of gives
@@ -674,3 +693,29 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationPaged)
+
+/**
+ * Get plan fulfilled by given plan
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/planFulfilledBy
+ * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
+ * @returns {PlanWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/planFulfilledBy', dbController.getPlanFulfilledBy)
+
+/**
+ * Get plans that fulfill given plan
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/planFulfillersTo
+ * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/planFulfillersTo', dbController.getPlanFulfillersTo)

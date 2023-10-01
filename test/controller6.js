@@ -121,6 +121,7 @@ const person1By2AgainFailsJwtProm = credentials[2].createVerification(person1By2
 let pushTokens,
     badPlanBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
     planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
+    planBy2FulfillsBy1JwtEnc,
     badProjectBy1JwtEnc, projectWithoutIdBy1JwtEnc, projectWithExtFullBy1JwtEnc,
     projectEditBy1JwtEnc, projectDupBy2JwtEnc, projectNewBy2JwtEnc,
     person1By2JwtEnc, person1By1JwtEnc, person1By2AgainFailsJwtEnc
@@ -156,7 +157,7 @@ before(async () => {
 
 })
 
-let firstPlanIdExternal, secondPlanIdExternal
+let firstPlanIdExternal, secondPlanIdExternal, childPlanIdExternal
 
 describe('6 - Plans', () => {
 
@@ -534,6 +535,55 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('make a plan that fulfills another one', async () => {
+    const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
+    planBy2FulfillsBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
+    planBy2FulfillsBy1JwtObj.claim.agent.identifier = creds[2].did
+    planBy2FulfillsBy1JwtObj.claim.description = "I'll make a taco for the effort."
+    planBy2FulfillsBy1JwtObj.claim.fulfills = {
+      "@type": "PlanAction",
+      "identifier": firstPlanIdExternal
+    }
+    planBy2FulfillsBy1JwtObj.iss = creds[2].did
+    const planJwt = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwt})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+        childPlanIdExternal = r.body.success.handleId
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('retrieve parent plan link from child', () => {
+    return request(Server)
+      .get('/api/v2/report/planFulfilledBy?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('object')
+        expect(r.body.data.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.childFulfillsLinkConfirmed).to.be.false
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  // TODO
+  // retrieve parent links from child /giveFulfillersTo & /planFulfillersTo -- or /claimFulfillersTo ?
+  // retrieve only confirmed child plans - fail
+  // confirm
+  // retrieve only confirmed child plans - succeed
+  // add "confirmed" boolean to results for gives & providers
+
+  // create fulfilling one by same user and see confirmed true
+
+  // before "provider retrieval gets one": confirm by 4 and see fulfillConfirmed change to true
+  // put this in "insert give #1": expect(r.body.success.fulfillsLinkConfirmed).to.be.true
+  // add this to "give #2 has expected data": expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
 })
 
 
@@ -1186,7 +1236,7 @@ describe('6 - check give totals', () => {
 
   it('provider retrieval gets one', () => {
     return request(Server)
-      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(secondGiveRecordHandleId))
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(secondGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1205,7 +1255,7 @@ describe('6 - check give totals', () => {
 
   it('provider retrieval by wrong one gets none', () => {
     return request(Server)
-      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1318,7 +1368,7 @@ describe('6 - check give totals', () => {
 
   it('provider retrieval works for multiple providers', () => {
     return request(Server)
-      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1385,7 +1435,7 @@ describe('6 - check give totals', () => {
 
   it('provider retrieval works for one updated', () => {
     return request(Server)
-      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1737,7 +1787,7 @@ describe('6 - check give totals', () => {
 
   it('provider retrieval works for a provider that was updated', () => {
     return request(Server)
-      .get('/api/v2/report/giveProviders?giveHandleId=' + encodeURIComponent(giveRecordHandleId6))
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(giveRecordHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {

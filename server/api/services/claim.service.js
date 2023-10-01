@@ -840,6 +840,18 @@ class ClaimService {
       // agent.did is for legacy data, some still in the mobile app
       const agentDid = claim.agent?.identifier || claim.agent?.did
 
+      let fulfillsPlanId = undefined
+      let fulfillsLinkConfirmed = false
+      if (claim.fulfills && claim.fulfills['@type'] === 'PlanAction') {
+        fulfillsPlanId = globalId(claim.fulfills.identifier)
+        const linkedPlanRecord = await dbService.planInfoByHandleId(fulfillsPlanId)
+        if (linkedPlanRecord
+            && (issuerDid === linkedPlanRecord.issuer
+                || issuerDid === linkedPlanRecord.agentDid)) {
+          fulfillsLinkConfirmed = true
+        }
+      }
+
       // We'll put the given times into the DB but only if they're valid dates.
       // This also helps when JS parses but DB datetime() would not.
       const startTime = new Date(claim.startTime)
@@ -867,6 +879,8 @@ class ClaimService {
         handleId: handleId,
         name: claim.name,
         description: claim.description,
+        fulfillsLinkConfirmed: fulfillsLinkConfirmed,
+        fulfillsPlanId: fulfillsPlanId,
         image: claim.image,
         endTime: endTimeStr,
         startTime: startTimeStr,

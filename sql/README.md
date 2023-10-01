@@ -1,7 +1,9 @@
 
-I'm using this file to explain data because sometimes the comments inside the
-.sqlite3 files need clarification or get outdated (and I can't edit them after
-flyway has run).
+Update this file with any changes to the schema.
+
+This file exists to explain data because sometimes the comments inside the
+.sqlite3 files need subsequent clarification or get outdated (and I can't edit
+them after flyway has run).
 
 ```
 CREATE TABLE action_claim (
@@ -41,6 +43,17 @@ CREATE TABLE give_claim (
     agentDid TEXT, -- global ID of the entity who gave the item
 
     recipientDid TEXT, -- global ID of recipient
+
+    -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
+    --
+    -- This does not mean that receipt of this give is confirmed,
+    --  but that both sides of the child/parent relationship agree that this parentage is correct.)
+    --
+    -- Note that, as long as this resides in the give_claim table, it means that the owner of the
+    -- parent 'fulfills' object has confirmed the relationship because the creator of this plan
+    -- owns the data and claimed the relationship so they obviously implicitly confirmed it.
+    --
+    fulfillLinkConfirmed INTEGER DEFAULT 0,
     fulfillsId TEXT, -- global ID to the offer to which this Give applies
     fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
 
@@ -63,7 +76,12 @@ CREATE TABLE give_claim (
 
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction which has this as a provider
-    providerHandleId TEXT -- handleId of the provider claim
+    providerHandleId TEXT, -- handleId of the provider claim
+
+    -- whether both giver and provider have confirmed this relationship (boolean, 1 = confirmed)
+    -- (This does not mean that receipt is confirmed, but that both sides of
+    --  the give/provider relationship agree that this linkage is correct.)
+    linkConfirmed INTEGER DEFAULT 0
 );
 
 CREATE TABLE jwt (
@@ -137,10 +155,25 @@ CREATE TABLE org_role_claim (
 );
 
 CREATE TABLE plan_claim (
+    handleId TEXT,
     jwtId text PRIMARY KEY,
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
     agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
-    handleId TEXT,
+
+    -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
+    --
+    -- This does not mean that receipt is confirmed, but that both sides of
+    --  the child/parent relationship agree that this parentage is correct.)
+    --
+    -- Note that, as long as this resides in the plan_claim table, it means that the owner of the
+    -- parent 'fulfills' object has confirmed the relationship because the creator of this plan
+    -- owns the data and claimed the relationship so they obviously implicitly confirmed it.
+    --
+    fulfillsLinkConfirmed INTEGER DEFAULT 0,
+
+    -- current plan contributes to another plan with this global plan ID
+    fulfillsPlanId TEXT,
+
     -- internalId TEXT, -- unused
     name TEXT,
     description TEXT,

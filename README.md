@@ -61,7 +61,7 @@ docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database
 
 When running on another domain (other than EndorserSearch.com):
 
-* You should edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
+* Edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
 
 
 

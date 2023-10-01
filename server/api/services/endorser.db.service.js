@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const R = require('ramda')
 const sqlite3 = require('sqlite3').verbose()
 const ulidx = require('ulidx')
 const ulid = ulidx.monotonicFactory()
@@ -89,8 +90,14 @@ function constructWhere(params, allowedColumns, claimContents, contentColumn, ex
   return { clause: whereClause, params: paramArray }
 }
 
+// convert SQLite date to ISO-formatted string
 function isoAndZonify(dateTime) {
   return dateTime == null ? dateTime : dateTime.replace(" ", "T") + "Z"
+}
+
+// convert SQLite number to boolean
+function booleanify(number) {
+  return number === 1
 }
 
 
@@ -113,7 +120,7 @@ function isoAndZonify(dateTime) {
      with optional "hitlimit" boolean telling if we hit the limit count for this query
 **/
 function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResultColumns,
-                                   contentColumn, dateColumns,
+                                   contentColumn, dateColumns, booleanColumns,
                                    params, afterIdInput, beforeIdInput) {
 
   let claimContents = params.claimContents
@@ -167,7 +174,11 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
               logger.error(`DB field reference ${field} was not found in results.`)
             }
             result[field] =
-              dateColumns.includes(field) ? isoAndZonify(row[field]) : row[field]
+              dateColumns.includes(field)
+                ? isoAndZonify(row[field])
+                : booleanColumns.includes(field)
+                  ? booleanify(row[field])
+                  : row[field]
           }
           data.push(result)
         }
@@ -645,8 +656,10 @@ class EndorserDatabase {
             if (err) {
               reject(err)
             } else {
-              if (row?.issuedAt) { row.issuedAt = isoAndZonify(row.issuedAt) }
-              if (row?.updatedAt) { row.updatedAt = isoAndZonify(row.updatedAt) }
+              if (row) {
+                row.issuedAt = isoAndZonify(row.issuedAt)
+                row.updatedAt = isoAndZonify(row.updatedAt)
+              }
               resolve(row)
             }
           }
@@ -685,6 +698,7 @@ class EndorserDatabase {
       ['issuedAt', 'amount', 'fullClaim', 'unit'],
       'description',
       ['issuedAt', 'updatedAt'],
+      [],
       params,
       afterIdInput,
       beforeIdInput
@@ -1067,20 +1081,24 @@ class EndorserDatabase {
   jwtsByWhere(whereClause, whereParams) {
     return new Promise((resolve, reject) => {
       let data = [], rowErr
+
+      // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
       const sql =
         "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim,"
         + " handleId, claimCanonHashBase64, hashChainB64 FROM jwt"
         + whereClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
       //console.log('jwtsByWhere params & sql: ', whereParams, sql)
+
       db.each(
-        // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
         sql,
         whereParams,
         function(err, row) {
           if (err) {
             rowErr = err
           } else {
-            row.issuedAt = isoAndZonify(row.issuedAt)
+            if (row) {
+              row.issuedAt = isoAndZonify(row.issuedAt)
+            }
             data.push({
               id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
               claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
@@ -1129,6 +1147,7 @@ class EndorserDatabase {
       ['claimContext', 'claim'],
       'claim',
       ['issuedAt'],
+      [],
       params,
       afterIdInput,
       beforeIdInput
@@ -1405,6 +1424,7 @@ class EndorserDatabase {
        'nonAmountGivenConfirmed', 'fullClaim'],
       'objectDescription',
       ['issuedAt', 'updatedAt', 'validThrough'],
+      [],
       params,
       afterIdInput,
       beforeIdInput
@@ -1633,20 +1653,82 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
-          + ", name, description, image, endTime, startTime, locLat, locLon,"
+          + ", name, description, image, endTime, startTime,"
+          + " fulfillsLinkConfirmed, fulfillsPlanId, locLat, locLon,"
           + " resultDescription, resultIdentifier, url"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.locLat, entry.locLon,
+        entry.fulfillsLinkConfirmed ? 1 : 0, entry.fulfillsPlanId, entry.locLat, entry.locLon,
         entry.resultDescription, entry.resultIdentifier, entry.url,
       ], function(err) {
         if (err) {
           reject(err)
         } else {
           resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  planFulfilledBy(handleId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+          "SELECT main.*, sub.fulfillsLinkConfirmed as subConfirmation FROM plan_claim main"
+          + " INNER JOIN plan_claim sub ON main.handleId = sub.fulfillsPlanId"
+          + " WHERE sub.handleId = ?",
+          [handleId],
+          function (err, row) {
+            if (err) {
+              reject(err)
+            } else if (row) {
+              const result = R.omit(['subConfirmation'], row)
+              if (row) {
+                result.endTime = isoAndZonify(row.endTime)
+                result.startTime = isoAndZonify(row.startTime)
+                result.fulfillsLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
+              }
+              resolve({data: result, childFulfillsLinkConfirmed: booleanify(row.subConfirmation)})
+            } else {
+              // there may be no match
+              resolve({ data: null })
+            }
+          })
+    })
+  }
+
+  planFulfillersTo(handleId) {
+    return new Promise((resolve, reject) => {
+      const params = [handleId]
+      let sql = "SELECT rowid, * FROM plan_claim WHERE fulfillsPlanId = ?"
+
+      if (afterIdInput) {
+        params.push(afterIdInput)
+        sql += " AND rowid > ?"
+      }
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND rowid < ?"
+      }
+
+      sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
+
+      const data = []
+      db.each(sql, params, function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          row.endTime = isoAndZonify(row.endTime)
+          row.startTime = isoAndZonify(row.startTime)
+          data.push(row)
+        }
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
         }
       })
     })
@@ -1661,8 +1743,10 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else {
-            if (row?.endTime) { row.endTime = isoAndZonify(row.endTime) }
-            if (row?.startTime) { row.startTime = isoAndZonify(row.startTime) }
+            if (row) {
+              row.endTime = isoAndZonify(row.endTime)
+              row.startTime = isoAndZonify(row.startTime)
+            }
             resolve(row)
           }
         }
@@ -1682,9 +1766,10 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['image', 'url'],
+      ['fulfillsPlanId', 'image', 'url'],
       'description',
       ['endTime', 'startTime'],
+      ['fulfillsLinkConfirmed'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1703,9 +1788,10 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['image', 'url'],
+      ['fulfillsPlanId', 'image', 'url'],
       'description',
       ['endTime', 'startTime'],
+      ['fulfillsLinkConfirmed'],
       { issuerDid },
       afterIdInput,
       beforeIdInput
@@ -1748,8 +1834,8 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else {
-          if (row.endTime) { row.endTime = isoAndZonify(row.endTime) }
-          if (row.startTime) { row.startTime = isoAndZonify(row.startTime) }
+          row.endTime = isoAndZonify(row.endTime)
+          row.startTime = isoAndZonify(row.startTime)
           data.push(row)
         }
       }, function(err, num) {
@@ -1767,13 +1853,14 @@ class EndorserDatabase {
       var stmt = (
         "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
-          + ", startTime = datetime(?)"
+          + ", startTime = datetime(?), fulfillsLinkConfirmed = ?, fulfillsPlanId = ?"
           + ", resultDescription = ?, resultIdentifier = ?, url = ?"
           + " WHERE handleId = ?"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
+        entry.fulfillsLinkConfirmed ? 1 : 0, entry.fulfillsPlanId,
         entry.resultDescription, entry.resultIdentifier, entry.url, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
@@ -1784,6 +1871,7 @@ class EndorserDatabase {
       })
     })
   }
+
 
 
 
@@ -1829,8 +1917,10 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else {
-            if (row?.endTime) { row.endTime = isoAndZonify(row.endTime) }
-            if (row?.startTime) { row.startTime = isoAndZonify(row.startTime) }
+            if (row) {
+              row.endTime = isoAndZonify(row.endTime)
+              row.startTime = isoAndZonify(row.startTime)
+            }
             resolve(row)
           }
         }
@@ -1853,6 +1943,7 @@ class EndorserDatabase {
       ['image', 'url'],
       'description',
       ['endTime', 'startTime'],
+      [],
       params,
       afterIdInput,
       beforeIdInput
@@ -1874,6 +1965,7 @@ class EndorserDatabase {
       ['image', 'url'],
       'description',
       ['endTime', 'startTime'],
+      [],
       { issuerDid },
       afterIdInput,
       beforeIdInput
@@ -1916,8 +2008,8 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else {
-          if (row.endTime) { row.endTime = isoAndZonify(row.endTime) }
-          if (row.startTime) { row.startTime = isoAndZonify(row.startTime) }
+          row.endTime = isoAndZonify(row.endTime)
+          row.startTime = isoAndZonify(row.startTime)
           data.push(row)
         }
       }, function(err, num) {

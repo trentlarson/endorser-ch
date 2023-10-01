@@ -1,0 +1,9 @@
+
+-- see README.md in this directory for explanations
+
+ALTER TABLE give_claim ADD COLUMN fulfillsLinkConfirmed INTEGER DEFAULT 0;
+
+ALTER TABLE give_provider ADD COLUMN linkConfirmed INTEGER DEFAULT 0;
+
+ALTER TABLE plan_claim ADD COLUMN fulfillsLinkConfirmed INTEGER DEFAULT 0;
+ALTER TABLE plan_claim ADD COLUMN fulfillsPlanId TEXT;
