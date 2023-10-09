@@ -61,6 +61,22 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getGiveFulfillersToGive(req, res, next) {
+    const handleId = req.query.giveHandleId
+    const afterId = req.query.afterId
+    const beforeId = req.query.beforeId
+    dbService.giveFulfillersToGive(handleId, afterId, beforeId)
+        .then(results => ({
+          data: results.data.map(datum =>
+              R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+          ),
+          hitLimit: results.hitLimit,
+        }))
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => { res.json(results).end() })
+        .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getGivesPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -83,17 +99,6 @@ class DbController {
   getGiveProviders(req, res, next) {
     const giveHandleId = req.query.giveHandleId
     dbService.giveProviderClaims(giveHandleId)
-      .then(results => ({
-        // remove earlier duplicates from edits to the same handleId
-        data: R.uniqWith(R.eqBy(R.prop('handleId')), results.data),
-        hitLimit: results.hitLimit,
-      }))
-      .then(results => ({
-        data: results.data.map(
-          datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)
-        ),
-        hitLimit: results.hitLimit,
-      }))
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -249,16 +254,27 @@ class DbController {
 
   getPlanFulfilledBy(req, res, next) {
     const handleId = req.query.planHandleId
-    console.log("getPlanFulfilledBy", handleId)
     dbService.planFulfilledBy(handleId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
-  getPlanFulfillersTo(req, res, next) {
+  /** jwtFulfillersToPlan not yet implemented
+  getJwtFulfillersToPlan(req, res, next) {
     const handleId = req.query.planHandleId
-    dbService.planFulfillersTo(handleId)
+    dbService.jwtFulfillersToPlan(handleId)
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => { res.json(results).end() })
+        .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+  **/
+
+  getPlanFulfillersToPlan(req, res, next) {
+    const handleId = req.query.planHandleId
+    const afterId = req.query.afterId
+    const beforeId = req.query.beforeId
+    dbService.planFulfillersToPlan(handleId, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -355,7 +371,7 @@ export default express
  * @property {string} recipientDid
  * @property {string} fulfillsId - handle ID of the offer this fulfills
  * @property {string} fulfillsType - type of the element this fulfills, usually "Offer"
- * @property {string} fulfillsPlanId - handle ID of the plan, if the offer applies to one
+ * @property {string} fulfillsPlanHandleId - handle ID of the plan, if the offer applies to one
  * @property {string} unit
  * @property {number} amount
  * @property {number} amountConfirmed - amount of this that recipient has confirmed
@@ -420,7 +436,7 @@ export default express
  * @property {string} description
  * @property {datetime} endTime
  * @property {boolean} fulfillsLinkConfirmed
- * @property {string} fulfillsPlanId
+ * @property {string} fulfillsPlanHandleId
  * @property {string} image
  * @property {string} issuerDid
  * @property {string} handleId
@@ -436,7 +452,13 @@ export default express
 /**
  * @typedef PlanWithFulfilledLinkConfirmation
  * @property {Plan} data (as many as allowed by our limit)
- * @property {boolean} fullfilledLinkConfirmed true when the link between plans has been confirmed by both
+ * @property {boolean} childFullfillsLinkConfirmed true when the link between plans has been confirmed by both
+ */
+
+/**
+ * @typedef PersonLink
+ * @Property {string} identifier DID
+ * @Property {boolean} linkConfirmed
  */
 
 /**
@@ -519,8 +541,8 @@ export default express
  * @param {string} recipientId.query.optional - recipient
  * @param {string} fulfillsId.query.optional - for ones that fulfill a particular item (eg. an offer)
  * @param {string} fulfillsType.query.optional - for ones that fulfill a particular type
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries,
- *  reverse chronologically; 'hitLimit' boolean property if there may be more;
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
+ *  'hitLimit' boolean property if there may be more;
  *  but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
  */
@@ -535,13 +557,28 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - JSON.stringified array with handle IDs of the plans which have received gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries,
- *   reverse chronologically; 'hitLimit' boolean property if there may be more;
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
+ *   'hitLimit' boolean property if there may be more;
  *   but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/givesToPlans', dbController.getGivesForPlansPaged)
+  // This endpoint can be removed when Time Safari code is updated.
   .get('/givesForPlans', dbController.getGivesForPlansPaged)
+
+/**
+ * Get Give fulfillers for a particular give
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/fulfillersToGive
+ * @param {string} giveHandleId.query.optional - the jwtId of the give entry
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
+ * 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/giveFulfillersToGive', dbController.getGiveFulfillersToGive)
 
 /**
  * Get gives provided by this provider
@@ -551,25 +588,13 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} providerId.query.optional - handle ID of the provider which may have helped with gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries,
- *   reverse chronologically; 'hitLimit' boolean property if there may be more;
- *   but note that the `providers` property of each entry is not populated
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
+ * 'hitLimit' boolean property if there may be more;
+ * but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/givesProvidedBy', dbController.getGivesProvidedBy)
-
-/**
- * Get providers for a particular give
- *
- * @group reports - Reports (with paging)
- * @route GET /api/v2/report/giveProviders
- * @param {string} giveHandleId.query.optional - the jwtId of the give entry
- * @returns {array.Give} 200 - 'data' property with each of the providers with known types
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/providersToGive', dbController.getGiveProviders)
 
 /**
  * Get totals of gives
@@ -616,7 +641,7 @@ export default express
  * Get offers dedicated to any in a list of plan IDs
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/offersForPlans
+ * @route GET /api/v2/report/offersToPlans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received offers
@@ -624,7 +649,7 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/offersForPlans', dbController.getOffersForPlansPaged)
+  .get('/offersToPlans', dbController.getOffersForPlansPaged)
 
 /**
  * Get totals of offers
@@ -704,13 +729,13 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/planFulfilledBy', dbController.getPlanFulfilledBy)
+  .get('/planFulfilledByPlan', dbController.getPlanFulfilledBy)
 
 /**
  * Get plans that fulfill given plan
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/planFulfillersTo
+ * @route GET /api/v2/report/fulfillersToPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -718,4 +743,16 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/planFulfillersTo', dbController.getPlanFulfillersTo)
+  .get('/planFulfillersToPlan', dbController.getPlanFulfillersToPlan)
+
+/**
+ * Get providers for a particular give
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/giveProviders
+ * @param {string} giveHandleId.query.optional - the jwtId of the give entry
+ * @returns {array.PersonLink} 200 - 'data' property with each of the providers with known types
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/providersToGive', dbController.getGiveProviders)

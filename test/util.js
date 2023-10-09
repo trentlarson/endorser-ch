@@ -125,6 +125,7 @@ module.exports = {
     "@type": "AgreeAction",
     "object": [
       // supply claims
+      // which could just have "identifier" of a previous claim (which would mean other properties are ignored)
       // ... though best practice is to replace this array with a single claim
     ]
   },

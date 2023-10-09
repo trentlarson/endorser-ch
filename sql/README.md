@@ -21,10 +21,27 @@ CREATE TABLE confirmation (
     issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     origClaim TEXT,
     origClaimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
+
+    -- This could be null if there was no explicit identifier or no claim found with matching data.
+    -- This could happen in the case of a plan. It shouldn't, but we don't error in that case
+    -- because we don't want to try and match on all that claim data at this point... that sees rare.
     origClaimJwtId TEXT,
+
+    -- The following are cached entries of the data being confirmed.
+    -- Note that some may be editable (eg. plans)... so beware that the
+    -- confirmation is only for the JWT, at the time of the confirmation;
+    -- these can be useful to help people see the latest values in an entity
+    -- and detect changes, but they cannot be used as a definitive statement of
+    -- who and how many confirmations are on particular data: that is only in
+    -- origClaimJwtId.
+
+    -- these are caches of the data in the origClaim, which may change to handle IDs in the future
     actionRowId BIGINT,
+    orgRoleRowId INTEGER,
     tenureRowId INTEGER,
-    orgRoleRowId INTEGER
+
+    -- this is obviously a handle ID already
+    planHandleId TEXT
 );
 
 CREATE TABLE event (
@@ -44,6 +61,9 @@ CREATE TABLE give_claim (
 
     recipientDid TEXT, -- global ID of recipient
 
+    fulfillsId TEXT, -- global ID to the offer to which this Give applies
+    fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
+
     -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
     --
     -- This does not mean that receipt of this give is confirmed,
@@ -54,12 +74,10 @@ CREATE TABLE give_claim (
     -- owns the data and claimed the relationship so they obviously implicitly confirmed it.
     --
     fulfillLinkConfirmed INTEGER DEFAULT 0,
-    fulfillsId TEXT, -- global ID to the offer to which this Give applies
-    fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
 
     -- This global plan ID is for the case where this is given to a broader
     -- plan that is nested inside the related data.
-    fulfillsPlanId TEXT,
+    fulfillsPlanHandleId TEXT,
 
     unit TEXT,
     amount REAL DEFAULT 0,
@@ -73,6 +91,11 @@ CREATE TABLE give_claim (
     description TEXT,
     fullClaim TEXT -- full claim JSON
 );
+CREATE INDEX give_agentDid ON give_claim(agentDid);
+CREATE INDEX give_recipientDid ON give_claim(recipientDid);
+CREATE INDEX give_fulfillsId ON give_claim(fulfillsId);
+CREATE INDEX give_fulfillsPlanId ON give_claim(fulfillsPlanId);
+CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);
 
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction which has this as a provider
@@ -83,6 +106,8 @@ CREATE TABLE give_provider (
     --  the give/provider relationship agree that this linkage is correct.)
     linkConfirmed INTEGER DEFAULT 0
 );
+CREATE INDEX give_provider_give ON give_provider(giveHandleId);
+CREATE INDEX give_provider_provider ON give_provider(providerHandleId);
 
 CREATE TABLE jwt (
     id CHARACTER(26) PRIMARY KEY,
@@ -100,6 +125,8 @@ CREATE TABLE jwt (
     jwtEncoded TEXT, -- the full original JWT
     nonceHashHex CHARACTER(64), -- hex of hash constructed with hashNonce to allow selective disclosure but to avoid correlation
 );
+CREATE INDEX jwt_entityId ON jwt(handleId);
+CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
 
 CREATE TABLE network (
     subject VARCHAR(100), -- DID of the entity who can see/reach the object
@@ -143,6 +170,10 @@ CREATE TABLE offer_claim (
     objectDescription TEXT,
     fullClaim TEXT -- full claim JSON
 );
+CREATE INDEX offer_offeredByDid ON offer_claim(offeredByDid);
+CREATE INDEX offer_recipientDid ON offer_claim(recipientDid);
+CREATE INDEX offer_recipientPlanId ON offer_claim(recipientPlanId);
+CREATE INDEX offer_validThrough ON offer_claim(validThrough);
 
 CREATE TABLE org_role_claim (
     jwtId CHARACTER(26),
@@ -156,7 +187,7 @@ CREATE TABLE org_role_claim (
 
 CREATE TABLE plan_claim (
     handleId TEXT,
-    jwtId text PRIMARY KEY,
+    jwtId text PRIMARY KEY, -- the latest JWT ID that updated this plan
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
     agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
 
@@ -172,7 +203,7 @@ CREATE TABLE plan_claim (
     fulfillsLinkConfirmed INTEGER DEFAULT 0,
 
     -- current plan contributes to another plan with this global plan ID
-    fulfillsPlanId TEXT,
+    fulfillsPlanHandleId TEXT,
 
     -- internalId TEXT, -- unused
     name TEXT,
@@ -186,6 +217,11 @@ CREATE TABLE plan_claim (
     resultIdentifier TEXT,
     url TEXT
 );
+CREATE INDEX plan_issuerDid ON plan_claim(issuerDid);
+CREATE INDEX plan_fullIri ON plan_claim(handleId);
+CREATE INDEX plan_internalId ON plan_claim(internalId);
+CREATE INDEX plan_endTime ON plan_claim(endTime);
+CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
 
 CREATE TABLE project_claim (
     jwtId TEXT PRIMARY KEY,
@@ -204,6 +240,11 @@ CREATE TABLE project_claim (
     resultIdentifier TEXT,
     url TEXT
 );
+CREATE INDEX project_issuerDid ON project_claim(issuerDid);
+CREATE INDEX project_fullIri ON project_claim(handleId);
+CREATE INDEX project_internalId ON project_claim(internalId);
+CREATE INDEX project_endTime ON project_claim(endTime);
+CREATE INDEX project_resultIdentifier ON project_claim(resultIdentifier);
 
 CREATE TABLE registration (
     did CHARACTER(100) PRIMARY KEY, -- DID of the registered entity; did:peer are 58 chars
@@ -213,6 +254,8 @@ CREATE TABLE registration (
     maxRegs INTEGER, -- allowed registrations per time period
     maxClaims INTEGER -- allowed claims per time period
 );
+CREATE INDEX registered_agent ON registration(agent);
+CREATE INDEX registered_epoch ON registration(epoch);
 
 CREATE TABLE tenure_claim (
     jwtId CHARACTER(26),

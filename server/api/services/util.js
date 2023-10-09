@@ -39,9 +39,10 @@ function buildConfirmationList(key, cacList) {
 }
 
 function withKeysSorted(myObject) {
-  if (!util.isObject(myObject)) {
+  if (myObject === null || typeof myObject !== 'object') {
+    // not an object
     return myObject
-  } else if (util.isArray(myObject)) {
+  } else if (Array.isArray(myObject)) {
     var result = []
     for (var elem of myObject) {
       result.push(withKeysSorted(elem))

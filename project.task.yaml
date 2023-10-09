@@ -1,8 +1,10 @@
 ---
 tasks:
 
-- allow Gives for free (ie. without registration)
 - add Lives of Gifts project
+  - add links between plans - finish tests starting line 617 of controller6.js
+  - change all mobile & kick-start handleId credential references to use the JWT ID
+- allow Gives for free (ie. without registration)
 
 - mobile:
 
@@ -230,7 +232,7 @@ tasks:
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 04 publish txid of merkle-tree of the transactions (then automate merkle-tree)
-  - 01 add test for rejection of duplicate claim submissions
+  - 01 add test for rejection of duplicate claim submission by same user (already checking duplicate confirmation when by ID)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 01 allow all confirmations, even if they fit a category but then fail a check
 - 02 allow read of all data in claims/confirmations issued by requester
@@ -282,7 +284,6 @@ tasks:
   - manage keys with KERI
   - add tests for endorser-mobile utility.testRecursivelyOnString
 
-- 01 disallow duplicate claims by same issuer; id:disallow-duplicate ; recommend storing hashes so for efficient claim indexing
 - 01 why do some claims (eg. claimIIW2019aFor1) not have iss set?
 - 08 allow links into contacts for contacting via text
 - 02 if we see someone in between 2 hops away, give a search URL for that person to replicate

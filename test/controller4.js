@@ -211,7 +211,7 @@ describe('4 - Load Claims Incrementally', () => {
   it('retrieve many Offer entries with many more to come', () =>
     request(Server)
       .get(
-        '/api/v2/report/offersForPlans?planIds='
+        '/api/v2/report/offersToPlans?planIds='
           + encodeURIComponent(JSON.stringify([PLAN_ID]))
       )
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
@@ -232,7 +232,7 @@ describe('4 - Load Claims Incrementally', () => {
   it('retrieve a few more Give/Offer claims', () =>
     request(Server)
       .get(
-        '/api/v2/report/offersForPlans?planIds='
+        '/api/v2/report/offersToPlans?planIds='
           + encodeURIComponent(JSON.stringify([PLAN_ID]))
           + '&beforeId=' + moreBeforeId
       )
