@@ -77,6 +77,22 @@ class DbController {
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getGiveFulfillersToOffer(req, res, next) {
+    const handleId = req.query.offerHandleId
+    const afterId = req.query.afterId
+    const beforeId = req.query.beforeId
+    dbService.giveFulfillersToOffer(handleId, afterId, beforeId)
+        .then(results => ({
+          data: results.data.map(datum =>
+              R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+          ),
+          hitLimit: results.hitLimit,
+        }))
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => { res.json(results).end() })
+        .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getGivesPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -568,17 +584,43 @@ export default express
   .get('/givesForPlans', dbController.getGivesForPlansPaged)
 
 /**
- * Get Give fulfillers for a particular give
+ * Get give fulfilled by this give
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/fulfillersToGive
- * @param {string} giveHandleId.query.optional - the jwtId of the give entry
+ * @route GET /api/v2/report/giveFulfilledByGive
+ * @param {string} giveHandleId.query.required - the handleId of the plan which is fulfilled by this plan
+ * @returns {GiveWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+// (not yet implemented)
+//  .get('/giveFulfilledByGive', dbController.getGiveFulfilledBy)
+
+/**
+ * Get Give fulfillers for a particular Give
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/giveFulfillersToGive
+ * @param {string} giveHandleId.query.required - the handleId of the give entry
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/giveFulfillersToGive', dbController.getGiveFulfillersToGive)
+
+/**
+ * Get Give fulfillers for a particular Offer
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/givefulfillersToOffer
+ * @param {string} giveHandleId.query.required - the handleId of the give entry
+ * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
+ * 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/giveFulfillersToOffer', dbController.getGiveFulfillersToOffer)
 
 /**
  * Get gives provided by this provider
@@ -723,7 +765,7 @@ export default express
  * Get plan fulfilled by given plan
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/planFulfilledBy
+ * @route GET /api/v2/report/planFulfilledByPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @returns {PlanWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
  * @returns {Error} 400 - error
@@ -749,7 +791,7 @@ export default express
  * Get providers for a particular give
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/giveProviders
+ * @route GET /api/v2/report/providersToGive
  * @param {string} giveHandleId.query.optional - the jwtId of the give entry
  * @returns {array.PersonLink} 200 - 'data' property with each of the providers with known types
  * @returns {Error} 400 - error

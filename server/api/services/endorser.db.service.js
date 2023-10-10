@@ -802,6 +802,45 @@ class EndorserDatabase {
     })
   }
 
+  giveFulfillersToOffer(handleId, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      const params = [handleId]
+      let sql = "SELECT main.* FROM give_claim main"
+          + " INNER JOIN offer_claim parent ON main.fulfillsId = parent.handleId"
+          + " WHERE parent.handleId = ? AND main.fulfillsType = 'Offer'"
+
+      if (afterIdInput) {
+        params.push(afterIdInput)
+        sql += " AND main.rowid > ?"
+      }
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND main.rowid < ?"
+      }
+
+      sql += " ORDER BY main.rowid DESC LIMIT " + DEFAULT_LIMIT
+
+      const data = []
+      console.log('sql & params', sql, params)
+      db.each(sql, params, function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          row.endTime = isoAndZonify(row.endTime)
+          row.startTime = isoAndZonify(row.startTime)
+          row.fulfillsLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
+          data.push(row)
+        }
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
   giveTotals(agentId, recipientDid, planId, unit, includeTrades, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       let allParams = []

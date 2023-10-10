@@ -567,6 +567,18 @@ describe('6 - Plans', () => {
 
   it('retrieve parent plan link from child', () => {
     return request(Server)
+      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.equal(null)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve parent plan link from child', () => {
+    return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
@@ -614,24 +626,6 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  // TODO
-  // retrieve parent links from child /giveFulfillersTo & /fulfillersToPlan -- or /claimFulfillersTo ?
-  // retrieve only confirmed child plans - fail
-  // confirm
-  // retrieve only confirmed child plans - succeed
-  // add "confirmed" boolean to results for gives & providers
-
-  // search through uses of handleId and see if they're appropriate
-
-  // create fulfilling one by same user and see confirmed true
-
-  // before "provider retrieval gets one": confirm by 4 and see fulfillConfirmed change to true
-  // put this in "insert give #1": expect(r.body.success.fulfillsLinkConfirmed).to.be.true
-  // add this to "give #2 has expected data": expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
-  // change all provider tests to be entities (Person or Organization)
-
-  // write anyFulfillersTo[Give|Plan]
-  // check if we want to test these ones: was a non-entity provider, maybe should be a fulfills
 })
 
 
@@ -1051,6 +1045,19 @@ describe('6 - check offer totals', () => {
         expect(r.body.data[0].amountGiven).to.equal(0)
         expect(r.body.data[0].amountGivenConfirmed).to.equal(0)
         expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer fulfiller retrieval gets two', () => {
+    return request(Server)
+      .get('/api/v2/report/giveFulfillersToOffer?giveHandleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1849,6 +1856,22 @@ describe('6 - check give totals', () => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].amountConfirmed).to.be.greaterThan(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer fulfiller retrieval gets two', () => {
+    return request(Server)
+      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(3)
+        expect(r.body.data[0].fullClaim.description).to.equal('First-graders & snowboarding & horses?')
+        expect(r.body.data[1].fullClaim.description).to.equal('Thanks for the first-grade learning materials!')
+        expect(r.body.data[2].fullClaim.description).to.equal('Giving it up for those first graders')
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

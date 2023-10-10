@@ -1,12 +1,41 @@
 ---
-tasks:
+tasks :
 
-- add Lives of Gifts project
+- add Lives of Gifts project :
   - add links between plans - finish tests starting line 617 of controller6.js
   - change all mobile & kick-start handleId credential references to use the JWT ID
+
+  - retrieve parent links from child /giveFulfillersTo & /fulfillersToPlan -- or /claimFulfillersTo ?
+  - giveFulfillersToGive one test
+  - giveFulfillersToOffer
+  - planFulfillersToPlan
+  - planFulfilledByPlan, done
+  - provider...
+
+  - retrieve only confirmed child plans - fail
+  - confirm
+  - retrieve only confirmed child plans - succeed
+  - add "confirmed" boolean to results for gives & providers
+
+  - search through uses of handleId and see if they're appropriate
+
+  - create fulfilling one by same user and see confirmed true
+
+  - before "provider retrieval gets one": confirm by 4 and see fulfillConfirmed change to true
+  - put this in "insert give #1": expect(r.body.success.fulfillsLinkConfirmed).to.be.true
+  - add this to "give #2 has expected data": expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
+  - change all provider tests to be entities (Person or Organization)
+
+  - write anyFulfillersTo[Give|Plan]
+  - check if we want to test these ones: was a non-entity provider, maybe should be a fulfills
+
+  - implement giveFulfilledByGive
+
+
+
 - allow Gives for free (ie. without registration)
 
-- mobile:
+- mobile :
 
   - Allow "Record Delivery" when I am the recipient of an offer
   - Allow pasting of a contract
@@ -34,7 +63,6 @@ tasks:
 
 - .5 double-check that the GiveAction "fulfills" and "recipient" save correctly when to a PlanAction
 
-- 01 allow edit of Plan
 - .2 allow a POST for givesForPlans (just like the GET)
 - 01 add DonateAction the same as Give, with a flag on give_claim for trade (vs donation)
 
@@ -57,6 +85,7 @@ tasks:
 - .5 mobile & server - change the registration from mobile to agent & participant .identifier (from agent.did), and look for others
 
 - 01 environments :
+  - enhance production environment
   - turn off nginx on server start; turn on haproxy on server start
   - fix test web server
 
@@ -86,7 +115,7 @@ tasks:
 
 - 02 add password hash algorithm to settings (and make task to allow update) id:migrate-pass-from-sha1
 
-- 04 revocation
+- 16 revocation (note that revocation for object or amountOfThisGood will change Give & Offer totals)
 
 - 01 run load test, especially for - claimContents search, confirmations-by-claim retrieval
 
@@ -194,7 +223,7 @@ tasks:
   - .5 add a verify at the top level to scan (just like under search)
   - 02 create items for sale/trade awaits:encrypt-seed
 
-  - 04 change default to did:peer
+  - 04 change default to did:peer :
     - write a peer DID resolver (to pass into verifyJWT)
     - on server side, provide an auth mechanism for peer DIDs
     - create a table for the provider & derivation? (include DID doc?)
@@ -211,7 +240,7 @@ tasks:
   - .5 clear the contact TextInput boxes after hitting "Create"
   - .5 remove didManagerFind call from ConfirmOthers without causing an error
 
-  - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message
+  - check if the assertion is owned by the user; if not, retrieve JWT from server or give error message :
     - 04 cases - original claim (not a VC) or VC w/o sig (or, someday, VC with sig)
   - .2 allow copying a presentation (eg. for emailing)
   - .5 show credential contents (and allow browsing)
@@ -223,15 +252,15 @@ tasks:
 
 - 01 endorser-auth - automatedly test issuance date, expiration; may have to generate VP dynamically
 - 01 fix subjects (eg. Jun 29 2019 claims by me for others)
-- 02 show signatures for proof of confirmations
+- 02 show signatures for proof of confirmations :
 - 02 the number in the green result might not always be a JWT ID so we should label the entity type (to help with debugging)
   - ... and add confirmation IDs for confirmation claims
-- 04 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver)
+- 04 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver) :
   - may be due to SimpleSigner in controller.js and https://github.com/decentralized-identity/did-jwt/blob/937973e31d4bee3ee32dd1e077f11d31b6b868cb/README.md#1-create-a-did-jwt
 - .5 allow the issuer to see all the details of JWTs they've issued
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
-- 04 publish txid of merkle-tree of the transactions (then automate merkle-tree)
+- 04 publish txid of merkle-tree of the transactions (then automate merkle-tree) :
   - 01 add test for rejection of duplicate claim submission by same user (already checking duplicate confirmation when by ID)
   - add test for creating the chain and adding a claim and creating more, ensuring duplicate records get different hashes
 - 01 allow all confirmations, even if they fit a category but then fail a check
@@ -242,7 +271,7 @@ tasks:
 - 02 change name of app from "uport demo" (when logging in)
 - 01 fix UI disallowing any calls for an expired token (see working-self on 2022.04.06) id:expired-uport-token
 - 01 add .json(someErr) to all routers in the error path
-- lesser endorser-mobile app issues:
+- lesser endorser-mobile app issues :
   - on android, get background to revive and show feed screen after clicking on notification when app is in background; id:android-feed-screen-from-background maybe https://github.com/invertase/notifee/issues/132#issuecomment-1038821680
   - on iOS, wake app to check & notify of new claims when app is terminated
 
@@ -315,7 +344,7 @@ tasks:
 - 04 export to Neo4J
 - 32 switch/add format to verifiable credentials?
 - 32 uport - inside JSON payload, show a name if DID matches a contact
-- 02 db:
+- 02 db :
   - add action_claim.startDateCanonical
     - and fill it
   - add created date to each record
@@ -324,7 +353,7 @@ tasks:
   - change JWT & CONFIRMATION subject to subjectDid; issuer to issuerDid & type to VARCHAR(100)
 - 01 gotta report errors to user (eg. unrecognized context URL or claim type in createWithClaimEntry result)
 - 01 gotta report errors to user (eg. "encoded" instead of "jwtEncoded", no event found, repeated action claim submitted)
-- 02 gotta report errors to user
+- 02 gotta report errors to user :
   - eg. repeated or failed confirmations so should see mix of successes and errors
   - eg. remove hashHex column and see how parts succeed but there's still an error
   - ... and guard every API call in uport-demo with a response.ok check & error catch (and loader)
@@ -352,7 +381,7 @@ tasks:
 - 08 add Typescript
 - 64 Follow OIP protocol when sending edits to previous claims.
 
-- x 01 mobile: requiresOffers & requiresOfferAmount
+- x 01 mobile : requiresOffers & requiresOfferAmount
 - x 04 desktop version of mobile app (for Vermont)
 
 log:
