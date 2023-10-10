@@ -565,7 +565,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
-  it('retrieve parent plan link from child', () => {
+  it('retrieve no parent plan link from parent', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -577,7 +577,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('retrieve parent plan link from child', () => {
+  it('retrieve one parent plan link from child', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -586,6 +586,31 @@ describe('6 - Plans', () => {
         expect(r.body.data).to.be.an('object')
         expect(r.body.data.handleId).to.equal(firstPlanIdExternal)
         expect(r.body.childFulfillsLinkConfirmed).to.be.false
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve one child plan link from parent', () => {
+    return request(Server)
+      .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve no child plan link from child', () => {
+    return request(Server)
+      .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(0)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -1051,7 +1076,7 @@ describe('6 - check offer totals', () => {
       })
   }).timeout(3000)
 
-  it('offer fulfiller retrieval gets two', () => {
+  it('offer fulfiller retrieval gets none', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToOffer?giveHandleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -1228,6 +1253,19 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
+  it('give fulfiller retrieval gets none', () => {
+    return request(Server)
+      .get('/api/v2/report/giveFulfillersToGive?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(0)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   it('insert give #2', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
@@ -1303,7 +1341,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('fulfiller retrieval gets one', () => {
+  it('give fulfiller retrieval gets one', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToGive?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -1862,7 +1900,7 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('offer fulfiller retrieval gets two', () => {
+  it('offer fulfiller retrieval gets three', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])

@@ -5,13 +5,9 @@ tasks :
   - add links between plans - finish tests starting line 617 of controller6.js
   - change all mobile & kick-start handleId credential references to use the JWT ID
 
-  - retrieve parent links from child /giveFulfillersTo & /fulfillersToPlan -- or /claimFulfillersTo ?
-  - giveFulfillersToGive one test
-  - giveFulfillersToOffer
-  - planFulfillersToPlan
-  - planFulfilledByPlan, done
   - provider...
 
+  - test when fulfillers are added or removed
   - retrieve only confirmed child plans - fail
   - confirm
   - retrieve only confirmed child plans - succeed

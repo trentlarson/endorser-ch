@@ -1809,8 +1809,8 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       const params = [handleId]
       let sql = "SELECT sub.* FROM plan_claim sub"
-        + " INNER JOIN plan_claim main ON main.fulfillsPlanHandleId = sub.handleId"
-        + " WHERE main.handleId = ?"
+        + " INNER JOIN plan_claim parent ON sub.fulfillsPlanHandleId = parent.handleId"
+        + " WHERE parent.handleId = ?"
 
       if (afterIdInput) {
         params.push(afterIdInput)
