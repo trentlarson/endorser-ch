@@ -672,10 +672,12 @@ class ClaimService {
 
     const fulfillsId = claim.fulfills?.identifier
     let fulfillsClaim = claim.fulfills
+    let fulfillsIssuer
     if (fulfillsId) {
       const idAsHandle = globalId(fulfillsId)
       const loadedFulfillsObj = await dbService.jwtLastByHandleIdRaw(idAsHandle)
       if (loadedFulfillsObj) {
+        fulfillsIssuer = loadedFulfillsObj.issuer
         fulfillsClaim = JSON.parse(loadedFulfillsObj.claim)
       }
     }
@@ -716,8 +718,10 @@ class ClaimService {
         fulfillsPlanHandleId = globalId(fulfillsClaimParent.identifier)
       }
     }
-    const fulfilleLinkConfirmed =
-      issuerDid === fulfillsClaim?.issuer || issuerDid === fulfillsClaim?.agentDid
+    const fulfillsLinkConfirmed =
+      issuerDid === fulfillsIssuer
+        || issuerDid === fulfillsClaim?.agent?.identifier // for Give & PlanAction
+        || issuerDid === fulfillsClaim?.offeredBy?.identifier // for Offer
 
     const byRecipient = issuerDid == claim.recipient?.identifier
     const amountConfirmed = byRecipient ? (claim.object?.amountOfThisGood || 1) : 0
@@ -730,7 +734,7 @@ class ClaimService {
       agentDid: claim.agent?.identifier || issuerDid,
       recipientDid: claim.recipient?.identifier,
       fulfillsId: fulfillsId,
-      fulfillsLinkConfirmed: fulfilleLinkConfirmed,
+      fulfillsLinkConfirmed: fulfillsLinkConfirmed,
       fulfillsType: fulfillsType,
       fulfillsPlanHandleId: fulfillsPlanHandleId,
       amount: claim.object?.amountOfThisGood,

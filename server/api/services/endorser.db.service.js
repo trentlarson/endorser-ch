@@ -821,7 +821,6 @@ class EndorserDatabase {
       sql += " ORDER BY main.rowid DESC LIMIT " + DEFAULT_LIMIT
 
       const data = []
-      console.log('sql & params', sql, params)
       db.each(sql, params, function(err, row) {
         if (err) {
           reject(err)

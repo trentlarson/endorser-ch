@@ -5,12 +5,7 @@ tasks :
   - add links between plans - finish tests starting line 617 of controller6.js
   - change all mobile & kick-start handleId credential references to use the JWT ID
 
-  - provider...
-
-  - test when fulfillers are added or removed
-  - retrieve only confirmed child plans - fail
   - confirm
-  - retrieve only confirmed child plans - succeed
   - add "confirmed" boolean to results for gives & providers
 
   - search through uses of handleId and see if they're appropriate
@@ -25,7 +20,9 @@ tasks :
   - write anyFulfillersTo[Give|Plan]
   - check if we want to test these ones: was a non-entity provider, maybe should be a fulfills
 
+  - test when fulfillers are added or removed
   - implement giveFulfilledByGive
+  - retrieve only confirmed child plans
 
 
 

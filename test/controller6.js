@@ -599,6 +599,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -1174,6 +1175,7 @@ describe('6 - check give totals', () => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
         expect(r.body.success.fulfillsPlanHandleId).to.be.a('string')
+        expect(r.body.success.fulfillsLinkConfirmed).to.be.true
         firstGiveRecordHandleId = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
