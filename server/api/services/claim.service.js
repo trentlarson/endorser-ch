@@ -718,6 +718,7 @@ class ClaimService {
         fulfillsPlanHandleId = globalId(fulfillsClaimParent.identifier)
       }
     }
+
     const fulfillsLinkConfirmed =
       issuerDid === fulfillsIssuer
         || issuerDid === fulfillsClaim?.agent?.identifier // for Give & PlanAction

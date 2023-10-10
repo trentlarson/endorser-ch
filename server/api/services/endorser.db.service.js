@@ -676,16 +676,16 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, updatedAt"
-          + ", agentDid"
-          + ", recipientDid, fulfillsId, fulfillsType, fulfillsPlanHandleId"
+          + ", agentDid, recipientDid"
+          + ", fulfillsId, fulfillsLinkConfirmed, fulfillsType, fulfillsPlanHandleId"
           + ", amountConfirmed, amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
-          entry.agentDid,
-          entry.recipientDid, entry.fulfillsId, entry.fulfillsType,
+          entry.agentDid, entry.recipientDid,
+          entry.fulfillsId, entry.fulfillsLinkConfirmed, entry.fulfillsType,
           entry.fulfillsPlanHandleId, entry.amountConfirmed,
           entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
@@ -700,10 +700,10 @@ class EndorserDatabase {
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
        'fulfillsId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
-      ['issuedAt', 'amount', 'fullClaim', 'unit'],
+      ['issuedAt', 'amount', 'fullClaim', 'fulfillsLinkConfirmed', 'unit'],
       'description',
       ['issuedAt', 'updatedAt'],
-      [],
+      ['fulfillsLinkConfirmed'],
       params,
       afterIdInput,
       beforeIdInput
@@ -744,6 +744,7 @@ class EndorserDatabase {
           if (err) {
             rowErr = err
           } else {
+            row.fulfillsLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
             row.issuedAt = isoAndZonify(row.issuedAt)
             row.validThrough = isoAndZonify(row.validThrough)
             data.push(row)
@@ -1854,6 +1855,7 @@ class EndorserDatabase {
             if (row) {
               row.endTime = isoAndZonify(row.endTime)
               row.startTime = isoAndZonify(row.startTime)
+              row.fulfillsLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
             }
             resolve(row)
           }
@@ -1944,6 +1946,7 @@ class EndorserDatabase {
         } else {
           row.endTime = isoAndZonify(row.endTime)
           row.startTime = isoAndZonify(row.startTime)
+          row.fulfillsLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
           data.push(row)
         }
       }, function(err, num) {

@@ -1334,6 +1334,7 @@ describe('6 - check give totals', () => {
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].description).to.equal('Found new homeschooling friends')
         expect(r.body.data[0].fulfillsId).to.equal(firstGiveRecordHandleId)
+        expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
         expect(r.body.data[0].fulfillsType).to.equal('GiveAction')
         expect(r.body.data[0].fulfillsPlanHandleId).to.be.null
         expect(r.body.data[0].recipientDid).to.equal(null)
