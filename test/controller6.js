@@ -652,6 +652,20 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('retrieve one child plan link from parent and show confirmed', () => {
+    return request(Server)
+      .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
 })
 
 
