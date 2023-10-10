@@ -1365,6 +1365,7 @@ describe('6 - check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
         expect(r.body.data[0].fullClaim.description).to.equal('Found new homeschooling friends')
         expect(r.body.data[0].fullClaim.object.amountOfThisGood).to.equal(1)
         expect(r.body.data[0].fullClaim.object.unitCode).to.equal('HUR')
@@ -1452,6 +1453,7 @@ describe('6 - check give totals', () => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
         thirdGiveRecordHandleId = r.body.success.handleId
+        expect(r.body.success.fulfillsLinkConfirmed).to.be.false
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1499,22 +1501,6 @@ describe('6 - check give totals', () => {
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].identifier).to.equal(creds[1].did)
         expect(r.body.data[1].identifier).to.equal(creds[2].did)
-        /** was a non-entity provider, maybe should be a fulfills
-        expect(r.body.data[0].claim.description).to.equal('Found new homeschooling friends')
-        expect(r.body.data[0].claimType).to.equal('GiveAction')
-        expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
-        expect(r.body.data[0].issuer).to.equal(creds[2].did)
-        expect(r.body.data[0].issuedAt).to.be.not.null
-        expect(r.body.data[0].subject).to.equal(creds[2].did)
-
-        expect(r.body.data[1].claim.description).to.equal('Had so much fun that we danced')
-        expect(r.body.data[1].claimType).to.equal('GiveAction')
-        expect(r.body.data[1].handleId).to.equal(firstGiveRecordHandleId)
-        expect(r.body.data[1].issuer).to.equal(creds[2].did)
-        expect(r.body.data[1].issuedAt).to.be.not.null
-        expect(r.body.data[1].subject).to.equal(creds[2].did)
-         **/
-
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1568,16 +1554,6 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].identifier).to.equal(creds[1].did)
-
-        /** was a non-entity provider, maybe should be a fulfills
-        expect(r.body.data[0].claim.description).to.equal('Had so much fun that we danced')
-        expect(r.body.data[0].claimType).to.equal('GiveAction')
-        expect(r.body.data[0].handleId).to.equal(firstGiveRecordHandleId)
-        expect(r.body.data[0].issuer).to.equal(creds[2].did)
-        expect(r.body.data[0].issuedAt).to.be.not.null
-        expect(r.body.data[0].subject).to.equal(creds[2].did)
-        **/
-
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1942,23 +1918,6 @@ describe('6 - check give totals', () => {
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].identifier).to.equal(creds[2].did)
         expect(r.body.data[1].identifier).to.equal(HIDDEN_TEXT)
-
-        /** was a non-entity provider, maybe should be a fulfills
-        expect(r.body.data[0].claim.description).to.equal('Found more homeschooling friends who jam')
-        expect(r.body.data[0].claimType).to.equal('GiveAction')
-        expect(r.body.data[0].handleId).to.equal(thirdGiveRecordHandleId)
-        expect(r.body.data[0].issuer).to.equal(creds[2].did)
-        expect(r.body.data[0].issuedAt).to.be.not.null
-        expect(r.body.data[0].subject).to.equal(creds[2].did)
-
-        expect(r.body.data[1].claim.agent.identifier).to.equal(creds[1].did)
-        expect(r.body.data[1].claim.description).to.equal(ENTITY_NEW_DESC)
-        expect(r.body.data[1].claimType).to.equal('PlanAction')
-        expect(r.body.data[1].handleId).to.equal(firstPlanIdExternal)
-        expect(r.body.data[1].issuer).to.equal(creds[1].did)
-        expect(r.body.data[1].issuedAt).to.be.not.null
-         **/
-
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

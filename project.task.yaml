@@ -2,29 +2,13 @@
 tasks :
 
 - add Lives of Gifts project :
-  - add links between plans - finish tests starting line 617 of controller6.js
   - change all mobile & kick-start handleId credential references to use the JWT ID
-
-  - confirm
-  - add "confirmed" boolean to results for gives & providers
-
   - search through uses of handleId and see if they're appropriate
-
-  - create fulfilling one by same user and see confirmed true
-
-  - before "provider retrieval gets one": confirm by 4 and see fulfillConfirmed change to true
-  - put this in "insert give #1": expect(r.body.success.fulfillsLinkConfirmed).to.be.true
-  - add this to "give #2 has expected data": expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
-  - change all provider tests to be entities (Person or Organization)
-
-  - write anyFulfillersTo[Give|Plan]
-  - check if we want to test these ones: was a non-entity provider, maybe should be a fulfills
 
   - test when fulfillers are added or removed
   - implement giveFulfilledByGive
   - retrieve only confirmed child plans
-
-
+  - write anyFulfillersTo[Give|Plan]
 
 - allow Gives for free (ie. without registration)
 
