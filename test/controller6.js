@@ -666,6 +666,50 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('remove fulfills link', async () => {
+    planBy2FulfillsBy1Claim.fulfills.identifier = null
+    const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
+    planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
+    planBy2FulfillsBy1JwtObj.iss = creds[2].did
+    const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+        childPlanIdExternal = r.body.success.handleId
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('parent plan link from child no longer shows that it is confirmed', () => {
+    return request(Server)
+      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.null
+        expect(r.body.childFulfillsLinkConfirmed).to.not.be.true // because may be undefined or false
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('retrieve no child plan link from parent', () => {
+    return request(Server)
+      .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(0)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
 })
 
 
