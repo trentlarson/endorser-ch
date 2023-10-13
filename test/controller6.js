@@ -666,7 +666,7 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('remove fulfills link', async () => {
+  it('update plan and remove fulfills link', async () => {
     planBy2FulfillsBy1Claim.fulfills.identifier = null
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
@@ -711,6 +711,16 @@ describe('6 - Plans', () => {
   }).timeout(3000)
 
 })
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1968,6 +1978,59 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
+  it('update give #6 by owner to remove fulfills link', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.identifier = giveRecordHandleId6
+    credObj.claim.recipient = { identifier: creds[1].did }
+    credObj.claim.description = 'First-graders & snowboarding & horses?'
+    credObj.claim.provider = [
+      { "@type": "Person", "identifier": creds[2].did },
+      { "@type": "Person", "identifier": creds[3].did },
+    ]
+    delete credObj.claim.object
+    credObj.sub = creds[2].did
+    credObj.iss = creds[1].did
+    const claimJwtEnc = await credentials[1].createVerification(credObj)
+
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+            'Something went wrong, but nothing critical. Here is the error:',
+            r.body.success.embeddedRecordError
+          )
+        }
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.success.handleId).to.be.a('string')
+        giveRecordHandleId6 = r.body.success.handleId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('fulfilled offer link from child gives no longer shows after link is removed', () => {
+    return request(Server)
+      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(2)
+        expect(r.body.data[0].fullClaim.description).to.equal('Thanks for the first-grade learning materials!')
+        expect(r.body.data[1].fullClaim.description).to.equal('Giving it up for those first graders')
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   let giveRecordHandleId7
 
   it('insert give #7 to record a trade', async () => {
@@ -2024,16 +2087,16 @@ describe('6 - check give totals', () => {
 
   it('give totals after #7 are correct when including trades', () => {
     return request(Server)
-        .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal + '&includeTrades=true')
-        .set('Authorization', 'Bearer ' + pushTokens[2])
-        .expect('Content-Type', /json/)
-        .then(r => {
-          expect(r.body.data).to.be.an('object')
-          expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 3 })
-          expect(r.status).that.equals(200)
-        }).catch((err) => {
-          return Promise.reject(err)
-        })
+      .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal + '&includeTrades=true')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('object')
+        expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 3 })
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
   }).timeout(3000)
 
 })

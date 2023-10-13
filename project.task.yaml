@@ -5,7 +5,6 @@ tasks :
   - change all mobile & kick-start handleId credential references to use the JWT ID
   - search through uses of handleId and see if they're appropriate
 
-  - test when fulfillers are added or removed
   - implement giveFulfilledByGive
   - retrieve only confirmed child plans
   - write anyFulfillersTo[Give|Plan]
