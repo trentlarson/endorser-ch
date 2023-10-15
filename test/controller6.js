@@ -404,7 +404,9 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('v2 update a plan description', async () => {
+  let firstIdSecondClaimInternal
+
+  it('v2 update plan description for plan #1', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimPlanAction)
@@ -419,6 +421,7 @@ describe('6 - Plans', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(201)
+        firstIdSecondClaimInternal = r.body.success.claimId
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -549,6 +552,7 @@ describe('6 - Plans', () => {
 
   it('make a plan that fulfills another one', async () => {
     planBy2FulfillsBy1Claim.fulfills.identifier = firstPlanIdExternal
+    planBy2FulfillsBy1Claim.fulfills.claimId = firstPlanIdExternal
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
@@ -565,6 +569,22 @@ describe('6 - Plans', () => {
       })
   }).timeout(5000)
 
+  it('v2 retrieve all plans and check that the child plan has a fulfills claim ID', () => {
+    return request(Server)
+      .get('/api/v2/report/plans')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(4)
+        console.log('r.body.data[0]', r.body.data[0])
+        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].fulfillsPlanClaimId).to.equal(firstIdInternal)
+        expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
   it('retrieve no parent plan link from parent', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
@@ -578,6 +598,7 @@ describe('6 - Plans', () => {
   }).timeout(3000)
 
   it('retrieve one parent plan link from child', () => {
+    console.log('asking for childPlanIdExternal', childPlanIdExternal)
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -666,8 +687,9 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('update plan and remove fulfills link', async () => {
-    planBy2FulfillsBy1Claim.fulfills.identifier = null
+  it('update child plan and update fulfills claim ID link', async () => {
+    planBy2FulfillsBy1Claim.fulfills.identifier = firstPlanIdExternal
+    planBy2FulfillsBy1Claim.fulfills.claimId = firstIdSecondClaimInternal
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
@@ -684,6 +706,55 @@ describe('6 - Plans', () => {
         return Promise.reject(err)
       })
   }).timeout(5000)
+
+  it('v2 retrieve all plans and check that child plan has updated fulfills claim link', () => {
+    return request(Server)
+      .get('/api/v2/report/plans')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(4)
+        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].fulfillsPlanClaimId).to.equal(firstIdSecondClaimInternal)
+        expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('update plan and remove fulfills link', async () => {
+    planBy2FulfillsBy1Claim.fulfills = undefined
+    const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
+    planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
+    planBy2FulfillsBy1JwtObj.iss = creds[2].did
+    const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+        childPlanIdExternal = r.body.success.handleId
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('v2 retrieve all plans and check that #2 has no fulfills info', () => {
+    return request(Server)
+      .get('/api/v2/report/plans')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(4)
+        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].fulfillsPlanClaimId).to.equal(null)
+        expect(r.body.data[0].fulfillsPlanHandleId).to.equal(null)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
 
   it('parent plan link from child no longer shows that it is confirmed', () => {
     return request(Server)

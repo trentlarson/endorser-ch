@@ -17,10 +17,12 @@ const ERROR_CODES = {
 const GLOBAL_ID_IRI_PREFIX = process.env.GLOBAL_ID_IRI_PREFIX || 'https://endorser.ch'
 const GLOBAL_ENTITY_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/entity/'
 
-const globalFromInternalIdentifier = (id) => GLOBAL_ENTITY_ID_IRI_PREFIX + id
+const globalFromLocalEndorserIdentifier = (id) => GLOBAL_ENTITY_ID_IRI_PREFIX + id
+const localFromGlobalEndorserIdentifier = (id) => id.substring(GLOBAL_ENTITY_ID_IRI_PREFIX.length)
+const isGlobalEndorserHandleId = (id) => id && id.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)
 
 const globalId = (id) =>
-  !id || isGlobalUri(id) ? id : globalFromInternalIdentifier(id)
+  !id || isGlobalUri(id) ? id : globalFromLocalEndorserIdentifier(id)
 
 /**
    Take KEY and a list of claims-and-confirmations for the same claim
@@ -211,4 +213,5 @@ function claimHashChain(seed, claimStrList) {
   )
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, isDid, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, internalFromGlobalEndorserIdentifier: localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+

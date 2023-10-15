@@ -13,7 +13,8 @@ import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, claimHashChain,
   ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier,
-  globalId, hashedClaimWithHashedDids, isGlobalUri,
+  globalId, hashedClaimWithHashedDids,
+  internalFromGlobalEndorserIdentifier, isGlobalEndorserHandleId, isGlobalUri,
 } from './util';
 import { addCanSee } from './network-cache.service'
 
@@ -316,7 +317,7 @@ class ClaimService {
       // should always be some globally unique identifier of a signed claim
       // and not something like a handleId referring to things that may be updated
 
-      if (origClaim['identifier'].startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)) {
+      if (isGlobalEndorserHandleId(origClaim['identifier'])) {
         origClaimJwtId = origClaim['identifier'].substring(GLOBAL_ENTITY_ID_IRI_PREFIX.length)
         const origJwt = await dbService.jwtById(origClaimJwtId)
         if (origJwt) {
@@ -939,18 +940,63 @@ class ClaimService {
 
       // note that this is similar to Project
 
+      let embeddedResults = {}
+
       // agent.did is for legacy data, some still in the mobile app
       const agentDid = claim.agent?.identifier || claim.agent?.did
 
+      let fulfillsPlanClaimId = undefined
       let fulfillsPlanHandleId = undefined
       let fulfillsLinkConfirmed = false
       if (claim.fulfills && claim.fulfills['@type'] === 'PlanAction') {
+        fulfillsPlanClaimId = claim.fulfills.claimId
+        if (isGlobalEndorserHandleId(fulfillsPlanClaimId)) {
+          fulfillsPlanClaimId = internalFromGlobalEndorserIdentifier(fulfillsPlanClaimId)
+        }
         fulfillsPlanHandleId = globalId(claim.fulfills.identifier)
+        // now the claim ID from the user is null or local for Endorser or global for external
+        // and the handle ID from the user is null or global
+
+        if (fulfillsPlanClaimId) {
+          if (!isGlobalUri(fulfillsPlanClaimId)) {
+            // the fulfills claim ID is internal, so we can check some info
+            const linkedClaimRecord = await dbService.jwtById(fulfillsPlanClaimId)
+            if (fulfillsPlanHandleId) {
+              if (linkedClaimRecord?.handleId !== fulfillsPlanHandleId) {
+                return Promise.reject(
+                    "Cannot link a fulfills PlanAction where claim ID doesn't match handle ID"
+                )
+              } else {
+                // they must be equal so the universe is at one with itself
+              }
+            } else {
+              // there is no handle ID in the fulfills, so use what's in the claim
+              fulfillsPlanHandleId = linkedClaimRecord?.handleId
+            }
+          } else {
+            // the fulfills claim ID is external, so just check that the handle ID is also external
+            if (isGlobalEndorserHandleId(fulfillsPlanHandleId)) {
+              return Promise.reject(
+                "Cannot supply an external claim ID with an Endorser handle ID"
+              )
+            }
+          }
+        } else {
+          // there is no claim ID in the fulfills; inform the user that we prefer claim IDs
+          if (isGlobalEndorserHandleId(fulfillsPlanHandleId)) {
+            embeddedResults = {
+              embeddedRecordError:
+                "A system handleId was supplied without a claimId. Note that a claim ID is preferred (so that data provenance is traceable)."
+            }
+          }
+        }
         const linkedPlanRecord = await dbService.planInfoByHandleId(fulfillsPlanHandleId)
         if (issuerDid === linkedPlanRecord?.issuer
             || issuerDid === linkedPlanRecord?.agentDid) {
           fulfillsLinkConfirmed = true
         }
+      } else {
+        // there is no 'fulfills' clause
       }
 
       // We'll put the given times into the DB but only if they're valid dates.
@@ -981,6 +1027,7 @@ class ClaimService {
         name: claim.name,
         description: claim.description,
         fulfillsLinkConfirmed: fulfillsLinkConfirmed,
+        fulfillsPlanClaimId: fulfillsPlanClaimId,
         fulfillsPlanHandleId: fulfillsPlanHandleId,
         image: claim.image,
         endTime: endTimeStr,
@@ -997,13 +1044,13 @@ class ClaimService {
         // new record
         const planId = await dbService.planInsert(entry)
         l.trace(`${this.constructor.name} New plan ${planId} ${util.inspect(entry)}`)
-        return { handleId, recordsSavedForEdit: 1, planId }
+        return R.mergeLeft(embeddedResults, { handleId, recordsSavedForEdit: 1, planId })
 
       } else {
         // edit existing record
         const numUpdated = await dbService.planUpdate(entry)
         l.trace(`${this.constructor.name} Edit plan ${util.inspect(entry)}`)
-        return { handleId, recordsSavedForEdit: numUpdated }
+        return R.mergeLeft(embeddedResults, { handleId, recordsSavedForEdit: numUpdated })
       }
 
     } else if (isContextSchemaOrg(claim['@context'])
@@ -1410,7 +1457,7 @@ class ClaimService {
           }
         } else {
           // no previous record with that handle exists
-          if (payloadClaim.identifier.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)) {
+          if (isGlobalEndorserHandleId(payloadClaim.identifier)) {
             // Don't allow any global IDs for this server that weren't created by this server.
             return Promise.reject(
               {

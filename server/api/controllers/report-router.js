@@ -387,7 +387,8 @@ export default express
  * @property {string} recipientDid
  * @property {string} fulfillsId - handle ID of the offer this fulfills
  * @property {string} fulfillsType - type of the element this fulfills, usually "Offer"
- * @property {string} fulfillsPlanHandleId - handle ID of the plan, if the offer applies to one
+ * @property {string} fulfillsPlanClaimId - claim ID of the plan, if the give applies to one
+ * @property {string} fulfillsPlanHandleId - handle ID of the plan, if the give applies to one
  * @property {string} unit
  * @property {number} amount
  * @property {number} amountConfirmed - amount of this that recipient has confirmed
@@ -452,7 +453,8 @@ export default express
  * @property {string} description
  * @property {datetime} endTime
  * @property {boolean} fulfillsLinkConfirmed
- * @property {string} fulfillsPlanHandleId
+ * @property {string} fulfillsPlanClaimId - claim ID of the plan, if the plan applies to one
+ * @property {string} fulfillsPlanHandleId - handle ID of the plan, if the plan applies to one
  * @property {string} image
  * @property {string} issuerDid
  * @property {string} handleId

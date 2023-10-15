@@ -1759,15 +1759,18 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
-          + ", name, description, image, endTime, startTime,"
-          + " fulfillsLinkConfirmed, fulfillsPlanHandleId, locLat, locLon,"
-          + " resultDescription, resultIdentifier, url"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?)"
+          + ", name, description, image, endTime, startTime"
+          + ", fulfillsLinkConfirmed, fulfillsPlanClaimId, fulfillsPlanHandleId"
+          + ", locLat, locLon"
+          + ", resultDescription, resultIdentifier, url"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.fulfillsLinkConfirmed ? 1 : 0, entry.fulfillsPlanHandleId, entry.locLat, entry.locLon,
+        entry.fulfillsLinkConfirmed ? 1 : 0,
+        entry.fulfillsPlanClaimId, entry.fulfillsPlanHandleId,
+        entry.locLat, entry.locLon,
         entry.resultDescription, entry.resultIdentifier, entry.url,
       ], function(err) {
         if (err) {
@@ -1876,7 +1879,7 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['fulfillsPlanHandleId', 'image', 'url'],
+      ['fulfillsPlanClaimId', 'fulfillsPlanHandleId', 'image', 'url'],
       'description',
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
@@ -1898,7 +1901,7 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['fulfillsPlanHandleId', 'image', 'url'],
+      ['fulfillsPlanClaimId', 'fulfillsPlanHandleId', 'image', 'url'],
       'description',
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
@@ -1964,14 +1967,16 @@ class EndorserDatabase {
       var stmt = (
         "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
-          + ", startTime = datetime(?), fulfillsLinkConfirmed = ?, fulfillsPlanHandleId = ?"
+          + ", startTime = datetime(?), fulfillsLinkConfirmed = ?"
+          + ", fulfillsPlanClaimId = ?, fulfillsPlanHandleId = ?"
           + ", resultDescription = ?, resultIdentifier = ?, url = ?"
           + " WHERE handleId = ?"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
-        entry.fulfillsLinkConfirmed ? 1 : 0, entry.fulfillsPlanHandleId,
+        entry.fulfillsLinkConfirmed ? 1 : 0,
+        entry.fulfillsPlanClaimId, entry.fulfillsPlanHandleId,
         entry.resultDescription, entry.resultIdentifier, entry.url, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {

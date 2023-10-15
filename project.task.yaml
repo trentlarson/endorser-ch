@@ -3,15 +3,19 @@ tasks :
 
 - add Lives of Gifts project :
   - change all mobile & kick-start handleId credential references to use the JWT ID
+  - create & test give links with claim IDs; test that mismatch fails
+  - change mobile "claimId" references that are actually handles to "handleId"
   - search through uses of handleId and see if they're appropriate
 
-  - implement giveFulfilledByGive
+  - implement giveFulfilledByGive, offerFulfilledByGive
   - retrieve only confirmed child plans
   - write anyFulfillersTo[Give|Plan]
 
 - allow Gives for free (ie. without registration)
 
 - mobile :
+  - change provider bookmarks to fulfills
+  - fix notifications
 
   - Allow "Record Delivery" when I am the recipient of an offer
   - Allow pasting of a contract

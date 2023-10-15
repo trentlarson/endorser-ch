@@ -75,8 +75,19 @@ CREATE TABLE give_claim (
     --
     fulfillLinkConfirmed INTEGER DEFAULT 0,
 
-    -- This global plan ID is for the case where this is given to a broader
-    -- plan that is nested inside the related data.
+    -- This is the ID of the plan claim JWT to which this Give directly links.
+    -- It is typically an internal ID, eg. 01D25AVGQG1N8E9JNGK7C7DZRD, but
+    -- also supports external, global IDs.
+    --
+    -- It's important because a handle ID points to content that can change
+    -- over time, but when claiming that this fulfills a plan we want a
+    -- reference to the exact claim that was seen at the time of the link,
+    -- in case something substantial in the plan changed and no longer reflects
+    -- the intent of the provider(s) of this Give.
+    fulfillsPlanClaimId TEXT,
+
+    -- This global, persistent plan ID is for the case where this is given to a
+    -- broader plan that is nested inside the related data.
     fulfillsPlanHandleId TEXT,
 
     unit TEXT,
@@ -201,6 +212,17 @@ CREATE TABLE plan_claim (
     -- owns the data and claimed the relationship so they obviously implicitly confirmed it.
     --
     fulfillsLinkConfirmed INTEGER DEFAULT 0,
+
+    -- This is the ID of the plan claim JWT to which this Plan directly links.
+    -- It is typically an internal ID, eg. 01D25AVGQG1N8E9JNGK7C7DZRD, but
+    -- also supports external, global IDs.
+    --
+    -- It's important because a handle ID points to content that can change
+    -- over time, but when claiming that this fulfills a plan we want a
+    -- reference to the exact claim that was seen at the time of the link,
+    -- in case something substantial in the plan changed and no longer reflects
+    -- the intent of the provider(s) of this Plan.
+    fulfillsPlanClaimId TEXT,
 
     -- current plan contributes to another plan with this global plan ID
     fulfillsPlanHandleId TEXT,
