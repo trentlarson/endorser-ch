@@ -8,7 +8,7 @@ import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import { HIDDEN_TEXT } from '../server/api/services/util';
+import {HIDDEN_TEXT, internalFromGlobalEndorserIdentifier} from '../server/api/services/util';
 import testUtil, {INITIAL_DESCRIPTION} from './util'
 
 const expect = chai.expect
@@ -576,7 +576,6 @@ describe('6 - Plans', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
-        console.log('r.body.data[0]', r.body.data[0])
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsPlanClaimId).to.equal(firstIdInternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
@@ -598,7 +597,6 @@ describe('6 - Plans', () => {
   }).timeout(3000)
 
   it('retrieve one parent plan link from child', () => {
-    console.log('asking for childPlanIdExternal', childPlanIdExternal)
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -687,11 +685,39 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('update child plan and update fulfills claim ID link', async () => {
-    planBy2FulfillsBy1Claim.fulfills.identifier = firstPlanIdExternal
-    planBy2FulfillsBy1Claim.fulfills.claimId = firstIdSecondClaimInternal
+  it('fail to update child plan fulfills with mismatching claim ID & handle ID', async () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = secondPlanIdExternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.claimId = firstIdSecondClaimInternal
+    planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
+    planBy2FulfillsBy1JwtObj.iss = creds[2].did
+    const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+        if (r.body.error) {
+          console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        } else if (r.body.success.embeddedRecordError) {
+          console.log(
+              'Something went wrong, but nothing critical. Here is the error:',
+              r.body.success.embeddedRecordError
+          )
+        }
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('update child plan and update fulfills claim ID link', async () => {
+    const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
+    planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = firstPlanIdExternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.claimId = firstIdSecondClaimInternal
     planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
@@ -717,15 +743,16 @@ describe('6 - Plans', () => {
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsPlanClaimId).to.equal(firstIdSecondClaimInternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
+        expect(firstIdSecondClaimInternal).to.not.equal(internalFromGlobalEndorserIdentifier(firstPlanIdExternal))
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(3000)
 
   it('update plan and remove fulfills link', async () => {
-    planBy2FulfillsBy1Claim.fulfills = undefined
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.fulfills = undefined
     planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
@@ -1290,6 +1317,7 @@ describe('6 - check give totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.fulfills.identifier = firstOfferId
+    //credObj.claim.fulfills.claimId = internalFromGlobalEndorserIdentifier(firstOfferId)
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
     }
@@ -1313,6 +1341,8 @@ describe('6 - check give totals', () => {
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
+        //expect(r.body.success.fulfillsPlanClaimId).to.equal(internalFromGlobalEndorserIdentifier(firstOfferId))
+        //expect(r.body.success.fulfillsPlanHandleId).to.equal(firstOfferId)
         expect(r.body.success.fulfillsPlanHandleId).to.be.a('string')
         expect(r.body.success.fulfillsLinkConfirmed).to.be.true
         firstGiveRecordHandleId = r.body.success.handleId

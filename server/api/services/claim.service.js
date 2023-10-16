@@ -669,6 +669,115 @@ class ClaimService {
     }
   }
 
+  // return object with fulfillsPlanClaimId, fulfillsPlanHandleId, embeddedResults
+  // if it was a PlanAction, or {} if it was not a PlanAction
+  async validatePlanClaimIdHandleId(fulfillsClause) {
+
+    if (!fulfillsClause
+        || (fulfillsClause['@type']
+            && fulfillsClause['@type'] !== 'PlanAction')) {
+      return {}
+    }
+    if (!fulfillsClause.claimId && !fulfillsClause.identifier) {
+      return {}
+    }
+
+    // There is a clause with IDs, and it has no type or it is a PlanAction.
+
+    let embeddedResults = {}
+
+    let fulfillsPlanClaimId = fulfillsClause.claimId
+    if (isGlobalEndorserHandleId(fulfillsPlanClaimId)) {
+      fulfillsPlanClaimId = internalFromGlobalEndorserIdentifier(fulfillsPlanClaimId)
+    }
+    let fulfillsPlanHandleId = globalId(fulfillsClause.identifier)
+    // now the claim ID from the user is null or local for Endorser or global for external
+    // and the handle ID from the user is null or global
+
+    let linkedPlanJwtClaimRecord
+    if (fulfillsPlanClaimId) {
+      if (!isGlobalUri(fulfillsPlanClaimId)) {
+        // the fulfills claim ID is internal, so we can check some info
+        linkedPlanJwtClaimRecord = await dbService.jwtById(fulfillsPlanClaimId)
+        if (!linkedPlanJwtClaimRecord) {
+          return Promise.reject(
+            "Cannot link a fulfills PlanAction with claimId that doesn't exist."
+          )
+        }
+        if (linkedPlanJwtClaimRecord.claimType !== 'PlanAction') {
+          if (!fulfillsClause['@type']) {
+            // it had no type, so we'll just return empty results
+            return {}
+          } else {
+            // liars! there is a type but the internal claim is not a PlanAction
+            return Promise.reject(
+              "The fulfills claimId was claimed to be PlanAction but it is actually a " + linkedPlanJwtClaimRecord.claimType + "."
+            )
+          }
+        }
+        if (fulfillsPlanHandleId) {
+          if (linkedPlanJwtClaimRecord.handleId !== fulfillsPlanHandleId) {
+            return Promise.reject(
+              "Cannot link a fulfills PlanAction where claim ID doesn't match handle ID."
+            )
+          } else {
+            // they're equal, so the universe is at one with itself
+          }
+        } else {
+          // there is no handle ID in the fulfills, so use what's in the claim
+          fulfillsPlanHandleId = linkedPlanJwtClaimRecord?.handleId
+        }
+      } else {
+        // the fulfills claim ID is external, so just check that the handle ID is also external
+        if (isGlobalEndorserHandleId(fulfillsPlanHandleId)) {
+          return Promise.reject(
+            "Cannot supply an external claim ID with an Endorser handle ID."
+          )
+        }
+      }
+    } else if (fulfillsPlanHandleId) {
+      // there is no claim ID in the fulfills; inform the user that we prefer claim IDs
+      if (isGlobalEndorserHandleId(fulfillsPlanHandleId)) {
+        embeddedResults = {
+          embeddedRecordWarning:
+            "A system handleId was supplied without a claimId. Note that a claim ID is preferred (so that data provenance is traceable)."
+        }
+      }
+      linkedPlanJwtClaimRecord = await dbService.jwtLastByHandleIdRaw(fulfillsPlanHandleId)
+      if (!linkedPlanJwtClaimRecord) {
+        return Promise.reject(
+          "Cannot link a fulfills PlanAction with handleId that doesn't exist."
+        )
+      }
+      if (linkedPlanJwtClaimRecord.claimType !== 'PlanAction') {
+        if (!fulfillsClause['@type']) {
+          // it had no type, so we'll just return empty results
+          return {}
+        } else {
+          // liars! there is an internal claim for that handle but it is not a PlanAction
+          return Promise.reject(
+            "The fulfills handleId was claimed to be PlanAction but it is actually a " + linkedPlanJwtClaimRecord.claimType + "."
+          )
+        }
+      }
+    }
+
+    return ({
+      embeddedResults,
+      fulfillsPlanClaimId,
+      fulfillsPlanHandleId,
+      linkedPlanJwtClaimRecord,
+    })
+  }
+
+  confirmedLink(issuerDid, linkedJwt) {
+    return (
+      issuerDid === linkedJwt?.issuer
+      || issuerDid === linkedJwt?.claim?.agent?.identifier // for Give & PlanAction
+      || issuerDid === linkedJwt?.claim?.offeredBy?.identifier // for Offer
+    )
+  }
+
   async createGive(jwtId, issuerDid, issuedAt, handleId, claim) {
 
     const fulfillsId = claim.fulfills?.identifier
@@ -691,9 +800,8 @@ class ClaimService {
     if (fulfillsType == 'PlanAction') {
       fulfillsPlanHandleId = globalId(fulfillsId)
     }
+    // now look for Plan in parentage, ie isPartOf
     if (!fulfillsPlanHandleId) {
-      // now look for Plan in parentage, ie isPartOf and itemOffered.isPartOf
-
       let fulfillsClaimParent = fulfillsClaim?.isPartOf
       if (fulfillsClaimParent?.identifier) {
         const idAsHandle = globalId(fulfillsClaimParent.identifier)
@@ -706,6 +814,7 @@ class ClaimService {
         fulfillsPlanHandleId = globalId(fulfillsClaimParent.identifier)
       }
     }
+    // now look for Plan in parentage, ie itemOffered.isPartOf
     if (!fulfillsPlanHandleId) {
       let fulfillsClaimParent = fulfillsClaim?.itemOffered?.isPartOf
       if (fulfillsClaimParent?.identifier) {
@@ -719,6 +828,7 @@ class ClaimService {
         fulfillsPlanHandleId = globalId(fulfillsClaimParent.identifier)
       }
     }
+    // now have fulfillsPlanHandleId set
 
     const fulfillsLinkConfirmed =
       issuerDid === fulfillsIssuer
@@ -945,59 +1055,13 @@ class ClaimService {
       // agent.did is for legacy data, some still in the mobile app
       const agentDid = claim.agent?.identifier || claim.agent?.did
 
-      let fulfillsPlanClaimId = undefined
-      let fulfillsPlanHandleId = undefined
-      let fulfillsLinkConfirmed = false
-      if (claim.fulfills && claim.fulfills['@type'] === 'PlanAction') {
-        fulfillsPlanClaimId = claim.fulfills.claimId
-        if (isGlobalEndorserHandleId(fulfillsPlanClaimId)) {
-          fulfillsPlanClaimId = internalFromGlobalEndorserIdentifier(fulfillsPlanClaimId)
-        }
-        fulfillsPlanHandleId = globalId(claim.fulfills.identifier)
-        // now the claim ID from the user is null or local for Endorser or global for external
-        // and the handle ID from the user is null or global
+      const planFulfills = await this.validatePlanClaimIdHandleId(claim.fulfills)
+      const fulfillsPlanClaimId = planFulfills.fulfillsPlanClaimId
+      const fulfillsPlanHandleId = planFulfills.fulfillsPlanHandleId
+      embeddedResults = planFulfills.embeddedResults
 
-        if (fulfillsPlanClaimId) {
-          if (!isGlobalUri(fulfillsPlanClaimId)) {
-            // the fulfills claim ID is internal, so we can check some info
-            const linkedClaimRecord = await dbService.jwtById(fulfillsPlanClaimId)
-            if (fulfillsPlanHandleId) {
-              if (linkedClaimRecord?.handleId !== fulfillsPlanHandleId) {
-                return Promise.reject(
-                    "Cannot link a fulfills PlanAction where claim ID doesn't match handle ID"
-                )
-              } else {
-                // they must be equal so the universe is at one with itself
-              }
-            } else {
-              // there is no handle ID in the fulfills, so use what's in the claim
-              fulfillsPlanHandleId = linkedClaimRecord?.handleId
-            }
-          } else {
-            // the fulfills claim ID is external, so just check that the handle ID is also external
-            if (isGlobalEndorserHandleId(fulfillsPlanHandleId)) {
-              return Promise.reject(
-                "Cannot supply an external claim ID with an Endorser handle ID"
-              )
-            }
-          }
-        } else {
-          // there is no claim ID in the fulfills; inform the user that we prefer claim IDs
-          if (isGlobalEndorserHandleId(fulfillsPlanHandleId)) {
-            embeddedResults = {
-              embeddedRecordError:
-                "A system handleId was supplied without a claimId. Note that a claim ID is preferred (so that data provenance is traceable)."
-            }
-          }
-        }
-        const linkedPlanRecord = await dbService.planInfoByHandleId(fulfillsPlanHandleId)
-        if (issuerDid === linkedPlanRecord?.issuer
-            || issuerDid === linkedPlanRecord?.agentDid) {
-          fulfillsLinkConfirmed = true
-        }
-      } else {
-        // there is no 'fulfills' clause
-      }
+      const fulfillsLinkConfirmed =
+        this.confirmedLink(issuerDid, planFulfills.linkedPlanJwtClaimRecord)
 
       // We'll put the given times into the DB but only if they're valid dates.
       // This also helps when JS parses but DB datetime() would not.
@@ -1052,6 +1116,7 @@ class ClaimService {
         l.trace(`${this.constructor.name} Edit plan ${util.inspect(entry)}`)
         return R.mergeLeft(embeddedResults, { handleId, recordsSavedForEdit: numUpdated })
       }
+
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Project') {
