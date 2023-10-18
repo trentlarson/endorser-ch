@@ -14,15 +14,16 @@ const ERROR_CODES = {
   UNREGISTERED_USER: 'UNREGISTERED_USER',
 }
 
+// This is an expected ID prefix for this system.
 const GLOBAL_ID_IRI_PREFIX = process.env.GLOBAL_ID_IRI_PREFIX || 'https://endorser.ch'
 const GLOBAL_ENTITY_ID_IRI_PREFIX = GLOBAL_ID_IRI_PREFIX + '/entity/'
 
 const globalFromLocalEndorserIdentifier = (id) => GLOBAL_ENTITY_ID_IRI_PREFIX + id
-const localFromGlobalEndorserIdentifier = (id) => id.substring(GLOBAL_ENTITY_ID_IRI_PREFIX.length)
 const isGlobalEndorserHandleId = (id) => id && id.startsWith(GLOBAL_ENTITY_ID_IRI_PREFIX)
+const localFromGlobalEndorserIdentifier = (id) => id.substring(GLOBAL_ENTITY_ID_IRI_PREFIX.length)
 
 const globalId = (id) =>
-  !id || isGlobalUri(id) ? id : globalFromLocalEndorserIdentifier(id)
+    (!id || isGlobalUri(id)) ? id : globalFromLocalEndorserIdentifier(id)
 
 /**
    Take KEY and a list of claims-and-confirmations for the same claim
@@ -213,5 +214,35 @@ function claimHashChain(seed, claimStrList) {
   )
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, internalFromGlobalEndorserIdentifier: localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+function isObject(item) {
+  return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+// return an array that contains all claimId properties,
+// where each value is an object of { lastClaimId, handleId, suppliedType }
+function findAllClaimIdsAndHandleIds(claim) {
+  let claimIdsAndHandleIds = []
+  const lastClaimId = claim['lastClaimId']
+  const handleId = claim['handleId']
+  const suppliedType = claim['@type']
+  if (lastClaimId || handleId) {
+    claimIdsAndHandleIds = [{lastClaimId, handleId, suppliedType}]
+  }
+  for (let key in claim) {
+    if (Array.isArray(claim[key])) {
+      for (let value of claim[key]) {
+        if (isObject(value)) {
+          claimIdsAndHandleIds = R.concat(claimIdsAndHandleIds, findAllClaimIdsAndHandleIds(value))
+        }
+      }
+    } else {
+      if (isObject(claim[key])) {
+        claimIdsAndHandleIds = R.concat(claimIdsAndHandleIds, findAllClaimIdsAndHandleIds(claim[key]))
+      }
+    }
+  }
+  return claimIdsAndHandleIds
+}
+
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
 

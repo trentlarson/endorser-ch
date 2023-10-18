@@ -1195,6 +1195,7 @@ describe('1 - Event', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        // It creates a JWT record but warns about this usage.
+console.log('r.body', r.body)
        expect(r.body)
          .to.be.an('object')
          .that.has.property('success')

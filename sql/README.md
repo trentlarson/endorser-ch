@@ -61,7 +61,8 @@ CREATE TABLE give_claim (
 
     recipientDid TEXT, -- global ID of recipient
 
-    fulfillsId TEXT, -- global ID to the offer to which this Give applies
+    fulfillsHandleId TEXT, -- global ID to the offer to which this Give applies
+    fulfillsLastClaimId TEXT, -- previous claim ID of the fulfills object, meaning the last one the client saw
     fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
 
     -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
@@ -84,7 +85,7 @@ CREATE TABLE give_claim (
     -- reference to the exact claim that was seen at the time of the link,
     -- in case something substantial in the plan changed and no longer reflects
     -- the intent of the provider(s) of this Give.
-    fulfillsPlanClaimId TEXT,
+    fulfillsPlanLastClaimId TEXT,
 
     -- This global, persistent plan ID is for the case where this is given to a
     -- broader plan that is nested inside the related data.
@@ -122,9 +123,6 @@ CREATE INDEX give_provider_provider ON give_provider(providerHandleId);
 
 CREATE TABLE jwt (
     id CHARACTER(26) PRIMARY KEY,
-    handleId TEXT, -- global IRI, used to update data via later claims
-    issuedAt DATETIME,
-    issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     subject VARCHAR(100),
     claimType VARCHAR(60),
     claimContext VARCHAR(60),
@@ -133,7 +131,11 @@ CREATE TABLE jwt (
     claimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
     hashChainB64 CHARACTER(64), -- merkle tree of claimCanonHashBase64 values
     hashNonce CHARACTER(24) -- randomized 18 bytes (currently base64-encoded), kept private, used for nonceHashHex
+    handleId TEXT, -- global IRI, used to update data via later claims (see also lastClaimId)
+    issuedAt DATETIME,
+    issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     jwtEncoded TEXT, -- the full original JWT
+    lastClaimId TEXT, -- the previous JWT ID for this entity, which the user is overwriting (see also handleId)
     nonceHashHex CHARACTER(64), -- hex of hash constructed with hashNonce to allow selective disclosure but to avoid correlation
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);

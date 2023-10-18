@@ -63,6 +63,9 @@ When running on another domain (other than EndorserSearch.com):
 
 * Edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
 
+* Edit the GLOBAL_ID_IRI_PREFIX in the util.js to have the global prefix for your domain in identifiers.
+
+* ... and maybe the GLOBAL_ENTITY_ID_IRI_PREFIX if you want a different path after the domain. (These don't have to resolve, but it's a nice touch if they do.)
 
 
 

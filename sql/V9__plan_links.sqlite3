@@ -1,16 +1,17 @@
 
 -- see README.md in this directory for explanations
 
-ALTER TABLE confirmation ADD COLUMN planHandleId TEXT;
-
 ALTER TABLE give_claim ADD COLUMN fulfillsLinkConfirmed INTEGER DEFAULT 0;
-ALTER TABLE give_claim ADD COLUMN fulfillsPlanClaimId TEXT;
+ALTER TABLE give_claim RENAME COLUMN fulfillsId TO fulfillsHandleId;
+ALTER TABLE give_claim ADD COLUMN fulfillsLastClaimId TEXT;
 ALTER TABLE give_claim RENAME COLUMN fulfillsPlanId TO fulfillsPlanHandleId;
+ALTER TABLE give_claim ADD COLUMN fulfillsPlanLastClaimId TEXT;
 
 ALTER TABLE give_provider ADD COLUMN linkConfirmed INTEGER DEFAULT 0;
 
+ALTER TABLE jwt ADD COLUMN lastClaimId TEXT;
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
 
 ALTER TABLE plan_claim ADD COLUMN fulfillsLinkConfirmed INTEGER DEFAULT 0;
-ALTER TABLE plan_claim ADD COLUMN fulfillsPlanClaimId TEXT;
 ALTER TABLE plan_claim ADD COLUMN fulfillsPlanHandleId TEXT;
+ALTER TABLE plan_claim ADD COLUMN fulfillsPlanLastClaimId TEXT;
