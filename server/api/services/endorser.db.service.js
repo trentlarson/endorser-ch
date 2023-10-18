@@ -677,18 +677,19 @@ class EndorserDatabase {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, updatedAt"
           + ", agentDid, recipientDid"
-          + ", fulfillsId, fulfillsLinkConfirmed, fulfillsType"
-          + ", fulfillsPlanLastClaimId, fulfillsPlanHandleId"
+          + ", fulfillsHandleId, fulfillsLastClaimId, fulfillsLinkConfirmed, fulfillsType"
+          + ", fulfillsPlanHandleId, fulfillsPlanLastClaimId"
           + ", amountConfirmed, amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
           entry.agentDid, entry.recipientDid,
-          entry.fulfillsId, entry.fulfillsLinkConfirmed, entry.fulfillsType,
-          entry.fulfillsPlanLastClaimId, entry.fulfillsPlanHandleId, entry.amountConfirmed,
-          entry.amount, entry.unit, entry.description, entry.fullClaim
+          entry.fulfillsHandleId, entry.fulfillsLastClaimId,
+          entry.fulfillsLinkConfirmed, entry.fulfillsType,
+          entry.fulfillsPlanHandleId, entry.fulfillsPlanLastClaimId,
+          entry.amountConfirmed, entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
     })
@@ -700,8 +701,8 @@ class EndorserDatabase {
       'give_claim',
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
-       'fulfillsId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
-      ['issuedAt', 'amount', 'fullClaim', 'fulfillsLinkConfirmed', 'fulfillsPlanLastClaimId', 'unit'],
+       'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
+      ['issuedAt', 'amount', 'fullClaim', 'fulfillsPlanLastClaimId', 'fulfillsLinkConfirmed', 'fulfillsPlanLastClaimId', 'unit'],
       'description',
       ['issuedAt', 'updatedAt'],
       ['fulfillsLinkConfirmed'],
@@ -770,7 +771,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       const params = [handleId]
       let sql = "SELECT main.* FROM give_claim main"
-          + " INNER JOIN give_claim parent ON main.fulfillsId = parent.handleId"
+          + " INNER JOIN give_claim parent ON main.fulfillsHandleId = parent.handleId"
           + " WHERE parent.handleId = ? AND main.fulfillsType = 'GiveAction'"
 
       if (afterIdInput) {
@@ -808,7 +809,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       const params = [handleId]
       let sql = "SELECT main.* FROM give_claim main"
-          + " INNER JOIN offer_claim parent ON main.fulfillsId = parent.handleId"
+          + " INNER JOIN offer_claim parent ON main.fulfillsHandleId = parent.handleId"
           + " WHERE parent.handleId = ? AND main.fulfillsType = 'Offer'"
 
       if (afterIdInput) {
@@ -911,8 +912,9 @@ class EndorserDatabase {
           "UPDATE give_claim set jwtId = ?"
           + ", issuedAt = datetime(?), updatedAt = datetime(?)"
           + ", agentDid = ?, recipientDid = ?"
-          + ", fulfillsId = ?, fulfillsType = ?"
-          + ", fulfillsPlanLastClaimId = ?, fulfillsPlanHandleId = ?"
+          + ", fulfillsHandleId = ?, fulfillsLastClaimId = ?"
+          + ", fulfillsLinkConfirmed = ?, fulfillsType = ?"
+          + ", fulfillsPlanHandleId = ?, fulfillsPlanLastClaimId = ?"
           + ", unit = ?, amount = ?"
           + ", description = ?, fullClaim = ?"
           + " WHERE handleId = ?"
@@ -920,8 +922,9 @@ class EndorserDatabase {
       db.run(stmt, [
         entry.jwtId, entry.issuedAt, entry.updatedAt,
         entry.agentDid, entry.recipientDid,
-        entry.fulfillsId, entry.fulfillsType,
-        entry.fulfillsPlanLastClaimId, entry.fulfillsPlanHandleId,
+        entry.fulfillsHandleId, entry.fulfillsPlanLastClaimId,
+        entry.fulfillsLinkConfirmed, entry.fulfillsType,
+        entry.fulfillsPlanHandleId, entry.fulfillsPlanLastClaimId,
         entry.unit, entry.amount, entry.description, entry.fullClaim,
         entry.handleId,
       ], function(err) {
