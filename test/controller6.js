@@ -9,7 +9,7 @@ const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
 import {
-  findAllClaimIdsAndHandleIds,
+  findAllLastClaimIdsAndHandleIds,
   HIDDEN_TEXT,
   globalId,
   localFromGlobalEndorserIdentifier,
@@ -173,7 +173,7 @@ before(async () => {
 
 })
 
-let firstPlanIdExternal, secondPlanIdExternal, childPlanIdExternal
+let firstPlanIdExternal, firstIdSecondClaimInternal, secondPlanIdExternal, childPlanIdExternal
 
 describe('6 - Plans', () => {
 
@@ -409,8 +409,6 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  let firstIdSecondClaimInternal
-
   it('v2 update plan description for plan #1', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
@@ -557,7 +555,7 @@ describe('6 - Plans', () => {
 
   it('make a plan that fulfills another one', async () => {
     planBy2FulfillsBy1Claim.fulfills.identifier = firstPlanIdExternal
-    planBy2FulfillsBy1Claim.fulfills.claimId = localFromGlobalEndorserIdentifier(firstPlanIdExternal)
+    planBy2FulfillsBy1Claim.fulfillslastClaimId = localFromGlobalEndorserIdentifier(firstPlanIdExternal)
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
@@ -582,7 +580,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
-        expect(r.body.data[0].fulfillsPlanClaimId).to.equal(firstIdInternal)
+        expect(r.body.data[0].fulfillsPlanLastClaimId).to.equal(firstIdSecondClaimInternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
@@ -694,7 +692,7 @@ describe('6 - Plans', () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = secondPlanIdExternal
-    planBy2FulfillsBy1JwtObj.claim.fulfills.claimId = firstIdSecondClaimInternal
+    planBy2FulfillsBy1JwtObj.claim.fulfillslastClaimId = firstIdSecondClaimInternal
     planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
@@ -722,7 +720,7 @@ describe('6 - Plans', () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = firstPlanIdExternal
-    planBy2FulfillsBy1JwtObj.claim.fulfills.claimId = firstIdSecondClaimInternal
+    planBy2FulfillsBy1JwtObj.claim.fulfillslastClaimId = firstIdSecondClaimInternal
     planBy2FulfillsBy1JwtObj.claim.identifier = childPlanIdExternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
@@ -746,7 +744,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
-        expect(r.body.data[0].fulfillsPlanClaimId).to.equal(firstIdSecondClaimInternal)
+        expect(r.body.data[0].fulfillsPlanLastClaimId).to.equal(firstIdSecondClaimInternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
         expect(globalId(firstIdSecondClaimInternal)).to.not.equal(firstPlanIdExternal)
       }).catch((err) => {
@@ -781,7 +779,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
-        expect(r.body.data[0].fulfillsPlanClaimId).to.equal(null)
+        expect(r.body.data[0].fulfillsPlanLastClaimId).to.equal(null)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(null)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1321,8 +1319,7 @@ describe('6 - check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
-    credObj.claim.fulfills.identifier = firstOfferId
-    credObj.claim.fulfills.claimId = localFromGlobalEndorserIdentifier(firstOfferId)
+    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(firstOfferId)
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
     }
@@ -1345,10 +1342,11 @@ describe('6 - check give totals', () => {
           )
         }
         expect(r.headers['content-type'], /json/)
-        console.log('r.body.success', r.body.success)
         expect(r.body.success.handleId).to.be.a('string')
-        expect(globalId(r.body.success.fulfillsPlanClaimId)).to.equal(firstOfferId)
-        expect(r.body.success.fulfillsPlanHandleId).to.equal(firstOfferId)
+        expect(r.body.success.fulfillsHandleId).to.equal(firstOfferId)
+        expect(globalId(r.body.success.fulfillsLastClaimId)).to.equal(firstOfferId)
+        expect(r.body.success.fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
+        expect(r.body.success.fulfillsPlanLastClaimId).to.equal(firstIdSecondClaimInternal)
         expect(r.body.success.fulfillsLinkConfirmed).to.be.true
         firstGiveRecordHandleId = r.body.success.handleId
         expect(r.status).that.equals(201)
@@ -1446,6 +1444,7 @@ describe('6 - check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.fulfills['@type'] = 'GiveAction'
     credObj.claim.fulfills.identifier = firstGiveRecordHandleId
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
@@ -1493,7 +1492,7 @@ describe('6 - check give totals', () => {
         expect(r.body.data[0].amountConfirmed).to.equal(0)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].description).to.equal('Found new homeschooling friends')
-        expect(r.body.data[0].fulfillsId).to.equal(firstGiveRecordHandleId)
+        expect(r.body.data[0].fulfillsHandleId).to.equal(firstGiveRecordHandleId)
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
         expect(r.body.data[0].fulfillsType).to.equal('GiveAction')
         expect(r.body.data[0].fulfillsPlanHandleId).to.be.null
@@ -2213,18 +2212,18 @@ describe('6 - claimId & handleId Guards', () => {
   // I didn't get to it, but I'm leaving this here in case I do later.
 
   it('yields the correct values when searching for claimId & handleId', () => {
-    expect(findAllClaimIdsAndHandleIds({})).to.deep.equal([])
-    expect(findAllClaimIdsAndHandleIds({a:1, b:[{c:3}]})).to.deep.equal([])
-    expect(findAllClaimIdsAndHandleIds({a:1, b:[{c:3}], claimId:"x"}))
-        .to.deep.equal([{claimId:"x", handleId: undefined}])
-    expect(findAllClaimIdsAndHandleIds({a:1, b:[{c:3}], claimId:"x", handleId: "y"}))
-        .to.deep.equal([{claimId:"x", handleId: "y"}])
-    expect(findAllClaimIdsAndHandleIds({a:1, b:[{c:3, handleId: "z"}], claimId: "x", handleId: "y"}))
-        .to.deep.equal([{claimId:"x", handleId: "y"}])
-    expect(findAllClaimIdsAndHandleIds({a:1, b:[{c:3, claimId: "z"}], claimId: "x", handleId: "y"}))
-        .to.deep.equal([{claimId:"x", handleId: "y"}, {claimId:"z", handleId: undefined}])
-    expect(findAllClaimIdsAndHandleIds({a:1, b:[{c:3, claimId:"z", handleId: "w"}], claimId: "x", handleId: "y"}))
-        .to.deep.equal([{claimId:"x", handleId: "y"}, {claimId:"z", handleId: "w"}])
+    expect(findAllLastClaimIdsAndHandleIds({})).to.deep.equal([])
+    expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3}]})).to.deep.equal([])
+    expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3}], lastClaimId:"x"}))
+        .to.deep.equal([{lastClaimId:"x"}])
+    expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3}], lastClaimId:"x", handleId: "y"}))
+        .to.deep.equal([{lastClaimId:"x"}])
+    expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3, handleId: "z"}], lastClaimId: "x", handleId: "y"}))
+        .to.deep.equal([{lastClaimId:"x"}, {handleId: "z"}])
+    expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3, lastClaimId: "z"}], lastClaimId: "x", handleId: "y"}))
+        .to.deep.equal([{lastClaimId:"x"}, {lastClaimId:"z"}])
+    expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3, lastClaimId:"z", handleId: "w"}], lastClaimId: "x", handleId: "y"}))
+        .to.deep.equal([{lastClaimId:"x"}, {lastClaimId:"z"}])
   })
 
 })

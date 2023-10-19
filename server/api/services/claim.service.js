@@ -12,7 +12,7 @@ import l from '../../common/logger'
 import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, claimHashChain,
-  ERROR_CODES, findAllClaimIdsAndHandleIds,
+  ERROR_CODES, findAllLastClaimIdsAndHandleIds,
   GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier,
   globalId, hashedClaimWithHashedDids,
   localEndorserOrGlobalIdentifier, isGlobalEndorserHandleId, isGlobalUri,
@@ -219,12 +219,12 @@ class ClaimService {
 
   async checkOfferConfirms(
     issuerDid, issuedAt, giveRecipientId, giveUnit, giveAmount,
-    giveFulfillsId, giveFulfillsTypeId, giveFulfillsPlanId,
+    giveFulfillsHandleId, giveFulfillsTypeId, giveFulfillsPlanHandleId,
     isOnlyConfirmation
   ) {
-    if (giveFulfillsId && giveFulfillsTypeId == 'Offer') {
+    if (giveFulfillsHandleId && giveFulfillsTypeId == 'Offer') {
       const offers =
-            await dbService.offersByParamsPaged({ handleId: giveFulfillsId })
+            await dbService.offersByParamsPaged({ handleId: giveFulfillsHandleId })
       if (offers.data.length > 0) {
         const offer = offers.data[0]
 
@@ -243,9 +243,9 @@ class ClaimService {
 
         } else if (offer.recipientPlanId
                    // if there is no plan in the offer, allow plan from give
-                   || giveFulfillsPlanId) {
+                   || giveFulfillsPlanHandleId) {
           // gotta look further into the associated plan
-          const planId = offer.recipientPlanId || giveFulfillsPlanId
+          const planId = offer.recipientPlanId || giveFulfillsPlanHandleId
           const plan = await dbService.planInfoByHandleId(planId)
           if (plan
               && (issuerDid == plan.issuerDid || issuerDid == plan.agentDid)) {
@@ -444,8 +444,8 @@ class ClaimService {
           await this.checkOfferConfirms(
             issuerDid, issuedAt, origGive.recipientDid,
             origGive.unit, origGive.amount,
-            origGive.fulfillsId, origGive.fulfillsType,
-            origGive.fulfillPlansId, true
+            origGive.fulfillsHandleId, origGive.fulfillsType,
+            origGive.fulfillsPlanHandleId, true
           )
           .catch(err => {
             embeddedResult.embeddedRecordError =
@@ -675,12 +675,15 @@ class ClaimService {
   //   linkedPlanClaim - clause or parent clause from DB if it's a PlanAction
   //   linkedPlanIssuerDid - issuer of the linkedPlanClaim
   async retrieveFulfillsPlanClaimAndIssuer(clause, claimIdDataList, linkedPlanIssuerDid) {
+    let linkedPlanLastClaimId, linkedPlanHandleId
     if (clause?.lastClaimId) {
       // first look in already-cached JWT record list
       const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.lastClaimId === clause?.lastClaimId)
       if (loadedFulfillsParentIdInfo?.lastClaimJwt) {
         clause = JSON.parse(loadedFulfillsParentIdInfo.lastClaimJwt.claim)
+        linkedPlanHandleId = loadedFulfillsParentIdInfo.lastClaimJwt.handleId
         linkedPlanIssuerDid = loadedFulfillsParentIdInfo.lastClaimJwt.issuer
+        linkedPlanLastClaimId = loadedFulfillsParentIdInfo.lastClaimJwt.id
       }
       // if not found, look in DB
       // (Almost everything is already cached in claimIdDataList but there is a
@@ -690,7 +693,9 @@ class ClaimService {
         const loadedFulfillsParentJwt = await dbService.jwtLastByHandleIdRaw(clause.lastClaimId)
         if (loadedFulfillsParentJwt) {
           clause = JSON.parse(loadedFulfillsParentJwt.claim)
+          linkedPlanHandleId = loadedFulfillsParentJwt.handleId
           linkedPlanIssuerDid = loadedFulfillsParentJwt.issuer
+          linkedPlanLastClaimId = loadedFulfillsParentJwt.id
         }
       }
     } else if (clause?.identifier) {
@@ -698,7 +703,9 @@ class ClaimService {
       const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.handleId === clause?.identifier)
       if (loadedFulfillsParentIdInfo?.handleJwt) {
         clause = JSON.parse(loadedFulfillsParentIdInfo.handleJwt.claim)
+        linkedPlanHandleId = loadedFulfillsParentIdInfo.handleJwt.handleId
         linkedPlanIssuerDid = loadedFulfillsParentIdInfo.handleJwt.issuer
+        linkedPlanLastClaimId = loadedFulfillsParentIdInfo.handleJwt.id
       }
       // if not found, look in DB
       // 9Almost everything is already cached in claimIdDataList but there is a
@@ -708,12 +715,18 @@ class ClaimService {
         const loadedFulfillsParentJwt = await dbService.jwtLastByHandleIdRaw(clause.identifier)
         if (loadedFulfillsParentJwt) {
           clause = JSON.parse(loadedFulfillsParentJwt.claim)
+          linkedPlanHandleId = loadedFulfillsParentJwt.handleId
           linkedPlanIssuerDid = loadedFulfillsParentJwt.issuer
+          linkedPlanLastClaimId = loadedFulfillsParentJwt.id
         }
       }
+    } else {
+      // no lastClaimId or identifier, so the other fields will be the defaults
     }
+
     if (clause?.['@type'] === 'PlanAction') {
-      return { linkedPlanClaim: clause, linkedPlanIssuerDid }
+      // return the claim anyway because it may have been inline (so we don't have a JWT record)
+      return { linkedPlanClaim: clause, linkedPlanHandleId, linkedPlanIssuerDid, linkedPlanLastClaimId }
     } else {
       return null
     }
@@ -747,7 +760,7 @@ class ClaimService {
             this.issuerSameAsPersonInLinkedJwt(
                 issuerDid,
                 loadedFulfillsJwt.claim,
-                loadedFulfillsJwt.issuerDid
+                loadedFulfillsJwt.issuer
             )
       }
     } else if (fulfillsHandleId && isGlobalEndorserHandleId(fulfillsHandleId)) {
@@ -762,7 +775,7 @@ class ClaimService {
             this.issuerSameAsPersonInLinkedJwt(
                 issuerDid,
                 loadedFulfillsJwt.claim,
-                loadedFulfillsJwt.issuerDid
+                loadedFulfillsJwt.issuer
             )
       }
     }
@@ -777,30 +790,26 @@ class ClaimService {
 
     // first look for Plan in the direct fulfills
     if (fulfillsClaim?.['@type'] === 'PlanAction') {
-      fulfillsPlanLastClaimId = fulfillsClaim.claimId
-      fulfillsPlanHandleId = fulfillsClaim.handleId
+      fulfillsPlanLastClaimId = fulfillsLastClaimId
+      fulfillsPlanHandleId = fulfillsHandleId
     }
 
-console.log('fulfillsPlanLastClaimId 1', fulfillsPlanLastClaimId)
-console.log(fulfillsClaim)
     // now look for Plan in parentage, ie isPartOf
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
       // not found yet, so check isPartOf
       const fulfillsPlanInfo =
           await this.retrieveFulfillsPlanClaimAndIssuer(fulfillsClaim?.isPartOf, claimIdDataList)
-      fulfillsPlanLastClaimId = fulfillsPlanInfo?.linkedPlanClaim?.lastClaimId
-      fulfillsPlanHandleId = fulfillsPlanInfo?.linkedPlanClaim?.handleId
+      fulfillsPlanLastClaimId = fulfillsPlanInfo?.linkedPlanLastClaimId
+      fulfillsPlanHandleId = fulfillsPlanInfo?.linkedPlanHandleId
     }
-console.log('fulfillsPlanLastClaimId 2', fulfillsPlanLastClaimId)
     // now look for Plan in parentage, ie itemOffered.isPartOf
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
       // not found yet, so check itemOffered.isPartOf
       const fulfillsPlanInfo =
           await this.retrieveFulfillsPlanClaimAndIssuer(fulfillsClaim?.itemOffered?.isPartOf, claimIdDataList)
-      fulfillsPlanLastClaimId = fulfillsPlanInfo?.linkedPlanClaim?.lastClaimId
-      fulfillsPlanHandleId = fulfillsPlanInfo?.linkedPlanClaim?.handleId
+      fulfillsPlanLastClaimId = fulfillsPlanInfo?.linkedPlanLastClaimId
+      fulfillsPlanHandleId = fulfillsPlanInfo?.linkedPlanHandleId
     }
-console.log('fulfillsPlanLastClaimId 3', fulfillsPlanLastClaimId)
     // now have fulfillsPlanHandleId set
 
     const byRecipient = issuerDid == claim.recipient?.identifier
@@ -897,7 +906,7 @@ console.log('fulfillsPlanLastClaimId 3', fulfillsPlanLastClaimId)
 
       this.checkOfferConfirms(
         issuerDid, issuedAt, newGive.recipientDid, newGive.unit, newGive.amount,
-        newGive.fulfillsId, newGive.fulfillsType, newGive.fulfillsPlanHandleId, false
+        newGive.fulfillsHandleId, newGive.fulfillsType, newGive.fulfillsPlanHandleId, false
       )
 
       l.trace(`${this.constructor.name} New give ${util.inspect(newGive)}`)
@@ -1026,8 +1035,8 @@ console.log('fulfillsPlanLastClaimId 3', fulfillsPlanLastClaimId)
 
       const planFulfills =
         await this.retrieveFulfillsPlanClaimAndIssuer(claim.fulfills, claimIdDataList, issuerDid)
-      const fulfillsPlanLastClaimId = planFulfills?.linkedPlanClaim?.lastClaimId
-      const fulfillsPlanHandleId = planFulfills?.linkedPlanClaim?.handleId
+      const fulfillsPlanHandleId = planFulfills?.linkedPlanHandleId
+      const fulfillsPlanLastClaimId = planFulfills?.linkedPlanLastClaimId
       const fulfillsLinkConfirmed =
         this.issuerSameAsPersonInLinkedJwt(
             issuerDid,
@@ -1373,11 +1382,11 @@ console.log('fulfillsPlanLastClaimId 3', fulfillsPlanLastClaimId)
     if (claimInfo.lastClaimId) {
       // there's a claim ID which is local to this system
       const claimJwt = await dbService.jwtById(claimInfo.lastClaimId)
-      claimInfo['lastClaimJwt'] = claimJwt
+      claimInfo.lastClaimJwt = claimJwt
     } else if (claimInfo.handleId && isGlobalEndorserHandleId(claimInfo.handleId)) {
-      // there wasn't a claim ID for this system but there is a handle ID for it
+      // there wasn't a last claim ID for this system but there is a handle ID for it
       const handleJwt = await dbService.jwtLastByHandleIdRaw(claimInfo.handleId)
-      claimInfo['handleJwt'] = handleJwt
+      claimInfo.handleJwt = handleJwt
     }
     return claimInfo
   }
@@ -1396,14 +1405,14 @@ console.log('fulfillsPlanLastClaimId 3', fulfillsPlanLastClaimId)
         errors.push(`Without a lastClaimId, a handleId of ${claimInfo.handleId} for this system should be in the database but was not.`)
       }
       if (claimInfo.suppliedType
-          && claimInfo.lastClaimJwt.claimType
+          && claimInfo.lastClaimJwt?.claimType
           && claimInfo.suppliedType !== claimInfo.lastClaimJwt.claimType) {
         errors.push(`The lastClaimId of ${claimInfo.lastClaimId} has a claimType of ${claimInfo.lastClaimJwt.claimType} which does not match the given claimType of ${claimInfo.suppliedType}`)
       }
-      if (claimInfo.lastClaimJwt
-          && claimInfo.handleId
-          && claimInfo.handleId != claimInfo.lastClaimJwt.handleId) {
-        errors.push(`The lastClaimId of ${claimInfo.lastClaimId} has a handle of ${claimInfo.lastClaimJwt.handleId} which does not match the given handleId of ${claimInfo.handleId}`)
+      if (claimInfo.suppliedType
+          && claimInfo.handleJwt?.claimType
+          && claimInfo.suppliedType !== claimInfo.handleJwt.claimType) {
+        errors.push(`The handleId of ${claimInfo.handleId} has a claimType of ${claimInfo.handleJwt.claimType} which does not match the given claimType of ${claimInfo.suppliedType}`)
       }
     }
     return errors
@@ -1498,12 +1507,14 @@ console.log('fulfillsPlanLastClaimId 3', fulfillsPlanLastClaimId)
       // We do this basic sanity check here because we want to fail before
       // storing the JWT and give the client an HTTP error code (rather than
       // a 201 result with an embeddedError result).
-      let claimIdDataList = findAllClaimIdsAndHandleIds(payloadClaim)
+      let claimIdDataList = findAllLastClaimIdsAndHandleIds(payloadClaim)
       claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdDataList))
       // If any of that data is not consistent, reject.
       const claimErrors = this.gatherErrors(claimIdDataList)
       if (claimErrors.length > 0) {
-        return Promise.reject({ consistencyErrors: claimErrors })
+        return Promise.reject({
+          clientError: { message: claimErrors.join(' ') }
+        })
       }
 
       // The following looks up a previous entry by handle ID, and if it exists

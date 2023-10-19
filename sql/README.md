@@ -24,7 +24,7 @@ CREATE TABLE confirmation (
 
     -- This could be null if there was no explicit identifier or no claim found with matching data.
     -- This could happen in the case of a plan. It shouldn't, but we don't error in that case
-    -- because we don't want to try and match on all that claim data at this point... that sees rare.
+    -- because we don't want to try and match on all that claim data at this point... that seems rare.
     origClaimJwtId TEXT,
 
     -- The following are cached entries of the data being confirmed.
@@ -135,7 +135,7 @@ CREATE TABLE jwt (
     issuedAt DATETIME,
     issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     jwtEncoded TEXT, -- the full original JWT
-    lastClaimId TEXT, -- the previous JWT ID for this entity, which the user is overwriting (see also handleId)
+    lastClaimId TEXT, -- the previous JWT ID for this entity, which the user is conceptually overwriting (see also handleId)
     nonceHashHex CHARACTER(64), -- hex of hash constructed with hashNonce to allow selective disclosure but to avoid correlation
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);

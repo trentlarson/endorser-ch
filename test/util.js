@@ -167,7 +167,11 @@ module.exports = {
     //agent: { identifier: "..." },
     //recipient: { identifier: "..." },
     object: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
-    fulfills: { '@type': 'Offer', identifier: "..." },
+    fulfills: {
+      '@type': 'Offer',
+      //lastClaimId: "...",
+      //identifier: "...", // but we prefer lastClaimId
+    },
     description: "Help pulling a snowboarder along.",
   },
 

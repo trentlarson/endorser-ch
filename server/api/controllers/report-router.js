@@ -385,9 +385,10 @@ export default express
  * @property {datetime} issuedAt
  * @property {string} agentId
  * @property {string} recipientDid
- * @property {string} fulfillsId - handle ID of the offer this fulfills
+ * @property {string} fulfillsLastClaimId - last seen claim ID of the offer this fulfills
+ * @property {string} fulfillsHandleId - handle ID of the offer this fulfills
  * @property {string} fulfillsType - type of the element this fulfills, usually "Offer"
- * @property {string} fulfillsPlanClaimId - claim ID of the plan, if the give applies to one
+ * @property {string} fulfillsPlanLastClaimId - last seen claim ID of the plan, if the give applies to one
  * @property {string} fulfillsPlanHandleId - handle ID of the plan, if the give applies to one
  * @property {string} unit
  * @property {number} amount
@@ -557,7 +558,7 @@ export default express
  * @param {string} agentId.query.optional - issuing agent
  * @param {string} handleId.query.optional - persistent handleId
  * @param {string} recipientId.query.optional - recipient
- * @param {string} fulfillsId.query.optional - for ones that fulfill a particular item (eg. an offer)
+ * @param {string} fulfillsHandleId.query.optional - for ones that fulfill a particular item (eg. an offer)
  * @param {string} fulfillsType.query.optional - for ones that fulfill a particular type
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
  *  'hitLimit' boolean property if there may be more;

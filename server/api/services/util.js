@@ -219,30 +219,34 @@ function isObject(item) {
 }
 
 // return an array that contains all claimId properties,
-// where each value is an object of { lastClaimId, handleId, suppliedType }
-function findAllClaimIdsAndHandleIds(claim) {
-  let claimIdsAndHandleIds = []
-  const lastClaimId = claim['lastClaimId']
-  const handleId = claim['handleId']
-  const suppliedType = claim['@type']
-  if (lastClaimId || handleId) {
-    claimIdsAndHandleIds = [{lastClaimId, handleId, suppliedType}]
+// where each value is an object of { lastClaimId || handleId, suppliedType }
+function findAllLastClaimIdsAndHandleIds(clause) {
+  let clauseIdsAndHandleIds = []
+  // we prefer lastClaimId, we'll take handleId, but we don't want both in the result
+  if (clause.lastClaimId) {
+    clauseIdsAndHandleIds = [{lastClaimId: clause.lastClaimId}]
+  } else if (clause.handleId || clause.identifier) {
+    clauseIdsAndHandleIds = [{handleId: clause.handleId || clause.identifier}]
   }
-  for (let key in claim) {
-    if (Array.isArray(claim[key])) {
-      for (let value of claim[key]) {
+  if (clauseIdsAndHandleIds.length > 0
+      && clause['@type']) {
+    clauseIdsAndHandleIds = [R.mergeLeft(clauseIdsAndHandleIds[0], {suppliedType: clause['@type']})]
+  }
+  for (let key in clause) {
+    if (Array.isArray(clause[key])) {
+      for (let value of clause[key]) {
         if (isObject(value)) {
-          claimIdsAndHandleIds = R.concat(claimIdsAndHandleIds, findAllClaimIdsAndHandleIds(value))
+          clauseIdsAndHandleIds = R.concat(clauseIdsAndHandleIds, findAllLastClaimIdsAndHandleIds(value))
         }
       }
     } else {
-      if (isObject(claim[key])) {
-        claimIdsAndHandleIds = R.concat(claimIdsAndHandleIds, findAllClaimIdsAndHandleIds(claim[key]))
+      if (isObject(clause[key])) {
+        clauseIdsAndHandleIds = R.concat(clauseIdsAndHandleIds, findAllLastClaimIdsAndHandleIds(clause[key]))
       }
     }
   }
-  return claimIdsAndHandleIds
+  return clauseIdsAndHandleIds
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
 
