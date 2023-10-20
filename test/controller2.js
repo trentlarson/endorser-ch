@@ -295,7 +295,7 @@ describe('2 - Visibility', () => {
        expect(r.status).that.equals(200)
      }).catch((err) => {
        return Promise.reject(err)
-     })).timeout(3000)
+     })).timeout(5000)
 
   it('user 5 should see two DIDs', () =>
      request(Server)

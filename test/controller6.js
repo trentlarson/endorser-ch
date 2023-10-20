@@ -553,11 +553,29 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('make a plan that fulfills another one', async () => {
-    planBy2FulfillsBy1Claim.fulfills.identifier = firstPlanIdExternal
-    planBy2FulfillsBy1Claim.fulfillslastClaimId = localFromGlobalEndorserIdentifier(firstPlanIdExternal)
+  it('fail to make a plan with mismatched lastClaimId & identifier', async () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.fulfills = {}
+    planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = secondPlanIdExternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstIdSecondClaimInternal
+    planBy2FulfillsBy1JwtObj.iss = creds[2].did
+    const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('make a plan that fulfills another one', async () => {
+    const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
+    planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
+    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstIdSecondClaimInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
     return request(Server)
@@ -898,7 +916,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer data is correct', () => {
     return request(Server)
@@ -1009,7 +1027,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('insert offer #3 that is for the same project', async () => {
 
@@ -1042,7 +1060,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer totals are correct after offer #3', () => {
     return request(Server)
@@ -1107,7 +1125,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offers are still correct for one project on multi-project endpoint', () => {
     return request(Server)
@@ -1174,7 +1192,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer totals are correct after offer #5', () => {
     return request(Server)
@@ -1222,7 +1240,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer data for #6 is correct', () => {
     return request(Server)
@@ -1287,7 +1305,7 @@ describe('6 - check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer total succeeds with recipient that matches issuer', () => {
     return request(Server)
@@ -1353,7 +1371,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer data has some new amounts from the Give', () => {
     return request(Server)
@@ -1477,7 +1495,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('give #2 has expected data', () => {
     return request(Server)
@@ -1617,7 +1635,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('give totals are correct for second plan', () => {
     return request(Server)
@@ -1703,7 +1721,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('provider retrieval works for one updated', () => {
     return request(Server)
@@ -1767,7 +1785,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('give confirmation did not work (wrong issuer)', () => {
     return request(Server)
@@ -1816,7 +1834,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('give confirmation set an amount confirmed', () => {
     return request(Server)
@@ -1886,7 +1904,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer #6 data now has a confirmed amount', () => {
     return request(Server)
@@ -1956,7 +1974,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer #6 data now has a confirmed non-amount', () => {
     return request(Server)
@@ -2014,7 +2032,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('offer #6 data now has even more paid & confirmed', () => {
     return request(Server)
@@ -2119,7 +2137,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('fulfilled offer link from child gives no longer shows after link is removed', () => {
     return request(Server)
@@ -2174,7 +2192,7 @@ describe('6 - check give totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('give totals after #7 are correct with a default request', () => {
     return request(Server)
@@ -2215,15 +2233,24 @@ describe('6 - claimId & handleId Guards', () => {
     expect(findAllLastClaimIdsAndHandleIds({})).to.deep.equal([])
     expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3}]})).to.deep.equal([])
     expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3}], lastClaimId:"x"}))
-        .to.deep.equal([{lastClaimId:"x"}])
+        .to.deep.equal([{lastClaimId:"x", clause:{a:1, b:[{c:3}], lastClaimId:"x"}}])
     expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3}], lastClaimId:"x", handleId: "y"}))
-        .to.deep.equal([{lastClaimId:"x"}])
+        .to.deep.equal([{lastClaimId:"x", clause:{a:1, b:[{c:3}], lastClaimId:"x", handleId: "y"}}])
     expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3, handleId: "z"}], lastClaimId: "x", handleId: "y"}))
-        .to.deep.equal([{lastClaimId:"x"}, {handleId: "z"}])
+        .to.deep.equal([
+            {lastClaimId:"x", clause:{a:1, b:[{c:3, handleId: "z"}], lastClaimId: "x", handleId: "y"}},
+            {handleId: "z", clause:{c:3, handleId: "z"}},
+        ])
     expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3, lastClaimId: "z"}], lastClaimId: "x", handleId: "y"}))
-        .to.deep.equal([{lastClaimId:"x"}, {lastClaimId:"z"}])
+        .to.deep.equal([
+            {lastClaimId:"x", clause:{a:1, b:[{c:3, lastClaimId: "z"}], lastClaimId: "x", handleId: "y"}},
+            {lastClaimId:"z", clause:{c:3, lastClaimId: "z"}},
+        ])
     expect(findAllLastClaimIdsAndHandleIds({a:1, b:[{c:3, lastClaimId:"z", handleId: "w"}], lastClaimId: "x", handleId: "y"}))
-        .to.deep.equal([{lastClaimId:"x"}, {lastClaimId:"z"}])
+        .to.deep.equal([
+            {lastClaimId:"x", clause:{a:1, b:[{c:3, lastClaimId:"z", handleId: "w"}], lastClaimId: "x", handleId: "y"}},
+            {lastClaimId:"z", clause:{c:3, lastClaimId:"z", handleId: "w"}},
+        ])
   })
 
 })

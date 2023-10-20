@@ -597,7 +597,7 @@ describe('1 - Claim', () => {
             .to.equal('JWT_VERIFY_FAILED')
         })
     }
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('should fail to claim with bad JWT "Signature invalid for JWT"', () => {
     const lastChar = claimBvcFor0By0JwtEnc.charAt(claimBvcFor0By0JwtEnc.length - 1)

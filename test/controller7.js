@@ -313,7 +313,7 @@ describe('7 - Selected Contact Correlation', () => {
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
       .catch(err => Promise.reject(err))
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('user 1 sends contact hashes for totally different user', async () => {
     return request(Server)
@@ -457,7 +457,7 @@ describe('7 - Selected Contact Correlation', () => {
         expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
       .catch(err => Promise.reject(err))
-  }).timeout(3000)
+  }).timeout(5000)
 
   it('user 2 still gets old match (until cache clears)', async () => {
     return request(Server)

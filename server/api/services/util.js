@@ -219,14 +219,14 @@ function isObject(item) {
 }
 
 // return an array that contains all claimId properties,
-// where each value is an object of { lastClaimId || handleId, suppliedType }
+// where each value is an object of { lastClaimId || handleId, suppliedType, clause }
 function findAllLastClaimIdsAndHandleIds(clause) {
   let clauseIdsAndHandleIds = []
   // we prefer lastClaimId, we'll take handleId, but we don't want both in the result
   if (clause.lastClaimId) {
-    clauseIdsAndHandleIds = [{lastClaimId: clause.lastClaimId}]
+    clauseIdsAndHandleIds = [{lastClaimId: clause.lastClaimId, clause}]
   } else if (clause.handleId || clause.identifier) {
-    clauseIdsAndHandleIds = [{handleId: clause.handleId || clause.identifier}]
+    clauseIdsAndHandleIds = [{handleId: clause.handleId || clause.identifier, clause}]
   }
   if (clauseIdsAndHandleIds.length > 0
       && clause['@type']) {

@@ -1400,6 +1400,11 @@ class ClaimService {
         // any local claimId should have a claimJwt
         errors.push(`The lastClaimId of ${claimInfo.lastClaimId} was not found in the database.`)
       }
+      if (claimInfo.lastClaimId
+          && claimInfo.clause.identifier
+          && claimInfo.lastClaimJwt.handleId !== claimInfo.clause.identifier) {
+        errors.push(`The lastClaimId of ${claimInfo.lastClaimId} has a handleId of ${claimInfo.lastClaimJwt.handleId} which doesn't match your supplied identifier of ${claimInfo.clause.identifier}.`)
+      }
       if (!claimInfo.lastClaimId
           && (isGlobalEndorserHandleId(claimInfo.handleId) && !claimInfo.handleJwt)) {
         errors.push(`Without a lastClaimId, a handleId of ${claimInfo.handleId} for this system should be in the database but was not.`)
