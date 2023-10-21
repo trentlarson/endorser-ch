@@ -723,7 +723,6 @@ export default express
  * @param {string} issuerDid.query.optional
  * @param {string} agentDid.query.optional
  * @param {string} handleId.query.optional
- * @param {string} internalId.query.optional
  * @param {string} description.query.optional
  * @param {string} endTime.query.optional
  * @param {string} startTime.query.optional

@@ -1510,17 +1510,21 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt =
           "INSERT INTO offer_claim (jwtId, handleId, issuedAt, updatedAt"
-          + ", offeredByDid"
-          + ", recipientDid, recipientPlanId, amount, unit, objectDescription"
+          + ", offeredByDid, recipientDid"
+          + ", fulfillsHandleId, fulfillsLastClaimId, fulfillsLinkConfirmed"
+          + ", fulfillsPlanHandleId, fulfillsPlanLastClaimId"
+          + ", amount, unit, objectDescription"
           + ", validThrough, fullClaim)"
           + " VALUES"
-          + " (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, datetime(?), ?)"
+          + " (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?), ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
-          entry.offeredByDid,
-          entry.recipientDid, entry.recipientPlanId, entry.amount, entry.unit,
+          entry.offeredByDid, entry.recipientDid,
+          entry.fulfillsHandleId, entry.fulfillsLastClaimId, entry.fulfillsLinkConfirmed ? 1 : 0,
+          entry.fulfillsPlanHandleId, entry.fulfillsPlanLastClaimId,
+          entry.amount, entry.unit,
           entry.objectDescription, entry.validThrough, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
@@ -1533,7 +1537,7 @@ class EndorserDatabase {
       'offer_claim',
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'offeredByDid', 'recipientDid',
-        'recipientPlanId', 'validThrough'],
+        'fulfillsPlanHandleId', 'validThrough'],
       ['amount', 'unit', 'amountGiven', 'amountGivenConfirmed',
        'nonAmountGivenConfirmed', 'fullClaim'],
       'objectDescription',
@@ -1543,6 +1547,29 @@ class EndorserDatabase {
       afterIdInput,
       beforeIdInput
     )
+  }
+
+  offerInfoByHandleId(handleId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+          "SELECT * FROM offer_claim WHERE handleId = ?",
+          [handleId],
+          function(err, row) {
+            if (err) {
+              reject(err)
+            } else {
+              if (row) {
+                row.issuedAt = isoAndZonify(row.issuedAt)
+                row.updatedAt = isoAndZonify(row.updatedAt)
+                row.endTime = isoAndZonify(row.endTime)
+                row.startTime = isoAndZonify(row.startTime)
+                row.recipientLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
+              }
+              resolve(row)
+            }
+          }
+      )
+    })
   }
 
   /**
@@ -1556,7 +1583,7 @@ class EndorserDatabase {
       const inListStr = planIds.map(value => "?").join(',')
       let allParams = planIds.map(util.globalId)
 
-      let whereClause = " recipientPlanId in (" + inListStr + ")"
+      let whereClause = " fulfillsPlanHandleId in (" + inListStr + ")"
 
       if (afterIdInput) {
         whereClause += ' AND ? < jwtId'
@@ -1570,7 +1597,7 @@ class EndorserDatabase {
       let data = []
       let rowErr
       const sql =
-            "SELECT jwtId, handleId, issuedAt, offeredByDid, amount, unit"
+            "SELECT jwtId, handleId, issuedAt, updatedAt, offeredByDid, amount, unit"
             + ", objectDescription, validThrough, fullClaim FROM offer_claim WHERE"
             + whereClause
             + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
@@ -1581,6 +1608,8 @@ class EndorserDatabase {
           if (err) {
             rowErr = err
           } else {
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            row.updatedAt = isoAndZonify(row.updatedAt)
             row.issuedAt = isoAndZonify(row.issuedAt)
             row.validThrough = isoAndZonify(row.validThrough)
             data.push(row)
@@ -1606,7 +1635,7 @@ class EndorserDatabase {
       let allParams = []
       let whereClause = ''
       if (planId) {
-        whereClause += ' recipientPlanId = ?'
+        whereClause += ' fulfillsPlanHandleId = ?'
         allParams = allParams.concat([planId])
       }
       if (recipientDid) {
@@ -1652,6 +1681,28 @@ class EndorserDatabase {
           }
         }
       )
+    })
+  }
+
+  offerUpdate(entry) {
+    return new Promise((resolve, reject) => {
+      var stmt =
+          "UPDATE offer_claim set jwtId = ?"
+          + ", issuedAt = datetime(?), updatedAt = datetime(?)"
+          + ", offeredByDid = ?"
+          + ", recipientDid = ?, fulfillsPlanHandleId = ?, amount = ?, unit = ?, objectDescription = ?"
+          + ", validThrough = datetime(?), fullClaim = ?"
+          + " WHERE handleId = ?"
+      db.run(
+          stmt,
+          [
+            entry.jwtId, entry.issuedAt, entry.updatedAt,
+            entry.offeredByDid,
+            entry.recipientDid, entry.fulfillsPlanHandleId, entry.amount, entry.unit,
+            entry.objectDescription, entry.validThrough, entry.fullClaim,
+            entry.handleId,
+          ],
+          function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
     })
   }
 
@@ -1851,6 +1902,27 @@ class EndorserDatabase {
           resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
         }
       })
+    })
+  }
+
+  planInfoByLastClaimId(lastClaimId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM plan_claim WHERE handleId = (select handleId from jwt where id = ?)",
+        [lastClaimId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.endTime = isoAndZonify(row.endTime)
+              row.startTime = isoAndZonify(row.startTime)
+              row.fulfillsLinkConfirmed = booleanify(row.fulfillsLinkConfirmed)
+            }
+            resolve(row)
+          }
+        }
+      )
     })
   }
 

@@ -225,7 +225,7 @@ function findAllLastClaimIdsAndHandleIds(clause) {
   // we prefer lastClaimId, we'll take handleId, but we don't want both in the result
   if (clause.lastClaimId) {
     clauseIdsAndHandleIds = [{lastClaimId: clause.lastClaimId, clause}]
-  } else if (clause.handleId || clause.identifier) {
+  } else if (clause.handleId || (clause.identifier && !isDid(clause.identifier))) {
     clauseIdsAndHandleIds = [{handleId: clause.handleId || clause.identifier, clause}]
   }
   if (clauseIdsAndHandleIds.length > 0

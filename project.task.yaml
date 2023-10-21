@@ -2,18 +2,26 @@
 tasks :
 
 - add Lives of Gifts project :
+  - check for commented code
+  - rename lastClaimId to jwtId? no because that's not clear what it's for
+  - add recipient and other linkConfirmed fields
+  - check that offerInfoByHandleId and giveInfoByHandleId DB calls don't send fullClaim to clients
   - change all mobile & kick-start handleId credential references to use the JWT ID
-  - create & test give links with claim IDs; test that mismatch fails
   - change mobile "claimId" references that are actually handles to "handleId"
   - search through uses of handleId and see if they're appropriate
   - disallow handle IDs without claim IDs in links?
   - add lastClaimId in confirmation input & offer input (& update?)
   - add lastClaimId to endorser-docs for all links, explain how it should be there if handleId is there
+  - in endorser-docs, ensure Offer has recipientId and recipientPlanId
   - tests for bad combinations of lastClaimId, handleId/identifier, context & type, fulfills, etc
+  - add link-confirmed fields for give & offer & plan people
+  - remove offer issuedAt / updatedAt? or add plan updatedAt? (with migration)
 
   - implement giveFulfilledByGive, offerFulfilledByGive
   - retrieve only confirmed child plans
   - write anyFulfillersTo[Give|Plan]
+
+- update plan_claims in DB to remove any internalId values, after next rollout
 
 - allow Gives for free (ie. without registration)
 

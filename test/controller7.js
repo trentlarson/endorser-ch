@@ -619,7 +619,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
     credObj.claim.object = {
-      jwtId: firstGiveRecordJwtId
+      lastClaimId: firstGiveRecordJwtId
     }
     credObj.sub = creds[0].did
     credObj.iss = creds[1].did
@@ -694,7 +694,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
     credObj.claim.object = {
-      jwtId: firstGiveRecordJwtId
+      lastClaimId: firstGiveRecordJwtId
     }
     credObj.sub = creds[0].did
     credObj.iss = creds[1].did
@@ -749,7 +749,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
     credObj.claim.object = {
-      jwtId: firstGiveRecordJwtId
+      lastClaimId: firstGiveRecordJwtId
     }
     credObj.sub = creds[0].did
     credObj.iss = creds[2].did
@@ -805,7 +805,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
     credObj.claim.object = {
-      jwtId: firstGiveRecordJwtId
+      lastClaimId: firstGiveRecordJwtId
     }
     credObj.sub = creds[0].did
     credObj.iss = creds[5].did
@@ -979,7 +979,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
     credObj.claim.object = {
-      jwtId: secondRecordJwtId
+      lastClaimId: secondRecordJwtId
     }
     credObj.sub = creds[3].did
     credObj.iss = creds[4].did
@@ -1013,7 +1013,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
     credObj.claim.object = {
-      jwtId: secondRecordJwtId
+      lastClaimId: secondRecordJwtId
     }
     credObj.sub = creds[3].did
     credObj.iss = creds[2].did

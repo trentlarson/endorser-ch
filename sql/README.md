@@ -74,11 +74,11 @@ CREATE TABLE give_claim (
     -- parent 'fulfills' object has confirmed the relationship because the creator of this plan
     -- owns the data and claimed the relationship so they obviously implicitly confirmed it.
     --
-    fulfillLinkConfirmed INTEGER DEFAULT 0,
+    fulfillsLinkConfirmed INTEGER DEFAULT 0,
 
     -- This is the ID of the plan claim JWT to which this Give directly links.
     -- It is typically an internal ID, eg. 01D25AVGQG1N8E9JNGK7C7DZRD, but
-    -- also supports external, global IDs.
+    -- also supports external, global IDs (but not internal global IDs).
     --
     -- It's important because a handle ID points to content that can change
     -- over time, but when claiming that this fulfills a plan we want a
@@ -96,8 +96,9 @@ CREATE TABLE give_claim (
 
     -- If giving an object with an amount, the amount of this Give with the
     -- same unit that has been confirmed.
-    -- If giving without an "amount" object, just a 1 for confirmed.
-    -- Only if confirmed by the Give recipient or by plan issuer or agent.
+    -- If the Give doesn't have an "amount" object, this is just 1.
+    -- This is only incremented if confirmed by the Give recipient or by
+    -- the fulfills plan issuer or agent.
     amountConfirmed REAL DEFAULT 0,
 
     description TEXT,
@@ -156,8 +157,18 @@ CREATE TABLE offer_claim (
 
     -- note that did:peer are 58 chars
     offeredByDid TEXT, -- global ID of the offering entity (issuer if empty)
+
     recipientDid TEXT, -- global ID of recipient (if any)
-    recipientPlanId TEXT, -- full ID of PlanAction (if any)
+
+    fulfillsHandleId TEXT, -- full ID of itemOffered.isPartOf (if any)
+    fulfillsLastClaimId TEXT, -- last claim ID of itemOffered.isPartOf (if any)
+    -- true if recipient (itemOffered.isPartOf) issuer has confirmed the link
+    fulfillsLinkConfirmed INTEGER DEFAULT 0,
+
+    -- full ID of PlanAction (if itemOffered.isPartOf is one)
+    -- This is set if there's a last claim ID.
+    fulfillsPlanHandleId TEXT,
+    fulfillsPlanLastClaimId TEXT, -- last claim ID of PlanAction (if itemOffered.isPartOf is one)
 
     unit TEXT,
     amount REAL DEFAULT 0,
@@ -185,7 +196,7 @@ CREATE TABLE offer_claim (
 );
 CREATE INDEX offer_offeredByDid ON offer_claim(offeredByDid);
 CREATE INDEX offer_recipientDid ON offer_claim(recipientDid);
-CREATE INDEX offer_recipientPlanId ON offer_claim(recipientPlanId);
+CREATE INDEX offer_recipientPlanId ON offer_claim(recipientPlanHandleId);
 CREATE INDEX offer_validThrough ON offer_claim(validThrough);
 
 CREATE TABLE org_role_claim (
@@ -200,7 +211,7 @@ CREATE TABLE org_role_claim (
 
 CREATE TABLE plan_claim (
     handleId TEXT,
-    jwtId text PRIMARY KEY, -- the latest JWT ID that updated this plan
+    jwtId text PRIMARY KEY, -- updated to the latest JWT ID that updated this
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
     agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
 
@@ -217,7 +228,7 @@ CREATE TABLE plan_claim (
 
     -- This is the ID of the plan claim JWT to which this Plan directly links.
     -- It is typically an internal ID, eg. 01D25AVGQG1N8E9JNGK7C7DZRD, but
-    -- also supports external, global IDs.
+    -- also supports external, global IDs (but not internal global IDs).
     --
     -- It's important because a handle ID points to content that can change
     -- over time, but when claiming that this fulfills a plan we want a
@@ -229,7 +240,6 @@ CREATE TABLE plan_claim (
     -- current plan contributes to another plan with this global plan ID
     fulfillsPlanHandleId TEXT,
 
-    -- internalId TEXT, -- unused
     name TEXT,
     description TEXT,
     image TEXT,
@@ -243,16 +253,15 @@ CREATE TABLE plan_claim (
 );
 CREATE INDEX plan_issuerDid ON plan_claim(issuerDid);
 CREATE INDEX plan_fullIri ON plan_claim(handleId);
-CREATE INDEX plan_internalId ON plan_claim(internalId);
 CREATE INDEX plan_endTime ON plan_claim(endTime);
+CREATE INDEX plan_fulfillsPlan on plan_claim (fulfillsPlanHandleId);
 CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
 
 CREATE TABLE project_claim (
-    jwtId TEXT PRIMARY KEY,
+    jwtId TEXT PRIMARY KEY, -- updated to the latest JWT ID that updated this
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
     agentDid TEXT, -- DID of the plan owner/initiator; did:peer are 58 chars
     handleId TEXT,
-    -- internalId TEXT, -- unused
     name TEXT,
     description TEXT,
     image TEXT,
@@ -266,7 +275,6 @@ CREATE TABLE project_claim (
 );
 CREATE INDEX project_issuerDid ON project_claim(issuerDid);
 CREATE INDEX project_fullIri ON project_claim(handleId);
-CREATE INDEX project_internalId ON project_claim(internalId);
 CREATE INDEX project_endTime ON project_claim(endTime);
 CREATE INDEX project_resultIdentifier ON project_claim(resultIdentifier);
 

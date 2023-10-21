@@ -1,12 +1,12 @@
-import { planService, projectService } from '../services/project.service'
+import { planService } from '../services/project.service'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
 class PlanController {
 
   // gets info but not the full claim
-  getPlanInfoByExternalId(req, res) {
+  getPlanInfoByLastClaimIdOrHandleId(req, res) {
     planService
-      .infoByExternalId(req.params.id)
+      .infoByLastClaimIdOrHandleId(req.params.id)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => {
         if (r) res.json(r);
@@ -43,7 +43,7 @@ const planRouter = express
  * @returns {object} plan data if it exists (or 404)
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/:id', planController.getPlanInfoByExternalId)
+  .get('/:id', planController.getPlanInfoByLastClaimIdOrHandleId)
 
 
 
