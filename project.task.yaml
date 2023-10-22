@@ -2,13 +2,12 @@
 tasks :
 
 - add Lives of Giving project :
-  - change all mobile & kick-start handleId credential references to use the lastClaimId
+  - change all mobile handleId credential references to use the lastClaimId
   - change mobile "claimId" references that are actually handles to "handleId"
-  - disallow handle IDs without claim IDs in links?
+  - check kick-start - handleId -> lastClaimId, fulfillsId,
   - in endorser-docs, add lastClaimId for all links, explain how it should be there if handleId is there
   - in endorser-docs, ensure Offer has recipientId and recipientPlanId
   - add tests for bad combinations of lastClaimId + handleId/identifier, context & type, fulfills, etc
-  - remove offer issuedAt / updatedAt? or add plan updatedAt? (with migration)
 
 - update plan_claims in DB to remove any internalId values, after next rollout
 

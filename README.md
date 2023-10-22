@@ -59,6 +59,8 @@ docker build -t endorser-ch:$ENDORSER_VERSION --build-arg ENDORSER_VERSION .
 docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database --name endorser-ch --env-file $PATH/.env -e APP_DB_FILE=/mnt/database/endorser-ch-dev.sqlite3 -e NODE_ENV=dev endorser-ch:$ENDORSER_VERSION
 ```
 
+* Before deploying, ask yourself: do you need to run a migration?
+
 When running on another domain (other than EndorserSearch.com):
 
 * Edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.

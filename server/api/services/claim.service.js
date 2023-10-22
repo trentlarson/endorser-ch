@@ -1563,7 +1563,7 @@ class ClaimService {
       // Generate the local id and find or generate the global "entity" handle ID.
       const jwtId = dbService.newUlid()
 
-      const lastClaimId = payload.claim.lastClaimId
+      const lastClaimId = payloadClaim.lastClaimId
       const lastClaimInfo =
           lastClaimId
               ? R.find(x => x.lastClaimId === lastClaimId, claimIdDataList)
