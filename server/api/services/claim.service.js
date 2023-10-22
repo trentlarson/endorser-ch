@@ -13,9 +13,9 @@ import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, claimHashChain,
   ERROR_CODES, findAllLastClaimIdsAndHandleIds,
-  GLOBAL_ENTITY_ID_IRI_PREFIX, globalFromInternalIdentifier,
-  globalId, hashedClaimWithHashedDids,
-  localEndorserOrGlobalIdentifier, isGlobalEndorserHandleId, isGlobalUri,
+  globalFromInternalIdentifier,
+  hashedClaimWithHashedDids,
+  isGlobalEndorserHandleId, isGlobalUri,
 } from './util';
 import { addCanSee } from './network-cache.service'
 
@@ -273,6 +273,81 @@ class ClaimService {
     return R.uniq(allConfirmers)
   }
 
+  // @param {Object} clause - a clause that may have an entry already in the claimIdDataList & DB
+  // @return Object of:
+  //   clauseClaim - clause from DB if there's no onlyIfType or the type matches
+  //   clauseHandleId
+  //   clauseIssuerDid - issuer of the clause claim
+  //   clauseLastClaimId
+  async retrieveClauseClaimAndIssuer(clause, claimIdDataList, onlyIfType, clauseIssuerDid) {
+    let clauseLastClaimId, clauseHandleId
+    if (clause?.lastClaimId) {
+      clauseLastClaimId = clause.lastClaimId
+      // first look in already-cached JWT record list
+      const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.lastClaimId === clause?.lastClaimId)
+      if (loadedFulfillsParentIdInfo?.lastClaimJwt) {
+        clause = JSON.parse(loadedFulfillsParentIdInfo.lastClaimJwt.claim)
+        clauseHandleId = loadedFulfillsParentIdInfo.lastClaimJwt.handleId
+        clauseIssuerDid = loadedFulfillsParentIdInfo.lastClaimJwt.issuer
+        clauseLastClaimId = loadedFulfillsParentIdInfo.lastClaimJwt.id
+      }
+      // if not found, look in DB
+      // (Almost everything is already cached in claimIdDataList but there is a
+      // possibility that the "fulfills" clause loaded something new from the
+      // DB and we may have to look this up.)
+      if (!loadedFulfillsParentIdInfo) {
+        const loadedFulfillsParentJwt = await dbService.jwtById(clause.lastClaimId)
+        if (loadedFulfillsParentJwt) {
+          clause = JSON.parse(loadedFulfillsParentJwt.claim)
+          clauseHandleId = loadedFulfillsParentJwt.handleId
+          clauseIssuerDid = loadedFulfillsParentJwt.issuer
+          clauseLastClaimId = loadedFulfillsParentJwt.id
+        }
+      }
+    } else if (clause?.identifier) {
+      clauseHandleId = clause.identifier
+      // first look in already-cached JWT record list
+      const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.handleId === clause?.identifier)
+      if (loadedFulfillsParentIdInfo?.handleJwt) {
+        clause = JSON.parse(loadedFulfillsParentIdInfo.handleJwt.claim)
+        clauseHandleId = loadedFulfillsParentIdInfo.handleJwt.handleId
+        clauseIssuerDid = loadedFulfillsParentIdInfo.handleJwt.issuer
+        clauseLastClaimId = loadedFulfillsParentIdInfo.handleJwt.id
+      }
+      // if not found, look in DB
+      // 9Almost everything is already cached in claimIdDataList but there is a
+      // possibility that the "fulfills" clause loaded something new from the
+      // DB and we may have to look this up.)
+      if (!loadedFulfillsParentIdInfo) {
+        const loadedFulfillsParentJwt = await dbService.jwtLastByHandleId(clause.identifier)
+        if (loadedFulfillsParentJwt) {
+          clause = JSON.parse(loadedFulfillsParentJwt.claim)
+          clauseHandleId = loadedFulfillsParentJwt.handleId
+          clauseIssuerDid = loadedFulfillsParentJwt.issuer
+          clauseLastClaimId = loadedFulfillsParentJwt.id
+        }
+      }
+    } else {
+      // no lastClaimId or identifier, so the other fields will be the defaults
+    }
+
+    if (!onlyIfType
+        || clause?.['@type'] === onlyIfType) {
+      // return the claim anyway because it may have been inline (so we don't have a JWT record)
+      return { clauseClaim: clause, clauseHandleId, clauseIssuerDid, clauseLastClaimId }
+    } else {
+      return null
+    }
+  }
+
+  issuerSameAsPersonInLinkedJwt(issuerDid, linkedClaim, linkedJwtIssuerDid) {
+    return (
+        issuerDid === linkedJwtIssuerDid
+        || issuerDid === linkedClaim?.agent?.identifier // for Give & PlanAction
+        || issuerDid === linkedClaim?.offeredBy?.identifier // for Offer
+    )
+  }
+
   /**
      @param origClaim is the claim contained inside the confirmation
 
@@ -419,16 +494,16 @@ class ClaimService {
         // confirm contribution link if not yet confirmed
         // (note that there is similar update-link-confirmed code in multiple places)
         if (origClaim.fulfills) {
-          const origOfferRecord = await dbService.giveInfoByHandleId(origClaimHandleId)
-          if (origOfferRecord?.fulfillsHandleId
+          const origGiveRecord = await dbService.giveInfoByHandleId(origClaimHandleId)
+          if (origGiveRecord?.fulfillsHandleId
               && !origClaim.fulfillsLinkConfirmed) {
             const fulfillsInfo = this.retrieveClauseClaimAndIssuer(origClaim.fulfills, claimIdDataList)
             const fulfillsLinkConfirmed =
                 this.issuerSameAsPersonInLinkedJwt(issuerDid, fulfillsInfo.clauseClaim)
             if (fulfillsLinkConfirmed) {
               // this issuer issued plan being fulfilled, so we can set the link confirmed
-              origOfferRecord.fulfillsLinkConfirmed = true
-              await dbService.offerUpdate(origOfferRecord)
+              origGiveRecord.fulfillsLinkConfirmed = true
+              await dbService.offerUpdate(origGiveRecord)
             }
           }
         }
@@ -670,81 +745,6 @@ class ClaimService {
 
       return result
     }
-  }
-
-  // @param {Object} clause - a clause that may have an entry already in the claimIdDataList & DB
-  // @return Object of:
-  //   clauseClaim - clause from DB if there's no onlyIfType or the type matches
-  //   clauseHandleId
-  //   clauseIssuerDid - issuer of the clause claim
-  //   clauseLastClaimId
-  async retrieveClauseClaimAndIssuer(clause, claimIdDataList, onlyIfType, clauseIssuerDid) {
-    let clauseLastClaimId, clauseHandleId
-    if (clause?.lastClaimId) {
-      clauseLastClaimId = clause.lastClaimId
-      // first look in already-cached JWT record list
-      const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.lastClaimId === clause?.lastClaimId)
-      if (loadedFulfillsParentIdInfo?.lastClaimJwt) {
-        clause = JSON.parse(loadedFulfillsParentIdInfo.lastClaimJwt.claim)
-        clauseHandleId = loadedFulfillsParentIdInfo.lastClaimJwt.handleId
-        clauseIssuerDid = loadedFulfillsParentIdInfo.lastClaimJwt.issuer
-        clauseLastClaimId = loadedFulfillsParentIdInfo.lastClaimJwt.id
-      }
-      // if not found, look in DB
-      // (Almost everything is already cached in claimIdDataList but there is a
-      // possibility that the "fulfills" clause loaded something new from the
-      // DB and we may have to look this up.)
-      if (!loadedFulfillsParentIdInfo) {
-        const loadedFulfillsParentJwt = await dbService.jwtById(clause.lastClaimId)
-        if (loadedFulfillsParentJwt) {
-          clause = JSON.parse(loadedFulfillsParentJwt.claim)
-          clauseHandleId = loadedFulfillsParentJwt.handleId
-          clauseIssuerDid = loadedFulfillsParentJwt.issuer
-          clauseLastClaimId = loadedFulfillsParentJwt.id
-        }
-      }
-    } else if (clause?.identifier) {
-      clauseHandleId = clause.identifier
-      // first look in already-cached JWT record list
-      const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.handleId === clause?.identifier)
-      if (loadedFulfillsParentIdInfo?.handleJwt) {
-        clause = JSON.parse(loadedFulfillsParentIdInfo.handleJwt.claim)
-        clauseHandleId = loadedFulfillsParentIdInfo.handleJwt.handleId
-        clauseIssuerDid = loadedFulfillsParentIdInfo.handleJwt.issuer
-        clauseLastClaimId = loadedFulfillsParentIdInfo.handleJwt.id
-      }
-      // if not found, look in DB
-      // 9Almost everything is already cached in claimIdDataList but there is a
-      // possibility that the "fulfills" clause loaded something new from the
-      // DB and we may have to look this up.)
-      if (!loadedFulfillsParentIdInfo) {
-        const loadedFulfillsParentJwt = await dbService.jwtLastByHandleId(clause.identifier)
-        if (loadedFulfillsParentJwt) {
-          clause = JSON.parse(loadedFulfillsParentJwt.claim)
-          clauseHandleId = loadedFulfillsParentJwt.handleId
-          clauseIssuerDid = loadedFulfillsParentJwt.issuer
-          clauseLastClaimId = loadedFulfillsParentJwt.id
-        }
-      }
-    } else {
-      // no lastClaimId or identifier, so the other fields will be the defaults
-    }
-
-    if (!onlyIfType
-        || clause?.['@type'] === onlyIfType) {
-      // return the claim anyway because it may have been inline (so we don't have a JWT record)
-      return { clauseClaim: clause, clauseHandleId, clauseIssuerDid, clauseLastClaimId }
-    } else {
-      return null
-    }
-  }
-
-  issuerSameAsPersonInLinkedJwt(issuerDid, linkedClaim, linkedJwtIssuerDid) {
-    return (
-      issuerDid === linkedJwtIssuerDid
-      || issuerDid === linkedClaim?.agent?.identifier // for Give & PlanAction
-      || issuerDid === linkedClaim?.offeredBy?.identifier // for Offer
-    )
   }
 
   async createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList) {

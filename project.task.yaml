@@ -1,25 +1,14 @@
 ---
 tasks :
 
-- add Lives of Gifts project :
-  - check for commented code
-  - rename lastClaimId to jwtId? no because that's not clear what it's for
-  - add recipient and other linkConfirmed fields
-  - check that offerInfoByHandleId and giveInfoByHandleId DB calls don't send fullClaim to clients
-  - change all mobile & kick-start handleId credential references to use the JWT ID
+- add Lives of Giving project :
+  - change all mobile & kick-start handleId credential references to use the lastClaimId
   - change mobile "claimId" references that are actually handles to "handleId"
-  - search through uses of handleId and see if they're appropriate
   - disallow handle IDs without claim IDs in links?
-  - add lastClaimId in confirmation input & offer input (& update?)
-  - add lastClaimId to endorser-docs for all links, explain how it should be there if handleId is there
+  - in endorser-docs, add lastClaimId for all links, explain how it should be there if handleId is there
   - in endorser-docs, ensure Offer has recipientId and recipientPlanId
-  - tests for bad combinations of lastClaimId, handleId/identifier, context & type, fulfills, etc
-  - add link-confirmed fields for give & offer & plan people
+  - add tests for bad combinations of lastClaimId + handleId/identifier, context & type, fulfills, etc
   - remove offer issuedAt / updatedAt? or add plan updatedAt? (with migration)
-
-  - implement giveFulfilledByGive, offerFulfilledByGive
-  - retrieve only confirmed child plans
-  - write anyFulfillersTo[Give|Plan]
 
 - update plan_claims in DB to remove any internalId values, after next rollout
 
@@ -349,6 +338,7 @@ tasks :
   - eg. repeated or failed confirmations so should see mix of successes and errors
   - eg. remove hashHex column and see how parts succeed but there's still an error
   - ... and guard every API call in uport-demo with a response.ok check & error catch (and loader)
+- 01 add link-confirmed fields for people (DIDs) in give & offer & plan
 - 01 in SignClaim, set to confirmations & choose some, set to Join action, set to confirmations again and see that the list is not refreshed
 - 01 usability - add a "waiting" spinner when remote method is called
 - 01 bug - if there's already a response JWT & message then a new one might not show
