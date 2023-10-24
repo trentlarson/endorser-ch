@@ -984,7 +984,7 @@ class EndorserDatabase {
    * @param giveHandleId
    * @returns array of { identifier: DID string, linkConfirmed: boolean }
    */
-  giveProviderClaims(giveHandleId) {
+  giveProviderDids(giveHandleId) {
     return new Promise((resolve, reject) => {
       let data = [], rowErr
 

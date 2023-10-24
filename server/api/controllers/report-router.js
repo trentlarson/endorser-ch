@@ -114,7 +114,7 @@ class DbController {
 
   getGiveProviders(req, res, next) {
     const giveHandleId = req.query.giveHandleId
-    dbService.giveProviderClaims(giveHandleId)
+    dbService.giveProviderDids(giveHandleId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
