@@ -630,7 +630,6 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
-        expect(r.body.data[0].fulfillsPlanLastClaimId).to.equal(firstPlanIdSecondClaimInternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
@@ -795,7 +794,6 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
-        expect(r.body.data[0].fulfillsPlanLastClaimId).to.equal(firstPlanIdSecondClaimInternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
         expect(globalId(firstPlanIdSecondClaimInternal)).to.not.equal(firstPlanIdExternal)
       }).catch((err) => {
@@ -830,7 +828,6 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
-        expect(r.body.data[0].fulfillsPlanLastClaimId).to.equal(null)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(null)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1548,7 +1545,6 @@ describe('6 - check give totals', () => {
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
         expect(r.body.data[0].fulfillsType).to.equal('GiveAction')
         expect(r.body.data[0].fulfillsPlanHandleId).to.be.null
-        expect(r.body.data[0].fulfillsPlanLastClaimId).to.be.null
         expect(r.body.data[0].recipientDid).to.equal(null)
         expect(r.status).that.equals(200)
       }).catch((err) => {

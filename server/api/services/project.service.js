@@ -5,12 +5,12 @@ import { globalId, isGlobalUri } from './util'
 class PlanService {
 
   // gets info rather than the initial signed claim
-  infoByLastClaimIdOrHandleId(someId) {
+  infoByClaimIdOrHandleId(someId) {
     l.trace(`${this.constructor.name}.byExternalId(${someId})`);
     if (isGlobalUri(someId)) {
       return dbService.planInfoByHandleId(someId)
     } else {
-      return dbService.planInfoByLastClaimId(someId)
+      return dbService.planInfoByClaimId(someId)
     }
   }
 

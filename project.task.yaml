@@ -2,6 +2,8 @@
 tasks :
 
 - add Lives of Giving project :
+  - test change on search for Offer result to have a Give
+  - fix problem with give of another hour to the BVC project
   - change all mobile handleId credential references to use the lastClaimId
   - change mobile "claimId" references that are actually handles to "handleId"
   - check kick-start - handleId -> lastClaimId, fulfillsId,

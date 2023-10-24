@@ -677,18 +677,18 @@ class EndorserDatabase {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, updatedAt"
           + ", agentDid, recipientDid"
-          + ", fulfillsHandleId, fulfillsLastClaimId, fulfillsLinkConfirmed, fulfillsType"
-          + ", fulfillsPlanHandleId, fulfillsPlanLastClaimId"
+          + ", fulfillsHandleId, fulfillsLinkConfirmed, fulfillsType"
+          + ", fulfillsPlanHandleId"
           + ", amountConfirmed, amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
           entry.agentDid, entry.recipientDid,
-          entry.fulfillsHandleId, entry.fulfillsLastClaimId,
+          entry.fulfillsHandleId,
           entry.fulfillsLinkConfirmed, entry.fulfillsType,
-          entry.fulfillsPlanHandleId, entry.fulfillsPlanLastClaimId,
+          entry.fulfillsPlanHandleId,
           entry.amountConfirmed, entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
@@ -702,7 +702,7 @@ class EndorserDatabase {
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
        'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
-      ['issuedAt', 'amount', 'fullClaim', 'fulfillsPlanLastClaimId', 'fulfillsLinkConfirmed', 'fulfillsPlanLastClaimId', 'unit'],
+      ['issuedAt', 'amount', 'fullClaim', 'fulfillsLinkConfirmed', 'unit'],
       'description',
       ['issuedAt', 'updatedAt'],
       ['fulfillsLinkConfirmed'],
@@ -912,9 +912,9 @@ class EndorserDatabase {
           "UPDATE give_claim set jwtId = ?"
           + ", issuedAt = datetime(?), updatedAt = datetime(?)"
           + ", agentDid = ?, recipientDid = ?"
-          + ", fulfillsHandleId = ?, fulfillsLastClaimId = ?"
+          + ", fulfillsHandleId = ?"
           + ", fulfillsLinkConfirmed = ?, fulfillsType = ?"
-          + ", fulfillsPlanHandleId = ?, fulfillsPlanLastClaimId = ?"
+          + ", fulfillsPlanHandleId = ?"
           + ", unit = ?, amount = ?"
           + ", description = ?, fullClaim = ?"
           + " WHERE handleId = ?"
@@ -922,9 +922,9 @@ class EndorserDatabase {
       db.run(stmt, [
         entry.jwtId, entry.issuedAt, entry.updatedAt,
         entry.agentDid, entry.recipientDid,
-        entry.fulfillsHandleId, entry.fulfillsPlanLastClaimId,
+        entry.fulfillsHandleId,
         entry.fulfillsLinkConfirmed, entry.fulfillsType,
-        entry.fulfillsPlanHandleId, entry.fulfillsPlanLastClaimId,
+        entry.fulfillsPlanHandleId,
         entry.unit, entry.amount, entry.description, entry.fullClaim,
         entry.handleId,
       ], function(err) {
@@ -1511,19 +1511,19 @@ class EndorserDatabase {
       var stmt =
           "INSERT INTO offer_claim (jwtId, handleId, issuedAt, updatedAt"
           + ", offeredByDid, recipientDid"
-          + ", fulfillsHandleId, fulfillsLastClaimId, fulfillsLinkConfirmed"
-          + ", fulfillsPlanHandleId, fulfillsPlanLastClaimId"
+          + ", fulfillsHandleId, fulfillsLinkConfirmed"
+          + ", fulfillsPlanHandleId"
           + ", amount, unit, objectDescription"
           + ", validThrough, fullClaim)"
           + " VALUES"
-          + " (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?), ?)"
+          + " (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, datetime(?), ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
           entry.offeredByDid, entry.recipientDid,
-          entry.fulfillsHandleId, entry.fulfillsLastClaimId, entry.fulfillsLinkConfirmed ? 1 : 0,
-          entry.fulfillsPlanHandleId, entry.fulfillsPlanLastClaimId,
+          entry.fulfillsHandleId, entry.fulfillsLinkConfirmed ? 1 : 0,
+          entry.fulfillsPlanHandleId,
           entry.amount, entry.unit,
           entry.objectDescription, entry.validThrough, entry.fullClaim
         ],
@@ -1819,16 +1819,16 @@ class EndorserDatabase {
       var stmt = (
         "INSERT OR IGNORE INTO plan_claim (jwtId, issuerDid, agentDid, handleId"
           + ", name, description, image, endTime, startTime"
-          + ", fulfillsLinkConfirmed, fulfillsPlanLastClaimId, fulfillsPlanHandleId"
+          + ", fulfillsLinkConfirmed, fulfillsPlanHandleId"
           + ", locLat, locLon"
           + ", resultDescription, resultIdentifier, url"
-          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?)"
+          + ") VALUES (?, ?, ?, ?, ?, ?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?)"
       )
       db.run(stmt, [
         entry.jwtId, entry.issuerDid, entry.agentDid, entry.handleId,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.fulfillsLinkConfirmed ? 1 : 0,
-        entry.fulfillsPlanLastClaimId, entry.fulfillsPlanHandleId,
+        entry.fulfillsPlanHandleId,
         entry.locLat, entry.locLon,
         entry.resultDescription, entry.resultIdentifier, entry.url,
       ], function(err) {
@@ -1905,11 +1905,11 @@ class EndorserDatabase {
     })
   }
 
-  planInfoByLastClaimId(lastClaimId) {
+  planInfoByClaimId(claimId) {
     return new Promise((resolve, reject) => {
       db.get(
         "SELECT * FROM plan_claim WHERE handleId = (select handleId from jwt where id = ?)",
-        [lastClaimId],
+        [claimId],
         function(err, row) {
           if (err) {
             reject(err)
@@ -1959,7 +1959,7 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['fulfillsPlanLastClaimId', 'fulfillsPlanHandleId', 'image', 'url'],
+      ['fulfillsPlanHandleId', 'image', 'url'],
       'description',
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
@@ -1981,7 +1981,7 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['fulfillsPlanLastClaimId', 'fulfillsPlanHandleId', 'image', 'url'],
+      ['fulfillsPlanHandleId', 'image', 'url'],
       'description',
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
@@ -2048,7 +2048,7 @@ class EndorserDatabase {
         "UPDATE plan_claim set jwtId = ?, issuerDid = ?, agentDid = ?"
           + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
           + ", startTime = datetime(?), fulfillsLinkConfirmed = ?"
-          + ", fulfillsPlanLastClaimId = ?, fulfillsPlanHandleId = ?"
+          + ", fulfillsPlanHandleId = ?"
           + ", resultDescription = ?, resultIdentifier = ?, url = ?"
           + " WHERE handleId = ?"
       )
@@ -2056,7 +2056,7 @@ class EndorserDatabase {
         entry.jwtId, entry.issuerDid, entry.agentDid,
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.fulfillsLinkConfirmed ? 1 : 0,
-        entry.fulfillsPlanLastClaimId, entry.fulfillsPlanHandleId,
+        entry.fulfillsPlanHandleId,
         entry.resultDescription, entry.resultIdentifier, entry.url, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
