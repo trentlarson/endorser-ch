@@ -863,7 +863,7 @@ class ClaimService {
         if (provider.identifier) {
           await dbService.giveProviderInsert({
             giveHandleId: handleId,
-            providerHandleId: provider.identifier,
+            providerDid: provider.identifier,
             linkConfirmed: provider.identifier === issuerDid,
           })
         }

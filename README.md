@@ -94,7 +94,7 @@ server/api/services/claim.service.js )
 
 #### Test server
 
-You can use the test server APIs at [https://test.endorser.ch:8000](https://test.endorser.ch:8000)
+You can use the test server APIs at [https://tes-api.endorser.ch](https://test-api.endorser.ch)
 
 
 

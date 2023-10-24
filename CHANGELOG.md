@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.4.0] - 2023.10.22
 
 ### Added
+- Ability to link a PlanAction that fulfills another PlanAction.
 - Field lastClaimId as preferred way to link claims (over handleId)
 
 

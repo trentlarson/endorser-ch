@@ -111,8 +111,8 @@ CREATE INDEX give_fulfillsPlanId ON give_claim(fulfillsPlanId);
 CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);
 
 CREATE TABLE give_provider (
-    giveHandleId TEXT, -- handleId of the GiveAction which has this as a provider
-    providerHandleId TEXT, -- handleId of the provider claim
+    giveHandleId TEXT, -- handleId of the GiveAction to which the provider contributes
+    providerDid TEXT, -- DID of the provider entity who helps make the give possible
 
     -- whether both giver and provider have confirmed this relationship (boolean, 1 = confirmed)
     -- (This does not mean that receipt is confirmed, but that both sides of

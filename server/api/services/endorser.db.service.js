@@ -967,12 +967,12 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT INTO give_provider"
-        + " (giveHandleId, providerHandleId)"
+        + " (giveHandleId, providerDid)"
         + " VALUES (?, ?)"
       );
       db.run(
         stmt,
-        [entry.giveHandleId, entry.providerHandleId],
+        [entry.giveHandleId, entry.providerDid],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
         })
@@ -989,8 +989,8 @@ class EndorserDatabase {
       let data = [], rowErr
 
       // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
-      const sql = 'select providerHandleId as identifier, linkConfirmed from give_provider'
-          // for extra detail: + ' left join jwt on jwt.handleId = give_provider.providerHandleId'
+      const sql = 'select providerDid as identifier, linkConfirmed from give_provider'
+          // for extra detail: + ' left join jwt on jwt.handleId = give_provider.providerDid'
           + ' where give_provider.giveHandleId = ?'
 
       db.each(
@@ -1012,13 +1012,13 @@ class EndorserDatabase {
 
   /**
    *
-   * @param providerHandleId
+   * @param providerDid
    * @param afterIdInput
    * @param beforeIdInput
    * @returns { data, hitLimit } the Give records that gave credit to this provider
    */
-  givesProvidedBy(providerHandleId, afterIdInput, beforeIdInput) {
-    const params = [providerHandleId]
+  givesProvidedBy(providerDid, afterIdInput, beforeIdInput) {
+    const params = [providerDid]
     let moreWhere = ''
     if (afterIdInput) {
       moreWhere += ' AND jwtId > ?'
@@ -1033,7 +1033,7 @@ class EndorserDatabase {
     const sql =
         'SELECT * FROM give_claim'
         + ' INNER JOIN give_provider ON give_provider.giveHandleId = give_claim.handleId'
-        + ' WHERE give_provider.providerHandleId = ?'
+        + ' WHERE give_provider.providerDid = ?'
         + moreWhere
         + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
 
@@ -1080,10 +1080,10 @@ class EndorserDatabase {
     })
   }
 
-  giveProviderMarkLinkAsConfirmed(giveId, providerId) {
+  giveProviderMarkLinkAsConfirmed(giveId, providerDid) {
     return new Promise((resolve, reject) => {
-      const stmt = ("UPDATE give_provider SET linkConfirmed = 1 WHERE giveHandleId = ? AND providerHandleId = ?");
-      db.run(stmt, [giveId, providerId], function(err) {
+      const stmt = ("UPDATE give_provider SET linkConfirmed = 1 WHERE giveHandleId = ? AND providerDid = ?");
+      db.run(stmt, [giveId, providerDid], function(err) {
         if (err) {
           reject(err)
         } else {
