@@ -6,7 +6,7 @@ ALTER TABLE give_claim RENAME COLUMN fulfillsId TO fulfillsHandleId;
 ALTER TABLE give_claim RENAME COLUMN fulfillsPlanId TO fulfillsPlanHandleId;
 
 ALTER TABLE give_provider ADD COLUMN linkConfirmed INTEGER DEFAULT 0;
-ALTER TABLE give_provider RENAME COLUMN providerHandleId TO providerDid;
+ALTER TABLE give_provider RENAME COLUMN providerHandleId TO providerId;
 
 ALTER TABLE jwt ADD COLUMN lastClaimId TEXT;
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
