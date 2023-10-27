@@ -64,8 +64,10 @@ docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database
 When running on another domain (other than EndorserSearch.com):
 
 * Edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
+  (It won't break anything to keep the value, but resulting credentials could cause confusion when looking across systems.)
 
 * Edit the GLOBAL_ID_IRI_PREFIX in the util.js to have the global prefix for your domain in identifiers.
+  (Same note: doesn't break anything but is potentially confusing.)
 
 * ... and maybe the GLOBAL_ENTITY_ID_IRI_PREFIX if you want a different path after the domain. (These don't have to resolve, but it's a nice touch if they do.)
 
