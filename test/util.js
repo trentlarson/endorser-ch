@@ -48,20 +48,20 @@ const allDidsAreHiddenFor = (exceptDid) => (result) => allDidsAreHidden(result, 
     "https://www.w3.org/ns/did/v1",
     "https://w3id.org/security/suites/secp256k1recovery-2020/v2"
   ],
-  "id": "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51",
+  "id": "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F",
   "verificationMethod": [
     {
-      "id": "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51#controller",
+      "id": "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F#controller",
       "type": "EcdsaSecp256k1RecoveryMethod2020",
-      "controller": "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51",
-      "blockchainAccountId": "eip155:1:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51"
+      "controller": "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F",
+      "blockchainAccountId": "eip155:1:0x0000694B58C2cC69658993A90D3840C560f2F51F"
     }
   ],
   "authentication": [
-    "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51#controller"
+    "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F#controller"
   ],
   "assertionMethod": [
-    "did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51#controller"
+    "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F#controller"
   ]
 }
 **/
