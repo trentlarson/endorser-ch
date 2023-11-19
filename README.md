@@ -1,6 +1,24 @@
 # endorser-ch
 
-This repo is an API for creating and querying claims in privacy-preserving ways.  For a full system, use the mobile app linked at [the public EndorserSearch.com server](https://endorsersearch.com); there's [a test server](https://test.endorser.ch:8000).
+This repo is an API for creating and querying claims in privacy-preserving ways.
+
+In particular:
+
+* Store and retrieve textual data as public but ensure identifier visibility is fully controlled by each user.
+
+* Allow this without cost, at least for users in selected communities. (It does have some rate-limiting to manage user.)
+
+* Support certain use cases like counting confirmations or totals of certain claims. (This could be a separate service.)
+
+This incarnation does have access to the identifier registration and visibility networks, providing some ability to
+discover other users. This can be optional as well, allowing for discovery via users' preferred messaging networks.
+
+This only allows claims (AKA attestations) and confirmations that are cryptographically signed.
+
+To try in a full system, see TimeSafari.app or use the mobile app linked at
+[the public EndorserSearch.com server](https://endorsersearch.com);
+there's [a test server](https://test.endorser.ch:8000).
+
 
 
 

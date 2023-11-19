@@ -1,15 +1,19 @@
 ---
 tasks :
 
+- bad cert may have to do with dups in /etc/haproxy and /etc/haproxy/certs
+- add server version in some endpoint
+
 - add Lives of Giving project :
   - check kick-start - handleId -> lastClaimId, fulfillsId,
+    - fix "provide" references
   - in endorser-docs, add lastClaimId for all links, explain how it should be there if handleId is there
   - in endorser-docs, ensure Offer has recipientId and recipientPlanId
   - add tests for bad combinations of lastClaimId + handleId/identifier, context & type, fulfills, etc
 
-- update plan_claims in DB to remove any internalId values, after next rollout
+  - after releasing server, change givesForPlans to givesToPlans on both clients
 
-- allow Gives for free (ie. without registration)
+- update plan_claims in DB to remove any internalId values, after next rollout
 
 - mobile :
   - change provider bookmarks to fulfills
