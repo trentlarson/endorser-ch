@@ -62,7 +62,6 @@ CREATE TABLE give_claim (
     recipientDid TEXT, -- global ID of recipient
 
     fulfillsHandleId TEXT, -- global ID to the offer to which this Give applies
-    fulfillsLastClaimId TEXT, -- previous claim ID of the fulfills object, meaning the last one the client saw
     fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
 
     -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
@@ -75,17 +74,6 @@ CREATE TABLE give_claim (
     -- owns the data and claimed the relationship so they obviously implicitly confirmed it.
     --
     fulfillsLinkConfirmed INTEGER DEFAULT 0,
-
-    -- This is the ID of the plan claim JWT to which this Give directly links.
-    -- It is typically an internal ID, eg. 01D25AVGQG1N8E9JNGK7C7DZRD, but
-    -- also supports external, global IDs (but not internal global IDs).
-    --
-    -- It's important because a handle ID points to content that can change
-    -- over time, but when claiming that this fulfills a plan we want a
-    -- reference to the exact claim that was seen at the time of the link,
-    -- in case something substantial in the plan changed and no longer reflects
-    -- the intent of the provider(s) of this Give.
-    fulfillsPlanLastClaimId TEXT,
 
     -- This global, persistent plan ID is for the case where this is given to a
     -- broader plan that is nested inside the related data.
@@ -136,7 +124,18 @@ CREATE TABLE jwt (
     issuedAt DATETIME,
     issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
     jwtEncoded TEXT, -- the full original JWT
+
+    -- This is the ID of the claim JWT to which this claim directly links.
+    -- It is an internal ID, eg. 01D25AVGQG1N8E9JNGK7C7DZRD, but
+    -- could be used for external, global IDs (but not internal global IDs).
+    --
+    -- It's important because a handle ID points to content that can change
+    -- over time, but when a claim refers to another then we want a
+    -- reference to the exact claim that was seen at the time of the link,
+    -- in case something substantial in the plan changed and no longer reflects
+    -- the intent of the provider(s) of this claim.
     lastClaimId TEXT, -- the previous JWT ID for this entity, which the user is conceptually overwriting (see also handleId)
+
     nonceHashHex CHARACTER(64), -- hex of hash constructed with hashNonce to allow selective disclosure but to avoid correlation
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
@@ -161,14 +160,12 @@ CREATE TABLE offer_claim (
     recipientDid TEXT, -- global ID of recipient (if any)
 
     fulfillsHandleId TEXT, -- full ID of itemOffered.isPartOf (if any)
-    fulfillsLastClaimId TEXT, -- last claim ID of itemOffered.isPartOf (if any)
     -- true if recipient (itemOffered.isPartOf) issuer has confirmed the link
     fulfillsLinkConfirmed INTEGER DEFAULT 0,
 
     -- full ID of PlanAction (if itemOffered.isPartOf is one)
     -- This is set if there's a last claim ID.
     fulfillsPlanHandleId TEXT,
-    fulfillsPlanLastClaimId TEXT, -- last claim ID of PlanAction (if itemOffered.isPartOf is one)
 
     unit TEXT,
     amount REAL DEFAULT 0,
