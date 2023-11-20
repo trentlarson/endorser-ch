@@ -1404,12 +1404,18 @@ class ClaimService {
     if (claimInfo.lastClaimId) {
       // there's a claim ID which is local to this system
       const claimJwt = await dbService.jwtById(claimInfo.lastClaimId)
+      if (!claimJwt) {
+        throw `No claim found with lastClaimId ${claimInfo.lastClaimId}`
+      }
       claimInfo.lastClaimJwt = claimJwt
       // we know every claim has a handleId
       claimInfo.handleId = claimJwt.handleId
     }
     if (isGlobalEndorserHandleId(claimInfo.handleId)) {
       const handleJwt = await dbService.jwtLastByHandleIdRaw(claimInfo.handleId)
+      if (!handleJwt) {
+        throw `No claim found with handleId ${claimInfo.handleId}`
+      }
       claimInfo.handleJwt = handleJwt
     }
     return claimInfo
@@ -1541,7 +1547,11 @@ class ClaimService {
       // storing the JWT and give the client an HTTP error code (rather than
       // a 201 result with an embeddedError result).
       let claimIdDataList = findAllLastClaimIdsAndHandleIds(payloadClaim)
-      claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdDataList))
+      try {
+        claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdDataList))
+      } catch (err) {
+        return Promise.reject({ clientError: { message: err } })
+      }
       // If any of that data is not consistent, reject.
       const claimErrors = this.gatherErrors(payloadClaim, claimIdDataList)
       if (claimErrors.length > 0) {
