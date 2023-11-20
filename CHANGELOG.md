@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.4.2] - 2023.10.26
+## [3.4.3] - 2023.11.19
+
+### Added
+- Better error if an ID field is used inappropriately
+
+
+
+## [3.4.2] - 2023.10.26 - 0cd3cb0c5b57db188854c8fb69432002e262210c
 
 ### Added
 - Ability to link a PlanAction that fulfills another PlanAction
