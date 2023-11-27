@@ -261,7 +261,8 @@ class DbController {
     const westLocLon = Number.parseFloat(req.query.westLocLon)
     const eastLocLon = Number.parseFloat(req.query.eastLocLon)
     dbService.plansByLocationPaged(
-      minLocLat, maxLocLat, westLocLon, eastLocLon, req.query.afterId, req.query.beforeId
+      minLocLat, maxLocLat, westLocLon, eastLocLon,
+      req.query.afterId, req.query.beforeId, req.query.claimContents
     )
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })
@@ -326,7 +327,8 @@ class DbController {
     const westLocLon = Number.parseFloat(req.query.westLocLon)
     const eastLocLon = Number.parseFloat(req.query.eastLocLon)
     dbService.projectsByLocationPaged(
-      minLocLat, maxLocLat, westLocLon, eastLocLon, req.query.afterId, req.query.beforeId
+      minLocLat, maxLocLat, westLocLon, eastLocLon,
+      req.query.afterId, req.query.beforeId, req.query.claimContents
     )
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
       .then(results => { res.json(results).end() })

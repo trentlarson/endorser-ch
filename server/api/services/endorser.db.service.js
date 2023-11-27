@@ -2010,15 +2010,20 @@ class EndorserDatabase {
    * @param beforeIdInput
    * @returns {Promise<unknown>}
    */
-  plansByLocationPaged(minLat, maxLat, westLon, eastLon, afterIdInput, beforeIdInput) {
+  plansByLocationPaged(minLat, maxLat, westLon, eastLon, afterIdInput, beforeIdInput, claimContents) {
     return new Promise((resolve, reject) => {
+      let sql = "SELECT rowid, * FROM plan_claim"
+
+      const where = constructWhere({}, [], claimContents, ['name', 'description'])
+      if (where.length > 0) {
+        sql += where + " AND"
+      } else {
+        sql += " WHERE"
+      }
+
       const params = [minLat, maxLat, westLon, eastLon]
-      let sql = (
-        "SELECT rowid, * FROM plan_claim"
-          + " WHERE"
-          + " (locLat BETWEEN ? AND ?)"
-          + " AND (locLon BETWEEN ? AND ?)"
-      )
+      sql += " (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+
       if (afterIdInput) {
         params.push(afterIdInput)
         sql += " AND rowid > ?"
@@ -2187,15 +2192,20 @@ class EndorserDatabase {
    * @param beforeIdInput
    * @returns {Promise<unknown>}
    */
-  projectsByLocationPaged(minLat, maxLat, westLon, eastLon, afterIdInput, beforeIdInput) {
+  projectsByLocationPaged(minLat, maxLat, westLon, eastLon, afterIdInput, beforeIdInput, claimContents) {
     return new Promise((resolve, reject) => {
+      let sql = "SELECT rowid, * FROM plan_claim"
+
+      const where = constructWhere({}, [], claimContents, ['name', 'description'])
+      if (where.length > 0) {
+        sql += where
+      } else {
+        sql += " WHERE"
+      }
+
       const params = [minLat, maxLat, westLon, eastLon]
-      let sql = (
-          "SELECT rowid, * FROM project_claim"
-          + " WHERE"
-          + " (locLat BETWEEN ? AND ?)"
-          + " AND (locLon BETWEEN ? AND ?)"
-      )
+      sql += " (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+
       if (afterIdInput) {
         params.push(afterIdInput)
         sql += " AND rowid > ?"
