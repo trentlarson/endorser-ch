@@ -877,7 +877,7 @@ describe('6 - Plans', () => {
 
 
 
-describe('6 - item just for BVC, for testing', () => {
+describe('6 - item just for BVC, partly for testing data on a local server', () => {
 
   it('insert BVC plan', async () => {
     // Now can create this JWT with the ID that was assigned.
@@ -900,6 +900,19 @@ describe('6 - item just for BVC, for testing', () => {
         return Promise.reject(err)
       })
   }).timeout(5000)
+
+  it('find offer in search', () => {
+    return request(Server)
+        .get('/api/v2/report/plans?claimContents=Bountiful%20together')
+        .set('Authorization', 'Bearer ' + pushTokens[2])
+        .expect('Content-Type', /json/)
+        .then(r => {
+          expect(r.body.data).to.be.an('array').of.length(1)
+          expect(r.status).that.equals(200)
+        }).catch((err) => {
+          return Promise.reject(err)
+        })
+  }).timeout(3000)
 })
 
 

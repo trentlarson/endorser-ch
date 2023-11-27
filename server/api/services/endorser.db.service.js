@@ -23,7 +23,7 @@ export const MUST_FILTER_TOTALS_ERROR = 'MUST_FILTER_TOTALS_ON_PROJECT_OR_RECIPI
 
 
 
-function constructWhere(params, allowedColumns, claimContents, contentColumn, excludeConfirmations) {
+function constructWhere(params, allowedColumns, claimContents, contentColumns, excludeConfirmations) {
 
   var whereClause = ""
   var paramArray = []
@@ -60,7 +60,7 @@ function constructWhere(params, allowedColumns, claimContents, contentColumn, ex
     }
   }
 
-  if (claimContents && contentColumn) {
+  if (claimContents && contentColumns && contentColumns.length > 0) {
     // allow multiple words
     const terms = claimContents.split(" ")
     for (const term of terms) {
@@ -69,8 +69,16 @@ function constructWhere(params, allowedColumns, claimContents, contentColumn, ex
         if (whereClause.length > 0) {
           whereClause += " AND"
         }
-        whereClause += " INSTR(lower(" + contentColumn + "), lower(?))"
-        paramArray.push(trimmed)
+        whereClause += " ("
+        for (const column of contentColumns) {
+          if (column !== contentColumns[0]) {
+            // anything after the first will be OR'd together
+            whereClause += " OR"
+          }
+          whereClause += " INSTR(lower(" + column + "), lower(?))"
+          paramArray.push(trimmed)
+        }
+        whereClause += ")"
       }
     }
   }
@@ -120,7 +128,7 @@ function booleanify(number) {
      with optional "hitlimit" boolean telling if we hit the limit count for this query
 **/
 function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResultColumns,
-                                   contentColumn, dateColumns, booleanColumns,
+                                   contentColumns, dateColumns, booleanColumns,
                                    params, afterIdInput, beforeIdInput) {
 
   let claimContents = params.claimContents
@@ -132,7 +140,7 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
     params,
     searchableColumns,
     claimContents,
-    contentColumn,
+    contentColumns,
     excludeConfirmations
   )
   let allClause = where.clause
@@ -167,7 +175,7 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
           rowErr = err
         } else {
           var fieldNames =
-              searchableColumns.concat(otherResultColumns).concat([contentColumn])
+              searchableColumns.concat(otherResultColumns).concat(contentColumns)
           const result = {}
           for (let field of fieldNames) {
             if (row[field] === undefined) {
@@ -703,7 +711,7 @@ class EndorserDatabase {
       ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
        'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
       ['issuedAt', 'amount', 'fullClaim', 'fulfillsLinkConfirmed', 'unit'],
-      'description',
+      ['description'],
       ['issuedAt', 'updatedAt'],
       ['fulfillsLinkConfirmed'],
       params,
@@ -1242,7 +1250,7 @@ class EndorserDatabase {
       params,
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHashBase64', 'hashChainB64'],
       claimContents,
-      'claim',
+      ['claim'],
       excludeConfirmations
     )
     return this.jwtsByWhere(where.clause, where.params)
@@ -1258,7 +1266,7 @@ class EndorserDatabase {
       'id',
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHashBase64', 'hashChainB64'],
       ['claimContext', 'claim', 'lastClaimId'],
-      'claim',
+      ['claim'],
       ['issuedAt'],
       [],
       params,
@@ -1540,7 +1548,7 @@ class EndorserDatabase {
         'fulfillsPlanHandleId', 'validThrough'],
       ['amount', 'unit', 'amountGiven', 'amountGivenConfirmed',
        'nonAmountGivenConfirmed', 'fullClaim'],
-      'objectDescription',
+      ['objectDescription'],
       ['issuedAt', 'updatedAt', 'validThrough'],
       [],
       params,
@@ -1960,7 +1968,7 @@ class EndorserDatabase {
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['fulfillsPlanHandleId', 'image', 'url'],
-      'description',
+      ['description', 'name'],
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
       params,
@@ -1982,7 +1990,7 @@ class EndorserDatabase {
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['fulfillsPlanHandleId', 'image', 'url'],
-      'description',
+      ['description'],
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
       { issuerDid },
@@ -2137,7 +2145,7 @@ class EndorserDatabase {
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['image', 'url'],
-      'description',
+      ['description', 'name'],
       ['endTime', 'startTime'],
       [],
       params,
@@ -2159,7 +2167,7 @@ class EndorserDatabase {
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
       ['image', 'url'],
-      'description',
+      ['description', 'name'],
       ['endTime', 'startTime'],
       [],
       { issuerDid },
