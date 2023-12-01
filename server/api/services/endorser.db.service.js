@@ -23,7 +23,7 @@ export const MUST_FILTER_TOTALS_ERROR = 'MUST_FILTER_TOTALS_ON_PROJECT_OR_RECIPI
 
 
 
-function constructWhere(params, allowedColumns, claimContents, contentColumns, excludeConfirmations) {
+function constructWhereConditions(params, allowedColumns, claimContents, contentColumns, excludeConfirmations) {
 
   var whereClause = ""
   var paramArray = []
@@ -92,10 +92,15 @@ function constructWhere(params, allowedColumns, claimContents, contentColumns, e
     whereClause += " AND claimType != 'Confirmation'"
   }
 
-  if (whereClause.length > 0) {
-    whereClause = " WHERE" + whereClause
-  }
   return { clause: whereClause, params: paramArray }
+}
+
+function constructWhere(params, allowedColumns, claimContents, contentColumns, excludeConfirmations) {
+  const whereClause = constructWhereConditions(params, allowedColumns, claimContents, contentColumns, excludeConfirmations)
+  if (whereClause.clause.length > 0) {
+    whereClause.clause = " WHERE " + whereClause.clause
+  }
+  return whereClause
 }
 
 // convert SQLite date to ISO-formatted string
@@ -2014,15 +2019,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       let sql = "SELECT rowid, * FROM plan_claim"
 
-      const where = constructWhere({}, [], claimContents, ['name', 'description'])
-      if (where.length > 0) {
-        sql += where + " AND"
-      } else {
-        sql += " WHERE"
-      }
-
       const params = [minLat, maxLat, westLon, eastLon]
-      sql += " (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+      sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+
+      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'])
+      if (contentWhere.clause.length > 0) {
+        sql += " AND " + contentWhere.clause
+        params.push(...contentWhere.params)
+      }
 
       if (afterIdInput) {
         params.push(afterIdInput)
@@ -2196,15 +2200,14 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       let sql = "SELECT rowid, * FROM plan_claim"
 
-      const where = constructWhere({}, [], claimContents, ['name', 'description'])
-      if (where.length > 0) {
-        sql += where
-      } else {
-        sql += " WHERE"
-      }
-
       const params = [minLat, maxLat, westLon, eastLon]
-      sql += " (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+      sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+
+      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'])
+      if (contentWhere.clause.length > 0) {
+        sql += " AND " + contentWhere.clause
+        params.push(...contentWhere.params)
+      }
 
       if (afterIdInput) {
         params.push(afterIdInput)
