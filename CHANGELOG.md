@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.4.3] - 2023.11.19
+
+
+## [3.4.4] - 2023.12.17
+
+### Added
+- Text search in names
+
+### Fixed
+- Search including locations
+
+
+
+## [3.4.3] - 2023.11.19 - 0a1bc81598912961cbb35660ea658aa620487a80
 
 ### Added
 - Better error if an ID field is used inappropriately

@@ -63,7 +63,7 @@ Debug: `npm run dev:debug`
 
 Release:
 
-* Update CHANGELOG.md & package.json, then tag the release.
+* Update CHANGELOG.md & package.json, then tag the release. Then increment the package version with "-beta".
 
 Run on Docker:
 
