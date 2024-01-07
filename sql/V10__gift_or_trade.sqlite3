@@ -1,0 +1,2 @@
+
+ALTER TABLE give_claim ADD COLUMN giftNotTrade INTEGER DEFAULT null;

@@ -62,7 +62,7 @@ CREATE TABLE give_claim (
     recipientDid TEXT, -- global ID of recipient
 
     fulfillsHandleId TEXT, -- global ID to the offer to which this Give applies
-    fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
+    fulfillsType TEXT, -- type of that ID (assuming context of schema.org), currently always "Offer"
 
     -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
     --
@@ -79,6 +79,10 @@ CREATE TABLE give_claim (
     -- broader plan that is nested inside the related data.
     fulfillsPlanHandleId TEXT,
 
+    -- 1 if this is a gift, 0 if it's a transaction, null if unknown
+    giveNotTrade INTEGER DEFAULT 0,
+
+    -- These are if there is a TypeAndQuantityNode in the object.
     unit TEXT,
     amount REAL DEFAULT 0,
 

@@ -749,9 +749,24 @@ class ClaimService {
 
   async createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList) {
 
-    // first record details about a direct "fulfills" link (loading from DB if necessary)
-    const fulfillsLastClaimId = claim.fulfills?.lastClaimId
-    let fulfillsHandleId = claim.fulfills?.identifier
+    const embeddedResults = {}
+
+    let claimFulfills = claim.fulfills
+    if (Array.isArray(claim.fulfills)) {
+      if (claim.fulfills.length > 0) {
+        claimFulfills = claim.fulfills[0]
+        if (claim.fulfills[1]?.itemOffered || claim.fulfills[1]?.includesObject) {
+          embeddedResults.embeddedRecordWarning =
+              "The 'fulfills' field is an array but only the first one will be checked for amounts and items."
+        }
+      } else {
+        claimFulfills = undefined
+      }
+    }
+
+    // first, record details about a direct "fulfills" link (loading from DB if necessary)
+    const fulfillsLastClaimId = claimFulfills?.lastClaimId
+    let fulfillsHandleId = claimFulfills?.identifier
     let fulfillsClaim = claim.fulfills
     let fulfillsType = fulfillsClaim?.['@type']
     let fulfillsLinkConfirmed = false
@@ -787,29 +802,36 @@ class ClaimService {
       }
     }
 
+    /**
+     * check for any explicit markers for Trade or Donation
+     **/
+    // 3 possible values: true means a gift/donation, false means a trade, and null means unknown
+    let giftNotTrade = null;
+
+    let fulfillsArray = Array.isArray(claim.fulfills) ? claim.fulfills : [claim.fulfills]
+    for (let fulfills of fulfillsArray) {
+      if (fulfills?.['@type'] === 'TradeAction') {
+        giftNotTrade = false
+        break // stop because any trades make the whole thing a trade
+      } else if (fulfills?.['@type'] === 'DonateAction') {
+        giftNotTrade = true
+        // ... but continue because even one TradeAction makes the whole thing a trade
+      }
+    }
 
     /**
      *  Now record if this is a part of a PlanAction.
      **/
     let fulfillsPlanLastClaimId
     let fulfillsPlanHandleId
-    let embeddedResults = {}
 
-    // first look for Plan in the direct fulfills
-    if (fulfillsClaim?.['@type'] === 'PlanAction') {
-      fulfillsPlanLastClaimId = fulfillsLastClaimId
-      fulfillsPlanHandleId = fulfillsHandleId
-    }
+    // look for Plan in parentage, ie fulfilled item's object.isPartOf
+    const fulfillsPlanInfo =
+        await this.retrieveClauseClaimAndIssuer(fulfillsClaim?.object?.isPartOf, claimIdDataList, 'PlanAction')
+    fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
+    fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
 
-    // now look for Plan in parentage, ie fulfilled item's isPartOf
-    if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
-      // not found yet, so check isPartOf
-      const fulfillsPlanInfo =
-          await this.retrieveClauseClaimAndIssuer(fulfillsClaim?.isPartOf, claimIdDataList, 'PlanAction')
-      fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
-      fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
-    }
-    // now look for Plan in parentage, ie fulfilled item's itemOffered.isPartOf
+    // look for Plan in parentage, ie fulfilled item's itemOffered.isPartOf
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
       // not found yet, so check itemOffered.isPartOf
       const fulfillsPlanInfo =
@@ -817,10 +839,24 @@ class ClaimService {
       fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
       fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
     }
-    // now have fulfillsPlan IDs set
+    // now have fulfillsPlan IDs set if they exist
 
     const byRecipient = issuerDid == claim.recipient?.identifier
-    const amountConfirmed = byRecipient ? (claim.object?.amountOfThisGood || 1) : 0
+
+    let claimAmountObject = claim.object
+    if (Array.isArray(claim.object)) {
+      if (claim.object.length > 0) {
+        claimAmountObject = claim.object[0]
+        if (claim.object.length > 1) {
+          embeddedResults.embeddedRecordWarning =
+              (embeddedResults.embeddedRecordWarning || "")
+              + " The 'object' field is an array but only the first one will be checked for amounts."
+        }
+      } else {
+        claimAmountObject = undefined
+      }
+    }
+    const amountConfirmed = byRecipient ? (claimAmountObject?.amountOfThisGood || 1) : 0
 
     const entry = {
       jwtId,
@@ -835,8 +871,9 @@ class ClaimService {
       fulfillsType,
       fulfillsPlanHandleId,
       fulfillsPlanLastClaimId,
-      amount: claim.object?.amountOfThisGood,
-      unit: claim.object?.unitCode,
+      giftNotTrade,
+      amount: claimAmountObject?.amountOfThisGood,
+      unit: claimAmountObject?.unitCode,
       description: claim.description,
       amountConfirmed,
       fullClaim: canonicalize(claim),

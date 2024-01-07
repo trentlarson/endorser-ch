@@ -238,7 +238,7 @@ describe('6 - Plans', () => {
       })
   })
 
-  it('fail to retrieve plan without matching a location', () => {
+  it('retrieve one plan with matching a location', () => {
     return request(Server)
       .get('/api/v2/report/plansByLocation?'
         + 'minLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude - 1)
@@ -1409,6 +1409,7 @@ describe('6 - check give totals', () => {
         expect(r.body.success.fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
         expect(r.body.success.fulfillsPlanLastClaimId).to.equal(firstPlanIdSecondClaimInternal)
         expect(r.body.success.fulfillsLinkConfirmed).to.be.true
+        expect(r.body.success.giftNotTrade).to.be.null
         firstGiveRecordHandleId = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
@@ -1505,11 +1506,11 @@ describe('6 - check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
-    credObj.claim.fulfills['@type'] = 'GiveAction'
-    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(firstGiveRecordHandleId)
-    credObj.claim.object = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
-    }
+    credObj.claim.fulfills = [
+        { '@type': 'GiveAction', identifier: firstGiveRecordHandleId },
+        { '@type': 'DonateAction' },
+    ]
+    credObj.claim.object = { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' }
     credObj.claim.description = 'Found new homeschooling friends'
     credObj.claim.provider = {
       "@type": "Person", "identifier": creds[1].did
@@ -1558,6 +1559,7 @@ describe('6 - check give totals', () => {
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
         expect(r.body.data[0].fulfillsType).to.equal('GiveAction')
         expect(r.body.data[0].fulfillsPlanHandleId).to.be.null
+        expect(r.body.data[0].giftNotTrade).to.be.true
         expect(r.body.data[0].recipientDid).to.equal(null)
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -2261,7 +2263,23 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  /**
+  it('give #7 has correct settings', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/gives?handleId='
+        + encodeURIComponent(giveRecordHandleId7)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data[0].giftNotTrade).to.be.false
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+    /**
    * This fails... but it's not an important use case and may not be worth recovering.
    *
   it('give totals after #7 are correct when including trades', () => {

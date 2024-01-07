@@ -132,8 +132,8 @@ function booleanify(number) {
    @return Promise of object with "data" as a list of results, reverse-chronologically,
      with optional "hitlimit" boolean telling if we hit the limit count for this query
 **/
-function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResultColumns,
-                                   contentColumns, dateColumns, booleanColumns,
+function tableEntriesByParamsPaged(table, idColumn, searchableColumns,
+                                   contentColumns, dateColumns, booleanColumns, otherResultColumns,
                                    params, afterIdInput, beforeIdInput) {
 
   let claimContents = params.claimContents
@@ -180,7 +180,7 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns, otherResu
           rowErr = err
         } else {
           var fieldNames =
-              searchableColumns.concat(otherResultColumns).concat(contentColumns)
+            searchableColumns.concat(contentColumns).concat(dateColumns).concat(booleanColumns).concat(otherResultColumns)
           const result = {}
           for (let field of fieldNames) {
             if (row[field] === undefined) {
@@ -691,9 +691,9 @@ class EndorserDatabase {
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, updatedAt"
           + ", agentDid, recipientDid"
           + ", fulfillsHandleId, fulfillsLinkConfirmed, fulfillsType"
-          + ", fulfillsPlanHandleId"
+          + ", fulfillsPlanHandleId, giftNotTrade"
           + ", amountConfirmed, amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
@@ -701,7 +701,7 @@ class EndorserDatabase {
           entry.agentDid, entry.recipientDid,
           entry.fulfillsHandleId,
           entry.fulfillsLinkConfirmed, entry.fulfillsType,
-          entry.fulfillsPlanHandleId,
+          entry.fulfillsPlanHandleId, entry.giftNotTrade,
           entry.amountConfirmed, entry.amount, entry.unit, entry.description, entry.fullClaim
         ],
         function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })
@@ -715,10 +715,10 @@ class EndorserDatabase {
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
        'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
-      ['issuedAt', 'amount', 'fullClaim', 'fulfillsLinkConfirmed', 'unit'],
       ['description'],
       ['issuedAt', 'updatedAt'],
-      ['fulfillsLinkConfirmed'],
+      ['fulfillsLinkConfirmed', 'giftNotTrade'],
+      ['amount', 'fullClaim', 'unit'],
       params,
       afterIdInput,
       beforeIdInput
@@ -784,8 +784,8 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       const params = [handleId]
       let sql = "SELECT main.* FROM give_claim main"
-          + " INNER JOIN give_claim parent ON main.fulfillsHandleId = parent.handleId"
-          + " WHERE parent.handleId = ? AND main.fulfillsType = 'GiveAction'"
+        + " INNER JOIN give_claim parent ON main.fulfillsHandleId = parent.handleId"
+        + " WHERE parent.handleId = ? AND main.fulfillsType = 'GiveAction'"
 
       if (afterIdInput) {
         params.push(afterIdInput)
@@ -927,7 +927,7 @@ class EndorserDatabase {
           + ", agentDid = ?, recipientDid = ?"
           + ", fulfillsHandleId = ?"
           + ", fulfillsLinkConfirmed = ?, fulfillsType = ?"
-          + ", fulfillsPlanHandleId = ?"
+          + ", fulfillsPlanHandleId = ?, giftNotTrade = ?"
           + ", unit = ?, amount = ?"
           + ", description = ?, fullClaim = ?"
           + " WHERE handleId = ?"
@@ -937,7 +937,7 @@ class EndorserDatabase {
         entry.agentDid, entry.recipientDid,
         entry.fulfillsHandleId,
         entry.fulfillsLinkConfirmed, entry.fulfillsType,
-        entry.fulfillsPlanHandleId,
+        entry.fulfillsPlanHandleId, entry.giftNotTrade,
         entry.unit, entry.amount, entry.description, entry.fullClaim,
         entry.handleId,
       ], function(err) {
@@ -1270,10 +1270,10 @@ class EndorserDatabase {
       'jwt',
       'id',
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHashBase64', 'hashChainB64'],
-      ['claimContext', 'claim', 'lastClaimId'],
       ['claim'],
       ['issuedAt'],
       [],
+      ['claimContext', 'lastClaimId'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1551,11 +1551,11 @@ class EndorserDatabase {
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'offeredByDid', 'recipientDid',
         'fulfillsPlanHandleId', 'validThrough'],
-      ['amount', 'unit', 'amountGiven', 'amountGivenConfirmed',
-       'nonAmountGivenConfirmed', 'fullClaim'],
       ['objectDescription'],
       ['issuedAt', 'updatedAt', 'validThrough'],
       [],
+      ['amount', 'unit', 'amountGiven', 'amountGivenConfirmed',
+        'nonAmountGivenConfirmed', 'fullClaim'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1972,10 +1972,10 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['fulfillsPlanHandleId', 'image', 'url'],
       ['description', 'name'],
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
+      ['fulfillsPlanHandleId', 'image', 'url'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1994,10 +1994,10 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['fulfillsPlanHandleId', 'image', 'url'],
       ['description'],
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
+      ['fulfillsPlanHandleId', 'image', 'url'],
       { issuerDid },
       afterIdInput,
       beforeIdInput
@@ -2153,10 +2153,10 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['image', 'url'],
       ['description', 'name'],
       ['endTime', 'startTime'],
       [],
+      ['image', 'url'],
       params,
       afterIdInput,
       beforeIdInput
@@ -2175,10 +2175,10 @@ class EndorserDatabase {
        'name', 'description', 'endTime', 'startTime',
        'locLat', 'locLon',
        'resultDescription', 'resultIdentifier'],
-      ['image', 'url'],
       ['description', 'name'],
       ['endTime', 'startTime'],
       [],
+      ['image', 'url'],
       { issuerDid },
       afterIdInput,
       beforeIdInput
