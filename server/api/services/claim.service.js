@@ -27,7 +27,7 @@ const resolver =
         })
       })
 
-const SERVICE_ID = process.env.SERVICE_ID
+const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
 
 const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
       process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 10

@@ -59,7 +59,7 @@ echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser
 
 #### Other Ways To Run
 
-Debug: `npm run dev:debug`
+Debug: `NODE_ENV=dev npm run dev:debug`
 
 Release:
 
