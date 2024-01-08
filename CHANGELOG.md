@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+
+
+
+## [3.4.5] - 2024.01.07
+
 ### Added
 - giftNotTrade flag
-### Removed
-- Logic for GiveActions fulfilled by other GiveActions
+- Allow arrays in GiveAction 'fulfills' and 'object' fields
 
 
 
