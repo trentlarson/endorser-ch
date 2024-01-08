@@ -1506,12 +1506,15 @@ describe('6 - check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
+    delete credObj.claim.description
     credObj.claim.fulfills = [
         { '@type': 'GiveAction', identifier: firstGiveRecordHandleId },
         { '@type': 'DonateAction' },
     ]
-    credObj.claim.object = { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' }
-    credObj.claim.description = 'Found new homeschooling friends'
+    credObj.claim.object = [
+      { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' },
+      { '@type': 'CreativeWork', description: 'Found new homeschooling friends' },
+    ]
     credObj.claim.provider = {
       "@type": "Person", "identifier": creds[1].did
     }
@@ -1533,6 +1536,7 @@ describe('6 - check give totals', () => {
           )
         }
         expect(r.headers['content-type'], /json/)
+        expect(r.body.success.embeddedRecordWarning).to.not.be.null
         expect(r.body.success.handleId).to.be.a('string')
         secondGiveRecordHandleId = r.body.success.handleId
         expect(r.status).that.equals(201)
@@ -1588,10 +1592,12 @@ describe('6 - check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].description).to.equal('Found new homeschooling friends')
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
-        expect(r.body.data[0].fullClaim.description).to.equal('Found new homeschooling friends')
-        expect(r.body.data[0].fullClaim.object.amountOfThisGood).to.equal(1)
-        expect(r.body.data[0].fullClaim.object.unitCode).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(1)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].fullClaim.object[0].amountOfThisGood).to.equal(1)
+        expect(r.body.data[0].fullClaim.object[0].unitCode).to.equal('HUR')
         expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
         expect(r.body.data[0].issuedAt).to.be.not.null
         expect(r.body.data[0].agentDid).to.equal(creds[2].did)
@@ -1621,7 +1627,7 @@ describe('6 - check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].fullClaim.description).to.equal('Found new homeschooling friends')
+        expect(r.body.data[0].description).to.equal('Found new homeschooling friends')
         expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
         expect(r.body.data[0].issuedAt).to.be.not.null
         expect(r.status).that.equals(200)
@@ -1791,10 +1797,13 @@ describe('6 - check give totals', () => {
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].handleId).to.equal(thirdGiveRecordHandleId)
+        expect(r.body.data[0].description).to.equal('Found more homeschooling friends who jam')
         expect(r.body.data[0].fullClaim.description).to.equal('Found more homeschooling friends who jam')
         expect(r.body.data[0].issuedAt).to.be.not.null
         expect(r.body.data[1].handleId).to.equal(secondGiveRecordHandleId)
-        expect(r.body.data[1].fullClaim.description).to.equal('Found new homeschooling friends')
+        expect(r.body.data[1].description).to.equal('Found new homeschooling friends')
+        expect(r.body.data[1].fullClaim.description).to.be.undefined
+        expect(r.body.data[1].fullClaim.object[1].description).to.equal('Found new homeschooling friends')
         expect(r.body.data[1].issuedAt).to.be.not.null
         expect(r.status).that.equals(200)
       }).catch((err) => {

@@ -753,14 +753,14 @@ class ClaimService {
 
     let claimFulfills = claim.fulfills
     if (Array.isArray(claim.fulfills)) {
-      if (claim.fulfills.length > 0) {
-        claimFulfills = claim.fulfills[0]
-        if (claim.fulfills[1]?.itemOffered || claim.fulfills[1]?.includesObject) {
-          embeddedResults.embeddedRecordWarning =
-              "The 'fulfills' field is an array but only the first one will be checked for amounts and items."
-        }
-      } else {
+      if (claim.fulfills.length === 0) {
         claimFulfills = undefined
+      } else {
+        claimFulfills = claim.fulfills[0]
+        if (claim.fulfills.length > 1) {
+          embeddedResults.embeddedRecordWarning =
+              "The 'fulfills' field is an array but only the first one will be checked for amounts & items & plan links."
+        }
       }
     }
 
@@ -803,7 +803,7 @@ class ClaimService {
     }
 
     /**
-     * check for any explicit markers for Trade or Donation
+     * check all fulfills for any explicit markers for Trade or Donation
      **/
     // 3 possible values: true means a gift/donation, false means a trade, and null means unknown
     let giftNotTrade = null;
@@ -815,12 +815,12 @@ class ClaimService {
         break // stop because any trades make the whole thing a trade
       } else if (fulfills?.['@type'] === 'DonateAction') {
         giftNotTrade = true
-        // ... but continue because even one TradeAction makes the whole thing a trade
+        // ... but continue because even one TradeAction later makes the whole thing a trade
       }
     }
 
     /**
-     *  Now record if this is a part of a PlanAction.
+     *  Now record if the give is a part of a PlanAction.
      **/
     let fulfillsPlanLastClaimId
     let fulfillsPlanHandleId
@@ -843,19 +843,39 @@ class ClaimService {
 
     const byRecipient = issuerDid == claim.recipient?.identifier
 
+    // for the amount & unit, take the first object with both
     let claimAmountObject = claim.object
     if (Array.isArray(claim.object)) {
-      if (claim.object.length > 0) {
-        claimAmountObject = claim.object[0]
+      if (claim.object.length === 0) {
+        claimAmountObject = undefined
+      } else {
+        claimAmountObject = R.find(claimObj => claimObj.amountOfThisGood && claimObj.unitCode, claim.object)
         if (claim.object.length > 1) {
           embeddedResults.embeddedRecordWarning =
               (embeddedResults.embeddedRecordWarning || "")
-              + " The 'object' field is an array but only the first one will be checked for amounts."
+              + " The 'object' field has many but only the first with amounts & items will be counted."
         }
-      } else {
-        claimAmountObject = undefined
       }
     }
+
+    // for the description, take the current description or the first object with a description
+    let claimDescription = claim.description
+    if (!claimDescription) {
+      claimDescription = claim.object?.description
+      if (Array.isArray(claim.object)) {
+        if (claim.object.length === 0) {
+          claimDescription = undefined
+        } else {
+          claimDescription = R.find(claimObj => claimObj.description, claim.object)?.description
+          if (claim.object.length > 1) {
+            embeddedResults.embeddedRecordWarning =
+                (embeddedResults.embeddedRecordWarning || "")
+                + " The 'object' field has many but only the first with a description will be used."
+          }
+        }
+      }
+    }
+
     const amountConfirmed = byRecipient ? (claimAmountObject?.amountOfThisGood || 1) : 0
 
     const entry = {
@@ -874,7 +894,7 @@ class ClaimService {
       giftNotTrade,
       amount: claimAmountObject?.amountOfThisGood,
       unit: claimAmountObject?.unitCode,
-      description: claim.description,
+      description: claimDescription,
       amountConfirmed,
       fullClaim: canonicalize(claim),
     }
