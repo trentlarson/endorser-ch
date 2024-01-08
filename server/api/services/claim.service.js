@@ -767,8 +767,7 @@ class ClaimService {
     // first, record details about a direct "fulfills" link (loading from DB if necessary)
     const fulfillsLastClaimId = claimFulfills?.lastClaimId
     let fulfillsHandleId = claimFulfills?.identifier
-    let fulfillsClaim = claim.fulfills
-    let fulfillsType = fulfillsClaim?.['@type']
+    let fulfillsType = claimFulfills?.['@type']
     let fulfillsLinkConfirmed = false
     if (fulfillsLastClaimId) {
       // prefer to pull the data from the DB from previously signed last-claim info
@@ -776,8 +775,8 @@ class ClaimService {
       let loadedFulfillsJwt = loadedFulfillsIdInfo?.lastClaimJwt
       if (loadedFulfillsJwt) {
         fulfillsHandleId = loadedFulfillsJwt.handleId
-        fulfillsClaim = JSON.parse(loadedFulfillsJwt.claim)
-        fulfillsType = fulfillsClaim?.['@type']
+        claimFulfills = JSON.parse(loadedFulfillsJwt.claim)
+        fulfillsType = claimFulfills?.['@type']
         fulfillsLinkConfirmed =
             this.issuerSameAsPersonInLinkedJwt(
                 issuerDid,
@@ -791,8 +790,8 @@ class ClaimService {
       let loadedFulfillsJwt = loadedFulfillsIdInfo?.handleJwt
       if (loadedFulfillsJwt) {
         fulfillsHandleId = loadedFulfillsJwt.handleId
-        fulfillsClaim = JSON.parse(loadedFulfillsJwt.claim)
-        fulfillsType = fulfillsClaim?.['@type']
+        claimFulfills = JSON.parse(loadedFulfillsJwt.claim)
+        fulfillsType = claimFulfills?.['@type']
         fulfillsLinkConfirmed =
             this.issuerSameAsPersonInLinkedJwt(
                 issuerDid,
@@ -825,17 +824,24 @@ class ClaimService {
     let fulfillsPlanLastClaimId
     let fulfillsPlanHandleId
 
+    // first look for Plan in the direct fulfills
+    if (claimFulfills?.['@type'] === 'PlanAction') {
+      fulfillsPlanLastClaimId = fulfillsLastClaimId
+      fulfillsPlanHandleId = fulfillsHandleId
+    }
     // look for Plan in parentage, ie fulfilled item's object.isPartOf
-    const fulfillsPlanInfo =
-        await this.retrieveClauseClaimAndIssuer(fulfillsClaim?.object?.isPartOf, claimIdDataList, 'PlanAction')
-    fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
-    fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
+    if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
+      const fulfillsPlanInfo =
+        await this.retrieveClauseClaimAndIssuer(claimFulfills?.object?.isPartOf, claimIdDataList, 'PlanAction')
+      fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
+      fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
+    }
 
     // look for Plan in parentage, ie fulfilled item's itemOffered.isPartOf
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
       // not found yet, so check itemOffered.isPartOf
       const fulfillsPlanInfo =
-          await this.retrieveClauseClaimAndIssuer(fulfillsClaim?.itemOffered?.isPartOf, claimIdDataList, 'PlanAction')
+          await this.retrieveClauseClaimAndIssuer(claimFulfills?.itemOffered?.isPartOf, claimIdDataList, 'PlanAction')
       fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
       fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
     }
