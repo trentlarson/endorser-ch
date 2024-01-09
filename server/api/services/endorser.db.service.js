@@ -1,3 +1,4 @@
+
 const crypto = require('crypto')
 const R = require('ramda')
 const sqlite3 = require('sqlite3').verbose()
@@ -23,7 +24,7 @@ export const MUST_FILTER_TOTALS_ERROR = 'MUST_FILTER_TOTALS_ON_PROJECT_OR_RECIPI
 
 
 
-function constructWhereConditions(params, allowedColumns, claimContents, contentColumns, excludeConfirmations) {
+function constructWhereConditions(params, allowedColumns, claimContents, contentColumns, booleanColumns = [], excludeConfirmations) {
 
   var whereClause = ""
   var paramArray = []
@@ -53,6 +54,9 @@ function constructWhereConditions(params, allowedColumns, claimContents, content
       if (params[param] && params[param].match(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/)) {
         // treat dates differently for SQLite
         whereClause += " " + col + " " + operator + " datetime('" + params[param] + "')"
+      } else if (booleanColumns.includes(col)) {
+        whereClause += " " + col + " " + operator + " ?"
+        paramArray.push(params[param] === 'true' ? 1 : 0)
       } else {
         whereClause += " " + col + " " + operator + " ?"
         paramArray.push(params[param])
@@ -95,8 +99,8 @@ function constructWhereConditions(params, allowedColumns, claimContents, content
   return { clause: whereClause, params: paramArray }
 }
 
-function constructWhere(params, allowedColumns, claimContents, contentColumns, excludeConfirmations) {
-  const whereClause = constructWhereConditions(params, allowedColumns, claimContents, contentColumns, excludeConfirmations)
+function constructWhere(params, allowedColumns, claimContents, contentColumns, booleanColumns, excludeConfirmations) {
+  const whereClause = constructWhereConditions(params, allowedColumns, claimContents, contentColumns, booleanColumns, excludeConfirmations)
   if (whereClause.clause.length > 0) {
     whereClause.clause = " WHERE " + whereClause.clause
   }
@@ -146,6 +150,7 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns,
     searchableColumns,
     claimContents,
     contentColumns,
+    booleanColumns,
     excludeConfirmations
   )
   let allClause = where.clause
@@ -714,7 +719,8 @@ class EndorserDatabase {
       'give_claim',
       'jwtId',
       ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
-       'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed'],
+        'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed',
+        'giftNotTrade'],
       ['description'],
       ['issuedAt', 'updatedAt'],
       ['fulfillsLinkConfirmed', 'giftNotTrade'],
@@ -1256,6 +1262,7 @@ class EndorserDatabase {
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHashBase64', 'hashChainB64'],
       claimContents,
       ['claim'],
+      [],
       excludeConfirmations
     )
     return this.jwtsByWhere(where.clause, where.params)
@@ -2022,7 +2029,7 @@ class EndorserDatabase {
       const params = [minLat, maxLat, westLon, eastLon]
       sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
 
-      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'])
+      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'], [])
       if (contentWhere.clause.length > 0) {
         sql += " AND " + contentWhere.clause
         params.push(...contentWhere.params)
@@ -2203,7 +2210,7 @@ class EndorserDatabase {
       const params = [minLat, maxLat, westLon, eastLon]
       sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
 
-      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'])
+      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'], [])
       if (contentWhere.clause.length > 0) {
         sql += " AND " + contentWhere.clause
         params.push(...contentWhere.params)

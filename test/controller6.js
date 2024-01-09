@@ -1653,7 +1653,10 @@ describe('6 - check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
-    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(anotherProjectOfferId)
+    credObj.claim.fulfills = [
+      { lastClaimId: localFromGlobalEndorserIdentifier(anotherProjectOfferId) },
+      { '@type': 'DonateAction' },
+    ]
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
     }
@@ -1741,7 +1744,10 @@ describe('6 - check give totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.lastClaimId = localFromGlobalEndorserIdentifier(thirdGiveRecordHandleId)
-    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(anotherProjectOfferId)
+    credObj.claim.fulfills = [
+      { lastClaimId: localFromGlobalEndorserIdentifier(anotherProjectOfferId) },
+      { '@type': 'DonateAction' },
+    ]
     credObj.claim.object = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
     }
@@ -2288,7 +2294,46 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-    /**
+  it('gift search does not include trade', () => {
+    return request(Server)
+      .get('/api/v2/report/gives?giftNotTrade=true')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(2)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('trade search does include trade', () => {
+    return request(Server)
+      .get('/api/v2/report/gives?giftNotTrade=false')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(1)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('all give search does include all', () => {
+    return request(Server)
+      .get('/api/v2/report/gives')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(7)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  /**
    * This fails... but it's not an important use case and may not be worth recovering.
    *
   it('give totals after #7 are correct when including trades', () => {

@@ -756,10 +756,13 @@ class ClaimService {
       if (claim.fulfills.length === 0) {
         claimFulfills = undefined
       } else {
-        claimFulfills = claim.fulfills[0]
+        claimFulfills = R.find(
+          obj => obj.amountOfThisGood || obj.description || obj.handleId || obj.identifier || obj.lastClaimId || obj.object,
+          claim.fulfills
+        )
         if (claim.fulfills.length > 1) {
           embeddedResults.embeddedRecordWarning =
-              "The 'fulfills' field is an array but only the first one will be checked for amounts & items & plan links."
+              "The 'fulfills' field is an array but only the first with amountOfThisGood, description, handleId, identifier, lastClaimId, or object will be checked for amounts & items & plan links."
         }
       }
     }
@@ -802,23 +805,6 @@ class ClaimService {
     }
 
     /**
-     * check all fulfills for any explicit markers for Trade or Donation
-     **/
-    // 3 possible values: true means a gift/donation, false means a trade, and null means unknown
-    let giftNotTrade = null;
-
-    let fulfillsArray = Array.isArray(claim.fulfills) ? claim.fulfills : [claim.fulfills]
-    for (let fulfills of fulfillsArray) {
-      if (fulfills?.['@type'] === 'TradeAction') {
-        giftNotTrade = false
-        break // stop because any trades make the whole thing a trade
-      } else if (fulfills?.['@type'] === 'DonateAction') {
-        giftNotTrade = true
-        // ... but continue because even one TradeAction later makes the whole thing a trade
-      }
-    }
-
-    /**
      *  Now record if the give is a part of a PlanAction.
      **/
     let fulfillsPlanLastClaimId
@@ -847,6 +833,23 @@ class ClaimService {
     }
     // now have fulfillsPlan IDs set if they exist
 
+    /**
+     * check all fulfills for any explicit markers for Trade or Donation
+     **/
+      // 3 possible values: true means a gift/donation, false means a trade, and null means unknown
+    let giftNotTrade = null;
+
+    let fulfillsArray = Array.isArray(claim.fulfills) ? claim.fulfills : [claim.fulfills]
+    for (let fulfills of fulfillsArray) {
+      if (fulfills?.['@type'] === 'TradeAction') {
+        giftNotTrade = false
+        break // stop because any trades make the whole thing a trade
+      } else if (fulfills?.['@type'] === 'DonateAction') {
+        giftNotTrade = true
+        // ... but continue because even one TradeAction later makes the whole thing a trade
+      }
+    }
+
     const byRecipient = issuerDid == claim.recipient?.identifier
 
     // for the amount & unit, take the first object with both
@@ -859,7 +862,7 @@ class ClaimService {
         if (claim.object.length > 1) {
           embeddedResults.embeddedRecordWarning =
               (embeddedResults.embeddedRecordWarning || "")
-              + " The 'object' field has many but only the first with amounts & items will be counted."
+              + " The 'object' field has many but only the first with amounts & units will be counted."
         }
       }
     }
