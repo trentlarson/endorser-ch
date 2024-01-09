@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.4.5] - 2024.01.07
-
+## [3.5.0] - 2024.01.09
+### BEWARE
+- You must run the DB migration.
 ### Added
 - giftNotTrade flag
 - Allow arrays in GiveAction 'fulfills' and 'object' fields
