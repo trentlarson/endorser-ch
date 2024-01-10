@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.5.0] - 2024.01.09
+## [3.5.1] - 2024.01.09
 ### BEWARE
 - You must run the DB migration.
+- You must run the sql-by-hand 10.1 migration.
 ### Added
 - giftNotTrade flag
 - Allow arrays in GiveAction 'fulfills' and 'object' fields
