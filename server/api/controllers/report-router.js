@@ -40,7 +40,7 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
-  getGivesForPlansPaged(req, res, next) {
+  getGivesToPlansPaged(req, res, next) {
     const planIdsParam = JSON.parse(req.query.planIds)
     if (!Array.isArray(planIdsParam)) {
       return res.status(400).json({
@@ -49,7 +49,7 @@ class DbController {
       }).end()
     }
     const planIds = planIdsParam.map(globalId)
-    dbService.givesForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
+    dbService.givesToPlansPaged(planIds, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>
           R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
@@ -574,7 +574,7 @@ export default express
  * Get gives dedicated to any in a list of plan IDs
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/givesForPlans
+ * @route GET /api/v2/report/givesToPlans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - JSON.stringified array with handle IDs of the plans which have received gives
@@ -584,9 +584,9 @@ export default express
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/givesToPlans', dbController.getGivesForPlansPaged)
+  .get('/givesToPlans', dbController.getGivesToPlansPaged)
   // This endpoint can be removed when Time Safari code is updated.
-  .get('/givesForPlans', dbController.getGivesForPlansPaged)
+  .get('/givesForPlans', dbController.getGivesToPlansPaged)
 
 /**
  * Get give fulfilled by this give

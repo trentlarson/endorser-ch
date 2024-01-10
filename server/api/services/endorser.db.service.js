@@ -735,7 +735,7 @@ class EndorserDatabase {
      Start after afterIdInput (optional) and before beforeIdinput (optional)
      and retrieve all gives for planId in reverse chronological order.
   **/
-  givesForPlansPaged(planIds, afterIdInput, beforeIdInput) {
+  givesToPlansPaged(planIds, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       const inListStr = planIds.map(value => "?").join(',')
       let whereClause =
