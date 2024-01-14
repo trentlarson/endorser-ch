@@ -30,9 +30,9 @@ const resolver =
 const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
 
 const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
-      process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 10
+      process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 31
 const DEFAULT_MAX_CLAIMS_PER_WEEK =
-      process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 100
+      process.env.DEFAULT_MAX_CLAIMS_PER_WEEK || 140
 
 // Determine if a claim has the right context, eg schema.org
 //
@@ -1682,7 +1682,7 @@ class ClaimService {
               return Promise.reject(
                   {
                     clientError: {
-                      message: `You cannot use a local URI identifier if you did not create the original.`
+                      message: `You cannot edit a claim if you did not create the original or get assigned as an agent.`
                     }
                   }
               )

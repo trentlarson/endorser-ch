@@ -1,6 +1,9 @@
 ---
 tasks :
 
+- make higher limit for confirmations
+- host on Vultr
+
 - bad cert may have to do with dups in /etc/haproxy and /etc/haproxy/certs
 - add server version in some endpoint
 

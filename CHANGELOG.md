@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Changed
+- Limits, from 10 registrations per month to 31 and from 100 claims per week to 140
 
 
 
