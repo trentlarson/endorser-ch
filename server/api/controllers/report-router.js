@@ -135,7 +135,7 @@ class DbController {
   }
 
   getGiveTotals(req, res, next) {
-    const agentId = req.query.agentId
+    const agentDid = req.query.agentDid
     const includeTrades = req.query.includeTrades
     const recipientId = req.query.recipientId
     const planId = globalId(req.query.planId)
@@ -144,7 +144,7 @@ class DbController {
         // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
         error: "Request for recipient totals can only be made by that recipient."
       }).end()
-    } else if (agentId && agentId != res.locals.tokenIssuer) {
+    } else if (agentDid && agentDid != res.locals.tokenIssuer) {
       res.status(400).json({
         // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
         error: "Request for agent totals can only be made by that agent."
@@ -153,7 +153,7 @@ class DbController {
       const afterId = req.query.afterId
       const beforeId = req.query.beforeId
       const unit = req.query.unit
-      dbService.giveTotals(agentId, recipientId, planId, unit, includeTrades, afterId, beforeId)
+      dbService.giveTotals(agentDid, recipientId, planId, unit, includeTrades, afterId, beforeId)
         .then(results => { res.json(results).end() })
         .catch(err => {
           if (err == MUST_FILTER_TOTALS_ERROR) {
@@ -385,7 +385,7 @@ export default express
  * @property {string} jwtId
  * @property {string} handleId
  * @property {datetime} issuedAt
- * @property {string} agentId
+ * @property {string} agentDid
  * @property {string} recipientDid
  * @property {string} fulfillsLastClaimId - last seen claim ID of the offer this fulfills
  * @property {string} fulfillsHandleId - handle ID of the offer this fulfills
@@ -557,7 +557,7 @@ export default express
  * @route GET /api/v2/report/gives
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} agentId.query.optional - issuing agent
+ * @param {string} agentDid.query.optional - issuing agent
  * @param {string} handleId.query.optional - persistent handleId
  * @param {string} recipientId.query.optional - recipient
  * @param {string} fulfillsHandleId.query.optional - for ones that fulfill a particular item (eg. an offer)

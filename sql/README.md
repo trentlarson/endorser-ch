@@ -159,7 +159,7 @@ CREATE TABLE offer_claim (
     updatedAt DATETIME,
 
     -- note that did:peer are 58 chars
-    offeredByDid TEXT, -- global ID of the offering entity (issuer if empty)
+    offeredByDid TEXT, -- global ID of the offering entity (issuer if it was sent empty)
 
     recipientDid TEXT, -- global ID of recipient (if any)
 

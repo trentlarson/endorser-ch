@@ -862,14 +862,14 @@ class EndorserDatabase {
     })
   }
 
-  giveTotals(agentId, recipientDid, planId, unit, includeTrades, afterIdInput, beforeIdInput) {
+  giveTotals(agentDid, recipientDid, planId, unit, includeTrades, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       let allParams = []
       let whereClause = ''
-      if (agentId) {
+      if (agentDid) {
         whereClause += whereClause ? ' AND' : '' // because I copy-paste this stuff :-)
         whereClause += ' agentDid = ?'
-        allParams = allParams.concat([agentId])
+        allParams = allParams.concat([agentDid])
       }
       if (planId) {
         whereClause += whereClause ? ' AND' : ''

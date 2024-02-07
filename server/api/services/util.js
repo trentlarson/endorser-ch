@@ -170,7 +170,7 @@ function claimWithHashedDids(nonceAndClaimStr) {
 
 /**
  @param idAndClaim is { "nonce": String, "claim": Stringified JSON }
- @return hex-encoded hashed JSON string where all DIDs are hashed via hashNonceAndDid
+ @return hex-encoded sha256-hash JSON string where all DIDs are hashed via hashNonceAndDid (hex-encoded sha256 hash)
  **/
 function hashedClaimWithHashedDids(nonceAndClaimStr) {
   const claimStr = claimWithHashedDids(nonceAndClaimStr)
@@ -200,7 +200,7 @@ function nonceHashChain(seed, nonceAndClaimStrList) {
   )
 }
 
-// return hex of the latest merkle root of base64'd hashed claim strings (which probably should be canonical)
+// return base64 of the latest merkle root of base64'd hashed claim strings (which probably should be canonical)
 function claimHashChain(seed, claimStrList) {
   return R.reduce(
     (prev, claimStr) =>

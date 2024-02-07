@@ -172,10 +172,10 @@ class ClaimService {
               seedHex = hashHexArray[0].hashChainB64
             }
             const updates = []
-            let latesthashChainB64 = seedHex
+            let latestHashChainB64 = seedHex
             for (let hashAndClaimStr of hashAndClaimStrArray) {
               const canon = canonicalize(JSON.parse(hashAndClaimStr.claim))
-              latesthashChainB64 = claimHashChain(latesthashChainB64, [canon])
+              latestHashChainB64 = claimHashChain(latestHashChainB64, [canon])
               if (hashAndClaimStr.claimCanonHashBase64 === null) {
                 l.error(
                   "Found entry " + hashAndClaimStr.id + " without a hashed claim. Will create."
@@ -200,7 +200,7 @@ class ClaimService {
               updates.push(dbService.jwtSetMerkleHash(
                 hashAndClaimStr.id,
                 hashAndClaimStr.claimCanonHashBase64,
-                latesthashChainB64,
+                latestHashChainB64,
                 hashAndClaimStr.nonceHashHex
               ))
             }
