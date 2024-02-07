@@ -1,11 +1,14 @@
 ---
 tasks :
 
+- change plan & project endpoints to use jwtId as identifier rather than rowid
 - make higher limit for confirmations
 - host on Vultr
 
-- bad cert may have to do with dups in /etc/haproxy and /etc/haproxy/certs
-- add server version in some endpoint
+- 01 disallow search & other list results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
+- 01 disallow search & other list results where a DID is supplied that is not visible to the issuer (maybe related to previous?)
+- .2 bad cert may have to do with dups in /etc/haproxy and /etc/haproxy/certs
+- .5 show all claim details when issued by the issuer
 
 - add Lives of Giving project :
   - check kick-start - handleId -> lastClaimId, fulfillsId,
@@ -13,10 +16,11 @@ tasks :
   - in endorser-docs, add lastClaimId for all links, explain how it should be there if handleId is there
   - in endorser-docs, ensure Offer has recipientId and recipientPlanId
   - add tests for bad combinations of lastClaimId + handleId/identifier, context & type, fulfills, etc
+  - .2 after releasing server, change givesForPlans to givesToPlans on both clients
 
-  - after releasing server, change givesForPlans to givesToPlans on both clients
-
-- update plan_claims in DB to remove any internalId values, after next rollout
+- .5 update plan_claims in DB to remove any internalId values, after next rollout
+- 02 make visibility signal to be a VC and store it
+- .5 add server version in some endpoint
 
 - mobile :
   - change provider bookmarks to fulfills
@@ -38,7 +42,6 @@ tasks :
 
 - .2 remove port from Base URL at top of API docs https://api.endorser.ch/api-docs/
 - .5 add a potential arbitrary message on "check limits" endpoint
-- 01 give full result if the claim was made by the issuer (even if issuer cannot see others)
 - 01 fix swagger to show return types; doing this in express-swagger-generator before returning the swaggerObject will show the model definition in the endpoint - swaggerObject.paths['/api/v2/claim'].post.responses['200'].schema = { '$ref':'#/definitions/JwtArrayMaybeMoreBody' }
 
 - 01 get group & others to sign new pledge(s)
@@ -62,9 +65,6 @@ tasks :
 - 02 add "olderThanId" and "newerThanId" and start to replace "afterId" and "beforeId"
 
 - 04 Allow MetaMask SSI Snap to create JWT VCs https://medium.com/@blockchainlabum/ssi-snap-new-release-did-key-and-did-pkh-ceramic-network-jwt-vc-official-dapp-d295e5e28cd7
-
-- 01 disallow search & other list results that only matched on DID content (ie. don't return results that don't contain the search criteria after DIDs are hidden)
-- 01 disallow search & other list results where a DID is supplied that is not visible to the issuer (maybe related to previous?)
 
 - 01 allow searches by agent & recipient DIDs if they're visible to issuer (changing router getGiveTotals/getOfferTotals checks) id:specific-searches-visible-if-allowed
 
@@ -243,7 +243,6 @@ tasks :
   - ... and add confirmation IDs for confirmation claims
 - 04 fix infura.io "legacy access request rate exceeded" (esp. in tests for ethr-did-resolver) :
   - may be due to SimpleSigner in controller.js and https://github.com/decentralized-identity/did-jwt/blob/937973e31d4bee3ee32dd1e077f11d31b6b868cb/README.md#1-create-a-did-jwt
-- .5 allow the issuer to see all the details of JWTs they've issued
 - 01 show an error, eg. on a confirmation for a claim that doesn't exist
 - 02 change /claim endpoint for searches to /claims or /report/claims (and gracefully migrate, incl mobile)
 - 04 publish txid of merkle-tree of the transactions (then automate merkle-tree) :
