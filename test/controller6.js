@@ -173,8 +173,9 @@ before(async () => {
 
 })
 
-let firstPlanIdExternal, firstPlanIdSecondClaimInternal, secondPlanIdExternal, secondPlanIdInternal,
-    childPlanIdExternal, childPlanIdInternal, childPlanIdInternalClaim2
+let firstPlanIdExternal, firstPlanIdSecondClaimInternal,
+  secondPlanIdExternal, secondPlanIdInternal,
+  childPlanIdExternal, childPlanIdInternal, childPlanIdInternalClaim2
 
 describe('6 - Plans', () => {
 
@@ -350,7 +351,7 @@ describe('6 - Plans', () => {
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimPlanAction)
     planObj.claim.agent.identifier = creds[1].did
-    planObj.claim.identifier = firstPlanIdExternal
+    planObj.claim.lastClaimId = firstPlanIdInternal
     planObj.claim.description = ENTITY_NEW_DESC
     planObj.iss = creds[2].did
     const planJwtEnc = await credentials[2].createVerification(planObj)
@@ -768,7 +769,6 @@ describe('6 - Plans', () => {
   it('update child plan and update fulfills claim ID link', async () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
-    planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = firstPlanIdExternal
     planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal
     planBy2FulfillsBy1JwtObj.claim.lastClaimId = childPlanIdInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did

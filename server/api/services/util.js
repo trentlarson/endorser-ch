@@ -218,8 +218,8 @@ function isObject(item) {
   return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
-// return an array that contains all claimId properties,
-// where each value is an object of { lastClaimId || handleId, suppliedType, clause }
+// return an array that contains details of all claimId references in the clause,
+// where each element is an object of { lastClaimId || handleId, suppliedType?, clause }
 function findAllLastClaimIdsAndHandleIds(clause) {
   let clauseIdsAndHandleIds = []
   // we prefer lastClaimId, we'll take handleId, but we don't want both in the result

@@ -17,7 +17,13 @@ This only allows claims (AKA attestations) and confirmations that are cryptograp
 
 To try in a full system, see TimeSafari.app or use the mobile app linked at
 [the public EndorserSearch.com server](https://endorsersearch.com);
-there's [a test server](https://test.endorser.ch:8000).
+there's [a test server](https://api-test.endorser.ch).
+
+
+For the roadmap, see [project.task.yml](./project.task.yml).
+
+
+
 
 
 
@@ -190,7 +196,7 @@ await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
 //import * as utility from './endorser-mobile/src/utility/utility' // require does not work
 
 # Now you can go to a terminal and put that JWT value into a JWT env var make a call as user #0.
-curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://test.endorser.ch:8000/api/claims
+curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://api-test.endorser.ch/api/claims
 
 ```
 
@@ -272,9 +278,13 @@ curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-T
 
 
 
+
+
+
+
 ## APIs
 
-We have [Swagger docs on production](https://endorser.ch:3000).
+We have [Swagger docs on production](https://api.endorser.ch).
 
 ... but note that these are created by hand and may not be up to date with the latest code.
 (I hope to automatically generate these from the code in the future so that both planned & existing APIs are available.)
@@ -303,7 +313,7 @@ Without extra parameters, these will return the most recent batch. To get result
 For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next batch that goes further in the past (excluding that one):
 
 ```
-curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
+curl -X GET "https://api.endorser.ch/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
 ```
 
 
@@ -312,23 +322,32 @@ curl -X GET "https://endorser.ch:3000/api/v2/report/claims?beforeId=01GQBE7Q0RQQ
 These endpoints return a "success" property, possibly with some data.
 
 
+#### Claim IDs
+
+Each claim is assigned a unique ID by this system. It is possible to also link to other chains by providing a full URN identifier,
+Here are the identifiers and how they're used:
+
+* JWT `id` is assigned to each verifiable credential JWT. It is used in other cached tables
+as the `jwtId` (eg. in `plan_claim`). It is a ULID, a string of 26 characters like "01GQBE7Q0RQQAGJMEEW6RSGKTF".
+
+* A `handleId` is a unique identifier used to refer to an entity which might have edits in a chain of claims.
+For example, a project could be created and then later edited, and all such claims can be tied together with this.
+By default, it is a global ID made out of the JWT `id`, eg. "http://endorser.ch/entity/01GQBE7Q0RQQAGJMEEW6RSGKTF",
+but it might be some other global `identifier` that was supplied by the user. This is metadata, typically not set directly;
+any subsequent claims sent to the server should send a `lastClaimId` to refer to the latest claim with the same `handleId`.
+
+* An `identifier` can be supplied when submitting a claim if the client wants to use their own identifier
+(such as an identifier from another chain); in those cases, it is also used as the `handleId`.
+This is a full global URN. It may be a DID. When referring to preceding claims, use `lastClaimId` instead.
+
+* A `lastClaimId` is the way to refer to a previous claim. (An `identifier` may still be accepted, but that use is deprecated.)
+It is typically a ULID, the short `id` reference to another internal claim that this should extend.
+
+* A `jwtId` is the `id` of the JWT that was used to submit the claim, found in the tables that cache the claim info
+(eg. in `plan_claim` and other `_claim` tables).
 
 
 
-
-
-
-## Kudos
-
-Project initialized with https://github.com/cdimascio/generator-express-no-stress
-
-## Related Work
-
-- [Sovrin AKA Hyperledger Indy](https://sovrin.org)
-  - [Verifiable Organizations Network](https://vonx.io) who showed [a mobile demo at IIW 28](https://iiw.vonx.io).
-- [Accredible](https://www.accredible.com/) and their [verification system](https://verify.accredible.com) which [uses Tierion](https://help.accredible.com/hc/en-us/articles/115005058985-Manually-Verifying-Blockchain-Records)
-- [Blockcerts for blockchain credentials](https://www.blockcerts.org)
-- [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
 
 
 
@@ -592,14 +611,6 @@ R.map((pair) => fs.appendFileSync('metrics-hidden-issuer.csv', pair[0] + ',' + p
 
 
 
-## Organization of This Project
-
-See [tasks.yml](tasks.yml).
-
-
-
-
-
 
 ## Misc
 
@@ -684,6 +695,25 @@ Open questions:
   If we fix this, we can fix some hacks in SignClaim (look for "milliseconds").
 
 
-References
 
+
+
+
+## Related Work
+
+- [Sovrin AKA Hyperledger Indy](https://sovrin.org)
+  - [Verifiable Organizations Network](https://vonx.io) who showed [a mobile demo at IIW 28](https://iiw.vonx.io).
+- [Accredible](https://www.accredible.com/) and their [verification system](https://verify.accredible.com) which [uses Tierion](https://help.accredible.com/hc/en-us/articles/115005058985-Manually-Verifying-Blockchain-Records)
+- [Blockcerts for blockchain credentials](https://www.blockcerts.org)
+- [Open Badges spec] (https://www.imsglobal.org/sites/default/files/Badges/OBv2p0Final/index.html)
+
+
+
+
+
+## Kudos
+
+- [Veramo.io](https://veramo.io) & [Decentralized Identity projects](https://github.com/decentralized-identity)
+- https://github.com/cdimascio/generator-express-no-stress
 - uport-connect classes https://github.com/uport-project/uport-connect/blob/develop/docs/reference/index.md#Connect+requestDisclosure
+
