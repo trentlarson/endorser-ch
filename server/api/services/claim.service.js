@@ -1702,16 +1702,28 @@ class ClaimService {
             )
           }
         }
+
       } else if (payloadClaim.identifier) {
         // There is no lastClaimId but there's an identifier, so we need to run checks that they have permissions.
+
+        // Check that the previous entry exists.
+        if (isGlobalEndorserHandleId(payloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
+          return Promise.reject(
+            {
+              clientError: {
+                message: `If you supply an Endorser identifier then it must have been sent earlier.`
+              }
+            }
+          )
+        }
 
         // This has an identifier so check the previous instance to see if they are allowed to edit.
         // (Is this redundant now that we've got lastClaimId?)
         // 'identifier' is a schema.org convention; may add others
         handleId =
           isGlobalUri(payloadClaim.identifier)
-          ? payloadClaim.identifier
-          : globalFromInternalIdentifier(payloadClaim.identifier)
+            ? payloadClaim.identifier
+            : globalFromInternalIdentifier(payloadClaim.identifier)
 
         const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
         if (prevEntry) {
@@ -1723,8 +1735,9 @@ class ClaimService {
                   message: `You cannot change the type of an existing entry.`
                 } }
             )
+          }
 
-          } else if (payload.iss == prevEntry.issuer) {
+          if (payload.iss == prevEntry.issuer) {
             // The issuer is the same as the previous.
             // We're OK to continue.
           } else if (payload.iss == handleId) {
