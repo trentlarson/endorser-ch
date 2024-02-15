@@ -8,8 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Changed in DB
+- ?
+
+
+
+## [3.5.2] - 2024.01.15
 ### Changed
 - Limits, from 10 registrations per month to 31 and from 100 claims per week to 140
+### Fixed
+- Problem updating with lastClaimId as agent
+### Changed in DB
+- Nothing
 
 
 
