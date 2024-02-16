@@ -35,14 +35,13 @@ For the roadmap, see [project.task.yml](./project.task.yml).
 Requires node v14+
 
 * You can use [asdf](https://asdf-vm.com) with this project.
-* ... or [tea](tea.xyz)
+* ... or [pkgx](https://pkgx.dev):
+
+```
+sh <(curl https://pkgx.sh) +npm sh
+````
 
 #### Dependencies
-
-| Project      | Version  |
-|--------------|----------|
-| nodejs.org   | ^16.18.0 |
-| npmjs.com    | ^9.1.3   |
 
 ```shell
 # install dependencies
