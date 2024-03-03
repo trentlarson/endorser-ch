@@ -5,6 +5,7 @@ import chai from 'chai'
 import chaiAsPromised from "chai-as-promised"
 import chaiString from 'chai-string'
 import crypto from 'crypto'
+import { createJWT } from 'did-jwt'
 import request from 'supertest'
 import { DateTime } from 'luxon'
 import R from 'ramda'
@@ -610,6 +611,44 @@ describe('1 - Claim', () => {
       return request(Server)
         .post('/api/claim')
         .send({"jwtEncoded": badlySignedJwt})
+        .expect('Content-Type', /json/)
+        .then(r => {
+          expect(r.status).that.equals(400)
+          expect(r.body)
+            .to.be.an('object')
+            .that.has.property('error')
+            .that.has.property('code')
+            .to.equal('JWT_VERIFY_FAILED')
+          expect(r.body)
+            .to.be.an('object')
+            .that.has.property('error')
+            .that.has.property('message')
+            .to.endsWith('Signature invalid for JWT')
+        })
+    }
+  }).timeout(3000)
+
+  it('should fail to submit signed JWT for someone else', async () => {
+
+    if (process.env.NODE_ENV === 'test-local') {
+      console.log('Skipping JWT verification test that requires online verification.')
+    } else {
+      const claimBvcFor0ByEvil1JwtObj = R.clone(testUtil.jwtTemplate)
+      claimBvcFor0ByEvil1JwtObj.claim = R.clone(claimBvcFor0)
+      claimBvcFor0ByEvil1JwtObj.sub = creds[0].did
+      const claimBvcFor0ByEvil1JwtProm = createJWT(
+        claimBvcFor0ByEvil1JwtObj,
+        {
+          payload: claimBvcFor0ByEvil1JwtObj,
+          issuer: creds[0].did,
+          signer: credentials[1].signer,
+          alg: 'ES256K-R'
+        }
+      )
+      const claimBvcFor0ByEvil1JwtEnc = await claimBvcFor0ByEvil1JwtProm
+      request(Server)
+        .post('/api/claim')
+        .send({"jwtEncoded": claimBvcFor0ByEvil1JwtEnc})
         .expect('Content-Type', /json/)
         .then(r => {
           expect(r.status).that.equals(400)

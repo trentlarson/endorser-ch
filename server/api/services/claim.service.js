@@ -953,6 +953,8 @@ class ClaimService {
       {
         const origClaim = claim['object']
         if (Array.isArray(origClaim)) {
+          // deprecated; we recommend sending one confirmation at a time for easier checks when hashing content, making references, etc.
+
           // if we run these in parallel then there can be duplicates
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (let claim of origClaim) {
@@ -1329,6 +1331,9 @@ class ClaimService {
       }
 
       { // handle multiple claims
+
+        // deprecated; we recommend sending one confirmation at a time for easier checks when hashing content, making references, etc.
+
         const origClaims = claim['originalClaims']
         if (origClaims) {
           // if we run these in parallel then there can be duplicates
@@ -1425,7 +1430,7 @@ class ClaimService {
     return R.mergeLeft(embeddedResults, { networkResults: allNetRecords })
   }
 
-  // return Promise of at least { payload, header, issuer }
+  // return Promise of at least { issuer, payload, verified boolean }
   // ... and also if successfully verified: data, doc, signature, signer
   async decodeAndVerifyJwt(jwt) {
     if (process.env.NODE_ENV === 'test-local') {
@@ -1439,7 +1444,7 @@ class ClaimService {
               )
         payload.exp = nowEpoch + 100
       }
-      return {payload, issuer: payload.iss, header: {typ: "test"}} // other elements will = undefined
+      return { verified: true, issuer: payload.iss, payload } // other elements will = undefined
     } else {
 
       try {

@@ -693,7 +693,7 @@ describe('6 - Plans', () => {
     const confirmChildPlanFor2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     confirmChildPlanFor2FulfillsBy1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
     const planClaim = R.clone(planBy2FulfillsBy1Claim)
-    planClaim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal
+    planClaim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal // just to make it like the current record
     planClaim.lastClaimId = childPlanIdInternal
     confirmChildPlanFor2FulfillsBy1JwtObj.claim.object.push(planClaim)
     confirmChildPlanFor2FulfillsBy1JwtObj.sub = creds[2].did

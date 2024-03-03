@@ -67,7 +67,7 @@ function requesterInfo(req, res, next) {
   if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
     // Is every endpoint OK to access now that we're hiding DIDs?
     if (req.originalUrl.startsWith("/api/action")
-        || req.originalUrl.startsWith("/api/claim") // even for GET (we just hide DIDs)
+        || req.originalUrl.startsWith("/api/claim") // POST checks for jwtEncoded, GET hides all DIDs
         || req.originalUrl.startsWith("/api/event")
         || req.originalUrl.startsWith("/api/plan")
         || req.originalUrl.startsWith("/api/project")

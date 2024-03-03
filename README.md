@@ -342,6 +342,9 @@ This is a full global URN. It may be a DID. When referring to preceding claims, 
 * A `lastClaimId` is the way to refer to a previous claim. (An `identifier` may still be accepted, but that use is deprecated.)
 It is typically a ULID, the short `id` reference to another internal claim that this should extend.
 
+  * Note that the ACDC approach has the link to previous claims outside the claim. I'm sure that will be preferable to
+  this approach where the link is inside the claim.
+
 * A `jwtId` is the `id` of the JWT that was used to submit the claim, found in the tables that cache the claim info
 (eg. in `plan_claim` and other `_claim` tables).
 

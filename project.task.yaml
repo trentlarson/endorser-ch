@@ -189,6 +189,7 @@ tasks :
   - .2 type:bug name got erased after new install, entering name & saving, creating new ID, and going back to main screen and then settings
 
   - .2 Distinguish issuer on confirmation list of new claims?
+  - .2 in ConfirmOthers, don't show any claims issued by the current user
 
   - .5 add rejections?
   - .5 add TradeAction? - BTC for food?
@@ -252,7 +253,6 @@ tasks :
 - 02 allow read of all data in claims/confirmations issued by requester
 - 02 in text search - show claim contents instead of DB records
 - 02 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
-- 01 remove the didVisibleToDids when listing possible confirmations
 - 02 change name of app from "uport demo" (when logging in)
 - 01 fix UI disallowing any calls for an expired token (see working-self on 2022.04.06) id:expired-uport-token
 - 01 add .json(someErr) to all routers in the error path
