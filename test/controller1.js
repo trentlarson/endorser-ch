@@ -633,20 +633,17 @@ describe('1 - Claim', () => {
     if (process.env.NODE_ENV === 'test-local') {
       console.log('Skipping JWT verification test that requires online verification.')
     } else {
-      const claimBvcFor0ByEvil1JwtObj = R.clone(testUtil.jwtTemplate)
-      claimBvcFor0ByEvil1JwtObj.claim = R.clone(claimBvcFor0)
-      claimBvcFor0ByEvil1JwtObj.sub = creds[0].did
       const claimBvcFor0ByEvil1JwtProm = createJWT(
-        claimBvcFor0ByEvil1JwtObj,
+        claimBvcFor0By0JwtObj,
         {
-          payload: claimBvcFor0ByEvil1JwtObj,
+          payload: claimBvcFor0By0JwtObj,
           issuer: creds[0].did,
           signer: credentials[1].signer,
           alg: 'ES256K-R'
         }
       )
       const claimBvcFor0ByEvil1JwtEnc = await claimBvcFor0ByEvil1JwtProm
-      request(Server)
+      return request(Server)
         .post('/api/claim')
         .send({"jwtEncoded": claimBvcFor0ByEvil1JwtEnc})
         .expect('Content-Type', /json/)
@@ -666,19 +663,43 @@ describe('1 - Claim', () => {
     }
   }).timeout(3000)
 
-  it('should add a new action claim', () =>
-     request(Server)
-     .post('/api/claim')
-     .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body).to.be.a('string')
-       firstId = r.body
-       expect(r.status).that.equals(201)
-     })
-  ).timeout(5000)
+  it('should add a new action claim with a raw createJWT call', async () => {
+    const claimBvcFor0By0RawJwtProm = createJWT(
+      claimBvcFor0By0JwtObj,
+      {
+        payload: claimBvcFor0By0JwtObj,
+        issuer: creds[0].did,
+        signer: credentials[0].signer,
+        alg: 'ES256K-R'
+      }
+    )
+    const claimBvcFor0By0RawJwtEnc = await claimBvcFor0By0RawJwtProm
+    return request(Server)
+      .post('/api/claim')
+      .send({"jwtEncoded": claimBvcFor0By0RawJwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body).to.be.a('string')
+        firstId = r.body
+        expect(r.status).that.equals(201)
+      })
+  }).timeout(5000)
+
   // All these 5000 waits are due to JWT verify, and the time doubled with ethr-did-resolver v6.
   // Each verification takes 1-1.8 seconds (sometimes over 2) and it verifies the push token and the claim.
+
+  // This is a mirror of the previous test in a simpler way.
+  // it('should add a new action claim from standard createVerification call', () =>
+  //    request(Server)
+  //    .post('/api/claim')
+  //    .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
+  //    .expect('Content-Type', /json/)
+  //    .then(r => {
+  //      expect(r.body).to.be.a('string')
+  //      firstId = r.body
+  //      expect(r.status).that.equals(201)
+  //    })
+  // ).timeout(5000)
 
   it('should get our claim #1 with Authorization Bearer token', () =>
      request(Server)
