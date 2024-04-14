@@ -58,7 +58,7 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 NODE_ENV=dev npm run dev
 
 # register ths first permissioned user by adding a DID thus:
-echo "INSERT INTO registration (did) VALUES ('YOUR_DID');" | sqlite3 ../endorser-ch-dev.sqlite3
+echo "INSERT INTO registration (did, maxClaims, maxRegs) VALUES ('YOUR_DID', 100, 10000);" | sqlite3 ../endorser-ch-dev.sqlite3
 # ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
 ```
 
@@ -184,15 +184,17 @@ const testUtil = require('../endorser-ch/test/util') // import does not work
 // One approach:
 await testUtil.credentials[0].signJWT({a:1})
 
-// Another approach:
+// Another approach (only needs did-jwt lib):
 const didJwt = require('did-jwt')
 const cred = testUtil.creds[0]
 const signer = didJwt.SimpleSigner(cred.privateKey)
-const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
+//const uportTokenPayload = { exp: 1, iat: 0, iss: cred.did }
 await didJwt.createJWT({a:1}, { issuer: cred.did, signer })
 
 // Another approach (not-fully-tested): use the endorser-mobile project and create an identifier and use the utility.accessToken method from this:
 //import * as utility from './endorser-mobile/src/utility/utility' // require does not work
+
+// Other approaches with did-jwt are below.
 
 # Now you can go to a terminal and put that JWT value into a JWT env var make a call as user #0.
 curl -H "Uport-Push-Token: $JWT" -H "Content-Type: application/json" https://api-test.endorser.ch/api/claims
@@ -531,14 +533,15 @@ mkdir metrics
 cd metrics
 
 # Use Node & NPM/Yarn
-# ... with tea:
-#tea +nodejs.org +pnpm.io sh
+# ... with pkgx:
+pkgx +nodejs.org +pnpm.io sh
 
 mkdir node_modules # so it doesn't search in parent directories
 pnpm add bent ramda
 
-// This is just if you want to get private data. (See below, too.)
-#pnpm add did-jwt@5.12.4
+# This is if you want to get private data. (See below, too.)
+# (For some reason, I had this pegged @5.12.4)
+pnpm add did-jwt
 
 node --experimental-modules
 
@@ -556,15 +559,19 @@ const fs = require('node:fs')
 // 'count' returns { data: [...], maybeMoreAfter: 'ID' }
 let count = async (moreBefore) => {
   let options = { "Content-Type": "application/json" }
-  /**/
-  // These are just if you want to get private data.
+  /**
+   * begin private data
+   *
+   *
+   * end private data
+   **/
+  // This is just if you want to get private data.
   const nowEpoch = Math.floor(Date.now() / 1000)
   const endEpoch = nowEpoch + 60
   const tokenPayload = { exp: endEpoch, iat: nowEpoch, iss: OWNER_DID }
   const signer = didJwt.SimpleSigner(OWNER_PRIVATE_KEY_HEX)
   const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: OWNER_DID, signer })
   options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt }, options)
-  /**/
   const getJson = bent('json', options)
   return getJson(getServer() + '/api/v2/report/claims?beforeId=' + moreBefore)
 }
@@ -592,23 +599,67 @@ let fillAll = async () => {
 await fillAll()
 
 // write months & types to CSV
+fs.writeFileSync('metrics.csv', 'month,issuedAt,claimType\n')
 all.map(record => fs.appendFileSync('metrics.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + '\n'))
 
-// write months and issuer DIDs to CSV
-all.map(record => fs.appendFileSync('metrics-issuer.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.issuer + '\n'))
 
+//// The following are only available if you retrieved private data.
+
+// write months and issuer DIDs to CSV
+fs.writeFileSync('metrics-issuer.csv', 'month,issuedAt,claimType,issuer\n')
+all.map(record => fs.appendFileSync('metrics-issuer.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + ',' + record.issuer + '\n'))
+
+let now = new Date()
 
 // write months and number of unique DIDs
-let monthUniqDids = R.uniq(R.map(record => record.issuedAt.substring(0, 7) + ',' + record.issuer, all))
-let monthUniqDidsStripped = R.sortBy(pair => pair[0], R.toPairs(R.countBy(k => k.substring(0,7), monthUniqDids)))
-R.map((pair) => fs.appendFileSync('metrics-uniq-issuer.csv', pair[0] + ',' + pair[1] + '\n'), monthUniqDidsStripped)
+fs.writeFileSync('metrics-uniq-issuers.csv', 'month,known_unique_issuers\n')
+let monthUniqDids = R.uniq(R.map(record => record.issuedAt.substring(0, 7) + ',' + record.issuer, all).sort())
+for (let year = 2019; year <= now.getFullYear(); year++) {
+  const highMonth = year === now.getFullYear() ? now.getMonth() : 11
+  for (let month = 0; month <= highMonth; month++) {
+    const monthNum = month + 1 // since getMonth is 0-based
+    const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
+
+    let count = R.filter(monthDid => monthDid.substring(0, 7) === monthStr, monthUniqDids).length
+    fs.appendFileSync('metrics-uniq-issuers.csv', monthStr + ',' + count + '\n')
+  }
+}
 
 // write months and number of hidden DIDs
-let monthHiddenDids = R.countBy(R.identity, R.map(rec => rec.issuedAt.substring(0, 7), R.filter(rec => rec.issuer === 'did:none:HIDDEN', all)))
-let monthHiddenDidsSorted = R.sortBy(pair => pair[0], R.toPairs(monthHiddenDids))
-R.map((pair) => fs.appendFileSync('metrics-hidden-issuer.csv', pair[0] + ',' + pair[1] + '\n'), monthHiddenDidsSorted)
+fs.writeFileSync('metrics-hidden-issuer-claims.csv', 'month,hidden_issuer_claims\n')
+for (let year = 2019; year <= now.getFullYear(); year++) {
+  const highMonth = year === now.getFullYear() ? now.getMonth() : 11
+  for (let month = 0; month <= highMonth; month++) {
+    const monthNum = month + 1 // since getMonth is 0-based
+    const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
+
+    const count = R.filter(record => record.issuedAt.substring(0, 7) === monthStr && record.issuer === 'did:none:HIDDEN', all).length
+    fs.appendFileSync('metrics-hidden-issuer-claims.csv', monthStr + ',' + count + '\n')
+  }
+}
+
+
+#let monthHiddenDids = R.countBy(R.identity, R.map(rec => rec.issuedAt.substring(0, 7), R.filter(rec => rec.issuer === 'did:none:HIDDEN', all)))
+#let monthHiddenDidsSorted = R.sortBy(pair => pair[0], R.toPairs(monthHiddenDids))
+#R.map((pair) => fs.appendFileSync('metrics-hidden-issuer.csv', pair[0] + ',' + pair[1] + '\n'), monthHiddenDidsSorted)
 
 ```
+
+
+
+
+
+
+
+
+
+## Limits
+
+* If you increase anyone's limits, make sure to increase them in the image app as well.
+
+
+
+
 
 
 
@@ -650,6 +701,14 @@ async function verify(jwt) {
 - If you see `Signature invalid for JWT`, you're being tricked.  Otherwise, it checks out.
   - If you see some other error (eg. "expired"), that's OK... it still passed the signature check, as long as it gets past this line: https://github.com/decentralized-identity/did-jwt/blob/v4.0.0/src/JWT.ts#L231
 
+
+
+
+DB Migrations:
+
+- Add a new one with a new file in the `sql` directory where you increment the "V" number in the filename.
+- Record the change in the sql/README.md file for the sake of documentation.
+- `npm run flyway migrate` to run it.
 
 
 
