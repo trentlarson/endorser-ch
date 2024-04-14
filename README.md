@@ -562,9 +562,6 @@ let count = async (moreBefore) => {
   /**
    * begin private data
    *
-   *
-   * end private data
-   **/
   // This is just if you want to get private data.
   const nowEpoch = Math.floor(Date.now() / 1000)
   const endEpoch = nowEpoch + 60
@@ -572,6 +569,9 @@ let count = async (moreBefore) => {
   const signer = didJwt.SimpleSigner(OWNER_PRIVATE_KEY_HEX)
   const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: OWNER_DID, signer })
   options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt }, options)
+   *
+   * end private data
+   **/
   const getJson = bent('json', options)
   return getJson(getServer() + '/api/v2/report/claims?beforeId=' + moreBefore)
 }
@@ -598,9 +598,36 @@ let fillAll = async () => {
 }
 await fillAll()
 
-// write months & types to CSV
+// write all claims with months & issuer & types to CSV
 fs.writeFileSync('metrics.csv', 'month,issuedAt,claimType\n')
 all.map(record => fs.appendFileSync('metrics.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + '\n'))
+
+// write count per month to CSV
+let monthClaims = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7), all))
+let keys = R.keys(monthClaims).sort()
+fs.writeFileSync('metrics-count.csv', 'month,count\n')
+R.map(key => fs.appendFileSync('metrics-count.csv', key + ',' + monthClaims[key] + '\n'), keys)
+
+// write counts for months & selected types to CSV
+let selectedTypes = ['AgreeAction', 'GiveAction', 'Offer', 'PlanAction']
+let now = new Date()
+let monthClaims = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, all))
+fs.writeFileSync('metrics-claims-by-month-filtered.csv', ',' + selectedTypes.join(',') + ',total' + '\n')
+for (let year = 2019; year <= now.getFullYear(); year++) {
+  const highMonth = year === now.getFullYear() ? now.getMonth() : 11
+  for (let month = 0; month <= highMonth; month++) {
+    const monthNum = month + 1 // since getMonth is 0-based
+    const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
+    let row = ''
+    let total = 0
+    for (let type of selectedTypes) {
+      const thisCount = monthClaims[monthStr + ',' + type] || 0
+      row += ',' + thisCount
+      total += thisCount
+    }
+    fs.appendFileSync('metrics-claims-by-month-filtered.csv', monthStr + row + ',' + total + '\n')
+  }
+}
 
 
 //// The following are only available if you retrieved private data.
@@ -609,11 +636,10 @@ all.map(record => fs.appendFileSync('metrics.csv', record.issuedAt.substring(0, 
 fs.writeFileSync('metrics-issuer.csv', 'month,issuedAt,claimType,issuer\n')
 all.map(record => fs.appendFileSync('metrics-issuer.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + ',' + record.issuer + '\n'))
 
-let now = new Date()
-
 // write months and number of unique DIDs
-fs.writeFileSync('metrics-uniq-issuers.csv', 'month,known_unique_issuers\n')
+let now = new Date()
 let monthUniqDids = R.uniq(R.map(record => record.issuedAt.substring(0, 7) + ',' + record.issuer, all).sort())
+fs.writeFileSync('metrics-uniq-issuers.csv', 'month,known_unique_issuers\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
   for (let month = 0; month <= highMonth; month++) {
@@ -626,6 +652,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 }
 
 // write months and number of hidden DIDs
+let now = new Date()
 fs.writeFileSync('metrics-hidden-issuer-claims.csv', 'month,hidden_issuer_claims\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
@@ -637,11 +664,6 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
     fs.appendFileSync('metrics-hidden-issuer-claims.csv', monthStr + ',' + count + '\n')
   }
 }
-
-
-#let monthHiddenDids = R.countBy(R.identity, R.map(rec => rec.issuedAt.substring(0, 7), R.filter(rec => rec.issuer === 'did:none:HIDDEN', all)))
-#let monthHiddenDidsSorted = R.sortBy(pair => pair[0], R.toPairs(monthHiddenDids))
-#R.map((pair) => fs.appendFileSync('metrics-hidden-issuer.csv', pair[0] + ',' + pair[1] + '\n'), monthHiddenDidsSorted)
 
 ```
 
