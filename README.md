@@ -534,7 +534,7 @@ cd metrics
 
 # Use Node & NPM/Yarn
 # ... with pkgx:
-pkgx +nodejs.org +pnpm.io sh
+pkgx +pnpm.io sh
 
 mkdir node_modules # so it doesn't search in parent directories
 pnpm add bent ramda
@@ -611,7 +611,8 @@ R.map(key => fs.appendFileSync('metrics-count.csv', key + ',' + monthClaims[key]
 // write counts for months & selected types to CSV
 let selectedTypes = ['AgreeAction', 'GiveAction', 'Offer', 'PlanAction']
 let now = new Date()
-let monthClaims = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, all))
+let nonEdits = R.filter(record => record.handleId.substring(27) === record.id, all)
+let monthClaims = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, nonEdits))
 fs.writeFileSync('metrics-claims-by-month-filtered.csv', ',' + selectedTypes.join(',') + ',total' + '\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
@@ -626,6 +627,27 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
       total += thisCount
     }
     fs.appendFileSync('metrics-claims-by-month-filtered.csv', monthStr + row + ',' + total + '\n')
+  }
+}
+
+// sum hours given to CSV
+let now = new Date()
+let givenHours = R.filter(
+  record =>
+    record.claimType === 'GiveAction'
+    && record.claim.object?.unitCode === 'HUR'
+    && record.claim.fulfills?.[0]?.['@type'] !== 'TradeAction',
+  all
+)
+let monthGives = R.groupBy(record => record.issuedAt.substring(0, 7), givenHours)
+fs.writeFileSync('metrics-given-hours.csv', 'month,total\n')
+for (let year = 2019; year <= now.getFullYear(); year++) {
+  const highMonth = year === now.getFullYear() ? now.getMonth() : 11
+  for (let month = 0; month <= highMonth; month++) {
+    const monthNum = month + 1 // since getMonth is 0-based
+    const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
+    const monthSum = R.sum((monthGives[monthStr] || []).map(r => r.claim.object.amountOfThisGood || 0))
+    fs.appendFileSync('metrics-given-hours.csv', monthStr + ',' + monthSum + '\n')
   }
 }
 
@@ -667,7 +689,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 
 ```
 
-
+- Remember to remove the current month from results.
 
 
 
