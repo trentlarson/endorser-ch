@@ -1,6 +1,8 @@
 ---
 tasks :
 
+- fix claim on wrong project https://api.endorser.ch/api/claim/byHandle/01HSE3R9MAC0FT3P3KZ382TWV7
+- bug - search on projects in area pulling up project where location was removed
 - change plan & project endpoints to use jwtId as identifier rather than rowid
 - make higher limit for confirmations
 - host on Vultr

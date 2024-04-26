@@ -550,6 +550,7 @@ node --experimental-modules
 let getServer = () => { return 'https://api.endorser.ch' }
 const bent = require('bent')
 const fs = require('node:fs')
+const R = require('ramda')
 
 // These are just if you want to get private data. (See below, too.)
 //const OWNER_DID = 'OWNER_DID'
@@ -575,7 +576,7 @@ let count = async (moreBefore) => {
   const getJson = bent('json', options)
   return getJson(getServer() + '/api/v2/report/claims?beforeId=' + moreBefore)
 }
-const R = require('ramda')
+
 let all = []
 let fillAll = async () => {
   let moreBefore = 'Z'
@@ -597,6 +598,11 @@ let fillAll = async () => {
   //all.map(record => console.log(record.issuedAt.substring(0, 7), ",", record.claimType))
 }
 await fillAll()
+
+// Write all claims to JSON -- which is not recommended if you read with your credentials:
+//fs.writeFileSync('metrics.json', JSON.stringify(all, null, 2))
+// Read them:
+//const all = require('./metrics.json')
 
 // write all claims with months & issuer & types to CSV
 fs.writeFileSync('metrics.csv', 'month,issuedAt,claimType\n')
@@ -646,7 +652,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
   for (let month = 0; month <= highMonth; month++) {
     const monthNum = month + 1 // since getMonth is 0-based
     const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
-    const monthSum = R.sum((monthGives[monthStr] || []).map(r => r.claim.object.amountOfThisGood || 0))
+    const monthSum = R.sum((monthGives[monthStr] || []).map(r => r.claim.object?.amountOfThisGood || 0))
     fs.appendFileSync('metrics-given-hours.csv', monthStr + ',' + monthSum + '\n')
   }
 }

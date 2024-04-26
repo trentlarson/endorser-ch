@@ -25,8 +25,7 @@ const pushTokenProms = R.map((c) =>
 )
 
 const claimOffer = {
-  "@context": "https://schema.org",
-  "@type": "Offer",
+  ... testUtil.claimOffer,
   //identifier: "...", // set in loop
   issuedAt: '2022-02-15 19:28:00Z',
   includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' },
@@ -40,7 +39,6 @@ claimOffer_By0_JwtObj.claim = R.clone(claimOffer)
 claimOffer_By0_JwtObj.sub = creds[1].did
 
 const claimOffer_OthersBy0_JwtObj = R.clone(testUtil.jwtTemplate)
-claimOffer_OthersBy0_JwtObj.claim = R.clone(claimOffer)
 claimOffer_OthersBy0_JwtObj.sub = creds[1].did
 
 const manyClaims =

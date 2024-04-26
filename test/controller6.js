@@ -133,7 +133,6 @@ const person1By2AgainFailsJwtProm = credentials[2].createVerification(person1By2
 
 
 
-
 let pushTokens,
     badPlanBy1JwtEnc, planWithoutIdBy1JwtEnc, planWithExtFullBy1JwtEnc,
     planEditBy1JwtEnc, planDupBy2JwtEnc, planNewBy2JwtEnc,
@@ -877,7 +876,9 @@ describe('6 - Plans', () => {
 
 
 
-describe('6 - item just for BVC, partly for testing data on a local server', () => {
+describe('6 - PlanAction just for BVC, partly for testing data on a local server', () => {
+
+  let bvcPlanLastClaimId
 
   it('insert BVC plan', async () => {
     // Now can create this JWT with the ID that was assigned.
@@ -895,24 +896,68 @@ describe('6 - item just for BVC, partly for testing data on a local server', () 
       .send({jwtEncoded: planJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
+        bvcPlanLastClaimId = r.body.success.claimId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(5000)
 
-  it('find offer in search', () => {
+  it('find plan in search', () => {
     return request(Server)
-        .get('/api/v2/report/plans?claimContents=Bountiful%20together')
-        .set('Authorization', 'Bearer ' + pushTokens[2])
+      .get('/api/v2/report/plans?claimContents=Bountiful%20together')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('add many gives', async () => {
+    const claimGive_OthersBy1_JwtObj = R.clone(testUtil.jwtTemplate)
+    claimGive_OthersBy1_JwtObj.claim = R.clone(testUtil.claimGive)
+    claimGive_OthersBy1_JwtObj.claim.fulfills = {
+      '@type': 'PlanAction',
+      lastClaimId: bvcPlanLastClaimId,
+    }
+    claimGive_OthersBy1_JwtObj.claim.object = {
+      '@type': 'TypeAndQuantityNode',
+      amountOfThisGood: 1,
+      unitCode: 'HUR',
+    }
+    claimGive_OthersBy1_JwtObj.sub = creds[1].did
+
+    const manyGives =
+      R.times(n =>
+        R.clone(claimGive_OthersBy1_JwtObj),
+        51
+      )
+      .map((vc, i) => {
+        vc.claim.issuedAt = new Date().toISOString()
+        return vc
+      })
+
+    const givesProms = manyGives.map(async (vc, i) => {
+      const vcJwt = await credentials[1].createVerification(vc)
+      return request(Server)
+        .post('/api/v2/claim')
+        .set('Authorization', 'Bearer ' + pushTokens[1])
+        .send({jwtEncoded: vcJwt})
         .expect('Content-Type', /json/)
         .then(r => {
-          expect(r.body.data).to.be.an('array').of.length(1)
-          expect(r.status).that.equals(200)
+          expect(r.status).that.equals(201)
+          expect(r.body.success).does.not.have.property('embeddedRecordError')
+          return Promise.resolve() // technically unnecessary
         }).catch((err) => {
           return Promise.reject(err)
         })
-  }).timeout(3000)
+    })
+    return await Promise.all(givesProms)
+  }).timeout(5000)
+
 })
 
 
@@ -923,7 +968,7 @@ describe('6 - item just for BVC, partly for testing data on a local server', () 
 
 let firstOfferId, anotherProjectOfferId, offerId6, validThroughDate
 
-describe('6 - check offer totals', () => {
+describe('6 - Check offer totals', () => {
 
   it('insert offer #1 that is for a project', async () => {
 
@@ -1372,7 +1417,7 @@ describe('6 - check offer totals', () => {
 
 
 
-describe('6 - check give totals', () => {
+describe('6 - Check give totals', () => {
 
   let firstGiveRecordHandleId, secondGiveRecordHandleId, thirdGiveRecordHandleId
 
@@ -2320,13 +2365,28 @@ describe('6 - check give totals', () => {
       })
   }).timeout(3000)
 
-  it('all give search does include all', () => {
+  let lastGiveClaimId
+  it('all give search does include first 50', () => {
     return request(Server)
       .get('/api/v2/report/gives')
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body.data.length).to.equal(7)
+        expect(r.body.data.length).to.equal(50)
+        expect(r.status).that.equals(200)
+        lastGiveClaimId = r.body.data[49].jwtId
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('all give search does include remaining 7', () => {
+    return request(Server)
+      .get('/api/v2/report/gives?beforeId=' + lastGiveClaimId)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(8)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
