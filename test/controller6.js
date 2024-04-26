@@ -34,6 +34,7 @@ const ENTITY_NEW_DESC = 'Edited details for app...'
 
 const planBy2FulfillsBy1Claim = R.clone(testUtil.claimPlanAction)
 planBy2FulfillsBy1Claim.agent.identifier = creds[2].did
+planBy2FulfillsBy1Claim.name = planBy2FulfillsBy1Claim.name + " - taco worthy"
 planBy2FulfillsBy1Claim.description = "I'll make a taco for the effort."
 planBy2FulfillsBy1Claim.fulfills = {
   "@type": "PlanAction",
@@ -46,6 +47,7 @@ planBy2FulfillsBy1Claim.fulfills = {
 const planWithoutIdBy1JwtObj = R.clone(testUtil.jwtTemplate)
 planWithoutIdBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
 planWithoutIdBy1JwtObj.claim.agent.identifier = creds[1].did
+planWithoutIdBy1JwtObj.claim.name = planWithoutIdBy1JwtObj.claim.name + " - overwritten"
 planWithoutIdBy1JwtObj.iss = creds[1].did
 const planWithoutIdBy1JwtProm = credentials[1].createVerification(planWithoutIdBy1JwtObj)
 
@@ -60,6 +62,7 @@ const planWithExtFullBy1JwtObj = R.clone(testUtil.jwtTemplate)
 planWithExtFullBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
 planWithExtFullBy1JwtObj.claim.agent.identifier = creds[1].did
 planWithExtFullBy1JwtObj.claim.identifier = 'scheme://from-somewhere/with-some-plan-id'
+planWithExtFullBy1JwtObj.claim.name = planWithExtFullBy1JwtObj.claim.name + " - external"
 planWithExtFullBy1JwtObj.iss = creds[1].did
 const planWithExtFullBy1JwtProm = credentials[1].createVerification(planWithExtFullBy1JwtObj)
 
@@ -67,6 +70,7 @@ const planNewBy2JwtObj = R.clone(testUtil.jwtTemplate)
 planNewBy2JwtObj.claim = R.clone(testUtil.claimPlanAction)
 planNewBy2JwtObj.claim.agent.identifier = creds[2].did
 planNewBy2JwtObj.claim.description = '#2 Has A Plan'
+planNewBy2JwtObj.claim.name = planNewBy2JwtObj.claim.name + " - by #2"
 planNewBy2JwtObj.iss = creds[2].did
 const planNewBy2JwtProm = credentials[2].createVerification(planNewBy2JwtObj)
 
