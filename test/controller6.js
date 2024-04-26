@@ -304,7 +304,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.body.issuer).that.equals(creds[1].did)
         expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
-        expect(r.body.claim.name).that.equals(testUtil.claimPlanAction.name)
+        expect(r.body.claim.name).that.equals(planWithoutIdBy1JwtObj.claim.name)
         expect(r.body.claim.description).that.equals(testUtil.claimPlanAction.description)
       }).catch((err) => {
         return Promise.reject(err)
@@ -923,10 +923,10 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
   it('add many gives', async () => {
     const claimGive_OthersBy1_JwtObj = R.clone(testUtil.jwtTemplate)
     claimGive_OthersBy1_JwtObj.claim = R.clone(testUtil.claimGive)
-    claimGive_OthersBy1_JwtObj.claim.fulfills = {
-      '@type': 'PlanAction',
-      lastClaimId: bvcPlanLastClaimId,
-    }
+    claimGive_OthersBy1_JwtObj.claim.fulfills = [
+      { '@type': 'PlanAction', lastClaimId: bvcPlanLastClaimId },
+      { '@type': 'DonateAction' },
+    ]
     claimGive_OthersBy1_JwtObj.claim.object = {
       '@type': 'TypeAndQuantityNode',
       amountOfThisGood: 1,
@@ -2343,32 +2343,6 @@ describe('6 - Check give totals', () => {
       })
   }).timeout(3000)
 
-  it('gift search does not include trade', () => {
-    return request(Server)
-      .get('/api/v2/report/gives?giftNotTrade=true')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body.data.length).to.equal(2)
-        expect(r.status).that.equals(200)
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
-  }).timeout(3000)
-
-  it('trade search does include trade', () => {
-    return request(Server)
-      .get('/api/v2/report/gives?giftNotTrade=false')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body.data.length).to.equal(1)
-        expect(r.status).that.equals(200)
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
-  }).timeout(3000)
-
   let lastGiveClaimId
   it('all give search does include first 50', () => {
     return request(Server)
@@ -2391,6 +2365,47 @@ describe('6 - Check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data.length).to.equal(8)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  let lastDonateGiveClaimId
+  it('gift-only search does include first 50', () => {
+    return request(Server)
+      .get('/api/v2/report/gives?giftNotTrade=true')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(50)
+        expect(r.status).that.equals(200)
+        lastDonateGiveClaimId = r.body.data[49].jwtId
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('gift-only search does not include trade', () => {
+    return request(Server)
+      .get('/api/v2/report/gives?giftNotTrade=true&beforeId=' + lastDonateGiveClaimId)
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(3) // 5 are blank
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('trade search does include trade', () => {
+    return request(Server)
+      .get('/api/v2/report/gives?giftNotTrade=false')
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body.data.length).to.equal(1)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
