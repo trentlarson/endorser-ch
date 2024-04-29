@@ -774,7 +774,7 @@ describe('1 - Claim', () => {
      })
   ).timeout(5000)
 
-  it('should get 3 claims', () =>
+  it('should get 2 claims', () =>
      request(Server)
      .get('/api/claim')
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
@@ -897,19 +897,6 @@ describe('1 - Claim', () => {
      })
   ).timeout(3000)
 
-  it('#0 should not see DID #1', () =>
-     request(Server)
-     .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body)
-         .to.be.an('array')
-         .to.not.include.members([creds[1].did])
-       expect(r.status).that.equals(200)
-     })
-  ).timeout(3000)
-
   it('should register user 1', () =>
      request(Server)
      .post('/api/claim')
@@ -922,6 +909,19 @@ describe('1 - Claim', () => {
      })
   ).timeout(5000)
 
+  it('#0 should not see DID #1', () =>
+    request(Server)
+    .get('/api/report/whichDidsICanSee')
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body)
+      .to.be.an('array')
+      .to.not.include.members([creds[1].did])
+      expect(r.status).that.equals(200)
+    })
+  ).timeout(3000)
+
   it('should add another new confirmation', () =>
     request(Server)
       .post('/api/claim')
@@ -933,6 +933,19 @@ describe('1 - Claim', () => {
         expect(r.status).that.equals(201)
       })
   ).timeout(5000)
+
+  it('#0 should now see DID #1 as a side-effect of the claim by #1 that includes #0', () =>
+    request(Server)
+    .get('/api/report/whichDidsICanSee')
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body)
+      .to.be.an('array')
+      .to.include.members([creds[1].did])
+      expect(r.status).that.equals(200)
+    })
+  ).timeout(3000)
 
   it('should register user 3', () =>
     request(Server)
@@ -957,19 +970,6 @@ describe('1 - Claim', () => {
        expect(r.status).that.equals(201)
      })
   ).timeout(5000)
-
-  it('should see DID #1', () =>
-     request(Server)
-     .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body)
-         .to.be.an('array')
-         .to.include.members([creds[1].did])
-       expect(r.status).that.equals(200)
-     })
-  ).timeout(3000) // weird that a single push-token JWT verification will take > 2 seconds - ug
 
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)

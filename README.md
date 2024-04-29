@@ -50,6 +50,8 @@ npm ci
 # set up the environment (optional)
 cp .env.local .env
 
+# Set the INFURA_PROJECT_ID in that .env file. (This isn't critical for local tests, but it's necessary for server operation and for verification tests.)
+
 # setup/migrate DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
@@ -104,6 +106,12 @@ When running on another domain (other than EndorserSearch.com):
 #### Automated tests
 
 Run the local automated tests and build sample data with this: `./test/test.sh`
+
+* This runs the tests twice:
+
+  * The first time, it doesn't do validation of the signed JWTs, so it's faster. This is good to validate basic logic.
+
+  * After a 10-second countdown, it runs the tests again with validation of every signature. It requires the INFURA_PROJECT_ID to be set in the .env file, which you can get with a free account at the infura.io site.
 
 * Note that this sometimes fails without reason and a rerun works, especially on "Load Claims Incrementally". (Network issue with infura.io?)
 
