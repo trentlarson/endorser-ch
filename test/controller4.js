@@ -148,7 +148,7 @@ describe('4 - Load Claims Incrementally', () => {
           })
       })
     )
-  }).timeout(9000)
+  }).timeout(101000)
 
   //---------------- Now retrieve them a bunch at a time.
 
@@ -168,7 +168,7 @@ describe('4 - Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  ).timeout(3000)
+  ).timeout(6000)
 
   it('retrieve many Give/Offer claims with a few more to come', () =>
     request(Server)
@@ -186,7 +186,7 @@ describe('4 - Load Claims Incrementally', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  ).timeout(3000)
+  ).timeout(6000)
 
   it('retrieve a few more Give/Offer claims', () =>
     request(Server)

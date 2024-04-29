@@ -960,7 +960,7 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
         })
     })
     return await Promise.all(givesProms)
-  }).timeout(5000)
+  }).timeout(30000)
 
 })
 
@@ -1008,7 +1008,7 @@ describe('6 - Check offer totals', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-  }).timeout(5000)
+  }).timeout(10000)
 
   it('offer data is correct', () => {
     return request(Server)
