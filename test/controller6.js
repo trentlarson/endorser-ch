@@ -920,6 +920,10 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
       })
   }).timeout(3000)
 
+  let timeToWait = 3000
+  if (process.env.NODE_ENV === 'test-local') {
+    timeToWait = 0; // since we'll avoid the infura.io verification
+  }
   it('add many gives', async () => {
     const claimGive_OthersBy1_JwtObj = R.clone(testUtil.jwtTemplate)
     claimGive_OthersBy1_JwtObj.claim = R.clone(testUtil.claimGive)
@@ -945,22 +949,27 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
       })
 
     const givesProms = manyGives.map(async (vc, i) => {
-      const vcJwt = await credentials[1].createVerification(vc)
-      return request(Server)
-        .post('/api/v2/claim')
-        .set('Authorization', 'Bearer ' + pushTokens[1])
-        .send({jwtEncoded: vcJwt})
-        .expect('Content-Type', /json/)
-        .then(r => {
-          expect(r.status).that.equals(201)
-          expect(r.body.success).does.not.have.property('embeddedRecordError')
-          return Promise.resolve() // technically unnecessary
-        }).catch((err) => {
-          return Promise.reject(err)
-        })
+      return new Promise((resolve, reject) => {
+        setTimeout(async () => {
+          const vcJwt = await credentials[1].createVerification(vc)
+          return request(Server)
+          .post('/api/v2/claim')
+          .set('Authorization', 'Bearer ' + pushTokens[1])
+          .send({jwtEncoded: vcJwt})
+          .expect('Content-Type', /json/)
+          .then(r => {
+            expect(r.status).that.equals(201)
+            expect(r.body.success).does.not.have.property('embeddedRecordError')
+            console.log('Inserted claim', i, 'of', manyGives.length)
+            resolve()
+          }).catch((err) => {
+            reject(err)
+          })
+        }, timeToWait * i)
+      })
     })
     return await Promise.all(givesProms)
-  }).timeout(30000)
+  }).timeout(timeToWait * 51)
 
 })
 

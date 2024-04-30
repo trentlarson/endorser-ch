@@ -126,12 +126,16 @@ describe('4 - Load Claims Incrementally', () => {
       })
   ).timeout(3000)
 
+  let timeToWait = 3000
+  if (process.env.NODE_ENV === 'test-local') {
+    timeToWait = 0; // since we'll avoid the infura.io verification
+  }
   it('insert many, many claims', async () => {
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 124)
-
-    return Promise.all(
-      manyClaimsJwtEnc.map((jwtEnc) => {
-        return request(Server)
+    const allResults = manyClaimsJwtEnc.map((jwtEnc, i) => {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          request(Server)
           .post('/api/claim')
           .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
           .send({jwtEncoded: jwtEnc})
@@ -143,12 +147,17 @@ describe('4 - Load Claims Incrementally', () => {
             expect(r.headers['content-type'], /json/)
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
+            console.log('Inserted claim', i, 'of', manyClaimsJwtEnc.length)
+            resolve()
           }).catch((err) => {
-            return Promise.reject(err)
+            reject(err)
           })
+        },
+        timeToWait * i)
       })
-    )
-  }).timeout(101000)
+    })
+    return Promise.all(allResults)
+  }).timeout(timeToWait * 101)
 
   //---------------- Now retrieve them a bunch at a time.
 
