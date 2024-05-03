@@ -8,12 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
-### Changed in DB
+### Changed in DB or environment
 - ?
 
 
 
-## [3.5.2] - 2024.01.15
+## [3.5.3] - 2024.05.03
+### Fixed
+- Problem updating project location
+- Test timeouts when waiting longer for Infura
+### Changed in DB
+- Nothing
+
+
+
+## [3.5.2] - 2024.02.15 - 5a541f2e7e1f48fea62f21ae96df3c8ad9300c78
 ### Changed
 - Limits, from 10 registrations per month to 31 and from 100 claims per week to 140
 ### Fixed

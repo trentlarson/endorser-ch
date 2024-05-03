@@ -70,7 +70,7 @@ Debug: `NODE_ENV=dev npm run dev:debug`
 
 Release:
 
-* Update CHANGELOG.md & package.json, run `npm install`, then tag the release. Then increment the package version with "-beta".
+* Update CHANGELOG.md & package.json, run `npm install`, then tag the release.
 
 Run on Docker:
 
@@ -87,6 +87,9 @@ docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database
 ```
 
 * Before deploying, ask yourself: do you need to run a migration?
+
+* After deploying, increment the version and add "-beta" to the package.json & commit..
+
 
 When running on another domain (other than EndorserSearch.com):
 
