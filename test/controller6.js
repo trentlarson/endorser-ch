@@ -414,13 +414,15 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
-  it('v2 update plan description for plan #1', async () => {
+  it('v2 update plan description & location for plan #1', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimPlanAction)
     planObj.claim.agent.identifier = creds[1].did
     planObj.claim.lastClaimId = firstPlanIdInternal
     planObj.claim.description = ENTITY_NEW_DESC
+    planObj.claim.location.geo.latitude =
+      testUtil.claimPlanAction.location.geo.latitude + 1
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
     return request(Server)
@@ -445,6 +447,7 @@ describe('6 - Plans', () => {
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.description).that.equals(ENTITY_NEW_DESC)
+        expect(r.body.locLat).that.equals(testUtil.claimPlanAction.location.geo.latitude + 1)
       }).catch((err) => {
         return Promise.reject(err)
       })

@@ -29,6 +29,7 @@ tasks :
   - make search for all bookmarks
   - fix notifications
 
+  - when entering DIDs, confirm with user if it isn't visible by issuer, and maybe guard against malformed DIDs (eg. malformed with spaces)
   - Allow "Record Delivery" when I am the recipient of an offer
   - Allow pasting of a contract
   - Show paid amounts from an offer

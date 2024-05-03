@@ -2073,6 +2073,7 @@ class EndorserDatabase {
           + ", name = ?, description = ?, image = ?, endTime = datetime(?)"
           + ", startTime = datetime(?), fulfillsLinkConfirmed = ?"
           + ", fulfillsPlanHandleId = ?"
+          + ", locLat = ?, locLon = ?"
           + ", resultDescription = ?, resultIdentifier = ?, url = ?"
           + " WHERE handleId = ?"
       )
@@ -2081,6 +2082,7 @@ class EndorserDatabase {
         entry.name, entry.description, entry.image, entry.endTime, entry.startTime,
         entry.fulfillsLinkConfirmed ? 1 : 0,
         entry.fulfillsPlanHandleId,
+        entry.locLat, entry.locLon,
         entry.resultDescription, entry.resultIdentifier, entry.url, entry.handleId
       ], function(err) {
         if (!err && this.changes === 1) {
