@@ -92,7 +92,7 @@ before(async () => {
   return Promise.resolve()
 })
 
-const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 154, NTH_IN_SECOND_BATCH = 7
+const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 155, NTH_IN_SECOND_BATCH = 7
 let moreBeforeId, firstInList, startOfSecondBatchInList, nthInListInSecondBatch
 
 describe('4 - Load Claims Incrementally', () => {
@@ -327,7 +327,7 @@ describe('4 - Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(4)
+        expect(r.body.data).to.be.an('array').of.length(5)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)

@@ -255,8 +255,14 @@ const claimFoodPantryFor4By4JwtProm = credentials[4].createVerification(claimFoo
 const confirmFoodPantryFor4By1JwtObj = R.clone(testUtil.jwtTemplate)
 confirmFoodPantryFor4By1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
 confirmFoodPantryFor4By1JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
-confirmFoodPantryFor4By1JwtObj.sub = creds[0].did
+confirmFoodPantryFor4By1JwtObj.sub = creds[4].did
 const confirmFoodPantryFor4By1JwtProm = credentials[1].createVerification(confirmFoodPantryFor4By1JwtObj)
+
+const confirmFoodPantryFor4By2JwtObj = R.clone(testUtil.jwtTemplate)
+confirmFoodPantryFor4By2JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+confirmFoodPantryFor4By2JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
+confirmFoodPantryFor4By2JwtObj.sub = creds[4].did
+const confirmFoodPantryFor4By2JwtProm = credentials[2].createVerification(confirmFoodPantryFor4By2JwtObj)
 
 
 
@@ -278,6 +284,7 @@ let pushTokens, registerBy0JwtEncs,
     // claims for 4
     claimFoodPantryFor4By4JwtEnc,
     confirmFoodPantryFor4By1JwtEnc,
+    confirmFoodPantryFor4By2JwtEnc,
     // claims for 11
     claimCornerBakeryTenureFor11By11JwtEnc,
     confirmCornerBakeryTenureFor11By10JwtEnc,
@@ -311,6 +318,7 @@ before(async () => {
     claimCornerBakeryTenureFor12By12JwtProm,
     claimFoodPantryFor4By4JwtProm,
     confirmFoodPantryFor4By1JwtProm,
+    confirmFoodPantryFor4By2JwtProm,
     claimIIW2019aFor1By1JwtProm,
     confirmIIW2019aFor1By0JwtProm,
     claimIIW2019aFor2By2JwtProm,
@@ -331,6 +339,7 @@ before(async () => {
       claimCornerBakeryTenureFor12By12JwtEnc,
       claimFoodPantryFor4By4JwtEnc,
       confirmFoodPantryFor4By1JwtEnc,
+      confirmFoodPantryFor4By2JwtEnc,
       claimIIW2019aFor1By1JwtEnc,
       confirmIIW2019aFor1By0JwtEnc,
       claimIIW2019aFor2By2JwtEnc,
@@ -369,6 +378,19 @@ describe('1 - Util', () => {
     const test = {b:[HIDDEN_TEXT]}
     test[HIDDEN_TEXT] = ["a"]
     expect(testUtil.allDidsAreHidden(test)).to.be.true
+
+    expect(testUtil.anyDidIsHidden(null)).to.be.false
+    expect(testUtil.anyDidIsHidden(9)).to.be.false
+    expect(testUtil.anyDidIsHidden(true)).to.be.false
+    expect(testUtil.anyDidIsHidden("stuff")).to.be.false
+    expect(testUtil.anyDidIsHidden(HIDDEN_TEXT)).to.be.true
+    expect(testUtil.anyDidIsHidden("did:x:0xabc123...")).to.be.false
+    expect(testUtil.anyDidIsHidden({a:HIDDEN_TEXT, b:[HIDDEN_TEXT]})).to.be.true
+    expect(testUtil.anyDidIsHidden({a:"did:x:0xabc123...", b:[HIDDEN_TEXT]})).to.be.true
+    expect(testUtil.anyDidIsHidden(["a", "b", "c", {d: HIDDEN_TEXT}])).to.be.true
+    expect(testUtil.anyDidIsHidden(["a", "b", "c", {d: "did:x:0xabc123..."}])).to.be.false
+    expect(testUtil.anyDidIsHidden({"did:x:0xabc123...":["a"], b:[HIDDEN_TEXT]})).to.be.true
+    expect(testUtil.anyDidIsHidden(test)).to.be.true
   })
 
   it('should return all DIDs inside', () => {
@@ -1561,7 +1583,7 @@ describe('1 - Visibility utils', () => {
         expect(r.status).that.equals(201)
       })).timeout(5000)
 
-  let foodPantryClaimId
+  let foodPantryClaimBy4Id
 
   it('should create a tenure for the Food Pantry', () =>
      request(Server)
@@ -1571,7 +1593,7 @@ describe('1 - Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
-       foodPantryClaimId = r.body
+       foodPantryClaimBy4Id = r.body
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
@@ -1588,7 +1610,7 @@ describe('1 - Visibility utils', () => {
 
   it('should get issuer and confirmer (even though confirmed claim format is different)', () =>
      request(Server)
-     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + foodPantryClaimId)
+     .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + foodPantryClaimBy4Id)
      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1666,6 +1688,44 @@ describe('1 - Visibility utils', () => {
          .to.not.include.members([creds[4].did])
        expect(r.status).that.equals(200)
      })).timeout(3000)
+
+  it('#5 should get claim but not see #4', () =>
+    request(Server)
+    .get('/api/claim/' + foodPantryClaimBy4Id)
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body.issuer).to.equal(HIDDEN_TEXT)
+      expect(r.body.claim.party.identifier).to.equal(HIDDEN_TEXT)
+      console.log(r.body)
+      expect(r.status).that.equals(200)
+    })).timeout(3000)
+
+  let foodPantryBy4ConfirmedBy2Id
+
+  it('#2 can confirm #4 tenure for the Food Pantry (even though #4 does not allow visibility)', () =>
+    request(Server)
+    .post('/api/claim')
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .send({ "jwtEncoded": confirmFoodPantryFor4By2JwtEnc })
+    .expect('Content-Type', /json/)
+    .then(r => {
+      console.log(r.body)
+      expect(r.body).to.be.a('string')
+      foodPantryBy4ConfirmedBy2Id = r.body
+      expect(r.status).that.equals(201)
+    })).timeout(5000)
+
+  it('#2 can get claim and see inside all details since they made that claim, even though #4 restricted visibility', () =>
+    request(Server)
+    .get('/api/claim/' + foodPantryBy4ConfirmedBy2Id)
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    //.expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body).to.be.an('object')
+      expect(testUtil.anyDidIsHidden(r.body)).to.be.false
+      expect(r.status).that.equals(200)
+    }))
 
 })
 

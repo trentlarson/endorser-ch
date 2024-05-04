@@ -227,6 +227,45 @@ describe('3 - Skills', () => {
        expect(r.status).that.equals(200)
      }))
 
+  it('search of DID contents by person with visibility yields results', () =>
+    request(Server)
+    .get('/api/claim?claimContents=' + encodeURIComponent(creds[0].did))
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body)
+      .to.be.an('array')
+      .of.length(22)
+      expect(r.body[0].claimType).to.equal('Person')
+      expect(r.body[0].claim.identifier).to.equal(creds[0].did)
+      expect(r.body[0].subject).to.equal(creds[0].did)
+      expect(r.status).that.equals(200)
+    }))
+
+  it('search of DID contents by person without visibility yields no result', () =>
+    request(Server)
+    .get('/api/claim?claimContents=' + encodeURIComponent(creds[0].did))
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body)
+      .to.be.an('array')
+      .of.length(0)
+      expect(r.status).that.equals(200)
+    }))
+
+  it('search of partial DID contents by person without visibility yields no result', () =>
+    request(Server)
+    .get('/api/claim?claimContents=' + encodeURIComponent(creds[0].did.substring(15, 30)))
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body)
+      .to.be.an('array')
+      .of.length(0)
+      expect(r.status).that.equals(200)
+    }))
+
   it('search reveals no personal claim of "carpentry"', () =>
      request(Server)
      .get('/api/claim?claimContents=carpentry&subject=' + creds[2].did)

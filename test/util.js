@@ -4,7 +4,7 @@
    Some of this is copied in the endorser-auth package (eg. test.js).
 **/
 
-import R from 'ramda'
+import R, {any} from 'ramda'
 import { ERROR_CODES, HIDDEN_TEXT, isDid } from '../server/api/services/util'
 
 const { Credentials } = require('uport-credentials')
@@ -40,6 +40,27 @@ function allDidsAreHidden(result, exceptDid) {
 }
 
 const allDidsAreHiddenFor = (exceptDid) => (result) => allDidsAreHidden(result, exceptDid)
+
+/**
+ @return true if any DID is hidden
+ **/
+function anyDidIsHidden(result) {
+  if (Object.prototype.toString.call(result) === "[object String]") {
+    return result === HIDDEN_TEXT
+  } else if (result instanceof Object) {
+    var values
+    if (Array.isArray(result)) {
+      values = result
+    } else {
+      // assuming it's an object since it's not an array
+      // (Hmmmm... this is inconsistent with other methods where the keys aren't checked.)
+      values = R.keys(result).concat(R.values(result))
+    }
+    return R.reduce((a,b) => a || b, false, R.map(anyDidIsHidden, values))
+  } else {
+    return false
+  }
+}
 
 /**
 // Here's the DID Document for CREDS #0:
@@ -246,6 +267,8 @@ module.exports = {
   },
 
   allDidsAreHidden: allDidsAreHidden,
+
+  anyDidIsHidden: anyDidIsHidden,
 
 }
 

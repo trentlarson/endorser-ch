@@ -56,8 +56,9 @@ class ClaimController {
   }
 
   getByQuery(req, res) {
+    const searchTermMaybeDIDs = [req.query.claimContents, req.query.issuer, req.query.subject, req.query.handleId]
     ClaimService.byQuery(req.query)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, searchTermMaybeDIDs))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -69,7 +70,6 @@ class ClaimController {
     }
     ClaimService
       .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
       .then(r => {
         const result = r.claimId
         return res

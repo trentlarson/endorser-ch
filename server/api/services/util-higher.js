@@ -16,9 +16,36 @@ import { HIDDEN_TEXT, isDid } from './util'
       - if any DIDs are public, add a "publicUrls" key at the top level with value of a map from DID to URL
  **/
 
-async function hideDidsAndAddLinksToNetwork(requesterDid, input) {
+async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybeDIDs = []) {
+  const validSearchTermMaybeDIDs = searchTermMaybeDIDs.filter(R.identity) // exclude any undefined/null/empty
   let allowedDids = await getAllDidsRequesterCanSee(requesterDid)
-  let result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
+  let result
+  if (Array.isArray(input)) {
+    result = []
+    for (let item of input) {
+      if (requesterDid && item?.issuer === requesterDid) {
+        // allow all visibility for the issuer
+        result = R.append(item, result)
+      } else {
+        const oneResult = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, item)
+        // Only include any element where the result still includes the search term
+        // because we shouldn't allow someone to search for a DID (or parts) and get activity that's hidden.
+        // (Other criteria are OK for searches for non-personal information, just not DID material.)
+        let allMatch = R.all((term) => JSON.stringify(oneResult).includes(term), validSearchTermMaybeDIDs)
+        if (allMatch) {
+          result = R.append(oneResult, result)
+        } else {
+          // don't include it
+        }
+      }
+    }
+  } else {
+    if (requesterDid && input?.issuer === requesterDid) {
+      result = input
+    } else {
+      result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
+    }
+  }
 
   // ensure the public URL lookup is initialized
   await getDidsSeenByAll()
@@ -132,4 +159,4 @@ async function makeGloballyVisible(issuerDid, url) {
     })
 }
 
-module.exports = { hideDidsAndAddLinksToNetwork, getPublicDidUrl, hideDidsAndAddLinksToNetworkSub, makeGloballyVisible }
+module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkSub /* for tests */, getPublicDidUrl, makeGloballyVisible }
