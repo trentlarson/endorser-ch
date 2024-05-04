@@ -13,7 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.5.3] - 2024.05.03
+## [3.5.4] - 2024.05.04
+### Fixed
+- Vulnerability exposing search result to people without visibility of that DID
+### Changed in DB or environment
+- Nothing
+
+
+
+## [3.5.3] - 2024.05.03 - e4ddcf7cc8340192413282ecc406f585efb4d1d8
 ### Fixed
 - Problem updating project location
 - Test timeouts when waiting longer for Infura
