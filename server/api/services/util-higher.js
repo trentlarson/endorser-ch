@@ -14,9 +14,17 @@ import { HIDDEN_TEXT, isDid } from './util'
         - name is a prefix of the same name plus suffix of "VisibleToDids"
         - value is an array of all DIDs who the requester can see & who can see the hidden DID
       - if any DIDs are public, add a "publicUrls" key at the top level with value of a map from DID to URL
+
+  @param requesterDid {string} the DID of the user making the request
+   @param input {object|array|string} the result to be scrubbed
+   @param searchTermMaybeDIDs {array} an array of strings in potential search fields that may be DIDs or parts of DIDs
  **/
 
-async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybeDIDs = []) {
+async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybeDIDs) {
+  if (!searchTermMaybeDIDs) {
+    throw new Error("Parameter searchTermMaybeDIDs is required to ensure no DID-based search parameter gives data to someone without visibility.")
+  }
+
   const validSearchTermMaybeDIDs = searchTermMaybeDIDs.filter(R.identity) // exclude any undefined/null/empty
   let allowedDids = await getAllDidsRequesterCanSee(requesterDid)
   let result

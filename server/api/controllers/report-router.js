@@ -20,7 +20,7 @@ class DbController {
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -35,7 +35,7 @@ class DbController {
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -56,7 +56,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -72,7 +72,7 @@ class DbController {
           ),
           hitLimit: results.hitLimit,
         }))
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -88,7 +88,7 @@ class DbController {
           ),
           hitLimit: results.hitLimit,
         }))
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -107,7 +107,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -115,7 +115,7 @@ class DbController {
   getGiveProviders(req, res, next) {
     const giveHandleId = req.query.giveHandleId
     dbService.giveProviderIds(giveHandleId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -129,7 +129,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -181,7 +181,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -200,7 +200,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -238,7 +238,7 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.plansByParamsPaged(query, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -250,7 +250,7 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.plansByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -264,7 +264,7 @@ class DbController {
       minLocLat, maxLocLat, westLocLon, eastLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -272,7 +272,7 @@ class DbController {
   getPlanFulfilledBy(req, res, next) {
     const handleId = req.query.planHandleId
     dbService.planFulfilledBy(handleId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -281,7 +281,7 @@ class DbController {
   getJwtFulfillersToPlan(req, res, next) {
     const handleId = req.query.planHandleId
     dbService.jwtFulfillersToPlan(handleId)
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -292,7 +292,7 @@ class DbController {
     const afterId = req.query.afterId
     const beforeId = req.query.beforeId
     dbService.planFulfillersToPlan(handleId, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -304,7 +304,7 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.projectsByParamsPaged(query, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -316,7 +316,7 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -330,7 +330,7 @@ class DbController {
       minLocLat, maxLocLat, westLocLon, eastLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -355,7 +355,7 @@ class ServiceController {
   getConfirmerIds(req, res) {
     const claimEntryIds = req.body.claimEntryIds
     ClaimService.retrieveConfirmersForClaimsEntryIds(claimEntryIds)
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results))
+        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
         .then(results => { res.json({ data: results }).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }

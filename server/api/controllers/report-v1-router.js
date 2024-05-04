@@ -15,7 +15,7 @@ class ClaimController {
   getIssuersMatchingClaim(req, res) {
     ClaimService.thisClaimAndConfirmationsIssuersMatchingClaimId(req.query.claimId)
       .then(result =>
-            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, { result : result}))
+            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, { result : result}, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
@@ -39,7 +39,7 @@ import ActionService from '../services/action.service';
 class ActionController {
   getActionClaimsAndConfirmationsSince(req, res) {
     ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -51,13 +51,13 @@ import TenureService from '../services/tenure.service';
 class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
   getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
@@ -69,7 +69,7 @@ import OrgRoleService from '../services/org.service';
 class OrgRoleController {
   getClaimsAndConfirmationsOnDate(req, res) {
     OrgRoleService.getClaimsAndConfirmationsOnDate(req.query.orgName, req.query.roleName, req.query.onDate)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
@@ -81,13 +81,13 @@ import { dbService } from '../services/endorser.db.service';
 class DbController {
   getVoteCounts(req, res) {
     dbService.retrieveVoteCounts()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getSeenByAll(req, res) {
     dbService.getSeenByAll()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

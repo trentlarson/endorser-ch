@@ -12,7 +12,7 @@ class Controller {
     }
     ClaimService
       .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => {
         const result = { success: r }
         return res

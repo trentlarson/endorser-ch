@@ -6,7 +6,7 @@ export class Controller {
   getById(req, res) {
     ActionService
       .byId(req.params.id)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
@@ -16,7 +16,7 @@ export class Controller {
 
   getByQuery(req, res) {
     ActionService.byQuery(req.query)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

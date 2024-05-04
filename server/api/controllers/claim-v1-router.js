@@ -9,7 +9,7 @@ class ClaimController {
   getById(req, res) {
     ClaimService
       .byId(req.params.id, res.locals.tokenIssuer)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
@@ -26,10 +26,10 @@ class ClaimController {
             { error: { message: "No claim found with ID " + req.params.id } }
           )
         }
-        hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+        hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, [])
           .then(scrubbed => {
             let resultClaim = JSON.parse(result.claim)
-            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, resultClaim)
+            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, resultClaim, [])
               .then(scrubbedClaim => {
                 resolve({
                   fullJwt: result,
@@ -102,7 +102,7 @@ class DbController {
       .then(result => {
         if (result) {
           result.claim = JSON.parse(result.claim)
-          return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result)
+          return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, [])
         } else {
           return null
         }

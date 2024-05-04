@@ -5,13 +5,13 @@ import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class TenureController {
   getById(req, res) {
     TenureService.byId(req.params.id)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
   getByQuery(req, res) {
     TenureService.byQuery()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
