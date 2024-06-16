@@ -18,7 +18,7 @@ import testUtil, {INITIAL_DESCRIPTION} from './util'
 
 const expect = chai.expect
 
-const creds = testUtil.creds
+const creds = testUtil.credData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 

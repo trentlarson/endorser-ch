@@ -16,7 +16,7 @@ import testUtil from './util'
 chai.use(chaiAsPromised);
 const expect = chai.expect
 
-const creds = testUtil.creds
+const creds = testUtil.credData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 
@@ -148,7 +148,7 @@ describe('5 - Registration', () => {
   it('check that User 1 can register one the next day', async () => {
     // change User 1's registration to a day ago
     const yesterdayEpoch = DateTime.utc().minus({ month: 1 }).toSeconds()
-    dbService.registrationUpdateIssueDateForTests(testUtil.creds[1].did, yesterdayEpoch)
+    dbService.registrationUpdateIssueDateForTests(testUtil.credData[1].did, yesterdayEpoch)
 
     // we know user 12 is already registered, so this won't affect state
     await request(Server)

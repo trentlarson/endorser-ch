@@ -156,7 +156,7 @@ it('contact lists can match', () => {
 
 
 
-const creds = testUtil.creds
+const creds = testUtil.credData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 

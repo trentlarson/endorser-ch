@@ -17,7 +17,7 @@ const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
-const creds = testUtil.creds
+const creds = testUtil.credData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 

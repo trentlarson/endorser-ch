@@ -36,7 +36,7 @@ const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3
 **/
 
 
-const creds = testUtil.creds
+const creds = testUtil.credData
 
 const claimBvc = {
   "@context": "https://schema.org",

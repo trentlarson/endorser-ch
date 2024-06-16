@@ -63,7 +63,7 @@ function anyDidIsHidden(result) {
 }
 
 /**
-// Here's the DID Document for CREDS #0:
+// Here's the DID Document for CRED_DATA #0:
 {
   "@context": [
     "https://www.w3.org/ns/did/v1",
@@ -87,7 +87,7 @@ function anyDidIsHidden(result) {
 }
 **/
 
-const CREDS = [
+const CRED_DATA = [
 
   // these old ones generated with derivation path m/7696500'/0'/0'/0'
   //{ did: 'did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51', privateKey: '01a3172cd9e334210b2669dce737d435beefe5c99802ded607c44cd85c96666b' }, // seminar accuse mystery assist delay law thing deal image undo guard initial shallow wrestle list fragile borrow velvet tomorrow awake explain test offer control
@@ -122,13 +122,13 @@ const CREDS = [
 
 ]
 
-const CREDENTIALS = R.map((c) => new Credentials(c), CREDS)
+const CREDENTIALS = R.map((c) => new Credentials(c), CRED_DATA)
 
 const INITIAL_DESCRIPTION = "Deliver an app that..."
 
 module.exports = {
 
-  creds: CREDS,
+  credData: CRED_DATA,
 
   credentials: CREDENTIALS,
 
