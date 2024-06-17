@@ -36,7 +36,7 @@ const signer = didJWT.SimpleSigner('fa09a3ff0d486be2eb69545c393e2cf47cb53feb44a3
 **/
 
 
-const creds = testUtil.credData
+const creds = testUtil.ethrCredData
 
 const claimBvc = {
   "@context": "https://schema.org",
@@ -92,7 +92,7 @@ const claimIIW2019a = {
   }
 }
 
-const credentials = testUtil.credentials
+const credentials = testUtil.ethrCredentials
 
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
 
@@ -109,8 +109,12 @@ const registerBy0Proms =
     16
   )
 
-
-
+const registerPeerBy0JwtObj = R.clone(testUtil.jwtTemplate)
+registerPeerBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+registerPeerBy0JwtObj.claim.agent.identifier = creds[0].did
+registerPeerBy0JwtObj.claim.participant.identifier = "did:peer:0zKMFjvUgYrM1hXwDciYHiA9MxXtJPXnRLJvqoMNAKoDLX9pKMWLb3VDsgua1p2zW1xXRsjZSTNsfvMnNyMS7dB4k7NAhFwL3pXBrBXgyYJ9ri"
+registerPeerBy0JwtObj.sub = "did:peer:0zKMFjvUgYrM1hXwDciYHiA9MxXtJPXnRLJvqoMNAKoDLX9pKMWLb3VDsgua1p2zW1xXRsjZSTNsfvMnNyMS7dB4k7NAhFwL3pXBrBXgyYJ9ri"
+const registerPeerBy0JwtProm = credentials[0].createVerification(registerPeerBy0JwtObj)
 
 const claimBvcFor0 = R.clone(claimBvc)
 claimBvcFor0.agent.identifier = creds[0].did
@@ -264,10 +268,9 @@ confirmFoodPantryFor4By2JwtObj.claim.object.push(R.clone(claimFoodPantryFor4))
 confirmFoodPantryFor4By2JwtObj.sub = creds[4].did
 const confirmFoodPantryFor4By2JwtProm = credentials[2].createVerification(confirmFoodPantryFor4By2JwtObj)
 
+const pizzaGivePeerJwtEnc = "eyJ0eXAiOiJKV0FOVCIsImFsZyI6IkVTMjU2In0.eyJBdXRoZW50aWNhdGlvbkRhdGFCNjRVUkwiOiJTWllONVlnT2pHaDBOQmNQWkhaZ1c0X2tycm1paGpMSG1Wenp1b01kbDJNRkFBQUFBQSIsIkNsaWVudERhdGFKU09OQjY0VVJMIjoiZXlKMGVYQmxJam9pZDJWaVlYVjBhRzR1WjJWMElpd2lZMmhoYkd4bGJtZGxJam9pWlhsS01sbDVTVFpsZVVwcVkyMVdhMXBYTlRCaFYwWnpWVE5XYVdGdFZtcGtRMGsyWlhsS1FWa3lPWFZrUjFZMFpFTkpOa2x0YURCa1NFSjZUMms0ZG1NeVRtOWFWekZvVEcwNWVWcDVTWE5KYTBJd1pWaENiRWxxYjJsU01td3lXbFZHYW1SSGJIWmlhVWx6U1cxU2JHTXlUbmxoV0VJd1lWYzVkVWxxYjJsalIydzJaVzFGYVdaWU1ITkpiV3hvWkVOSk5rMVVZM2hQUkZVMFRtcHJOVTFEZDJsaFdFNTZTV3B2YVZwSGJHdFBia0pzV2xoSk5rMUljRXhVVlZweFpHeFdibGRZU2s1TlYyaFpaREJTYW1GV2JFbGhWVVUxVkZob1dXUkZjRkZYUnpWVFZFVndNbU5YT1U1VWEwWk1ZakJTVFZkRWJIZFRNREZZVkVkSmVsWnJVbnBhTTFab1RWaEJlV1ZzWTNobFJtaFRZekp3WVZVeFVrOWpNbG95VkZjMVQyVlZNVlJPTWxKRFRrZHpNMVJyUm05U2JtUk5UVE5DV1ZGdVNrTlhSMlExVjFWdk5XTnRhMmxtVVNJc0ltOXlhV2RwYmlJNkltaDBkSEE2THk5c2IyTmhiR2h2YzNRNk9EQTRNQ0lzSW1OeWIzTnpUM0pwWjJsdUlqcG1ZV3h6WlgwIiwiaWF0IjoxNzE4NTg2OTkyLCJpc3MiOiJkaWQ6cGVlcjowektNRmp2VWdZck0xaFh3RGNpWUhpQTlNeFh0SlBYblJMSnZxb01OQUtvRExYOXBLTVdMYjNWRHNndWExcDJ6VzF4WFJzalpTVE5zZnZNbk55TVM3ZEI0azdOQWhGd0wzcFhCckJYZ3lZSjlyaSJ9.MEUCIQDJyCTbMPIFnuBoW3FYnlgtDEIHZ2OrkCEvqVnHU7kJDQIgVxjBjfW1TwQfcSOYwK8Z7AdCWGJlyxtLEsrnPif7caE";
 
-
-
-let pushTokens, registerBy0JwtEncs,
+let pushTokens, registerBy0JwtEncs, registerPeerBy0JwtEnc,
     // claims for 0
     claimBvcFor0By0JwtEnc, confirmBvcFor0By0JwtEnc, confirmBvcFor0By1JwtEnc, confirmBvcFor0By3JwtEnc,
     claimMyNightFor0By0JwtEnc,
@@ -301,6 +304,10 @@ before(async () => {
   await Promise.all(registerBy0Proms).then((jwts) => {
     registerBy0JwtEncs = jwts
     //console.log("Created register JWTs", registerBy0JwtEncs)
+  })
+
+  registerPeerBy0JwtProm.then((jwt) => {
+    registerPeerBy0JwtEnc = jwt
   })
 
   await Promise.all([
@@ -1044,6 +1051,35 @@ describe('1 - Claim', () => {
 
 })
 
+describe('1 - Peer DID', () => {
+
+  it('should register peer DID user', () =>
+    request(Server)
+    .post('/api/claim')
+    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+    .send({"jwtEncoded": registerPeerBy0JwtEnc})
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body).to.be.a('string')
+      expect(r.status).that.equals(201)
+    })
+  ).timeout(5000)
+
+  it('should create a Give with a peer DID', () =>
+    request(Server)
+    .post('/api/claim')
+    //.set('Authorization', 'Bearer ' + pizzaGivePeerJwtEnc)
+    .send({jwtEncoded: pizzaGivePeerJwtEnc})
+    //.expect('Content-Type', /json/)
+    .then(r => {
+      console.log(r.body)
+      expect(r.body).to.be.a('string')
+      expect(r.status).that.equals(201)
+    })
+  ).timeout(5000)
+
+})
+
 describe('1 - Action', () => {
 
   it('should get action with the right properties', () =>
@@ -1697,7 +1733,6 @@ describe('1 - Visibility utils', () => {
     .then(r => {
       expect(r.body.issuer).to.equal(HIDDEN_TEXT)
       expect(r.body.claim.party.identifier).to.equal(HIDDEN_TEXT)
-      console.log(r.body)
       expect(r.status).that.equals(200)
     })).timeout(3000)
 
@@ -1710,7 +1745,6 @@ describe('1 - Visibility utils', () => {
     .send({ "jwtEncoded": confirmFoodPantryFor4By2JwtEnc })
     .expect('Content-Type', /json/)
     .then(r => {
-      console.log(r.body)
       expect(r.body).to.be.a('string')
       foodPantryBy4ConfirmedBy2Id = r.body
       expect(r.status).that.equals(201)

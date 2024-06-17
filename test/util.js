@@ -63,7 +63,7 @@ function anyDidIsHidden(result) {
 }
 
 /**
-// Here's the DID Document for CRED_DATA #0:
+// Here's the DID Document for ETHR_CRED_DATA #0:
 {
   "@context": [
     "https://www.w3.org/ns/did/v1",
@@ -87,7 +87,7 @@ function anyDidIsHidden(result) {
 }
 **/
 
-const CRED_DATA = [
+const ETHR_CRED_DATA = [
 
   // these old ones generated with derivation path m/7696500'/0'/0'/0'
   //{ did: 'did:ethr:0x000Ee5654b9742f6Fe18ea970e32b97ee2247B51', privateKey: '01a3172cd9e334210b2669dce737d435beefe5c99802ded607c44cd85c96666b' }, // seminar accuse mystery assist delay law thing deal image undo guard initial shallow wrestle list fragile borrow velvet tomorrow awake explain test offer control
@@ -122,15 +122,20 @@ const CRED_DATA = [
 
 ]
 
-const CREDENTIALS = R.map((c) => new Credentials(c), CRED_DATA)
+const PEER_CRED_DATA = [
+  { did: 'did:peer:0zKMFjvUgYrM1hXwDciYHiA9MxXtJPXnRLJvqoMNAKoDLX9pKMWLb3VDsgua1p2zW1xXRsjZSTNsfvMnNyMS7dB4k7NAhFwL3pXBrBXgyYJ9ri', publicKeyHex: 'a50102032620012158204bfa4f3a68e72142df6791b516f32e6cd44383240c7af13fe610b8ab21f42eba22582037bb715ba5e071b8e6754148a0b17a224f5ca7a5294dc7bd964864f41f9b3bbb' },
+];
+
+const ETHR_CREDENTIALS = R.map((c) => new Credentials(c), ETHR_CRED_DATA)
 
 const INITIAL_DESCRIPTION = "Deliver an app that..."
 
 module.exports = {
 
-  credData: CRED_DATA,
+  ethrCredData: ETHR_CRED_DATA,
+  ethrCredentials: ETHR_CREDENTIALS,
 
-  credentials: CREDENTIALS,
+  peerCredData: PEER_CRED_DATA,
 
   ERROR_CODES: ERROR_CODES,
 

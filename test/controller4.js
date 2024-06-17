@@ -15,7 +15,7 @@ import testUtil from './util'
 
 const expect = chai.expect
 
-const creds = testUtil.credData
+const creds = testUtil.ethrCredData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 
@@ -92,7 +92,7 @@ before(async () => {
   return Promise.resolve()
 })
 
-const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 155, NTH_IN_SECOND_BATCH = 7
+const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 157, NTH_IN_SECOND_BATCH = 9
 let moreBeforeId, firstInList, startOfSecondBatchInList, nthInListInSecondBatch
 
 describe('4 - Load Claims Incrementally', () => {
@@ -147,7 +147,7 @@ describe('4 - Load Claims Incrementally', () => {
             expect(r.headers['content-type'], /json/)
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
-            console.log('Inserted claim', i, 'of', manyClaimsJwtEnc.length)
+            //console.log('Inserted claim #', i + 1, 'of', manyClaimsJwtEnc.length)
             resolve()
           }).catch((err) => {
             reject(err)
@@ -322,12 +322,11 @@ describe('4 - Load Claims Incrementally', () => {
     request(Server)
       .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
       .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
-      .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(5)
+        expect(r.body.data).to.be.an('array').of.length(7)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)

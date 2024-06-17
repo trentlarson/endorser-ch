@@ -18,7 +18,7 @@ import testUtil, {INITIAL_DESCRIPTION} from './util'
 
 const expect = chai.expect
 
-const creds = testUtil.credData
+const creds = testUtil.ethrCredData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 
@@ -963,7 +963,7 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
           .then(r => {
             expect(r.status).that.equals(201)
             expect(r.body.success).does.not.have.property('embeddedRecordError')
-            console.log('Inserted claim', i, 'of', manyGives.length)
+            //console.log('Inserted claim #', i + 1, 'of', manyGives.length)
             resolve()
           }).catch((err) => {
             reject(err)
@@ -2370,13 +2370,13 @@ describe('6 - Check give totals', () => {
       })
   }).timeout(3000)
 
-  it('all give search does include remaining 7', () => {
+  it('all give search does include remaining 9', () => {
     return request(Server)
       .get('/api/v2/report/gives?beforeId=' + lastGiveClaimId)
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body.data.length).to.equal(8)
+        expect(r.body.data.length).to.equal(9)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

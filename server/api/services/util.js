@@ -1,10 +1,11 @@
-const crypto = require('crypto')
-const R = require('ramda')
-const util = require('util')
+import crypto from 'crypto';
+import * as R from 'ramda';
 
 // the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token' // deprecated: use Authorization instead
+const ETHR_DID_PREFIX = 'did:ethr:'
+const PEER_DID_PREFIX = 'did:peer:'
 
 const ERROR_CODES = {
   CANNOT_REGISTER_TOO_SOON: 'CANNOT_REGISTER_TOO_SOON',
@@ -12,6 +13,7 @@ const ERROR_CODES = {
   OVER_CLAIM_LIMIT: 'OVER_CLAIM_LIMIT',
   OVER_REGISTRATION_LIMIT: 'OVER_REGISTRATION_LIMIT',
   UNREGISTERED_USER: 'UNREGISTERED_USER',
+  UNSUPPORTED_DID_METHOD: 'UNSUPPORTED_DID_METHOD',
 }
 
 // This is an expected ID prefix for this system.
@@ -104,7 +106,7 @@ function isGlobalUri(uri) {
 // otherwise true if they're equivalent, even for mismatched-case "did:ethr:" DIDs
 function equivalentDids(did1, did2) {
   if (isDid(did1) && isDid(did2)) {
-    if (did1.startsWith('did:ethr:')) {
+    if (did1.startsWith(ETHR_DID_PREFIX)) {
       did1 = did1.toLowerCase()
       did2 = did2.toLowerCase()
     }
@@ -248,5 +250,5 @@ function findAllLastClaimIdsAndHandleIds(clause) {
   return clauseIdsAndHandleIds
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, ETHR_DID_PREFIX, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, PEER_DID_PREFIX, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
 

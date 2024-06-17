@@ -20,7 +20,7 @@ const START_TIME_STRING = '2018-12-29T08:00:00.000-07:00'
 const DAY_START_TIME_STRING = DateTime.fromISO(START_TIME_STRING).set({hour:0}).startOf("day").toISO()
 const TODAY_START_TIME_STRING = DateTime.local().set({hour:0}).startOf("day").toISO()
 
-const creds = testUtil.credData
+const creds = testUtil.ethrCredData
 
 const claimRecorder = {
   "@context": "https://schema.org",
@@ -356,13 +356,12 @@ describe('2 - Role Claims on Date', async () => {
           .post('/api/claim')
           .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
           .send({"jwtEncoded": registerBy0JwtEncs[thisNum]})
-          .expect('Content-Type', /json/)
           .then(r => {
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
           })
-        if (thisNum === 8) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 12)
-        if (thisNum === 9) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 10)
+        if (thisNum === 8) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 13)
+        if (thisNum === 9) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 11)
       }).timeout(5000)
     },
     5

@@ -12,11 +12,13 @@ import l from '../../common/logger'
 import { dbService } from './endorser.db.service'
 import {
   allDidsInside, calcBbox, claimHashChain,
-  ERROR_CODES, findAllLastClaimIdsAndHandleIds,
+  ERROR_CODES, ETHR_DID_PREFIX, findAllLastClaimIdsAndHandleIds,
   globalFromInternalIdentifier,
   hashedClaimWithHashedDids,
   isGlobalEndorserHandleId, isGlobalUri,
+  PEER_DID_PREFIX,
 } from './util';
+import { verifyPeerSignature } from './util-crypto';
 import { addCanSee } from './network-cache.service'
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
@@ -1431,12 +1433,22 @@ class ClaimService {
   }
 
   // return Promise of at least { issuer, payload, verified boolean }
-  // ... and also if successfully verified: data, doc, signature, signer
+  // ... and also if successfully verified by did-jwt (not JWANT): data, doc, signature, signer
   async decodeAndVerifyJwt(jwt) {
-    if (process.env.NODE_ENV === 'test-local') {
+    const pieces = R.split('.', jwt)
+    const header = JSON.parse(base64url.decode(pieces[0]))
+    const payload = JSON.parse(base64url.decode(pieces[1]))
+    const issuerDid = payload.iss
+    if (!issuerDid) {
+      return Promise.reject({
+        clientError: {
+          message: `Missing "iss" field in JWT.`,
+        }
+      })
+    }
+    if (issuerDid && issuerDid.startsWith("did:ethr:") && process.env.NODE_ENV === 'test-local') {
       // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed
       // eg. no "." separators.
-      let payload = JSON.parse(base64url.decode(R.split('.', jwt)[1]))
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
       if (payload.exp < nowEpoch) {
         l.warn("JWT with exp " + payload.exp
@@ -1444,20 +1456,69 @@ class ClaimService {
               )
         payload.exp = nowEpoch + 100
       }
-      return { verified: true, issuer: payload.iss, payload } // other elements will = undefined
-    } else {
+      return { issuer: issuerDid, payload, verified: true } // other elements will = undefined
+    }
 
+    if (issuerDid.startsWith(ETHR_DID_PREFIX)) {
       try {
-        let verified = await didJwt.verifyJWT(jwt, { resolver })
+        let verified = await didJwt.verifyJWT(jwt, {resolver})
         return verified
 
       } catch (e) {
         return Promise.reject({
-          clientError: { message: `JWT failed verification: ` + e.toString(),
-                         code: ERROR_CODES.JWT_VERIFY_FAILED }
+          clientError: {
+            message: `JWT failed verification: ` + e.toString(),
+            code: ERROR_CODES.JWT_VERIFY_FAILED
+          }
         })
       }
     }
+
+    if (issuerDid.startsWith(PEER_DID_PREFIX) && header.typ === "JWANT") {
+      const authData = payload.AuthenticationDataB64URL
+      const clientData = payload.ClientDataJSONB64URL
+      if (!authData || !clientData) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT with typ == JWANT requires AuthenticationData and ClientDataJSON.`
+          }
+        })
+      }
+      const decodedAuthDataBuff = Buffer.from(authData, 'base64url')
+      const decodedClientData = Buffer.from(clientData, 'base64url')
+      const hashedClientDataBuff = crypto.createHash("sha256")
+        .update(decodedClientData)
+        .digest()
+      const preimage = new Uint8Array(Buffer.concat([decodedAuthDataBuff, hashedClientDataBuff]))
+      const PEER_DID_MULTIBASE_PREFIX = PEER_DID_PREFIX + "0"
+      // Uint8Array
+      const publicKey = didJwt.multibaseToBytes(issuerDid.substring(PEER_DID_MULTIBASE_PREFIX.length));
+      const signature = new Uint8Array(Buffer.from(pieces[2], 'base64url'))
+
+      const verified = await verifyPeerSignature(preimage, publicKey, signature)
+      let claimPayload = JSON.parse(decodedClientData.toString())
+      if (claimPayload.challenge) {
+        claimPayload = JSON.parse(Buffer.from(claimPayload.challenge, "base64url"))
+        claimPayload.iat = payload.iat
+        claimPayload.iss = payload.iss
+      }
+      return { issuer: issuerDid, payload: claimPayload, verified: verified }
+    }
+
+    if (issuerDid.startsWith(PEER_DID_PREFIX)) {
+      return Promise.reject({
+        clientError: {
+          message: `JWT with a PEER DID currently only supported with typ == JWANT. Contact us us for JWT suport since it should be straightforward.`
+        }
+      })
+    }
+
+    return Promise.reject({
+      clientError: {
+        message: `Unsupported DID method ${issuerDid}`,
+        code: ERROR_CODES.UNSUPPORTED_DID_METHOD
+      }
+    })
   }
 
   // see findAllLastClaimIdsAndHandleIds for the format of each claimInfo: { lastClaimId || handleId, suppliedType?, clause }
@@ -1543,6 +1604,18 @@ class ClaimService {
     // available: {didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified}
     const { payload } =
         await this.decodeAndVerifyJwt(jwtEncoded)
+        .then((result) => {
+          const { issuer, payload, verified } = result
+          if (!verified) {
+            return Promise.reject({
+              clientError: {
+                message: `Claim JWT verification failed.`,
+                code: ERROR_CODES.JWT_VERIFY_FAILED
+              }
+            })
+          }
+          return result;
+        })
         .catch((err) => {
           return Promise.reject(err)
         })

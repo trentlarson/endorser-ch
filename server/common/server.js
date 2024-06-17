@@ -91,9 +91,18 @@ function requesterInfo(req, res, next) {
         //console.log("Elements of the decoded JWT", result)
         //console.log("... and the JWT doc publicKey", result.doc && result.doc.publicKey)
         //console.log("... and the JWT doc authentication", result.doc && result.doc.authentication)
-        const {payload, header, issuer} = result
-        res.locals.tokenIssuer = payload.iss
-        next()
+        const { header, issuer, payload, verified } = result
+        if (verified) {
+          res.locals.tokenIssuer = payload.iss
+          next()
+        } else {
+          res.status(400).json({
+            error: {
+              message: "Signature failed validation.",
+              code: ERROR_CODES.JWT_VERIFY_FAILED
+            }
+          }).end()
+        }
       })
       .catch(e => {
         // You would think that the separate parameter of "e" in this l.error would give the most info, but you'd be wrong in some cases such as when infura.io complains about "legacy access request rate exceeded".

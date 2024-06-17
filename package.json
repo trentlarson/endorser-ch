@@ -20,11 +20,14 @@
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
   },
   "dependencies": {
+    "@peculiar/asn1-ecc": "^2.3.8",
+    "@peculiar/asn1-schema": "^2.3.8",
     "body-parser": "^1.18.2",
     "canonicalize": "^1.0.8",
+    "cbor-x": "^1.5.9",
     "cookie-parser": "^1.4.3",
     "cors": "^2.8.5",
-    "did-jwt": "6.8.0",
+    "did-jwt": "^7.4.7",
     "did-resolver": "^4.0.0",
     "dotenv": "^6.0.0",
     "ethr-did-resolver": "^6.2.2",
@@ -41,9 +44,9 @@
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
+    "@babel/eslint-parser": "^7.22.15",
     "@babel/node": "^7.2.2",
     "@babel/preset-env": "^7.2.3",
-    "@babel/eslint-parser": "^7.22.15",
     "base64url": "^3.0.1",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
