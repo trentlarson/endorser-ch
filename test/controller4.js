@@ -97,7 +97,6 @@ describe('4 - Load Claims Incrementally', () => {
   it('insert offer claim', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({jwtEncoded: oneOfferJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -134,7 +133,6 @@ describe('4 - Load Claims Incrementally', () => {
         setTimeout(() => {
           request(Server)
           .post('/api/claim')
-          .set('Authorization', 'Bearer ' + pushTokens[0])
           .send({jwtEncoded: jwtEnc})
           .then(r => {
             if (r.body.error) {

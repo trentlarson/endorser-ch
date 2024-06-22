@@ -215,7 +215,6 @@ let claimId
 async function postClaim(pushTokenNum, claimJwtEnc) {
   return request(Server)
     .post('/api/claim')
-    .set('Authorization', 'Bearer ' + pushTokens[pushTokenNum])
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
@@ -234,7 +233,6 @@ describe('2 - Visibility', () => {
   it('user 2 should add a new LandRecorder role claim', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[2])
      .send({jwtEncoded: claimRecorderFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -353,7 +351,6 @@ describe('2 - Role Claims on Date', async () => {
       it('should register user ' + thisNum, async () => {
         await request(Server)
           .post('/api/claim')
-          .set('Authorization', 'Bearer ' + pushTokens[0])
           .send({"jwtEncoded": registerBy0JwtEncs[thisNum]})
           .then(r => {
             expect(r.body).to.be.a('string')
@@ -403,7 +400,6 @@ describe('2 - Vote', async () => {
 
     await request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[5])
       .send({"jwtEncoded": claimJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {

@@ -957,7 +957,6 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
           const vcJwt = await credentials[1].createVerification(vc)
           return request(Server)
           .post('/api/v2/claim')
-          .set('Authorization', 'Bearer ' + pushTokens[1])
           .send({jwtEncoded: vcJwt})
           .expect('Content-Type', /json/)
           .then(r => {
@@ -1006,7 +1005,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1118,7 +1116,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1151,7 +1148,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[3])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1215,7 +1211,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[4])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1283,7 +1278,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[4])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1330,7 +1324,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[4])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1396,7 +1389,6 @@ describe('6 - Check offer totals', () => {
 
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {

@@ -180,7 +180,6 @@ before(async () => {
 async function postClaim(pushTokenNum, claimJwtEnc) {
   return request(Server)
     .post('/api/claim')
-    .set('Authorization', 'Bearer ' + pushTokens[pushTokenNum])
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
@@ -196,7 +195,6 @@ describe('3 - Skills', () => {
   it('insert claim for 0 with carpentry skills by themself', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({jwtEncoded: claim_Carpentry_For0_By0_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -293,7 +291,6 @@ describe('3 - Skills', () => {
   it('claim 3 with carpentry skills by 4', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[4])
      .send({jwtEncoded: claim_Carpentry_For3_By4_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -307,7 +304,6 @@ describe('3 - Skills', () => {
   it('claim 7 with carpentry skills by themself', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[7])
      .send({jwtEncoded: claim_Carpentry_For7_By7_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {

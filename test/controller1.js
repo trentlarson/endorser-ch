@@ -789,17 +789,28 @@ describe('1 - Claim', () => {
   ).timeout(3000)
 
   it('should add a confirmation for that action (even though it is their own)', () =>
-     request(Server)
-     .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
-     .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body).to.be.a('string')
-       firstConfirmationClaimId = r.body
-       expect(r.status).that.equals(201)
-     })
+    request(Server)
+    .post('/api/claim')
+    .set('Authorization', 'Bearer ' + pushTokens[0])
+    .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body).to.be.a('string')
+      firstConfirmationClaimId = r.body
+      expect(r.status).that.equals(201)
+    })
   ).timeout(5000)
+
+  it('should fail when sending an Auth that does not match claim', () =>
+    request(Server)
+    .post('/api/claim')
+    .set('Authorization', 'Bearer ' + pushTokens[1])
+    .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(500) // should be 400 -- must change result of Promise.reject
+    })
+  ).timeout(3000)
 
   it('should get 2 claims', () =>
      request(Server)
@@ -856,7 +867,6 @@ describe('1 - Claim', () => {
   it('should add another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": claimMyNightFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -868,7 +878,6 @@ describe('1 - Claim', () => {
   it('should add yet another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": claimBvcFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -927,7 +936,6 @@ describe('1 - Claim', () => {
   it('should register user 1', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": registerBy0JwtEncs[1]})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -952,7 +960,6 @@ describe('1 - Claim', () => {
   it('should add another new confirmation', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -977,7 +984,6 @@ describe('1 - Claim', () => {
   it('should register user 3', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[3]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -989,8 +995,7 @@ describe('1 - Claim', () => {
   it('should successfully add a second confirmation by someone else', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[3])
-      .send({"jwtEncoded": confirmBvcFor0By3JwtEnc})
+     .send({"jwtEncoded": confirmBvcFor0By3JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
@@ -1001,7 +1006,6 @@ describe('1 - Claim', () => {
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": claimDebugFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1025,7 +1029,6 @@ describe('1 - Claim', () => {
   it('should add yet another new confirmation of two claims', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmMultipleFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1054,7 +1057,6 @@ describe('1 - Peer DID', () => {
   it('should register peer DID user', () =>
     request(Server)
     .post('/api/claim')
-    .set('Authorization', 'Bearer ' + pushTokens[0])
     .send({"jwtEncoded": registerPeerBy0JwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
@@ -1066,11 +1068,9 @@ describe('1 - Peer DID', () => {
   it('should create a Give with a peer DID', () =>
     request(Server)
     .post('/api/claim')
-    //.set('Authorization', 'Bearer ' + pizzaGivePeerJwtEnc)
     .send({jwtEncoded: pizzaGivePeerJwtEnc})
-    //.expect('Content-Type', /json/)
+    .expect('Content-Type', /json/)
     .then(r => {
-      console.log(r.body)
       expect(r.body).to.be.a('string')
       expect(r.status).that.equals(201)
     })
@@ -1294,7 +1294,6 @@ describe('1 - Event', () => {
   it('should not add a duplicate confirmation for this action', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1306,7 +1305,6 @@ describe('1 - Event', () => {
   it('should warn when adding a confirmation of a confirmation', () =>
      request(Server)
      .post('/api/v2/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({"jwtEncoded": confirmBvcForConfirm0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1394,7 +1392,6 @@ describe('1 - Tenure', () => {
   it('should register user 12', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[12]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1405,7 +1402,6 @@ describe('1 - Tenure', () => {
   it ('should create a tenure', () =>
       request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[12])
       .send({"jwtEncoded": claimCornerBakeryTenureFor12By12JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1494,7 +1490,6 @@ describe('1 - Visibility utils', () => {
   it('should register user 2', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[2]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1529,7 +1524,6 @@ describe('1 - Visibility utils', () => {
   it('should register user 11', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[11]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1540,7 +1534,6 @@ describe('1 - Visibility utils', () => {
   it('should create a new tenure', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[11])
      .send({ "jwtEncoded": claimCornerBakeryTenureFor11By11JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1574,7 +1567,6 @@ describe('1 - Visibility utils', () => {
   it('should confirm that competing tenure', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[10])
      .send({ "jwtEncoded": confirmCornerBakeryTenureFor11By10JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1609,7 +1601,6 @@ describe('1 - Visibility utils', () => {
   it('should register user 4', () =>
     request(Server)
       .post('/api/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[4]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1622,7 +1613,6 @@ describe('1 - Visibility utils', () => {
   it('should create a tenure for the Food Pantry', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[4])
      .send({ "jwtEncoded": claimFoodPantryFor4By4JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1634,7 +1624,6 @@ describe('1 - Visibility utils', () => {
   it('should confirm that tenure for the Food Pantry', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({ "jwtEncoded": confirmFoodPantryFor4By1JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1739,7 +1728,6 @@ describe('1 - Visibility utils', () => {
   it('#2 can confirm #4 tenure for the Food Pantry (even though #4 does not allow visibility)', () =>
     request(Server)
     .post('/api/claim')
-    .set('Authorization', 'Bearer ' + pushTokens[2])
     .send({ "jwtEncoded": confirmFoodPantryFor4By2JwtEnc })
     .expect('Content-Type', /json/)
     .then(r => {
@@ -1766,7 +1754,6 @@ describe('1 - Transitive Connections', () => {
   it('should claim attendance for 1', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({"jwtEncoded": claimIIW2019aFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1777,7 +1764,6 @@ describe('1 - Transitive Connections', () => {
   it('should claim attendance for 2', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[2])
      .send({"jwtEncoded": claimIIW2019aFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1788,7 +1774,6 @@ describe('1 - Transitive Connections', () => {
   it('should confirm attendance for 1 by 0', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmIIW2019aFor1By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1799,7 +1784,6 @@ describe('1 - Transitive Connections', () => {
   it('should confirm attendance for 2 by 1', () =>
      request(Server)
      .post('/api/claim')
-     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({"jwtEncoded": confirmIIW2019aFor2By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
