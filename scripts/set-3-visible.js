@@ -13,7 +13,7 @@ var testUtil = require('../test/util')
 
 var creds = testUtil.ethrCredData
 var credentials = R.map((c) => new Credentials(c), creds)
-let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+let pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.nextMinuteEpoch }), credentials)
 
 
 let claimAttendance = {

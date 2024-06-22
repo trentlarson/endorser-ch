@@ -20,7 +20,7 @@ const creds = testUtil.ethrCredData
 const credentials = R.map((c) => new Credentials(c), creds)
 
 const pushTokenProms = R.map((c) =>
-  c.createVerification({ exp: testUtil.tomorrowEpoch }),
+  c.createVerification({ exp: testUtil.nextMinuteEpoch }),
   credentials
 )
 

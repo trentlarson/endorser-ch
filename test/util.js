@@ -10,7 +10,7 @@ import { ERROR_CODES, HIDDEN_TEXT, isDid } from '../server/api/services/util'
 const { Credentials } = require('uport-credentials')
 
 const NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
-const TOMORROW_EPOCH = NOW_EPOCH + (24 * 60 * 60)
+const NEXT_MINUTE_EPOCH = NOW_EPOCH + (24 * 60 * 60)
 
 
 /**
@@ -141,11 +141,11 @@ module.exports = {
 
   nowEpoch: NOW_EPOCH,
 
-  tomorrowEpoch: NOW_EPOCH + (24 * 60 * 60),
+  nextMinuteEpoch: NEXT_MINUTE_EPOCH,
 
   jwtTemplate: {
     "iat": NOW_EPOCH,
-    "exp": TOMORROW_EPOCH,
+    "exp": NEXT_MINUTE_EPOCH,
     // supply "sub"
     // supply "claim", usually including same DID of "sub"
     // supply "iss"

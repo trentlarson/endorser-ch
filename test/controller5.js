@@ -20,7 +20,7 @@ const creds = testUtil.ethrCredData
 
 const credentials = R.map((c) => new Credentials(c), creds)
 
-const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.nextMinuteEpoch }), credentials)
 
 const register13By0JwtObj = R.clone(testUtil.jwtTemplate)
 register13By0JwtObj.claim = R.clone(testUtil.registrationTemplate)

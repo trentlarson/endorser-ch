@@ -94,7 +94,7 @@ const claimIIW2019a = {
 
 const credentials = testUtil.ethrCredentials
 
-const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.tomorrowEpoch }), credentials)
+const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.nextMinuteEpoch }), credentials)
 
 const registerBy0Proms =
   R.times(
