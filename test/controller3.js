@@ -8,7 +8,7 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
-import { HIDDEN_TEXT, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { HIDDEN_TEXT } from '../server/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect
@@ -180,7 +180,7 @@ before(async () => {
 async function postClaim(pushTokenNum, claimJwtEnc) {
   return request(Server)
     .post('/api/claim')
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[pushTokenNum])
+    .set('Authorization', 'Bearer ' + pushTokens[pushTokenNum])
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
@@ -196,7 +196,7 @@ describe('3 - Skills', () => {
   it('insert claim for 0 with carpentry skills by themself', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({jwtEncoded: claim_Carpentry_For0_By0_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -210,7 +210,7 @@ describe('3 - Skills', () => {
   it('search reveals no direct connection with "carpentry"', () =>
      request(Server)
      .get('/api/claim?claimContents=carpentry')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .set('Authorization', 'Bearer ' + pushTokens[2])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -230,7 +230,7 @@ describe('3 - Skills', () => {
   it('search of DID contents by person with visibility yields results', () =>
     request(Server)
     .get('/api/claim?claimContents=' + encodeURIComponent(creds[0].did))
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+    .set('Authorization', 'Bearer ' + pushTokens[1])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body)
@@ -245,7 +245,7 @@ describe('3 - Skills', () => {
   it('search of DID contents by person without visibility yields no result', () =>
     request(Server)
     .get('/api/claim?claimContents=' + encodeURIComponent(creds[0].did))
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .set('Authorization', 'Bearer ' + pushTokens[2])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body)
@@ -257,7 +257,7 @@ describe('3 - Skills', () => {
   it('search of partial DID contents by person without visibility yields no result', () =>
     request(Server)
     .get('/api/claim?claimContents=' + encodeURIComponent(creds[0].did.substring(15, 30)))
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .set('Authorization', 'Bearer ' + pushTokens[2])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body)
@@ -269,7 +269,7 @@ describe('3 - Skills', () => {
   it('search reveals no personal claim of "carpentry"', () =>
      request(Server)
      .get('/api/claim?claimContents=carpentry&subject=' + creds[2].did)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .set('Authorization', 'Bearer ' + pushTokens[2])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -281,7 +281,7 @@ describe('3 - Skills', () => {
   it('search reveals a personal claim of "carpentry"', () =>
      request(Server)
      .get('/api/claim?claimContents=carpentry&subject=' + creds[0].did)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -293,7 +293,7 @@ describe('3 - Skills', () => {
   it('claim 3 with carpentry skills by 4', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .set('Authorization', 'Bearer ' + pushTokens[4])
      .send({jwtEncoded: claim_Carpentry_For3_By4_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -307,7 +307,7 @@ describe('3 - Skills', () => {
   it('claim 7 with carpentry skills by themself', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[7])
+     .set('Authorization', 'Bearer ' + pushTokens[7])
      .send({jwtEncoded: claim_Carpentry_For7_By7_JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {

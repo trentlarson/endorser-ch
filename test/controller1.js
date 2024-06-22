@@ -10,10 +10,8 @@ import request from 'supertest'
 import { DateTime } from 'luxon'
 import R from 'ramda'
 
-const { Credentials } = require('uport-credentials')
-
 import Server from '../server'
-import { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, nonceHashChain, UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
+import { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, nonceHashChain } from '../server/api/services/util';
 import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
 import testUtil from './util'
 
@@ -615,7 +613,7 @@ describe('1 - Claim', () => {
     } else {
       return request(Server)
         .post('/api/claim')
-        .set(UPORT_PUSH_TOKEN_HEADER, badlySignedJwt)
+        .set('Authorization', 'Bearer ' + badlySignedJwt)
         .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
         .expect('Content-Type', /json/)
         .then(r => {
@@ -754,7 +752,7 @@ describe('1 - Claim', () => {
   it('should get our claim #1 with uPort token', () =>
     request(Server)
       .get('/api/claim/' + firstId)
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body)
@@ -793,7 +791,7 @@ describe('1 - Claim', () => {
   it('should add a confirmation for that action (even though it is their own)', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -806,7 +804,7 @@ describe('1 - Claim', () => {
   it('should get 2 claims', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -819,7 +817,7 @@ describe('1 - Claim', () => {
   it('should get 1 JoinAction claim', () =>
      request(Server)
      .get('/api/claim?claimType=JoinAction')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -832,7 +830,7 @@ describe('1 - Claim', () => {
   it('should get 1 confirmation', () =>
      request(Server)
      .get('/api/claim?claimType=AgreeAction')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -845,7 +843,7 @@ describe('1 - Claim', () => {
   it('should get one issuer (original claimant) who claimed or confirmed this', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body.result)
@@ -858,7 +856,7 @@ describe('1 - Claim', () => {
   it('should add another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": claimMyNightFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -870,7 +868,7 @@ describe('1 - Claim', () => {
   it('should add yet another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": claimBvcFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -882,7 +880,7 @@ describe('1 - Claim', () => {
   it('should get a set of action claims & one confirmation', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body[0])
@@ -898,7 +896,7 @@ describe('1 - Claim', () => {
     const claimEncoded = encodeURIComponent(JSON.stringify(claimBvcFor1.event))
     return request(Server)
       .get('/api/event/actionClaimsAndConfirmations?event=' + claimEncoded)
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body)
@@ -916,7 +914,7 @@ describe('1 - Claim', () => {
   it('#0 should see themselves', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -929,7 +927,7 @@ describe('1 - Claim', () => {
   it('should register user 1', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": registerBy0JwtEncs[1]})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -941,7 +939,7 @@ describe('1 - Claim', () => {
   it('#0 should not see DID #1', () =>
     request(Server)
     .get('/api/report/whichDidsICanSee')
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+    .set('Authorization', 'Bearer ' + pushTokens[0])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body)
@@ -954,7 +952,7 @@ describe('1 - Claim', () => {
   it('should add another new confirmation', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({"jwtEncoded": confirmBvcFor0By1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -966,7 +964,7 @@ describe('1 - Claim', () => {
   it('#0 should now see DID #1 as a side-effect of the claim by #1 that includes #0', () =>
     request(Server)
     .get('/api/report/whichDidsICanSee')
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+    .set('Authorization', 'Bearer ' + pushTokens[0])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body)
@@ -979,7 +977,7 @@ describe('1 - Claim', () => {
   it('should register user 3', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[3]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -991,7 +989,7 @@ describe('1 - Claim', () => {
   it('should successfully add a second confirmation by someone else', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .set('Authorization', 'Bearer ' + pushTokens[3])
       .send({"jwtEncoded": confirmBvcFor0By3JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1003,7 +1001,7 @@ describe('1 - Claim', () => {
   it('should add a new join claim for a debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": claimDebugFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1015,7 +1013,7 @@ describe('1 - Claim', () => {
   it('should retrieve the debug event (Trent @ home, Thurs night debug, 2019-02-01T02:00:00Z)', () =>
      request(Server)
      .get('/api/event?name=Thurs%20night%20debug')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body[0].orgName).that.equals('Trent @ home')
@@ -1027,7 +1025,7 @@ describe('1 - Claim', () => {
   it('should add yet another new confirmation of two claims', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmMultipleFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1039,7 +1037,7 @@ describe('1 - Claim', () => {
   it('should get the right number of claims today', () =>
      request(Server)
      .get('/api/claim/?issuedAt_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING) + "&excludeConfirmations=true")
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1056,7 +1054,7 @@ describe('1 - Peer DID', () => {
   it('should register peer DID user', () =>
     request(Server)
     .post('/api/claim')
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+    .set('Authorization', 'Bearer ' + pushTokens[0])
     .send({"jwtEncoded": registerPeerBy0JwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
@@ -1085,7 +1083,7 @@ describe('1 - Action', () => {
   it('should get action with the right properties', () =>
      request(Server)
      .get('/api/action/1')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1126,7 +1124,7 @@ describe('1 - Action', () => {
   it('should get action with the DID hidden', () =>
      request(Server)
      .get('/api/action/1')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1143,7 +1141,7 @@ describe('1 - Action', () => {
   it('should get no actions that match query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T14:59:59Z')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1156,7 +1154,7 @@ describe('1 - Action', () => {
   it('should get one action that matched query', () =>
      request(Server)
      .get('/api/action?eventStartTime=2018-12-29T15:00:00Z')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1185,7 +1183,7 @@ describe('1 - Action', () => {
   it('should get enough past claims', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + encodeURIComponent(DAY_START_TIME_STRING))
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1214,7 +1212,7 @@ describe('1 - Action', () => {
   it('should get no actions today', () =>
      request(Server)
      .get('/api/action/?eventStartTime_greaterThanOrEqualTo=' + encodeURIComponent(TODAY_START_TIME_STRING))
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1231,7 +1229,7 @@ describe('1 - Event', () => {
   it('should get event with the right properties', () =>
      request(Server)
      .get('/api/event/1')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1250,7 +1248,7 @@ describe('1 - Event', () => {
   it('should get 1 BVC event', () =>
      request(Server)
      .get('/api/event?orgName=Bountiful%20Voluntaryist%20Community')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1262,7 +1260,7 @@ describe('1 - Event', () => {
   it('should get a set of action claims & three confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1296,7 +1294,7 @@ describe('1 - Event', () => {
   it('should not add a duplicate confirmation for this action', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1308,7 +1306,7 @@ describe('1 - Event', () => {
   it('should warn when adding a confirmation of a confirmation', () =>
      request(Server)
      .post('/api/v2/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({"jwtEncoded": confirmBvcForConfirm0By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1326,7 +1324,7 @@ describe('1 - Event', () => {
   it('should get multiple action claims & still three confirmations', () =>
      request(Server)
      .get('/api/event/1/actionClaimsAndConfirmations')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body[0])
@@ -1341,7 +1339,7 @@ describe('1 - Event', () => {
     const claimEncoded = encodeURIComponent(JSON.stringify(claimBvcFor0.event))
     return request(Server)
       .get('/api/event/actionClaimsAndConfirmations?event=' + claimEncoded)
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body[0])
@@ -1356,7 +1354,7 @@ describe('1 - Event', () => {
   it('should now get three issuers/confirmers for this claim ID', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body.result)
@@ -1368,7 +1366,7 @@ describe('1 - Event', () => {
   it('should get no issuers for an unknown claim', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=NOTHING')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body.result)
@@ -1380,7 +1378,7 @@ describe('1 - Event', () => {
   it('should get an issuer for confirming a valid claim', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + firstConfirmationClaimId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body.result)
@@ -1396,7 +1394,7 @@ describe('1 - Tenure', () => {
   it('should register user 12', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[12]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1407,7 +1405,7 @@ describe('1 - Tenure', () => {
   it ('should create a tenure', () =>
       request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+      .set('Authorization', 'Bearer ' + pushTokens[12])
       .send({"jwtEncoded": claimCornerBakeryTenureFor12By12JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1418,7 +1416,7 @@ describe('1 - Tenure', () => {
   it('should get 1 claim', () =>
      request(Server)
      .get('/api/claim?claimType=Tenure')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1434,7 +1432,7 @@ describe('1 - Report', () => {
   it('should get right aggregated info', () =>
      request(Server)
      .get('/api/report/actionClaimsAndConfirmationsSince?dateTime=' + encodeURIComponent(START_TIME_STRING))
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1467,7 +1465,7 @@ describe('1 - Report', () => {
   it('should get 1 tenure', () =>
      request(Server)
      .get('/api/report/tenureClaimsAtPoint?lat=40.883944&lon=-111.884787')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1479,7 +1477,7 @@ describe('1 - Report', () => {
   it('should get no tenures', () =>
      request(Server)
      .get('/api/report/tenureClaimsAtPoint?lat=40.883943&lon=-111.884787')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1496,7 +1494,7 @@ describe('1 - Visibility utils', () => {
   it('should register user 2', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[2]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1508,7 +1506,7 @@ describe('1 - Visibility utils', () => {
     request(Server)
       .post('/api/report/cannotSeeMe')
       .send({ "did": creds[2].did })
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
@@ -1518,7 +1516,7 @@ describe('1 - Visibility utils', () => {
   it('should get claims from other tests but cannot see inside any', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .set('Authorization', 'Bearer ' + pushTokens[2])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array')
@@ -1531,7 +1529,7 @@ describe('1 - Visibility utils', () => {
   it('should register user 11', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[11]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1542,7 +1540,7 @@ describe('1 - Visibility utils', () => {
   it('should create a new tenure', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[11])
+     .set('Authorization', 'Bearer ' + pushTokens[11])
      .send({ "jwtEncoded": claimCornerBakeryTenureFor11By11JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1553,7 +1551,7 @@ describe('1 - Visibility utils', () => {
   it('should get claims and can see inside the most recent but cannot see inside the oldest', () =>
      request(Server)
      .get('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array')
@@ -1565,7 +1563,7 @@ describe('1 - Visibility utils', () => {
   it('should register user 10', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[10]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1576,7 +1574,7 @@ describe('1 - Visibility utils', () => {
   it('should confirm that competing tenure', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[10])
+     .set('Authorization', 'Bearer ' + pushTokens[10])
      .send({ "jwtEncoded": confirmCornerBakeryTenureFor11By10JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1587,7 +1585,7 @@ describe('1 - Visibility utils', () => {
   it('should get 2 tenure claims', () =>
      request(Server)
      .get('/api/claim?claimType=Tenure')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1599,7 +1597,7 @@ describe('1 - Visibility utils', () => {
   it('should get 2 competing tenures and confirmations', () =>
      request(Server)
      .get('/api/report/tenureClaimsAndConfirmationsAtPoint?lat=40.883944&lon=-111.884787')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1611,7 +1609,7 @@ describe('1 - Visibility utils', () => {
   it('should register user 4', () =>
     request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({"jwtEncoded": registerBy0JwtEncs[4]})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1624,7 +1622,7 @@ describe('1 - Visibility utils', () => {
   it('should create a tenure for the Food Pantry', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .set('Authorization', 'Bearer ' + pushTokens[4])
      .send({ "jwtEncoded": claimFoodPantryFor4By4JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1636,7 +1634,7 @@ describe('1 - Visibility utils', () => {
   it('should confirm that tenure for the Food Pantry', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({ "jwtEncoded": confirmFoodPantryFor4By1JwtEnc })
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1647,7 +1645,7 @@ describe('1 - Visibility utils', () => {
   it('should get issuer and confirmer (even though confirmed claim format is different)', () =>
      request(Server)
      .get('/api/report/issuersWhoClaimedOrConfirmed?claimId=' + foodPantryClaimBy4Id)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .set('Authorization', 'Bearer ' + pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body.result)
@@ -1662,7 +1660,7 @@ describe('1 - Visibility utils', () => {
   it('#5 should not see #4', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .set('Authorization', 'Bearer ' + pushTokens[5])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1675,7 +1673,7 @@ describe('1 - Visibility utils', () => {
      request(Server)
      .post('/api/report/canSeeMe')
      .send({ "did": creds[5].did })
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .set('Authorization', 'Bearer ' + pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)
@@ -1684,7 +1682,7 @@ describe('1 - Visibility utils', () => {
   it('#5 should see #4', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .set('Authorization', 'Bearer ' + pushTokens[5])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1696,7 +1694,7 @@ describe('1 - Visibility utils', () => {
   it('#4 can tell that #5 can see them', () =>
      request(Server)
      .get('/api/report/canDidExplicitlySeeMe?did=' + creds[5].did)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .set('Authorization', 'Bearer ' + pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.true
@@ -1707,7 +1705,7 @@ describe('1 - Visibility utils', () => {
      request(Server)
      .post('/api/report/cannotSeeMe')
      .send({ "did": creds[5].did })
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[4])
+     .set('Authorization', 'Bearer ' + pushTokens[4])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)
@@ -1716,7 +1714,7 @@ describe('1 - Visibility utils', () => {
   it('#5 should not see #4 again', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .set('Authorization', 'Bearer ' + pushTokens[5])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -1728,7 +1726,7 @@ describe('1 - Visibility utils', () => {
   it('#5 should get claim but not see #4', () =>
     request(Server)
     .get('/api/claim/' + foodPantryClaimBy4Id)
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .set('Authorization', 'Bearer ' + pushTokens[2])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body.issuer).to.equal(HIDDEN_TEXT)
@@ -1741,7 +1739,7 @@ describe('1 - Visibility utils', () => {
   it('#2 can confirm #4 tenure for the Food Pantry (even though #4 does not allow visibility)', () =>
     request(Server)
     .post('/api/claim')
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .set('Authorization', 'Bearer ' + pushTokens[2])
     .send({ "jwtEncoded": confirmFoodPantryFor4By2JwtEnc })
     .expect('Content-Type', /json/)
     .then(r => {
@@ -1753,7 +1751,7 @@ describe('1 - Visibility utils', () => {
   it('#2 can get claim and see inside all details since they made that claim, even though #4 restricted visibility', () =>
     request(Server)
     .get('/api/claim/' + foodPantryBy4ConfirmedBy2Id)
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+    .set('Authorization', 'Bearer ' + pushTokens[2])
     //.expect('Content-Type', /json/)
     .then(r => {
       expect(r.body).to.be.an('object')
@@ -1768,7 +1766,7 @@ describe('1 - Transitive Connections', () => {
   it('should claim attendance for 1', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({"jwtEncoded": claimIIW2019aFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1779,7 +1777,7 @@ describe('1 - Transitive Connections', () => {
   it('should claim attendance for 2', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .set('Authorization', 'Bearer ' + pushTokens[2])
      .send({"jwtEncoded": claimIIW2019aFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1790,7 +1788,7 @@ describe('1 - Transitive Connections', () => {
   it('should confirm attendance for 1 by 0', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+     .set('Authorization', 'Bearer ' + pushTokens[0])
      .send({"jwtEncoded": confirmIIW2019aFor1By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -1801,7 +1799,7 @@ describe('1 - Transitive Connections', () => {
   it('should confirm attendance for 2 by 1', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+     .set('Authorization', 'Bearer ' + pushTokens[1])
      .send({"jwtEncoded": confirmIIW2019aFor2By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {

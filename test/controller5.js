@@ -10,7 +10,6 @@ const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
 import { dbService } from '../server/api/services/endorser.db.service'
-import { UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
 chai.use(chaiAsPromised);
@@ -74,7 +73,7 @@ describe('5 - Registration', () => {
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 123)
     await request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({jwtEncoded: register13By0JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -89,7 +88,7 @@ describe('5 - Registration', () => {
   it('check that User 1 cannot register on the same day', async () => {
     await request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({jwtEncoded: register13By1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -103,7 +102,7 @@ describe('5 - Registration', () => {
   it('check that user 13 cannot claim', () =>
     request(Server)
       .get('/api/v2/report/canClaim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[13])
+      .set('Authorization', 'Bearer ' + pushTokens[13])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(200)
@@ -119,7 +118,7 @@ describe('5 - Registration', () => {
   it('check that User 0 cannot insert too many claims', async() => {
     return request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+      .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({jwtEncoded: claimAnotherBy0JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
@@ -132,7 +131,7 @@ describe('5 - Registration', () => {
   it('check that user 12 can claim', () =>
      request(Server)
      .get('/api/v2/report/canClaim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[12])
+     .set('Authorization', 'Bearer ' + pushTokens[12])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(200)
@@ -153,7 +152,7 @@ describe('5 - Registration', () => {
     // we know user 12 is already registered, so this won't affect state
     await request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[1])
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({jwtEncoded: register12By1JwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {

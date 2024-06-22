@@ -11,7 +11,6 @@ const { Credentials } = require('uport-credentials')
 
 import Server from '../server'
 import { dbService } from '../server/api/services/endorser.db.service'
-import { UPORT_PUSH_TOKEN_HEADER } from '../server/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect
@@ -216,7 +215,7 @@ let claimId
 async function postClaim(pushTokenNum, claimJwtEnc) {
   return request(Server)
     .post('/api/claim')
-    .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[pushTokenNum])
+    .set('Authorization', 'Bearer ' + pushTokens[pushTokenNum])
     .send({jwtEncoded: claimJwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
@@ -235,7 +234,7 @@ describe('2 - Visibility', () => {
   it('user 2 should add a new LandRecorder role claim', () =>
      request(Server)
      .post('/api/claim')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .set('Authorization', 'Bearer ' + pushTokens[2])
      .send({jwtEncoded: claimRecorderFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
@@ -250,7 +249,7 @@ describe('2 - Visibility', () => {
   it('user 3 should get that claim with all DIDs hidden', () =>
      request(Server)
      .get('/api/claim/' + claimId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .set('Authorization', 'Bearer ' + pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -269,7 +268,7 @@ describe('2 - Visibility', () => {
   it('user 3 should not see that full land claim JWT', () =>
      request(Server)
      .get('/api/claim/full/' + claimId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .set('Authorization', 'Bearer ' + pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.status).that.equals(403)
@@ -278,7 +277,7 @@ describe('2 - Visibility', () => {
   it('user 5 should see one DID', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .set('Authorization', 'Bearer ' + pushTokens[5])
      .then(r => {
        expect(r.status).that.equals(200)
        expect(r.body).that.deep.equals([creds[5].did])
@@ -289,7 +288,7 @@ describe('2 - Visibility', () => {
   it('user 2 should make user 2 visible to everyone', () =>
      request(Server)
      .post('/api/report/makeMeGloballyVisible')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[2])
+     .set('Authorization', 'Bearer ' + pushTokens[2])
      .send({"url":"https://ignitecommunity.org"})
      .then(r => {
        expect(r.status).that.equals(200)
@@ -300,7 +299,7 @@ describe('2 - Visibility', () => {
   it('user 5 should see two DIDs', () =>
      request(Server)
      .get('/api/report/whichDidsICanSee')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+     .set('Authorization', 'Bearer ' + pushTokens[5])
      .then(r => {
        expect(r.status).that.equals(200)
        expect(r.body).that.deep.equals([creds[2].did, creds[5].did])
@@ -311,7 +310,7 @@ describe('2 - Visibility', () => {
   it('user 3 should get that claim with DIDs shown', () =>
      request(Server)
      .get('/api/claim/' + claimId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .set('Authorization', 'Bearer ' + pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(testUtil.allDidsAreHidden(r.body)).to.be.false
@@ -326,7 +325,7 @@ describe('2 - Visibility', () => {
   it('user 3 should now see that full land claim JWT', () =>
      request(Server)
      .get('/api/claim/full/' + claimId)
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .set('Authorization', 'Bearer ' + pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
@@ -354,7 +353,7 @@ describe('2 - Role Claims on Date', async () => {
       it('should register user ' + thisNum, async () => {
         await request(Server)
           .post('/api/claim')
-          .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[0])
+          .set('Authorization', 'Bearer ' + pushTokens[0])
           .send({"jwtEncoded": registerBy0JwtEncs[thisNum]})
           .then(r => {
             expect(r.body).to.be.a('string')
@@ -379,7 +378,7 @@ describe('2 - Role Claims on Date', async () => {
   it('should get org role claims & confirmations', () =>
      request(Server)
      .get('/api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-07-01')
-     .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[3])
+     .set('Authorization', 'Bearer ' + pushTokens[3])
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array').of.length(2)
@@ -404,7 +403,7 @@ describe('2 - Vote', async () => {
 
     await request(Server)
       .post('/api/claim')
-      .set(UPORT_PUSH_TOKEN_HEADER, pushTokens[5])
+      .set('Authorization', 'Bearer ' + pushTokens[5])
       .send({"jwtEncoded": claimJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
