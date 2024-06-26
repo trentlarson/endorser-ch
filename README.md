@@ -60,7 +60,7 @@ NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 NODE_ENV=dev npm run dev
 
 # register ths first permissioned user by adding a DID thus:
-echo "INSERT INTO registration (did, maxClaims, maxRegs) VALUES ('YOUR_DID', 100, 10000);" | sqlite3 ../endorser-ch-dev.sqlite3
+echo "INSERT INTO registration (did, maxClaims, maxRegs, epoch) VALUES ('YOUR_DID', 100, 10000, 1719348718092);" | sqlite3 ../endorser-ch-dev.sqlite3
 # ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
 ```
 
@@ -132,7 +132,7 @@ server/api/services/claim.service.js )
 
 #### Test server
 
-You can use the test server APIs at [https://tes-api.endorser.ch](https://test-api.endorser.ch)
+You can use the test server APIs at [https://test-api.endorser.ch](https://test-api.endorser.ch)
 
 
 
