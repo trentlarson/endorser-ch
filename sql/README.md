@@ -6,6 +6,7 @@ This file exists to explain data because sometimes the comments inside the
 them after flyway has run).
 
 ```
+-- cache table, for quick retrieval of claims with type JoinAction
 CREATE TABLE action_claim (
     jwtId CHARACTER(26),
     issuerDid VARCHAR(100),
@@ -16,6 +17,7 @@ CREATE TABLE action_claim (
     eventStartTime DATETIME
 );
 
+-- cache table, for quick retrieval of claims with type AgreeAction (or, in olden times, Confirmation)
 CREATE TABLE confirmation (
     jwtId CHARACTER(26),
     issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
@@ -44,12 +46,14 @@ CREATE TABLE confirmation (
     planHandleId TEXT
 );
 
+-- an event referenced by a JoinAction in the action_claim table
 CREATE TABLE event (
     orgName VARCHAR(120),
     name VARCHAR(250),
     startTime DATETIME
 );
 
+-- cache table, for quick retrieval of claims with type GiveAction
 CREATE TABLE give_claim (
     handleId TEXT PRIMARY KEY,
     jwtId TEXT,
@@ -61,7 +65,7 @@ CREATE TABLE give_claim (
 
     recipientDid TEXT, -- global ID of recipient
 
-    fulfillsHandleId TEXT, -- global ID to the offer to which this Give applies
+    fulfillsHandleId TEXT, -- global ID to the item to which this Give applies, currently always an offer
     fulfillsType TEXT, -- type of that ID (assuming context of schema.org), currently always "Offer"
 
     -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
@@ -102,6 +106,7 @@ CREATE INDEX give_fulfillsId ON give_claim(fulfillsId);
 CREATE INDEX give_fulfillsPlanId ON give_claim(fulfillsPlanId);
 CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);
 
+-- cache table, for quick retrieval of GiveAction claims with a provider
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction to which the provider contributes
     providerId TEXT, -- DID or handle ID of the provider entity who helps make the give possible
@@ -114,6 +119,7 @@ CREATE TABLE give_provider (
 CREATE INDEX give_provider_give ON give_provider(giveHandleId);
 CREATE INDEX give_provider_provider ON give_provider(providerHandleId);
 
+-- table for all the raw incoming claims, before they are parsed and potentially stored in the other tables
 CREATE TABLE jwt (
     id CHARACTER(26) PRIMARY KEY,
     subject VARCHAR(100),
@@ -145,6 +151,7 @@ CREATE TABLE jwt (
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
 
+-- track all the visibility, where each subject can see each object
 CREATE TABLE network (
     subject VARCHAR(100), -- DID of the entity who can see/reach the object
     object VARCHAR(100), -- DID of the entity who can be seen/reached by the subject
@@ -152,6 +159,7 @@ CREATE TABLE network (
     CONSTRAINT both_unique UNIQUE (subject, object)
 );
 
+-- cache table, for quick retrieval of claims with type Offer
 CREATE TABLE offer_claim (
     handleId TEXT PRIMARY KEY,
     jwtId TEXT,
@@ -200,6 +208,7 @@ CREATE INDEX offer_recipientDid ON offer_claim(recipientDid);
 CREATE INDEX offer_recipientPlanId ON offer_claim(recipientPlanHandleId);
 CREATE INDEX offer_validThrough ON offer_claim(validThrough);
 
+-- cache table, for quick retrieval of claims with type Organization with someone in an OrganizationRole
 CREATE TABLE org_role_claim (
     jwtId CHARACTER(26),
     issuerDid VARCHAR(100), -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
@@ -210,6 +219,7 @@ CREATE TABLE org_role_claim (
     memberDid TEXT -- DID of the member with the role; did:ethr are 52 chars
 );
 
+-- cache table, for quick retrieval of claims with type PlanAction
 CREATE TABLE plan_claim (
     handleId TEXT,
     jwtId text PRIMARY KEY, -- updated to the latest JWT ID that updated this
@@ -258,6 +268,7 @@ CREATE INDEX plan_endTime ON plan_claim(endTime);
 CREATE INDEX plan_fulfillsPlan on plan_claim (fulfillsPlanHandleId);
 CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
 
+-- cache table, for quick retrieval of claims with type Project
 CREATE TABLE project_claim (
     jwtId TEXT PRIMARY KEY, -- updated to the latest JWT ID that updated this
     issuerDid TEXT, -- DID of the entity who recorded this; did:peer are 58 chars
@@ -279,6 +290,7 @@ CREATE INDEX project_fullIri ON project_claim(handleId);
 CREATE INDEX project_endTime ON project_claim(endTime);
 CREATE INDEX project_resultIdentifier ON project_claim(resultIdentifier);
 
+-- cache table, for quick retrieval of claims with type RegisterAction
 CREATE TABLE registration (
     did CHARACTER(100) PRIMARY KEY, -- DID of the registered entity; did:peer are 58 chars
     agent CHARACTER(100), -- DID of the registering entity; did:peer are 58 chars
@@ -290,6 +302,7 @@ CREATE TABLE registration (
 CREATE INDEX registered_agent ON registration(agent);
 CREATE INDEX registered_epoch ON registration(epoch);
 
+-- cache table, for quick retrieval of claims with type Tenure
 CREATE TABLE tenure_claim (
     jwtId CHARACTER(26),
     issuerDid VARCHAR(100), -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
@@ -303,6 +316,7 @@ CREATE TABLE tenure_claim (
     maxLat REAL
 );
 
+-- cache table, for quick retrieval of claims with type VoteAction
 CREATE TABLE vote_claim (
     jwtId CHARACTER(26),
     issuerDid VARCHAR(100), -- DID of the issuer (first one to create this claim); did:ethr are 52 chars
