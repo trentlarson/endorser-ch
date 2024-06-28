@@ -1569,7 +1569,7 @@ describe('6 - Check give totals', () => {
       { '@type': 'CreativeWork', description: 'Found new homeschooling friends' },
     ]
     credObj.claim.provider = {
-      "@type": "Person", "identifier": creds[1].did
+      "@type": "GiveAction", "identifier": firstGiveRecordHandleId
     }
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1631,7 +1631,7 @@ describe('6 - Check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].identifier).to.equal(creds[1].did)
+        expect(r.body.data[0].identifier).to.equal(firstGiveRecordHandleId)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1675,7 +1675,7 @@ describe('6 - Check give totals', () => {
 
   it('provider-gives retrieval gets one', () => {
     return request(Server)
-      .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(creds[1].did))
+      .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -1715,8 +1715,8 @@ describe('6 - Check give totals', () => {
     }
     credObj.claim.description = 'Found more homeschooling friends who jam'
     credObj.claim.provider = [
-      { "@type": "Person", "identifier": creds[1].did },
-      { "@type": "Person", "identifier": creds[2].did },
+      { "@type": "GiveAction", "identifier": firstGiveRecordHandleId },
+      { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
     ]
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1784,8 +1784,8 @@ describe('6 - Check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(2)
-        expect(r.body.data[0].identifier).to.equal(creds[1].did)
-        expect(r.body.data[1].identifier).to.equal(creds[2].did)
+        expect(r.body.data[0].identifier).to.equal(firstGiveRecordHandleId)
+        expect(r.body.data[1].identifier).to.equal(secondGiveRecordHandleId)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1806,7 +1806,7 @@ describe('6 - Check give totals', () => {
     }
     credObj.claim.description = 'Found more homeschooling friends who jam'
     credObj.claim.provider = [
-      { "@type": "Person", "identifier": creds[1].did },
+      { "@type": "GiveAction", "identifier": firstGiveRecordHandleId },
     ]
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1841,7 +1841,7 @@ describe('6 - Check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].identifier).to.equal(creds[1].did)
+        expect(r.body.data[0].identifier).to.equal(firstGiveRecordHandleId)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1850,7 +1850,7 @@ describe('6 - Check give totals', () => {
 
   it('provider-gives retrieval gets two', () => {
     return request(Server)
-      .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(creds[1].did))
+      .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .expect('Content-Type', /json/)
       .then(r => {
@@ -2124,8 +2124,8 @@ describe('6 - Check give totals', () => {
     credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerId6)
     credObj.claim.description = 'First-graders & snowboarding & horses?'
     credObj.claim.provider = [
-      { "@type": "Person", "identifier": creds[2].did },
-      { "@type": "Person", "identifier": creds[3].did },
+      { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
+      { "@type": "GiveAction", "identifier": thirdGiveRecordHandleId },
     ]
     delete credObj.claim.object
     credObj.sub = creds[2].did
@@ -2214,8 +2214,8 @@ describe('6 - Check give totals', () => {
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(2)
-        expect(r.body.data[0].identifier).to.equal(creds[2].did)
-        expect(r.body.data[1].identifier).to.equal(HIDDEN_TEXT)
+        expect(r.body.data[0].identifier).to.equal(secondGiveRecordHandleId)
+        expect(r.body.data[1].identifier).to.equal(thirdGiveRecordHandleId)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2230,8 +2230,8 @@ describe('6 - Check give totals', () => {
     credObj.claim.recipient = { identifier: creds[1].did }
     credObj.claim.description = 'First-graders & snowboarding & horses?'
     credObj.claim.provider = [
-      { "@type": "Person", "identifier": creds[2].did },
-      { "@type": "Person", "identifier": creds[3].did },
+      { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
+      { "@type": "GiveAction", "identifier": thirdGiveRecordHandleId },
     ]
     delete credObj.claim.object
     credObj.sub = creds[2].did
