@@ -11,6 +11,7 @@ import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/u
 import { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
 
 import ClaimService from '../services/claim.service';
+
 class ClaimController {
   getIssuersMatchingClaim(req, res) {
     ClaimService.thisClaimAndConfirmationsIssuersMatchingClaimId(req.query.claimId)
@@ -81,13 +82,11 @@ import { dbService } from '../services/endorser.db.service';
 class DbController {
   getVoteCounts(req, res) {
     dbService.retrieveVoteCounts()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getSeenByAll(req, res) {
     dbService.getSeenByAll()
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -208,6 +207,8 @@ export default express
 /**
  * Get issuers for a claim
  *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group reports v1 - Reports (with limited result counts)
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
  * @param {string} claimId.query.required - the ID of the claim
@@ -219,6 +220,8 @@ export default express
 
 /**
  * Get claims and confirmations for individual
+ *
+ * Beware: this array may include a "publicUrls" key within it.
  *
  * @group reports v1 - Reports
  * @route GET /api/report/actionClaimsAndConfirmationsSince
@@ -245,6 +248,8 @@ export default express
 /**
  * Get tenure claims and confirmations for a point
  *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group reports v1 - Reports
  * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
@@ -257,6 +262,8 @@ export default express
 
 /**
  * Get org-role claims and confirmations for org & role & date
+ *
+ * Beware: this array may include a "publicUrls" key within it.
  *
  * @group reports v1 - Reports
  * @route GET /api/report/orgRoleClaimsAndConfirmationsOnDate

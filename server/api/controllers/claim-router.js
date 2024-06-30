@@ -12,7 +12,7 @@ class Controller {
     }
     ClaimService
       .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      // no need to check for visible data because they sent it
       .then(r => {
         const result = { success: r }
         return res

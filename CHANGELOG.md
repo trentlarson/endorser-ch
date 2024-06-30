@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Fixed
+- Hidden DIDs in givesToPlans endpoint in claims that the user issued
 ### Changed in DB or environment
-- ?
+- SQL script 11
 
 
 

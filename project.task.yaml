@@ -256,7 +256,8 @@ tasks :
 - 01 allow all confirmations, even if they fit a category but then fail a check
 - 02 allow read of all data in claims/confirmations issued by requester
 - 02 in text search - show claim contents instead of DB records
-- 02 fix any endpoints that return arrays to be a {"result":...} object to handle "publicUrls" (eg claim search)
+- 02 deprecate any endpoints that return straight arrays and create ones that are {"data":...} object to handle "publicUrls" (eg claim search, v1 issuers who confirmed)
+- 01 add "...VisibleToDids" for array elements
 - 02 change name of app from "uport demo" (when logging in)
 - 01 fix UI disallowing any calls for an expired token (see working-self on 2022.04.06) id:expired-uport-token
 - 01 add .json(someErr) to all routers in the error path

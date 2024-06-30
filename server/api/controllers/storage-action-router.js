@@ -43,6 +43,9 @@ export default express
 
 /**
  * Get many actions
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group storage of actions - Action storage
  * @route GET /api/action
  * @param {String} agentDid.query.optional

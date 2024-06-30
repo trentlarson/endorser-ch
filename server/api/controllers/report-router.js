@@ -1,7 +1,10 @@
 import * as express from 'express'
 import * as R from 'ramda'
 
-import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+import {
+  hideDidsAndAddLinksToNetwork,
+  hideDidsAndAddLinksToNetworkInKey
+} from '../services/util-higher'
 
 import ClaimService from '../services/claim.service'
 import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
@@ -20,7 +23,7 @@ class DbController {
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data",  []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -35,7 +38,7 @@ class DbController {
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -56,7 +59,9 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results =>
+        hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", [])
+      )
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -72,7 +77,7 @@ class DbController {
           ),
           hitLimit: results.hitLimit,
         }))
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+        .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -88,7 +93,7 @@ class DbController {
           ),
           hitLimit: results.hitLimit,
         }))
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+        .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -107,7 +112,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -129,7 +134,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -181,7 +186,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -200,7 +205,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -330,7 +335,7 @@ class DbController {
       minLocLat, maxLocLat, westLocLon, eastLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
-      .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -553,6 +558,8 @@ export default express
 /**
  * Search gives
  *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/gives
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
@@ -717,6 +724,8 @@ export default express
 /**
  * Get all plans for the query inputs, paginated, reverse-chronologically
  *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plans
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
@@ -738,6 +747,8 @@ export default express
 /**
  * Get all plans by the issuer, paginated, reverse-chronologically
  *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
@@ -750,6 +761,8 @@ export default express
 
 /**
  * Get all plans that have a location in the bbox specified, paginated, reverse-chronologically
+ *
+ * Beware: this array may include a "publicUrls" key within it.
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plansByLocation
@@ -768,6 +781,8 @@ export default express
 /**
  * Get plan fulfilled by given plan
  *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/planFulfilledByPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
@@ -779,6 +794,8 @@ export default express
 
 /**
  * Get plans that fulfill given plan
+ *
+ * Beware: this array may include a "publicUrls" key within it.
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/fulfillersToPlan
@@ -794,7 +811,9 @@ export default express
 /**
  * Get providers for a particular give
  *
- * @group reports - Reports (with paging)
+ * Beware: this array may include a "publicUrls" key within it.
+ *
+ *  @group reports - Reports (with paging)
  * @route GET /api/v2/report/providersToGive
  * @param {string} giveHandleId.query.optional - the jwtId of the give entry
  * @returns {array.PersonLink} 200 - 'data' property with each of the providers with known types

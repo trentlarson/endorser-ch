@@ -4,22 +4,49 @@ import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll
 import { HIDDEN_TEXT, isDid } from './util'
 
 /**
+ * Call hideDidsAndAddLinksToNetwork but where input is expected to have a
+ * "data" key with the data to hide, so that the process starts there, and then
+ * any "publicUrls" are moved to the top level.
+ *
+ * The value in the key is expected to follow the rules for "issuer" or "issuerDid".
+ *
+ * @see #hideDidsAndAddLinksToNetwork
+ * @param key {string} the key to use to find the data to hide (eg "data")
+ * @returns {Promise<object>} which returns the input but with the key replaced
+ * and with any publicUrls moved to the top level
+ */
+async function hideDidsAndAddLinksToNetworkInKey(requesterDid, input, key, searchTermMaybeDIDs) {
+  const result = await hideDidsAndAddLinksToNetwork(requesterDid, input[key], searchTermMaybeDIDs)
+  if (result["publicUrls"]) {
+    input["publicUrls"] = result["publicUrls"]
+    delete result["publicUrls"]
+  }
+  input[key] = result
+  return input
+}
+
+/**
   Accept the original result and return the result for the given user
   where, if a DID is not visible to this user, it is hidden but connected DIDs are shown.
     - if a non-map object, replace any non-visible DIDs with HIDDEN_DID value
-      ... but non-map usage is _DISCOURAGED_ because then the "publicUrls" can't be added
+      ... but non-map usage is _DISCOURAGED_ because then the "publicUrls" either get lost or show as a key in an array which is weird (see below)
     - if a map object
       - recurse on values
-      - if any values are HIDDEN_DID, add a key
+      - if any values are HIDDEN_DID and are visible to someone else in user's network, add a key
         - name is a prefix of the same name plus suffix of "VisibleToDids"
         - value is an array of all DIDs who the requester can see & who can see the hidden DID
       - if any DIDs are public, add a "publicUrls" key at the top level with value of a map from DID to URL
 
-  @param requesterDid {string} the DID of the user making the request
-   @param input {object|array|string} the result to be scrubbed
-   @param searchTermMaybeDIDs {array} an array of strings in potential search fields that may be DIDs or parts of DIDs
- **/
+  Note that this object or each element of this array (recursively) is expected
+  to have a key of either "issuer" or "issuerDid" if it contains any DIDs (so
+  that the data isn't hidden from this person who might be the issuer).
 
+  @param requesterDid {string} the DID of the user making the request
+  @param input {object|array|string} the result to be scrubbed
+  @param searchTermMaybeDIDs {array} an array of strings in potential search fields that may be DIDs or parts of DIDs
+  @returns {Promise<object|array|string>} the result with DIDs hidden, key + "VisibleToDids" added,
+    and links to DIDs with published URLs added as "publicUrls" key (for both objects and arrays)
+ **/
 async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybeDIDs) {
   if (!searchTermMaybeDIDs) {
     throw new Error("Parameter searchTermMaybeDIDs is required to ensure no DID-based search parameter gives data to someone without visibility.")
@@ -31,7 +58,7 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
   if (Array.isArray(input)) {
     result = []
     for (let item of input) {
-      if (requesterDid && item?.issuer === requesterDid) {
+      if (requesterDid && ((item?.issuer || item?.issuerDid) === requesterDid)) {
         // allow all visibility for the issuer
         result = R.append(item, result)
       } else {
@@ -48,14 +75,15 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       }
     }
   } else {
-    if (requesterDid && input?.issuer === requesterDid) {
+    if (requesterDid && ((input?.issuer || input?.issuerDid) === requesterDid)) {
       result = input
     } else {
       result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
     }
   }
 
-  // ensure the public URL lookup is initialized
+  // Include any public URLs.
+  // For arrays, this adds the publicUrls as a top-level key, which is weird... it works, but we should handle this better.
   await getDidsSeenByAll()
   let publicUrls = gatherPublicUrls(result)
   if (R.length(R.keys(publicUrls)) > 0) {
@@ -167,4 +195,4 @@ async function makeGloballyVisible(issuerDid, url) {
     })
 }
 
-module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkSub /* for tests */, getPublicDidUrl, makeGloballyVisible }
+module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInKey, hideDidsAndAddLinksToNetworkSub /* for tests */, getPublicDidUrl, makeGloballyVisible }

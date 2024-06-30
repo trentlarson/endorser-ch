@@ -70,6 +70,7 @@ class ClaimController {
     }
     ClaimService
       .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
+      // no need to check for visible data because they sent it
       .then(r => {
         const result = r.claimId
         return res
@@ -147,6 +148,9 @@ export default express
 
 /**
  * Get many Claim JWTs
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim
  * @param {string} claimContents.query.optional

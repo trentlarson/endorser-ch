@@ -57,6 +57,9 @@ export default express
 
 /**
  * Get many events
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group storage of events - Event storage
  * @route GET /api/event
  * @param {String} orgName.query.optional
@@ -101,6 +104,9 @@ export default express
 
 /**
  * Get claims and confirmations for an event
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group storage of events - Event storage
  * @route GET /api/event/actionClaimsAndConfirmations
  * @param {EventInput} event.query.required - the event data
@@ -123,6 +129,9 @@ export default express
 
 /**
  * Get claims and confirmations for an event
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group storage of events - Event storage
  * @route GET /api/event/{id}/actionClaimsAndConfirmations
  * @param {number} id.path.required - the ID of the event record to retrieve

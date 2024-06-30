@@ -1706,6 +1706,7 @@ describe('6 - Check give totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.recipient = { identifier: creds[5].did }
     credObj.claim.fulfills = [
       { lastClaimId: localFromGlobalEndorserIdentifier(anotherProjectOfferId) },
       { '@type': 'DonateAction' },
@@ -1771,6 +1772,9 @@ describe('6 - Check give totals', () => {
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].amountConfirmed).to.be.equal(0)
+        // these test that a user can see all data from their own claims
+        expect(r.body.data[0].recipientDid).to.be.equal(creds[5].did)
+        expect(r.body.data[0].fullClaim.recipient.identifier).to.be.equal(creds[5].did)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

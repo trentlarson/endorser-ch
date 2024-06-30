@@ -694,16 +694,16 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt =
           "INSERT INTO give_claim (jwtId, handleId, issuedAt, updatedAt"
-          + ", agentDid, recipientDid"
+          + ", issuerDid, agentDid, recipientDid"
           + ", fulfillsHandleId, fulfillsLinkConfirmed, fulfillsType"
           + ", fulfillsPlanHandleId, giftNotTrade"
           + ", amountConfirmed, amount, unit, description, fullClaim)"
-          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          + " VALUES (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
-          entry.agentDid, entry.recipientDid,
+          entry.issuerDid, entry.agentDid, entry.recipientDid,
           entry.fulfillsHandleId,
           entry.fulfillsLinkConfirmed, entry.fulfillsType,
           entry.fulfillsPlanHandleId, entry.giftNotTrade,
@@ -718,7 +718,8 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'give_claim',
       'jwtId',
-      ['jwtId', 'handleId', 'updatedAt', 'agentDid', 'recipientDid',
+      [
+        'jwtId', 'handleId', 'updatedAt', 'issuerDid', 'agentDid', 'recipientDid',
         'fulfillsHandleId', 'fulfillsType', 'fulfillsPlanHandleId', 'amountConfirmed',
         'giftNotTrade'],
       ['description'],
@@ -1530,18 +1531,18 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt =
           "INSERT INTO offer_claim (jwtId, handleId, issuedAt, updatedAt"
-          + ", offeredByDid, recipientDid"
+          + ", issuerDid, offeredByDid, recipientDid"
           + ", fulfillsHandleId, fulfillsLinkConfirmed"
           + ", fulfillsPlanHandleId"
           + ", amount, unit, objectDescription"
           + ", validThrough, fullClaim)"
           + " VALUES"
-          + " (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, datetime(?), ?)"
+          + " (?, ?, datetime(?), datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?), ?)"
       db.run(
         stmt,
         [
           entry.jwtId, entry.handleId, entry.issuedAt, entry.updatedAt,
-          entry.offeredByDid, entry.recipientDid,
+          entry.issuerDid, entry.offeredByDid, entry.recipientDid,
           entry.fulfillsHandleId, entry.fulfillsLinkConfirmed ? 1 : 0,
           entry.fulfillsPlanHandleId,
           entry.amount, entry.unit,
@@ -1556,7 +1557,8 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'offer_claim',
       'jwtId',
-      ['jwtId', 'handleId', 'updatedAt', 'offeredByDid', 'recipientDid',
+      [
+        'jwtId', 'handleId', 'updatedAt', 'issuerDid', 'offeredByDid', 'recipientDid',
         'fulfillsPlanHandleId', 'validThrough'],
       ['objectDescription'],
       ['issuedAt', 'updatedAt', 'validThrough'],

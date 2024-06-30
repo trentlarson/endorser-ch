@@ -32,6 +32,9 @@ export default express
 
 /**
  * Get many tenures
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
  * @group storage of tenures - Tenure storage
  * @route GET /api/tenure/
  * @returns {array.object} 200 - many tenures (up to 50)
