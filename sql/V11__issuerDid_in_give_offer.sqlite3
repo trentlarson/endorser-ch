@@ -1,0 +1,8 @@
+
+-- see README.md in this directory for explanations
+
+alter table give_claim add column issuerDid text;
+alter table offer_claim add column issuerDid text;
+
+update give_claim set issuerDid = (select issuer from jwt where jwt.id = give_claim.jwtId);
+update offer_claim set issuerDid = (select issuer from jwt where jwt.id = offer_claim.jwtId);

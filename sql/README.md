@@ -60,6 +60,8 @@ CREATE TABLE give_claim (
     issuedAt DATETIME,
     updatedAt DATETIME,
 
+    issuerDid VARCHAR(100),
+
     -- note that did:peer are 58 chars
     agentDid TEXT, -- global ID of the entity who gave the item
 
@@ -165,6 +167,8 @@ CREATE TABLE offer_claim (
     jwtId TEXT,
     issuedAt DATETIME,
     updatedAt DATETIME,
+
+    issuerDid VARCHAR(100),
 
     -- note that did:peer are 58 chars
     offeredByDid TEXT, -- global ID of the offering entity (issuer if it was sent empty)
