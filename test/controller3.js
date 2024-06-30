@@ -248,7 +248,8 @@ describe('3 - Skills', () => {
     .then(r => {
       expect(r.body)
       .to.be.an('array')
-      .of.length(0)
+      .of.length(1)
+      expect(r.body[0].claimType).to.equal("RegisterAction")
       expect(r.status).that.equals(200)
     }))
 
@@ -260,7 +261,8 @@ describe('3 - Skills', () => {
     .then(r => {
       expect(r.body)
       .to.be.an('array')
-      .of.length(0)
+      .of.length(1)
+      expect(r.body[0].claimType).to.equal("RegisterAction")
       expect(r.status).that.equals(200)
     }))
 

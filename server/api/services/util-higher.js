@@ -1,7 +1,7 @@
 import R from 'ramda'
 import l from '../../common/logger'
 import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, whoDoesRequesterSeeWhoCanSeeObject } from './network-cache.service'
-import { HIDDEN_TEXT, isDid } from './util'
+import {HIDDEN_TEXT, inputContainsDid, isDid} from './util'
 
 /**
  * Call hideDidsAndAddLinksToNetwork but where input is expected to have a
@@ -58,7 +58,11 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
   if (Array.isArray(input)) {
     result = []
     for (let item of input) {
-      if (requesterDid && ((item?.issuer || item?.issuerDid) === requesterDid)) {
+      const issuerInClaim = inputContainsDid(item, requesterDid)
+      if (
+        issuerInClaim
+        || (requesterDid && ((item?.issuer || item?.issuerDid) === requesterDid))
+      ) {
         // allow all visibility for the issuer
         result = R.append(item, result)
       } else {
@@ -75,7 +79,11 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       }
     }
   } else {
-    if (requesterDid && ((input?.issuer || input?.issuerDid) === requesterDid)) {
+    const issuerInClaim = inputContainsDid(input, requesterDid)
+    if (
+      issuerInClaim
+      || (requesterDid && ((input?.issuer || input?.issuerDid) === requesterDid))
+    ) {
       result = input
     } else {
       result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)

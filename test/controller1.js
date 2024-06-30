@@ -11,7 +11,7 @@ import { DateTime } from 'luxon'
 import R from 'ramda'
 
 import Server from '../server'
-import { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, nonceHashChain } from '../server/api/services/util';
+import { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, nonceHashChain } from '../server/api/services/util';
 import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
 import testUtil from './util'
 
@@ -430,6 +430,21 @@ describe('1 - Util', () => {
     expect(allDidsInside(repObj11)).to.deep.equal([HIDDEN_TEXT])
     expect(allDidsInside(repObj12)).to.deep.equal([addr0, HIDDEN_TEXT, addru])
     expect(allDidsInside(someObj2)).to.deep.equal([])
+
+    expect(inputContainsDid(null, addr0)).to.be.false
+    expect(inputContainsDid(9, addr0)).to.be.false
+    expect(inputContainsDid({}, addr0)).to.be.false
+    expect(inputContainsDid([], addr0)).to.be.false
+    expect(inputContainsDid([addr0], addr0)).to.be.true
+    expect(inputContainsDid([addr0], addru)).to.be.false
+    expect(inputContainsDid(addr0, addr0)).to.be.true
+    expect(inputContainsDid(addru, addr0)).to.be.false
+    expect(inputContainsDid(someObj1, addr0)).to.be.true
+    expect(inputContainsDid(someObj1, addra)).to.be.false
+    expect(inputContainsDid(someObj1, addru)).to.be.true
+    expect(inputContainsDid(someObj2, addr0)).to.be.false
+    expect(inputContainsDid(someObj2, addra)).to.be.false
+    expect(inputContainsDid(someObj2, addru)).to.be.false
   })
 
   it('should hide DIDs', () => {
@@ -1515,9 +1530,19 @@ describe('1 - Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array')
+       console.log(r.body)
+       let countTwoVisible = 0;
        for (let i = 0; i < r.body.length; i++) {
-         expect(testUtil.allDidsAreHidden(r.body[i], creds[2].did)).to.be.true
+         if (inputContainsDid(r.body[i], creds[2].did)) {
+           expect(inputContainsDid(r.body[i], HIDDEN_TEXT)).to.be.false
+           expect(r.body[i].claimType).to.equal("RegisterAction")
+           countTwoVisible++
+         } else {
+           expect(testUtil.allDidsAreHidden(r.body[i], creds[2].did)).to.be.true
+         }
        }
+       // #2 should only see their registration claim
+       expect(countTwoVisible).to.equal(1)
        expect(r.status).that.equals(200)
      }))
 

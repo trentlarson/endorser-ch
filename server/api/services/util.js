@@ -143,6 +143,35 @@ function allDidsInside(input) {
   }
 }
 
+function inputContainsDid(input, did) {
+
+  if (Object.prototype.toString.call(input) === "[object String]") {
+    return input === did
+  } else if (input instanceof Object) {
+
+    if (!Array.isArray(input)) {
+      // it's an object
+      const keys = R.keys(input)
+      for (let key of keys) {
+        if (inputContainsDid(input[key], did)) {
+          return true
+        }
+      }
+      return false
+    } else {
+      // it's an array
+      for (let value of input) {
+        if (inputContainsDid(value, did)) {
+          return true
+        }
+      }
+      return false
+    }
+  } else {
+    return false
+  }
+}
+
 function hashNonceAndDid(nonce, did) {
   const hash = crypto.createHash('sha256')
   hash.update(did + nonce)
@@ -250,5 +279,5 @@ function findAllLastClaimIdsAndHandleIds(clause) {
   return clauseIdsAndHandleIds
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, ETHR_DID_PREFIX, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, PEER_DID_PREFIX, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, ETHR_DID_PREFIX, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, inputContainsDid, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, PEER_DID_PREFIX, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
 
