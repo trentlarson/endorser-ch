@@ -953,21 +953,22 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
 
     const givesProms = manyGives.map(async (vc, i) => {
       return new Promise((resolve, reject) => {
-        setTimeout(async () => {
-          const vcJwt = await credentials[1].createVerification(vc)
-          return request(Server)
-          .post('/api/v2/claim')
-          .send({jwtEncoded: vcJwt})
-          .expect('Content-Type', /json/)
-          .then(r => {
-            expect(r.status).that.equals(201)
-            expect(r.body.success).does.not.have.property('embeddedRecordError')
-            //console.log('Inserted claim #', i + 1, 'of', manyGives.length)
-            resolve()
-          }).catch((err) => {
-            reject(err)
+        credentials[1].createVerification(vc)
+          .then(vcJwt => {
+            return request(Server)
+            .post('/api/v2/claim')
+            .send({jwtEncoded: vcJwt})
+            .expect('Content-Type', /json/)
+            .then(r => {
+              expect(r.status).that.equals(201)
+              expect(r.body.success).does.not.have.property('embeddedRecordError')
+              //console.log('Inserted claim #', i + 1, 'of', manyGives.length)
+              resolve()
+            }).catch((err) => {
+              reject(err)
+            })
+
           })
-        }, timeToWait * i)
       })
     })
     return await Promise.all(givesProms)
