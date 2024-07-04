@@ -665,7 +665,7 @@ describe('1 - Claim', () => {
             .to.be.an('object')
             .that.has.property('error')
             .that.has.property('message')
-            .to.endsWith('Signature invalid for JWT')
+            .to.endsWith('no matching public key found')
         })
     }
   }).timeout(3000)
@@ -700,7 +700,7 @@ describe('1 - Claim', () => {
             .to.be.an('object')
             .that.has.property('error')
             .that.has.property('message')
-            .to.endsWith('Signature invalid for JWT')
+            .to.endsWith('no matching public key found')
         })
     }
   }).timeout(3000)

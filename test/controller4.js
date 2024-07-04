@@ -130,7 +130,6 @@ describe('4 - Load Claims Incrementally', () => {
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 124)
     const allResults = manyClaimsJwtEnc.map((jwtEnc, i) => {
       return new Promise((resolve, reject) => {
-        setTimeout(() => {
           request(Server)
           .post('/api/claim')
           .send({jwtEncoded: jwtEnc})
@@ -147,8 +146,6 @@ describe('4 - Load Claims Incrementally', () => {
           }).catch((err) => {
             reject(err)
           })
-        },
-        timeToWait * i)
       })
     })
     return Promise.all(allResults)

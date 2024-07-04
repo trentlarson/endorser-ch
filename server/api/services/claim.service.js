@@ -21,13 +21,18 @@ import {
 import { verifyPeerSignature } from './util-crypto';
 import { addCanSee } from './network-cache.service'
 
+import {didEthLocalResolver} from "../../did/did-eth-local-resolver";
+
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
-const resolver =
-      new Resolver({
-        ...ethrDidResolver({
-          infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'
-        })
-      })
+const resolver = process.env.USE_INFURA === "true" ?
+  new Resolver({
+    ...ethrDidResolver({
+      infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'
+    })
+  }) :
+  new Resolver({
+    'ethr': didEthLocalResolver
+  });
 
 const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
 
@@ -1448,7 +1453,7 @@ class ClaimService {
         }
       })
     }
-    if (issuerDid && issuerDid.startsWith("did:ethr:") && process.env.NODE_ENV === 'test-local') {
+    if (issuerDid && issuerDid.startsWith(ETHR_DID_PREFIX) && process.env.NODE_ENV === 'test-local') {
       // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed
       // eg. no "." separators.
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
