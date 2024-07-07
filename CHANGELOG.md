@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.6.2] - 2024.07.07
+## [3.6.2] - 2024.07.07 - 7fb49766ffd739886d7cc28871cfc3914870fd9d
 ### Added
 - Acceptance of JWANT tokens for did:peer DIDs created with passkeys.
 ### Fixed
