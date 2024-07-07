@@ -68,7 +68,7 @@ echo "INSERT INTO registration (did, maxClaims, maxRegs, epoch) VALUES ('YOUR_DI
 
 Debug: `NODE_ENV=dev npm run dev:debug`
 
-Release:
+Deploy / Release:
 
 * Update CHANGELOG.md & package.json, run `npm install`, then commit and tag the release.
 

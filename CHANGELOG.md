@@ -8,14 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Changed in DB or environment
+- Nothing
+
+
+
+## [3.6.0] - 2024.07.06
+### Added
+- Acceptance of JWANT tokens for did:peer DIDs created with passkeys.
 ### Fixed
-- Hidden DIDs in givesToPlans endpoint in claims that the user issued
+- Hidden DIDs in claims that the user issued
+- Hidden DIDs in claims that include the user
 ### Changed in DB or environment
 - SQL script 11
 
 
 
-## [3.5.4] - 2024.05.04
+## [3.5.4] - 2024.05.04 - d59075cc2b84ed2b2eb682152de4263528c1695f
 ### Fixed
 - Vulnerability exposing search result to people without visibility of that DID
 ### Changed in DB or environment
