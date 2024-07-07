@@ -50,7 +50,8 @@ npm ci
 # set up the environment (optional)
 cp .env.local .env
 
-# Set the INFURA_PROJECT_ID in that .env file. (This isn't critical for local tests, but it's necessary for server operation and for verification tests.)
+# If you want to use the did-jwt did:ethr resolver, set USE_INFURA=true and set the INFURA_PROJECT_ID in that .env file.
+# (This isn't used for local tests, but it's possible for server operation and for verification tests.)
 
 # setup/migrate DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
@@ -114,7 +115,9 @@ Run the local automated tests and build sample data with this: `./test/test.sh`
 
   * The first time, it doesn't do validation of the signed JWTs, so it's faster. This is good to validate basic logic.
 
-  * After a 10-second countdown, it runs the tests again with validation of every signature. It requires the INFURA_PROJECT_ID to be set in the .env file, which you can get with a free account at the infura.io site.
+  * After a 10-second countdown, it runs the tests again with validation of every signature.
+    This has been changed to a local resolver, so the Infura stuff isn't so critical, but if you want it:
+    set USE_INFURA=true in the .env file, then set the INFURA_PROJECT_ID which you can get with a free account at the infura.io site.
 
 * Note that this sometimes fails without reason and a rerun works, especially on "Load Claims Incrementally". (Network issue with infura.io?)
 
@@ -747,6 +750,7 @@ Here's a way to verify a JWT signature.
 yarn add did-jwt@4.0.0 ethr-did-resolver@3.0.0
 node
 
+// note that you can now use the local resolver instead of Infura; see server/did/did-eth-local-resolver.js
 const infuraProjectId = '...' // get one at infura.io
 const didJWT = require('did-jwt')
 const Resolver = require('did-resolver').Resolver

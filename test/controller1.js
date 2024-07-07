@@ -267,6 +267,7 @@ confirmFoodPantryFor4By2JwtObj.sub = creds[4].did
 const confirmFoodPantryFor4By2JwtProm = credentials[2].createVerification(confirmFoodPantryFor4By2JwtObj)
 
 const pizzaGivePeerJwtEnc = "eyJ0eXAiOiJKV0FOVCIsImFsZyI6IkVTMjU2In0.eyJBdXRoZW50aWNhdGlvbkRhdGFCNjRVUkwiOiJTWllONVlnT2pHaDBOQmNQWkhaZ1c0X2tycm1paGpMSG1Wenp1b01kbDJNRkFBQUFBQSIsIkNsaWVudERhdGFKU09OQjY0VVJMIjoiZXlKMGVYQmxJam9pZDJWaVlYVjBhRzR1WjJWMElpd2lZMmhoYkd4bGJtZGxJam9pWlhsS01sbDVTVFpsZVVwcVkyMVdhMXBYTlRCaFYwWnpWVE5XYVdGdFZtcGtRMGsyWlhsS1FWa3lPWFZrUjFZMFpFTkpOa2x0YURCa1NFSjZUMms0ZG1NeVRtOWFWekZvVEcwNWVWcDVTWE5KYTBJd1pWaENiRWxxYjJsU01td3lXbFZHYW1SSGJIWmlhVWx6U1cxU2JHTXlUbmxoV0VJd1lWYzVkVWxxYjJsalIydzJaVzFGYVdaWU1ITkpiV3hvWkVOSk5rMVVZM2hQUkZVMFRtcHJOVTFEZDJsaFdFNTZTV3B2YVZwSGJHdFBia0pzV2xoSk5rMUljRXhVVlZweFpHeFdibGRZU2s1TlYyaFpaREJTYW1GV2JFbGhWVVUxVkZob1dXUkZjRkZYUnpWVFZFVndNbU5YT1U1VWEwWk1ZakJTVFZkRWJIZFRNREZZVkVkSmVsWnJVbnBhTTFab1RWaEJlV1ZzWTNobFJtaFRZekp3WVZVeFVrOWpNbG95VkZjMVQyVlZNVlJPTWxKRFRrZHpNMVJyUm05U2JtUk5UVE5DV1ZGdVNrTlhSMlExVjFWdk5XTnRhMmxtVVNJc0ltOXlhV2RwYmlJNkltaDBkSEE2THk5c2IyTmhiR2h2YzNRNk9EQTRNQ0lzSW1OeWIzTnpUM0pwWjJsdUlqcG1ZV3h6WlgwIiwiaWF0IjoxNzE4NTg2OTkyLCJpc3MiOiJkaWQ6cGVlcjowektNRmp2VWdZck0xaFh3RGNpWUhpQTlNeFh0SlBYblJMSnZxb01OQUtvRExYOXBLTVdMYjNWRHNndWExcDJ6VzF4WFJzalpTVE5zZnZNbk55TVM3ZEI0azdOQWhGd0wzcFhCckJYZ3lZSjlyaSJ9.MEUCIQDJyCTbMPIFnuBoW3FYnlgtDEIHZ2OrkCEvqVnHU7kJDQIgVxjBjfW1TwQfcSOYwK8Z7AdCWGJlyxtLEsrnPif7caE";
+const pizzaGivePeerBadSigJwtEnc = "eyJ0eXAiOiJKV0FOVCIsImFsZyI6IkVTMjU2In0.eyJBdXRoZW50aWNhdGlvbkRhdGFCNjRVUkwiOiJTWllONVlnT2pHaDBOQmNQWkhaZ1c0X2tycm1paGpMSG1Wenp1b01kbDJNRkFBQUFBQSIsIkNsaWVudERhdGFKU09OQjY0VVJMIjoiZXlKMGVYQmxJam9pZDJWaVlYVjBhRzR1WjJWMElpd2lZMmhoYkd4bGJtZGxJam9pWlhsS01sbDVTVFpsZVVwcVkyMVdhMXBYTlRCaFYwWnpWVE5XYVdGdFZtcGtRMGsyWlhsS1FWa3lPWFZrUjFZMFpFTkpOa2x0YURCa1NFSjZUMms0ZG1NeVRtOWFWekZvVEcwNWVWcDVTWE5KYTBJd1pWaENiRWxxYjJsU01td3lXbFZHYW1SSGJIWmlhVWx6U1cxU2JHTXlUbmxoV0VJd1lWYzVkVWxxYjJsalIydzJaVzFGYVdaWU1ITkpiV3hvWkVOSk5rMVVZM2hQUkZVMFRtcHJOVTFEZDJsaFdFNTZTV3B2YVZwSGJHdFBia0pzV2xoSk5rMUljRXhVVlZweFpHeFdibGRZU2s1TlYyaFpaREJTYW1GV2JFbGhWVVUxVkZob1dXUkZjRkZYUnpWVFZFVndNbU5YT1U1VWEwWk1ZakJTVFZkRWJIZFRNREZZVkVkSmVsWnJVbnBhTTFab1RWaEJlV1ZzWTNobFJtaFRZekp3WVZVeFVrOWpNbG95VkZjMVQyVlZNVlJPTWxKRFRrZHpNMVJyUm05U2JtUk5UVE5DV1ZGdVNrTlhSMlExVjFWdk5XTnRhMmxtVVNJc0ltOXlhV2RwYmlJNkltaDBkSEE2THk5c2IyTmhiR2h2YzNRNk9EQTRNQ0lzSW1OeWIzTnpUM0pwWjJsdUlqcG1ZV3h6WlgwIiwiaWF0IjoxNzE4NTg2OTkyLCJpc3MiOiJkaWQ6cGVlcjowektNRmp2VWdZck0xaFh3RGNpWUhpQTlNeFh0SlBYblJMSnZxb01OQUtvRExYOXBLTVdMYjNWRHNndWExcDJ6VzF4WFJzalpTVE5zZnZNbk55TVM3ZEI0azdOQWhGd0wzcFhCckJYZ3lZSjlyaSJ9.MEUCIQDJyCTbMPIFnuBoW3FYnlgtDEIHZ2OrkCEvqVnHU7kJDQIgVxjBjfW1TwQfcSOYwK8Z7AdCWGJlyxtLEsrnPif7caA";
 
 let pushTokens, registerBy0JwtEncs, registerPeerBy0JwtEnc,
     // claims for 0
@@ -1080,6 +1081,16 @@ describe('1 - Peer DID', () => {
     })
   ).timeout(5000)
 
+  it('should fail to create a Give with a peer DID and a bad signature', () =>
+    request(Server)
+    .post('/api/claim')
+    .send({jwtEncoded: pizzaGivePeerBadSigJwtEnc})
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(400)
+    })
+  ).timeout(5000)
+
   it('should create a Give with a peer DID', () =>
     request(Server)
     .post('/api/claim')
@@ -1530,7 +1541,6 @@ describe('1 - Visibility utils', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.an('array')
-       console.log(r.body)
        let countTwoVisible = 0;
        for (let i = 0; i < r.body.length; i++) {
          if (inputContainsDid(r.body[i], creds[2].did)) {
