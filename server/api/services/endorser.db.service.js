@@ -102,7 +102,7 @@ function constructWhereConditions(params, allowedColumns, claimContents, content
 function constructWhere(params, allowedColumns, claimContents, contentColumns, booleanColumns, excludeConfirmations) {
   const whereClause = constructWhereConditions(params, allowedColumns, claimContents, contentColumns, booleanColumns, excludeConfirmations)
   if (whereClause.clause.length > 0) {
-    whereClause.clause = " WHERE " + whereClause.clause
+    whereClause.clause = " WHERE" + whereClause.clause
   }
   return whereClause
 }
@@ -189,7 +189,7 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns,
           const result = {}
           for (let field of fieldNames) {
             if (row[field] === undefined) {
-              logger.error(`DB field reference ${field} was not found in results.`)
+              logger.error(`Requested DB field reference ${field} was undefined in results fields in query: ${sql}`)
             }
             result[field] =
               dateColumns.includes(field)
