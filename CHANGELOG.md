@@ -13,14 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [3.6.1] - 2024.07.07
-### Fixed
-- Bad reference to crypto functionality in peer DID code
-### Changed in DB or environment
-- Nothing
-
-
-## [3.6.0] - 2024.07.06
+## [3.6.2] - 2024.07.07
 ### Added
 - Acceptance of JWANT tokens for did:peer DIDs created with passkeys.
 ### Fixed
