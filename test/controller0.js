@@ -5,8 +5,6 @@ import { DateTime } from "luxon"
 import { dbService } from '../server/api/services/endorser.db.service'
 import testUtil from './util'
 
-const credentials = testUtil.ethrCredentials
-
 describe('0 - Setup', () => {
 
   it('should register initial user', () => {

@@ -35,6 +35,7 @@ const resolver = process.env.USE_INFURA === "true" ?
   });
 
 const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
+const TEST_BYPASS_ENV_VALUE = "test-local";
 
 const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
       process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 31
@@ -1453,7 +1454,7 @@ class ClaimService {
         }
       })
     }
-    if (issuerDid && issuerDid.startsWith(ETHR_DID_PREFIX) && process.env.NODE_ENV === 'test-local') {
+    if (issuerDid && issuerDid.startsWith(ETHR_DID_PREFIX) && process.env.NODE_ENV === TEST_BYPASS_ENV_VALUE) {
       // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed
       // eg. no "." separators.
       let nowEpoch =  Math.floor(new Date().getTime() / 1000)
@@ -1482,6 +1483,30 @@ class ClaimService {
     }
 
     if (issuerDid.startsWith(PEER_DID_PREFIX) && header.typ === "JWANT") {
+
+      if (!payload.iss) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT is missing an "iss" field.`,
+          }
+        })
+      }
+      let nowEpoch =  Math.floor(new Date().getTime() / 1000)
+      if (!payload.exp) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT with is missing an "exp" field.`,
+          }
+        })
+      }
+      if (payload.exp < nowEpoch && process.env.NODE_ENV !== TEST_BYPASS_ENV_VALUE) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT with exp ${payload.exp} has expired.`,
+          }
+        });
+      }
+
       const authData = payload.AuthenticationDataB64URL
       const clientData = payload.ClientDataJSONB64URL
       if (!authData || !clientData) {
@@ -1491,8 +1516,54 @@ class ClaimService {
           }
         })
       }
+
       const decodedAuthDataBuff = Buffer.from(authData, 'base64url')
       const decodedClientData = Buffer.from(clientData, 'base64url')
+
+      let claimPayload = JSON.parse(decodedClientData.toString())
+      if (claimPayload.challenge) {
+        claimPayload = JSON.parse(Buffer.from(claimPayload.challenge, "base64url"))
+        if (!claimPayload.exp) {
+          claimPayload.exp = payload.exp
+        }
+        if (!claimPayload.iat) {
+          claimPayload.iat = payload.iat
+        }
+        if (!claimPayload.iss) {
+          claimPayload.iss = payload.iss
+        }
+      }
+      if (!claimPayload.exp) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT client data challenge is missing an "exp" field.`,
+          }
+        })
+      }
+      if (claimPayload.exp < nowEpoch && process.env.NODE_ENV !== TEST_BYPASS_ENV_VALUE) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT client data challenge exp time is past.`,
+          }
+        })
+      }
+      console.log('claimPayload.exp', claimPayload.exp, 'payload.exp', payload.exp)
+      if (claimPayload.exp != payload.exp) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT client data challenge "exp" field doesn't match the outside payload "exp".`,
+          }
+        })
+      }
+      console.log('claimPayload.iss', claimPayload.iss, 'payload.iss', payload.iss)
+      if (claimPayload.iss != payload.iss) {
+        return Promise.reject({
+          clientError: {
+            message: `JWT client data challenge "iss" field doesn't match the outside payload "iss".`,
+          }
+        })
+      }
+
       const hashedClientDataBuff = crypto.createHash("sha256")
         .update(decodedClientData)
         .digest()
@@ -1501,14 +1572,7 @@ class ClaimService {
       // Uint8Array
       const publicKey = didJwt.multibaseToBytes(issuerDid.substring(PEER_DID_MULTIBASE_PREFIX.length));
       const signature = new Uint8Array(Buffer.from(pieces[2], 'base64url'))
-
       const verified = await verifyPeerSignature(preimage, publicKey, signature)
-      let claimPayload = JSON.parse(decodedClientData.toString())
-      if (claimPayload.challenge) {
-        claimPayload = JSON.parse(Buffer.from(claimPayload.challenge, "base64url"))
-        claimPayload.iat = payload.iat
-        claimPayload.iss = payload.iss
-      }
       return { issuer: issuerDid, payload: claimPayload, verified: verified }
     }
 

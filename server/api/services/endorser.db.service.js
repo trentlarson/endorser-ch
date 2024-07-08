@@ -1147,6 +1147,9 @@ class EndorserDatabase {
     // 144 bits, base64 >= 128 bits with all character space (no padding chars)
     const hashNonce = crypto.randomBytes(18).toString('base64')
     const nonceHashHex = util.hashedClaimWithHashedDids({nonce: hashNonce, claim: claimStr})
+    if (!payload.iat) {
+        throw new Error('JWT payload must include "iat" field.')
+    }
     const issuedAt = new Date(payload.iat * 1000).toISOString()
     const issuer = payload.iss
     const subject = payload.sub

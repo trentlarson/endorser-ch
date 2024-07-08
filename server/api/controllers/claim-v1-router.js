@@ -83,7 +83,7 @@ class ClaimController {
           res.status(400).json({ error: { message: err.clientError.message, code: err.clientError.code } })
         } else {
           console.log(err)
-          res.status(500).json({ error: err }).end()
+          res.status(500).json({ error: "" + err }).end()
         }
       })
   }
