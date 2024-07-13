@@ -4,7 +4,7 @@
 import chai from 'chai'
 import chaiAsPromised from "chai-as-promised"
 import chaiString from 'chai-string'
-import crypto from 'crypto'
+//import crypto from 'crypto'
 import { createJWT } from 'did-jwt'
 import request from 'supertest'
 import { DateTime } from 'luxon'

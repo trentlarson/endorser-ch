@@ -7,6 +7,8 @@ import {DIDResolutionResult} from 'did-resolver';
  * This effectively hard codes the did:ethr DID resolver to use the address as the public key.
  * @param did : string
  * @returns {Promise<DIDResolutionResult>}
+ *
+ * Similar code resides in image-api
  */
 export const didEthLocalResolver = async(did) => {
   const didRegex = /^did:ethr:(0x[0-9a-fA-F]{40})$/;

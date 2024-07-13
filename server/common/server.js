@@ -6,10 +6,10 @@ import * as http from 'http';
 import * as os from 'os';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import l from './logger';
 
-import ClaimService from '../api/services/claim.service';
 import { ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util';
+import { decodeAndVerifyJwt } from "../api/services/vc";
+import l from './logger';
 const app = new Express();
 
 app.use(helmet())
@@ -86,7 +86,7 @@ function requesterInfo(req, res, next) {
       res.status(401).json('Missing Bearer JWT In Authorization header').end()
     }
   } else {
-    ClaimService.decodeAndVerifyJwt(jwt)
+    decodeAndVerifyJwt(jwt)
       .then((result) => {
         //console.log("Elements of the decoded JWT", result)
         //console.log("... and the JWT doc publicKey", result.doc && result.doc.publicKey)
