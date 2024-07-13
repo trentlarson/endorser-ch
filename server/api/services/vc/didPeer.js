@@ -3,6 +3,13 @@ import { ECDSASigValue } from "@peculiar/asn1-ecc";
 import crypto from "crypto";
 import { decode as cborDecode } from "cbor-x";
 
+/**
+ *
+ *
+ * similar code is in crowd-funder-for-time-pwa libs/crypto/vc/passkeyDidPeer.ts verifyJwtWebCrypto
+ *
+ * @returns {Promise<boolean>}
+ */
 export async function verifyPeerSignature(payloadBytes, publicKeyBytes, signatureBytes) {
   // this simple approach doesn't work
   //const verify = crypto.createVerify('sha256')
@@ -75,7 +82,7 @@ function arrayToBase64Url(anything /* Uint8Array*/) {
  *
  * @return Uint8Array of the signature inside
  */
-export function unwrapEC2Signature(signature /* Uint8Array */) {
+function unwrapEC2Signature(signature /* Uint8Array */) {
   const parsedSignature = AsnParser.parse(signature, ECDSASigValue);
   let rBytes = new Uint8Array(parsedSignature.r);
   let sBytes = new Uint8Array(parsedSignature.s);
@@ -97,7 +104,7 @@ export function unwrapEC2Signature(signature /* Uint8Array */) {
  * Determine if the DER-specific `00` byte at the start of an ECDSA signature byte sequence
  * should be removed based on the following logic:
  *
- * "If the leading byte is 0x0, and the the high order bit on the second byte is not set to 0,
+ * "If the leading byte is 0x0, and the high order bit on the second byte is not set to 0,
  * then remove the leading 0x0 byte"
  *
  * @return true if leading zero should be removed
@@ -113,7 +120,7 @@ function shouldRemoveLeadingZero(bytes /* Uint8Array */) {
  * @param arrays - Uint8Array[]
  * @return Uint8Array
  */
-export function isoUint8ArrayConcat(arrays /* Uint8Array[] */) {
+function isoUint8ArrayConcat(arrays /* Uint8Array[] */) {
   let pointer = 0;
   const totalLength = arrays.reduce((prev, curr) => prev + curr.length, 0);
 

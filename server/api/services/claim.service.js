@@ -1,41 +1,27 @@
 import base64url from 'base64url'
 import canonicalize from 'canonicalize'
 import crypto from 'crypto'
-import didJwt from 'did-jwt'
-import { Resolver } from 'did-resolver'
-import { DateTime } from 'luxon'
+import {DateTime, Duration} from 'luxon'
 import R from 'ramda'
 import util from 'util'
-import { getResolver as ethrDidResolver } from 'ethr-did-resolver'
 
 import l from '../../common/logger'
-import { dbService } from './endorser.db.service'
+import {dbService} from './endorser.db.service'
 import {
-  allDidsInside, calcBbox, claimHashChain,
-  ERROR_CODES, ETHR_DID_PREFIX, findAllLastClaimIdsAndHandleIds,
+  allDidsInside,
+  calcBbox,
+  claimHashChain,
+  ERROR_CODES,
+  findAllLastClaimIdsAndHandleIds,
   globalFromInternalIdentifier,
   hashedClaimWithHashedDids,
-  isGlobalEndorserHandleId, isGlobalUri,
-  PEER_DID_PREFIX,
+  isGlobalEndorserHandleId,
+  isGlobalUri,
 } from './util';
-import { verifyPeerSignature } from './util-crypto';
-import { addCanSee } from './network-cache.service'
-
-import {didEthLocalResolver} from "../../did/did-eth-local-resolver";
-
-// for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
-const resolver = process.env.USE_INFURA === "true" ?
-  new Resolver({
-    ...ethrDidResolver({
-      infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'
-    })
-  }) :
-  new Resolver({
-    'ethr': didEthLocalResolver
-  });
+import {addCanSee} from './network-cache.service'
+import {decodeAndVerifyJwt} from "./vc";
 
 const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
-const TEST_BYPASS_ENV_VALUE = "test-local";
 
 const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
       process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 31
@@ -140,8 +126,8 @@ class ClaimService {
       const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
       const startOfWeekString = startOfWeekDate.toISO()
       const result = {
-        nextMonthBeginDateTime: startOfMonthDate.plus({months: 1}).toISO(),
-        nextWeekBeginDateTime: startOfWeekDate.plus({weeks: 1}).toISO(),
+        nextMonthBeginDateTime: startOfMonthDate.plus(Duration.fromObject({months: 1})).toISO(),
+        nextWeekBeginDateTime: startOfWeekDate.plus(Duration.fromObject({weeks: 1})).toISO(),
       }
 
       const claimedCount = await dbService.jwtCountByAfter(requestorDid, startOfWeekString)
@@ -1440,158 +1426,6 @@ class ClaimService {
     return R.mergeLeft(embeddedResults, { networkResults: allNetRecords })
   }
 
-  // return Promise of at least { issuer, payload, verified boolean }
-  // ... and also if successfully verified by did-jwt (not JWANT): data, doc, signature, signer
-  async decodeAndVerifyJwt(jwt) {
-    const pieces = R.split('.', jwt)
-    const header = JSON.parse(base64url.decode(pieces[0]))
-    const payload = JSON.parse(base64url.decode(pieces[1]))
-    const issuerDid = payload.iss
-    if (!issuerDid) {
-      return Promise.reject({
-        clientError: {
-          message: `Missing "iss" field in JWT.`,
-        }
-      })
-    }
-    if (issuerDid && issuerDid.startsWith(ETHR_DID_PREFIX) && process.env.NODE_ENV === TEST_BYPASS_ENV_VALUE) {
-      // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed
-      // eg. no "." separators.
-      let nowEpoch =  Math.floor(new Date().getTime() / 1000)
-      if (payload.exp < nowEpoch) {
-        l.warn("JWT with exp " + payload.exp
-               + " has expired but we're in test mode so using a new time."
-              )
-        payload.exp = nowEpoch + 100
-      }
-      return { issuer: issuerDid, payload, verified: true } // other elements will = undefined
-    }
-
-    if (issuerDid.startsWith(ETHR_DID_PREFIX)) {
-      try {
-        let verified = await didJwt.verifyJWT(jwt, {resolver})
-        return verified
-
-      } catch (e) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT failed verification: ` + e.toString(),
-            code: ERROR_CODES.JWT_VERIFY_FAILED
-          }
-        })
-      }
-    }
-
-    if (issuerDid.startsWith(PEER_DID_PREFIX) && header.typ === "JWANT") {
-
-      if (!payload.iss) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT is missing an "iss" field.`,
-          }
-        })
-      }
-      let nowEpoch =  Math.floor(new Date().getTime() / 1000)
-      if (!payload.exp) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT with is missing an "exp" field.`,
-          }
-        })
-      }
-      if (payload.exp < nowEpoch && process.env.NODE_ENV !== TEST_BYPASS_ENV_VALUE) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT with exp ${payload.exp} has expired.`,
-          }
-        });
-      }
-
-      const authData = payload.AuthenticationDataB64URL
-      const clientData = payload.ClientDataJSONB64URL
-      if (!authData || !clientData) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT with typ == JWANT requires AuthenticationData and ClientDataJSON.`
-          }
-        })
-      }
-
-      const decodedAuthDataBuff = Buffer.from(authData, 'base64url')
-      const decodedClientData = Buffer.from(clientData, 'base64url')
-
-      let claimPayload = JSON.parse(decodedClientData.toString())
-      if (claimPayload.challenge) {
-        claimPayload = JSON.parse(Buffer.from(claimPayload.challenge, "base64url"))
-        if (!claimPayload.exp) {
-          claimPayload.exp = payload.exp
-        }
-        if (!claimPayload.iat) {
-          claimPayload.iat = payload.iat
-        }
-        if (!claimPayload.iss) {
-          claimPayload.iss = payload.iss
-        }
-      }
-      if (!claimPayload.exp) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT client data challenge is missing an "exp" field.`,
-          }
-        })
-      }
-      if (claimPayload.exp < nowEpoch && process.env.NODE_ENV !== TEST_BYPASS_ENV_VALUE) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT client data challenge exp time is past.`,
-          }
-        })
-      }
-      console.log('claimPayload.exp', claimPayload.exp, 'payload.exp', payload.exp)
-      if (claimPayload.exp != payload.exp) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT client data challenge "exp" field doesn't match the outside payload "exp".`,
-          }
-        })
-      }
-      console.log('claimPayload.iss', claimPayload.iss, 'payload.iss', payload.iss)
-      if (claimPayload.iss != payload.iss) {
-        return Promise.reject({
-          clientError: {
-            message: `JWT client data challenge "iss" field doesn't match the outside payload "iss".`,
-          }
-        })
-      }
-
-      const hashedClientDataBuff = crypto.createHash("sha256")
-        .update(decodedClientData)
-        .digest()
-      const preimage = new Uint8Array(Buffer.concat([decodedAuthDataBuff, hashedClientDataBuff]))
-      const PEER_DID_MULTIBASE_PREFIX = PEER_DID_PREFIX + "0"
-      // Uint8Array
-      const publicKey = didJwt.multibaseToBytes(issuerDid.substring(PEER_DID_MULTIBASE_PREFIX.length));
-      const signature = new Uint8Array(Buffer.from(pieces[2], 'base64url'))
-      const verified = await verifyPeerSignature(preimage, publicKey, signature)
-      return { issuer: issuerDid, payload: claimPayload, verified: verified }
-    }
-
-    if (issuerDid.startsWith(PEER_DID_PREFIX)) {
-      return Promise.reject({
-        clientError: {
-          message: `JWT with a PEER DID currently only supported with typ == JWANT. Contact us us for JWT suport since it should be straightforward.`
-        }
-      })
-    }
-
-    return Promise.reject({
-      clientError: {
-        message: `Unsupported DID method ${issuerDid}`,
-        code: ERROR_CODES.UNSUPPORTED_DID_METHOD
-      }
-    })
-  }
-
   // see findAllLastClaimIdsAndHandleIds for the format of each claimInfo: { lastClaimId || handleId, suppliedType?, clause }
   //
   // return Promise of object with the lastClaimId's JWT loaded into the lastClaimJwt field,
@@ -1674,7 +1508,7 @@ class ClaimService {
 
     // available: {didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified}
     const { payload } =
-        await this.decodeAndVerifyJwt(jwtEncoded)
+        await decodeAndVerifyJwt(jwtEncoded)
         .then((result) => {
           const { issuer, payload, verified } = result
           if (!verified) {
