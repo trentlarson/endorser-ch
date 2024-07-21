@@ -896,7 +896,7 @@ class ClaimService {
       fulfillsPlanHandleId,
       fulfillsPlanLastClaimId,
       giftNotTrade,
-      amount: claimAmountObject?.amountOfThisGood,
+      amount: claimAmountObject?.amountOfThisGood || 0,
       unit: claimAmountObject?.unitCode,
       description: claimDescription,
       amountConfirmed,

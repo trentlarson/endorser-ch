@@ -89,7 +89,7 @@ CREATE TABLE give_claim (
     giveNotTrade INTEGER DEFAULT 0,
 
     -- These are if there is a TypeAndQuantityNode in the object.
-    unit TEXT,
+    unit TEXT, -- may be null
     amount REAL DEFAULT 0,
 
     -- If giving an object with an amount, the amount of this Give with the

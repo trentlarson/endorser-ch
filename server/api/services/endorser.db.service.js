@@ -863,10 +863,18 @@ class EndorserDatabase {
     })
   }
 
-  giveTotals(agentDid, recipientDid, planId, unit, includeTrades, afterIdInput, beforeIdInput) {
+  giveTotals(agentDid, recipientDid, planId, unit, onlyGifted, onlyTraded, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       let allParams = []
       let whereClause = ''
+      if (afterIdInput) {
+        whereClause = ' AND jwtId > ?'
+        allParams = allParams.concat([afterIdInput])
+      }
+      if (beforeIdInput) {
+        whereClause += ' AND jwtId < ?'
+        allParams = allParams.concat([beforeIdInput])
+      }
       if (agentDid) {
         whereClause += whereClause ? ' AND' : '' // because I copy-paste this stuff :-)
         whereClause += ' agentDid = ?'
@@ -891,16 +899,11 @@ class EndorserDatabase {
         whereClause += ' AND unit = ?'
         allParams = allParams.concat([unit])
       }
-      if (!includeTrades) {
-        whereClause += " AND fulfillsType != 'TradeAction'"
+      if (onlyGifted) {
+        whereClause += " AND giftNotTrade = 1"
       }
-      if (afterIdInput) {
-        whereClause = ' AND jwtId > ?'
-        allParams = allParams.concat([afterIdInput])
-      }
-      if (beforeIdInput) {
-        whereClause += ' AND jwtId < ?'
-        allParams = allParams.concat([beforeIdInput])
+      if (onlyTraded) {
+        whereClause += " AND giftNotTrade = 0"
       }
       whereClause = ' WHERE' + whereClause + ' AND unit IS NOT null'
 

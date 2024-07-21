@@ -192,8 +192,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planWithoutIdBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body.success.claimId).to.be.a('string')
         expect(r.body.success.handleId).to.be.a('string')
@@ -209,8 +209,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + firstPlanIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -234,8 +234,8 @@ describe('6 - Plans', () => {
         + '&eastLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 2)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data?.length).that.equals(0)
       }).catch((err) => {
         return Promise.reject(err)
@@ -251,8 +251,8 @@ describe('6 - Plans', () => {
         + '&eastLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 1)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data?.length).that.equals(1)
       }).catch((err) => {
         return Promise.reject(err)
@@ -263,8 +263,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: badPlanBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
         expect(r.body.error.message).to.be.a('string')
       }).catch((err) => {
@@ -276,8 +276,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].handleId).to.be.a('string')
       }).catch((err) => {
@@ -300,8 +300,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/claim/byHandle/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.issuer).that.equals(creds[1].did)
         expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
         expect(r.body.claim.name).that.equals(planWithoutIdBy1JwtObj.claim.name)
@@ -315,8 +315,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -339,8 +339,8 @@ describe('6 - Plans', () => {
   it('access plan by public, by internal ID', () => {
     return request(Server)
       .get('/api/plan/' + firstPlanIdInternal)
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(HIDDEN_TEXT)
         expect(r.body.issuerDid).that.equals(HIDDEN_TEXT)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -361,8 +361,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
@@ -373,8 +373,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + firstPlanIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -388,8 +388,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + firstPlanIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -403,8 +403,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -428,8 +428,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         firstPlanIdSecondClaimInternal = r.body.success.claimId
       }).catch((err) => {
@@ -441,8 +441,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + firstPlanIdInternal)
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -457,8 +457,8 @@ describe('6 - Plans', () => {
     return request(Server)
         .get('/api/plan/' + firstPlanIdSecondClaimInternal)
         .set('Authorization', 'Bearer ' + pushTokens[1])
-        .expect('Content-Type', /json/)
         .then(r => {
+          expect(r.headers['content-type'], /json/)
           expect(r.body.agentDid).that.equals(creds[1].did)
           expect(r.body.issuerDid).that.equals(creds[1].did)
           expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -472,8 +472,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/plan/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
@@ -487,8 +487,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/claim/byHandle/' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.issuer).that.equals(creds[1].did)
         expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
         expect(r.body.claim.name).that.equals(testUtil.claimPlanAction.name)
@@ -520,8 +520,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planWithExtFullBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).that.equals('scheme://from-somewhere/with-some-plan-id')
         secondPlanIdExternal = r.body.success.handleId
         secondPlanIdInternal = r.body.success.claimId
@@ -535,8 +535,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[1].handleId).to.equal(firstPlanIdExternal)
       }).catch((err) => {
@@ -548,8 +548,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planNewBy2JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -560,8 +560,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plansByIssuer')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(2)
       }).catch((err) => {
         return Promise.reject(err)
@@ -572,8 +572,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plansByIssuer?beforeId=2')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
       }).catch((err) => {
         return Promise.reject(err)
@@ -584,8 +584,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plansByIssuer')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
       }).catch((err) => {
         return Promise.reject(err)
@@ -602,8 +602,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
@@ -619,8 +619,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         childPlanIdExternal = r.body.success.handleId
         childPlanIdInternal = r.body.success.claimId
@@ -633,8 +633,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
@@ -647,8 +647,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.equal(null)
       }).catch((err) => {
         return Promise.reject(err)
@@ -659,8 +659,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
         expect(r.body.data.handleId).to.equal(firstPlanIdExternal)
         expect(r.body.childFulfillsLinkConfirmed).to.be.false
@@ -673,8 +673,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
@@ -687,8 +687,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(0)
       }).catch((err) => {
         return Promise.reject(err)
@@ -708,8 +708,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwt})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         if (r.body.error) {
           console.log('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
@@ -729,8 +729,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
         expect(r.body.data.handleId).to.equal(firstPlanIdExternal)
         expect(r.body.childFulfillsLinkConfirmed).to.be.true
@@ -743,8 +743,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
@@ -764,8 +764,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
@@ -782,8 +782,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         childPlanIdExternal = r.body.success.handleId
         childPlanIdInternalClaim2 = r.body.success.claimId
@@ -796,8 +796,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
@@ -817,8 +817,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planBy2FulfillsBy1JwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         childPlanIdExternal = r.body.success.handleId
       }).catch((err) => {
@@ -830,8 +830,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(null)
@@ -844,8 +844,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.null
         expect(r.body.childFulfillsLinkConfirmed).to.not.be.true // because may be undefined or false
       }).catch((err) => {
@@ -857,8 +857,8 @@ describe('6 - Plans', () => {
     return request(Server)
       .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(firstPlanIdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(0)
       }).catch((err) => {
         return Promise.reject(err)
@@ -901,8 +901,8 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         bvcPlanLastClaimId = r.body.success.claimId
         expect(r.status).that.equals(201)
       }).catch((err) => {
@@ -914,8 +914,8 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
     return request(Server)
       .get('/api/v2/report/plans?claimContents=Bountiful%20together')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -1025,8 +1025,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].offeredByDid).to.equal(creds[2].did)
         expect(r.body.data[0].recipientDid).to.be.null
@@ -1051,8 +1051,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?unit=HUR')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1063,8 +1063,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?recipientId=' + creds[1].did)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1075,8 +1075,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 1})
         expect(r.status).that.equals(200)
@@ -1089,8 +1089,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?claimContents=groom%20horse')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].fulfillsPlanHandleId).that.equals(firstPlanIdExternal)
         expect(r.status).that.equals(200)
@@ -1167,8 +1167,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 4 })
         expect(r.status).that.equals(200)
@@ -1184,8 +1184,8 @@ describe('6 - Check offer totals', () => {
           + encodeURIComponent(JSON.stringify([firstPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(3)
         expect(r.status).that.equals(200)
@@ -1234,8 +1234,8 @@ describe('6 - Check offer totals', () => {
           + encodeURIComponent(JSON.stringify([firstPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(3)
         expect(r.status).that.equals(200)
@@ -1251,8 +1251,8 @@ describe('6 - Check offer totals', () => {
           + encodeURIComponent(JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[5])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(4)
         expect(r.status).that.equals(200)
@@ -1297,8 +1297,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?planId=' + secondPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 20 })
         expect(r.status).that.equals(200)
@@ -1344,8 +1344,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].handleId).to.equal(offerId6)
         expect(r.body.data[0].offeredByDid).to.equal(creds[4].did)
@@ -1366,8 +1366,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToOffer?giveHandleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -1408,8 +1408,8 @@ describe('6 - Check offer totals', () => {
     return request(Server)
       .get('/api/v2/report/offerTotals?recipientId=' + creds[2].did)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 3 })
         expect(r.status).that.equals(200)
@@ -1475,8 +1475,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(1)
@@ -1493,9 +1493,9 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?unit=HUR')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
         expect(r.status).that.equals(400)
+        expect(r.headers['content-type'], /json/)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -1505,8 +1505,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?recipientId=' + creds[1].did)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1517,8 +1517,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2 })
         expect(r.status).that.equals(200)
@@ -1533,8 +1533,8 @@ describe('6 - Check give totals', () => {
         '/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array')
         expect(r.body.data.amount).to.equal()
         expect(r.status).that.equals(200)
@@ -1547,8 +1547,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToGive?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -1603,8 +1603,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/gives?handleId=' + encodeURIComponent(secondGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].agentDid).to.equal(creds[2].did)
         expect(r.body.data[0].issuedAt).to.be.not.null
@@ -1629,8 +1629,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(secondGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].identifier).to.equal(firstGiveRecordHandleId)
         expect(r.status).that.equals(200)
@@ -1643,8 +1643,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToGive?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].description).to.equal('Found new homeschooling friends')
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
@@ -1665,8 +1665,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(0)
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -1678,8 +1678,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].description).to.equal('Found new homeschooling friends')
         expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
@@ -1694,8 +1694,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
         .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(creds[0].did))
         .set('Authorization', 'Bearer ' + pushTokens[2])
-        .expect('Content-Type', /json/)
         .then(r => {
+          expect(r.headers['content-type'], /json/)
           expect(r.body.data).to.be.an('array').of.length(0)
           expect(r.status).that.equals(200)
         }).catch((err) => {
@@ -1751,8 +1751,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?planId=' + secondPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 3 })
         expect(r.status).that.equals(200)
@@ -1768,8 +1768,8 @@ describe('6 - Check give totals', () => {
           + encodeURIComponent(JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]))
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].amountConfirmed).to.be.equal(0)
@@ -1786,8 +1786,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].identifier).to.equal(firstGiveRecordHandleId)
         expect(r.body.data[1].identifier).to.equal(secondGiveRecordHandleId)
@@ -1843,8 +1843,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(thirdGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].identifier).to.equal(firstGiveRecordHandleId)
         expect(r.status).that.equals(200)
@@ -1857,8 +1857,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(firstGiveRecordHandleId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].handleId).to.equal(thirdGiveRecordHandleId)
         expect(r.body.data[0].description).to.equal('Found more homeschooling friends who jam')
@@ -1916,8 +1916,8 @@ describe('6 - Check give totals', () => {
           + encodeURIComponent(firstGiveRecordHandleId)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].amountConfirmed).to.be.equal(0)
@@ -1968,8 +1968,8 @@ describe('6 - Check give totals', () => {
           + encodeURIComponent(firstGiveRecordHandleId)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].amountConfirmed).to.be.greaterThan(0)
@@ -1983,8 +1983,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(firstOfferId))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(1)
@@ -2035,8 +2035,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(3)
@@ -2053,8 +2053,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?recipientId=' + creds[2].did)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         if (r.body.error) {
           console.log('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
@@ -2105,8 +2105,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(3)
@@ -2164,8 +2164,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].unit).to.equal('HUR')
         expect(r.body.data[0].amount).to.equal(3)
@@ -2185,8 +2185,8 @@ describe('6 - Check give totals', () => {
           + encodeURIComponent(giveRecordHandleId6)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].amountConfirmed).to.be.greaterThan(0)
@@ -2200,8 +2200,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(3)
         expect(r.body.data[0].fullClaim.description).to.equal('First-graders & snowboarding & horses?')
         expect(r.body.data[1].fullClaim.description).to.equal('Thanks for the first-grade learning materials!')
@@ -2216,8 +2216,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(giveRecordHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].identifier).to.equal(secondGiveRecordHandleId)
         expect(r.body.data[1].identifier).to.equal(thirdGiveRecordHandleId)
@@ -2233,6 +2233,7 @@ describe('6 - Check give totals', () => {
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.lastClaimId = giveRecordLastClaimId6
     credObj.claim.recipient = { identifier: creds[1].did }
+    // skipping fulfills
     credObj.claim.description = 'First-graders & snowboarding & horses?'
     credObj.claim.provider = [
       { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
@@ -2257,20 +2258,38 @@ describe('6 - Check give totals', () => {
           )
         }
         expect(r.headers['content-type'], /json/)
-        expect(r.body.success.handleId).to.be.a('string')
-        giveRecordHandleId6 = r.body.success.handleId
+        expect(r.body.success.handleId).to.equal(giveRecordHandleId6)
+        giveRecordLastClaimId6 = r.body.success.claimId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
       })
   }).timeout(5000)
 
+  it('give #6 now has amount 0', () => {
+    return request(Server)
+    .get(
+      '/api/v2/report/gives?handleId='
+      + encodeURIComponent(giveRecordHandleId6)
+    )
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body).to.be.an('object')
+      expect(r.body.data).to.be.an('array').of.length(1)
+      expect(r.body.data[0].amount).to.equal(0)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
   it('fulfilled offer link from child gives no longer shows after link is removed', () => {
     return request(Server)
       .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].fullClaim.description).to.equal('Thanks for the first-grade learning materials!')
         expect(r.body.data[1].fullClaim.description).to.equal('Giving it up for those first graders')
@@ -2289,10 +2308,10 @@ describe('6 - Check give totals', () => {
     credObj.claim.agent = { identifier: creds[2].did }
     credObj.claim.recipient = { identifier: creds[1].did }
     delete credObj.claim.fulfills.identifier
-    credObj.claim.fulfills = {
-      "@type": "TradeAction",
-      isPartOf: { lastClaimId: childPlanIdInternalClaim2 },
-    }
+    credObj.claim.fulfills = [
+      { lastClaimId: childPlanIdInternalClaim2 },
+      { "@type": "TradeAction" },
+    ]
     credObj.claim.description = 'Trading the ginger chews'
     credObj.claim.object.amountOfThisGood = 3
     credObj.claim.object.unitCode = 'USD'
@@ -2326,14 +2345,56 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2 })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
       })
+  }).timeout(3000)
+
+  it('give totals after #7 are correct for child plan with defaults', () => {
+    return request(Server)
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal))
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('object')
+      expect(r.body.data).to.deep.equal({ "USD": 3 })
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
+  it('give totals after #7 are correct for child plan with only gifted', () => {
+    return request(Server)
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyGifted=true')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('object')
+      expect(r.body.data).to.deep.equal({})
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
+  it('give totals after #7 are correct for child plan with only traded', () => {
+    return request(Server)
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyTraded=true')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('object')
+      expect(r.body.data).to.deep.equal({ "USD": 3 })
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
   }).timeout(3000)
 
   it('give #7 has correct settings', () => {
@@ -2343,8 +2404,8 @@ describe('6 - Check give totals', () => {
         + encodeURIComponent(giveRecordHandleId7)
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data[0].giftNotTrade).to.be.false
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -2352,28 +2413,146 @@ describe('6 - Check give totals', () => {
       })
   }).timeout(3000)
 
+  it('insert give #8 to record a donation to the same plan as #7', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.agent = { identifier: creds[3].did }
+    delete credObj.claim.fulfills.identifier
+    credObj.claim.fulfills = [
+      { lastClaimId: childPlanIdInternalClaim2 },
+      { "@type": "DonateAction" },
+    ]
+    credObj.claim.description = 'Donating the licorice'
+    credObj.claim.object.amountOfThisGood = 2
+    credObj.claim.object.unitCode = 'USD'
+    credObj.sub = creds[3].did
+    credObj.iss = creds[3].did
+    const claimJwtEnc = await credentials[3].createVerification(credObj)
+
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: claimJwtEnc})
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      } else if (r.body.success.embeddedRecordError) {
+        console.log(
+          'Something went wrong, but nothing critical. Here is the error:',
+          r.body.success.embeddedRecordError
+        )
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.success.handleId).to.be.a('string')
+      expect(r.status).that.equals(201)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(5000)
+
+  it('insert give #9 to record a donation to the same plan as #7', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.agent = { identifier: creds[4].did }
+    delete credObj.claim.fulfills.identifier
+    credObj.claim.fulfills = [
+      { lastClaimId: childPlanIdInternalClaim2 },
+      { "@type": "DonateAction" },
+    ]
+    credObj.claim.description = 'Donating the licorice'
+    credObj.claim.object.amountOfThisGood = 1
+    credObj.claim.object.unitCode = 'HUR'
+    credObj.sub = creds[4].did
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: claimJwtEnc})
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      } else if (r.body.success.embeddedRecordError) {
+        console.log(
+          'Something went wrong, but nothing critical. Here is the error:',
+          r.body.success.embeddedRecordError
+        )
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.success.handleId).to.be.a('string')
+      expect(r.status).that.equals(201)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(5000)
+
+  it('give totals after #8 are correct for child plan with defaults', () => {
+    return request(Server)
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal))
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('object')
+      expect(r.body.data).to.deep.equal({ "HUR": 1, "USD": 5 })
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
+  it('give totals after #8 are correct for child plan with only gifted', () => {
+    return request(Server)
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyGifted=true')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('object')
+      expect(r.body.data).to.deep.equal({ "HUR": 1, "USD": 2 })
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
+  it('give totals after #8 are correct for child plan with only traded', () => {
+    return request(Server)
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyTraded=true')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('object')
+      expect(r.body.data).to.deep.equal({ "USD": 3 })
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
   let lastGiveClaimId
   it('all give search does include first 50', () => {
     return request(Server)
-      .get('/api/v2/report/gives')
-      .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
-      .then(r => {
-        expect(r.body.data.length).to.equal(50)
-        expect(r.status).that.equals(200)
-        lastGiveClaimId = r.body.data[49].jwtId
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
+    .get('/api/v2/report/gives')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data.length).to.equal(50)
+      expect(r.status).that.equals(200)
+      lastGiveClaimId = r.body.data[49].jwtId
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
   }).timeout(3000)
 
-  it('all give search does include remaining 9', () => {
+  it('all give search does include remaining 11', () => {
     return request(Server)
       .get('/api/v2/report/gives?beforeId=' + lastGiveClaimId)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body.data.length).to.equal(9)
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.data.length).to.equal(11)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2385,8 +2564,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/gives?giftNotTrade=true')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data.length).to.equal(50)
         expect(r.status).that.equals(200)
         lastDonateGiveClaimId = r.body.data[49].jwtId
@@ -2399,9 +2578,9 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/gives?giftNotTrade=true&beforeId=' + lastDonateGiveClaimId)
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body.data.length).to.equal(3) // 5 are blank
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.data.length).to.equal(5) // 5 are blank
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2412,8 +2591,8 @@ describe('6 - Check give totals', () => {
     return request(Server)
       .get('/api/v2/report/gives?giftNotTrade=false')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data.length).to.equal(1)
         expect(r.status).that.equals(200)
       }).catch((err) => {
@@ -2424,12 +2603,12 @@ describe('6 - Check give totals', () => {
   /**
    * This fails... but it's not an important use case and may not be worth recovering.
    *
-  it('give totals after #7 are correct when including trades', () => {
+  it('give totals after #7 are correct when including trades - fails', () => {
     return request(Server)
       .get('/api/v2/report/giveTotals?planId=' + firstPlanIdExternal + '&includeTrades=true')
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
         expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 3 })
         expect(r.status).that.equals(200)
@@ -2438,6 +2617,103 @@ describe('6 - Check give totals', () => {
       })
   }).timeout(3000)
   **/
+
+  it('update give #6 to adjust description & totals and also to be a donation', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.lastClaimId = giveRecordLastClaimId6
+    credObj.claim.recipient = { identifier: creds[1].did }
+    credObj.claim.fulfills = [
+      { lastClaimId: localFromGlobalEndorserIdentifier(offerId6) },
+      { "@type": "DonateAction" },
+    ]
+    credObj.claim.description = 'First-graders & snowboarding ... that is enough'
+    credObj.claim.provider = [
+      { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
+      { "@type": "GiveAction", "identifier": thirdGiveRecordHandleId },
+    ]
+    credObj.claim.object.amountOfThisGood = 3
+    credObj.sub = creds[2].did
+    credObj.iss = creds[1].did
+    const claimJwtEnc = await credentials[1].createVerification(credObj)
+
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: claimJwtEnc})
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      } else if (r.body.success.embeddedRecordError) {
+        console.log(
+          'Something went wrong, but nothing critical. Here is the error:',
+          r.body.success.embeddedRecordError
+        )
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.success.handleId).to.equal(giveRecordHandleId6)
+      expect(r.body.success.description).to.equal('First-graders & snowboarding ... that is enough')
+      giveRecordLastClaimId6 = r.body.success.claimId
+      expect(r.status).that.equals(201)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(5000)
+
+  it('give #6 is has changed description & amount', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/gives?handleId='
+        + encodeURIComponent(giveRecordHandleId6)
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.body).to.be.an('object')
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].description).to.equal('First-graders & snowboarding ... that is enough')
+        expect(r.body.data[0].amount).to.equal(3)
+        expect(r.body.data[0].amountConfirmed).to.equal(1)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer #6 data now has even more paid & confirmed', () => {
+    return request(Server)
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].unit).to.equal('HUR')
+        expect(r.body.data[0].amount).to.equal(3)
+        expect(r.body.data[0].amountGiven).to.equal(7)
+        expect(r.body.data[0].amountGivenConfirmed).to.equal(7)
+        expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(2)
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('offer fulfiller retrieval gets three', () => {
+    return request(Server)
+      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
+      .set('Authorization', 'Bearer ' + pushTokens[2])
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.data).to.be.an('array').of.length(3)
+        expect(r.body.data[0].fullClaim.description).to.equal('First-graders & snowboarding ... that is enough')
+        expect(r.body.data[1].fullClaim.description).to.equal('Thanks for the first-grade learning materials!')
+        expect(r.body.data[2].fullClaim.description).to.equal('Giving it up for those first graders')
+        expect(r.status).that.equals(200)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
 
 })
 

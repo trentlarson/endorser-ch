@@ -10,6 +10,43 @@ import ClaimService from '../services/claim.service'
 import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
 import {globalId} from "../services/util";
 
+// Why does it not work to put this in the class?
+// When it's in the class, "this" is undefined so "this.getGiveTotalsMaybeGifted" fails when called.
+// Without "this." I get: "ReferenceError: getGiveTotalsMaybeGifted is not defined"
+function getGiveTotalsMaybeGifted(req, res, next, onlyGifted) {
+  const agentDid = req.query.agentDid
+  const onlyTraded = req.query.onlyTraded === "true"
+  const recipientId = req.query.recipientId
+  const planId = globalId(req.query.planId)
+  if (recipientId && recipientId != res.locals.tokenIssuer) {
+    res.status(400).json({
+      // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
+      error: "Request for recipient totals can only be made by that recipient."
+    }).end()
+  } else if (agentDid && agentDid != res.locals.tokenIssuer) {
+    res.status(400).json({
+      // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
+      error: "Request for agent totals can only be made by that agent."
+    }).end()
+  } else {
+    const afterId = req.query.afterId
+    const beforeId = req.query.beforeId
+    const unit = req.query.unit
+    dbService.giveTotals(agentDid, recipientId, planId, unit, onlyGifted, onlyTraded, afterId, beforeId)
+    .then(results => { res.json(results).end() })
+    .catch(err => {
+      if (err == MUST_FILTER_TOTALS_ERROR) {
+        res.status(400).json({
+          error: "Client must filter by plan or recipient when asking for totals."
+        }).end()
+      } else {
+        console.error(err)
+        res.status(500).json(""+err).end()
+      }
+    })
+  }
+}
+
 class DbController {
 
   getAllJwtsPaged(req, res, next) {
@@ -41,6 +78,10 @@ class DbController {
       .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
+  getGiftedTotals(req, res, next) {
+    getGiveTotalsMaybeGifted(req, res, next, true);
   }
 
   getGivesToPlansPaged(req, res, next) {
@@ -140,37 +181,9 @@ class DbController {
   }
 
   getGiveTotals(req, res, next) {
-    const agentDid = req.query.agentDid
-    const includeTrades = req.query.includeTrades
-    const recipientId = req.query.recipientId
-    const planId = globalId(req.query.planId)
-    if (recipientId && recipientId != res.locals.tokenIssuer) {
-      res.status(400).json({
-        // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
-        error: "Request for recipient totals can only be made by that recipient."
-      }).end()
-    } else if (agentDid && agentDid != res.locals.tokenIssuer) {
-      res.status(400).json({
-        // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
-        error: "Request for agent totals can only be made by that agent."
-      }).end()
-    } else {
-      const afterId = req.query.afterId
-      const beforeId = req.query.beforeId
-      const unit = req.query.unit
-      dbService.giveTotals(agentDid, recipientId, planId, unit, includeTrades, afterId, beforeId)
-        .then(results => { res.json(results).end() })
-        .catch(err => {
-          if (err == MUST_FILTER_TOTALS_ERROR) {
-            res.status(400).json({
-              error: "Client must filter by plan or recipient when asking for totals."
-            }).end()
-          } else {
-            console.error(err)
-            res.status(500).json(""+err).end()
-          }
-        })
-    }
+    // The "giftNotTrade" flag is deprecated. (It's potentially confusing.) Use "onlyGifted". Remove after, say, 2025.
+    const onlyGifted = req.query.onlyGifted ?? req.query.giftNotTrade
+    getGiveTotalsMaybeGifted(req, res, next, onlyGifted === "true");
   }
 
   getOffersForPlansPaged(req, res, next) {
@@ -556,6 +569,22 @@ export default express
   .post('/confirmers', serviceController.getConfirmerIds)
 
 /**
+ * Get totals of all the gift-only gives (like /giveTotals but only for those that are gifts)
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/giftedTotals
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} planId.query.optional - handle ID of the plan which has received gives
+ * @param {string} recipientId.query.optional - DID of recipient who has received gives
+ * @param {string} unit.query.optional - unit code to restrict amounts
+ * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/giftedTotals', dbController.getGiftedTotals)
+
+/**
  * Search gives
  *
  * Beware: this array may include a "publicUrls" key within it.
@@ -653,17 +682,12 @@ export default express
 /**
  * Get totals of gives
  *
- * I agonized over the includeTrades. There's a perspective that, by default, this endpoint should retrieve all the give
- * activity. However, the vision of this service is to focus on the Give Economy, and not the Trade Economy, and so the
- * default behavior is to focus only on the gives. I'm only including the possibility for trades to be included because
- * this service is still fairly open-ended and we'll allow that use-case for now; this flag will allow us to detect
- * other uses and provide helpful messages if we stop supporting this kind of usage in the future.
- *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveTotals
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @param {string} includeTrades.query.optional - doesn't include trades by default, so set this to 'true' to include them -- see above for more details on this design
+ * @param {string} onlyGifted.query.optional - only the ones that fulfill DonateAction (and not any TradeAction)
+ * @param {string} onlyTraded.query.optional - only the ones that fulfill TradeAction
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts

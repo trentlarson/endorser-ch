@@ -9,17 +9,15 @@
 import base64url from "base64url";
 import didJwt from "did-jwt";
 import {Resolver} from "did-resolver";
-import {getResolver as ethrDidResolver} from "ethr-did-resolver";
-import * as R from "ramda";
 
-import l from "../../../common/logger";
-import {ERROR_CODES} from "../util";
 import {didEthLocalResolver} from "./did-eth-local-resolver";
-import {verifyJwt} from "./passkeyDidPeer";
+import {verifyJwt as peerVerifyJwt} from "./passkeyDidPeer";
 
 export const TEST_BYPASS_ENV_VALUE = "test-local";
-const ETHR_DID_PREFIX = 'did:ethr:'
-const PEER_DID_PREFIX = 'did:peer:'
+export const ETHR_DID_PREFIX = 'did:ethr:'
+export const PEER_DID_PREFIX = 'did:peer:'
+export const JWT_VERIFY_FAILED_CODE = "JWT_VERIFY_FAILED_CODE"
+export const UNSUPPORTED_DID_METHOD_CODE = "UNSUPPORTED_DID_METHOD"
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
 const resolver = process.env.USE_INFURA === "true" ?
@@ -35,7 +33,7 @@ const resolver = process.env.USE_INFURA === "true" ?
 // return Promise of at least { issuer, payload, verified boolean }
 // ... and also if successfully verified by did-jwt (not JWANT): data, doc, signature, signer
 export async function decodeAndVerifyJwt(jwt) {
-  const pieces = R.split('.', jwt)
+  const pieces = jwt.split('.')
   const header = JSON.parse(base64url.decode(pieces[0]))
   const payload = JSON.parse(base64url.decode(pieces[1]))
   const issuerDid = payload.iss
@@ -51,8 +49,8 @@ export async function decodeAndVerifyJwt(jwt) {
     // eg. no "." separators.
     let nowEpoch =  Math.floor(new Date().getTime() / 1000)
     if (payload.exp < nowEpoch) {
-      l.warn("JWT with exp " + payload.exp
-        + " has expired but we're in test mode so using a new time."
+      console.log("JWT with exp " + payload.exp
+        + " has expired but we're in test mode so we'll use a new time."
       )
       payload.exp = nowEpoch + 100
     }
@@ -68,14 +66,14 @@ export async function decodeAndVerifyJwt(jwt) {
       return Promise.reject({
         clientError: {
           message: `JWT failed verification: ` + e.toString(),
-          code: ERROR_CODES.JWT_VERIFY_FAILED
+          code: JWT_VERIFY_FAILED_CODE
         }
       })
     }
   }
 
   if (issuerDid.startsWith(PEER_DID_PREFIX) && header.typ === "JWANT") {
-    const { claimPayload, verified } = await verifyJwt(payload, issuerDid, pieces[2])
+    const { claimPayload, verified } = await peerVerifyJwt(payload, issuerDid, pieces[2])
     return { issuer: issuerDid, payload: claimPayload, verified: verified }
   }
 
@@ -90,7 +88,7 @@ export async function decodeAndVerifyJwt(jwt) {
   return Promise.reject({
     clientError: {
       message: `Unsupported DID method ${issuerDid}`,
-      code: ERROR_CODES.UNSUPPORTED_DID_METHOD
+      code: UNSUPPORTED_DID_METHOD_CODE
     }
   })
 }

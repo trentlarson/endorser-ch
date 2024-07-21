@@ -167,8 +167,8 @@ let pushTokens
 const requestAndExpect = (thisRequest, tokenIndex, result) => {
   return thisRequest
     .set('Authorization', 'Bearer ' + pushTokens[tokenIndex])
-    .expect('Content-Type', /json/)
     .then(r => {
+      expect(r.headers['content-type'], /json/)
       expect(r.body).to.deep.equal(result)
       expect(r.status).that.equals(200)
     })
@@ -202,8 +202,8 @@ describe('7 - Selected Contact Correlation', () => {
         '/api/userUtil/getContactMatch?counterparty='
         + encodeURIComponent(creds[1].did)
       )
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(401)
       })
       .catch(err => Promise.reject(err))
@@ -216,8 +216,8 @@ describe('7 - Selected Contact Correlation', () => {
         + encodeURIComponent(creds[1].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: RESULT_NEED_BOTH_USER_DATA })
       })
@@ -232,8 +232,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user1ContactsHashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       }).catch(err => Promise.reject(err))
@@ -246,8 +246,8 @@ describe('7 - Selected Contact Correlation', () => {
         + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
@@ -266,8 +266,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + basicJwtEnc)
       .send({ contactHashes: [] })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
       })
@@ -281,8 +281,8 @@ describe('7 - Selected Contact Correlation', () => {
         + encodeURIComponent(creds[2].did)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
       })
@@ -307,8 +307,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({ contactHashes: user2Contacts1Hashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
@@ -323,8 +323,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user1ContactsHashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
@@ -335,8 +335,8 @@ describe('7 - Selected Contact Correlation', () => {
     return request(Server)
       .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: RESULT_NEED_THIS_USER_DATA})
       })
@@ -351,8 +351,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user1ContactsHashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
       })
@@ -363,8 +363,8 @@ describe('7 - Selected Contact Correlation', () => {
     return request(Server)
       .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
       })
@@ -389,8 +389,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user1ContactsHashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
@@ -405,8 +405,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({ contactHashes: user2Contacts2Hashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
@@ -422,8 +422,8 @@ describe('7 - Selected Contact Correlation', () => {
     return request(Server)
       .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
@@ -434,8 +434,8 @@ describe('7 - Selected Contact Correlation', () => {
     return request(Server)
       .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
@@ -451,8 +451,8 @@ describe('7 - Selected Contact Correlation', () => {
     return request(Server)
       .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[2].did))
       .set('Authorization', 'Bearer ' + pushTokens[1])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
@@ -463,8 +463,8 @@ describe('7 - Selected Contact Correlation', () => {
     return request(Server)
       .get('/api/userUtil/getContactMatch?counterparty=' + encodeURIComponent(creds[1].did))
       .set('Authorization', 'Bearer ' + pushTokens[2])
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(200)
         expect(r.body).to.deep.equal({data: {matches: [matchingContactDid]}})
       })
@@ -483,8 +483,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user2Contacts1Hashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
@@ -498,8 +498,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({ contactHashes: user2Contacts2Hashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: {matches: user2ContactsHashedMatching}})
         expect(r.body.data.onlyOneMatch).to.be.undefined
@@ -525,8 +525,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ contactHashes: user2Contacts1Hashed, onlyOneMatch: true })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body).to.deep.equal({data: RESULT_NEED_COUNTERPARTY_DATA})
       })
@@ -541,8 +541,8 @@ describe('7 - Selected Contact Correlation', () => {
       )
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send({ contactHashes: user2Contacts2Hashed })
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
         expect(r.body.data.matches).to.have.lengthOf(1)
         expect(r.body.data.matches[0]).to.be.oneOf(user2ContactsHashedMatching)
@@ -1083,8 +1083,8 @@ describe('7 - Add Sample Pledge', () => {
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
