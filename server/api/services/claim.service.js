@@ -1711,6 +1711,11 @@ class ClaimService {
         const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
         if (prevEntry) {
           // There is a previous entry.
+
+          // use that entry handleId, just in case this was a lastClaimId and the handleId is different
+          handleId = prevEntry.handleId
+
+          // check that the context nor type has changed
           if (payloadClaim["@context"] != prevEntry.claimContext
               || payloadClaim["@type"] != prevEntry.claimType) {
             return Promise.reject(
@@ -1720,6 +1725,7 @@ class ClaimService {
             )
           }
 
+          // check that the issuer matches
           if (payload.iss == prevEntry.issuer) {
             // The issuer is the same as the previous.
             // We're OK to continue.
