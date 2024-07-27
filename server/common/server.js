@@ -116,7 +116,7 @@ function requesterInfo(req, res, next) {
                 message: "Low-level error while parsing JWT '" + jwt + "': " + JSON.stringify(e),
                 code: ERROR_CODES.JWT_VERIFY_FAILED
               }
-        res.status(400).json({ error: "" + errorObj }).end()
+        res.status(400).json({ error: errorObj }).end()
       })
   }
 }

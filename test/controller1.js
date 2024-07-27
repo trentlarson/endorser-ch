@@ -626,8 +626,8 @@ describe('1 - Claim', () => {
   )
 
   it('should fail to claim with bad JWT: "Unexpected end of data"', () => {
-    const headerPayload = pushTokens[3].substring(0, pushTokens[3].lastIndexOf('.') + 1)
-    const badlySignedJwt = headerPayload + '_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_'
+    const headerPayload = pushTokens[0].substring(0, pushTokens[0].lastIndexOf('.'))
+    const badlySignedJwt = headerPayload + '._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_'
     if (process.env.NODE_ENV === 'test-local') {
       console.log('Skipping JWT verification test that requires online verification.')
     } else {

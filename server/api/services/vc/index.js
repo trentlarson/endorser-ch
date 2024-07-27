@@ -16,7 +16,7 @@ import {verifyJwt as peerVerifyJwt} from "./passkeyDidPeer";
 export const TEST_BYPASS_ENV_VALUE = "test-local";
 export const ETHR_DID_PREFIX = 'did:ethr:'
 export const PEER_DID_PREFIX = 'did:peer:'
-export const JWT_VERIFY_FAILED_CODE = "JWT_VERIFY_FAILED_CODE"
+export const JWT_VERIFY_FAILED_CODE = "JWT_VERIFY_FAILED"
 export const UNSUPPORTED_DID_METHOD_CODE = "UNSUPPORTED_DID_METHOD"
 
 // for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
@@ -43,18 +43,6 @@ export async function decodeAndVerifyJwt(jwt) {
         message: `Missing "iss" field in JWT.`,
       }
     })
-  }
-  if (issuerDid && issuerDid.startsWith(ETHR_DID_PREFIX) && process.env.NODE_ENV === TEST_BYPASS_ENV_VALUE) {
-    // Error of "Cannot read property 'toString' of undefined" usually means the JWT is malformed
-    // eg. no "." separators.
-    let nowEpoch =  Math.floor(new Date().getTime() / 1000)
-    if (payload.exp < nowEpoch) {
-      console.log("JWT with exp " + payload.exp
-        + " has expired but we're in test mode so we'll use a new time."
-      )
-      payload.exp = nowEpoch + 100
-    }
-    return { issuer: issuerDid, payload, verified: true } // other elements will = undefined
   }
 
   if (issuerDid.startsWith(ETHR_DID_PREFIX)) {

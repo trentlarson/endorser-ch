@@ -111,24 +111,15 @@ When running on another domain (other than EndorserSearch.com):
 
 Run the local automated tests and build sample data with this: `./test/test.sh`
 
-* This runs the tests twice:
-
-  * The first time, it doesn't do validation of the signed JWTs, so it's faster. This is good to validate basic logic.
-
-  * After a 10-second countdown, it runs the tests again with validation of every signature.
-    This has been changed to a local resolver, so the Infura stuff isn't so critical, but if you want it:
-    set USE_INFURA=true in the .env file, then set the INFURA_PROJECT_ID which you can get with a free account at the infura.io site.
-
-* Note that this sometimes fails without reason and a rerun works, especially on "Load Claims Incrementally". (Network issue with infura.io?)
+* Note that this sometimes fails without reason and a rerun works, especially on "Load Claims Incrementally".
 
 * That creates a sample DB file ../endorser-ch-test-local.sqlite3 which you may then use as baseline data for running in dev mode by copying to ../endorser-ch-dev.sqlite3
 
-* You can also run the server in offline test mode by setting environment
-variable `NODE_ENV=test-local` and then it will accept all JWTs and it won't do
-any real JWT validity checking, including expiration. (This may be changed when
-I figure out how to validate JWTs without being online. It is accomplished with
-the `process.env.NODE_ENV === 'test-local'` code currently only found in
-server/api/services/claim.service.js )
+
+
+#### Manual tests
+
+`NODE_ENV=dev npm run dev` and then check that this works: http://localhost:3000/api-explorer/
 
 
 
