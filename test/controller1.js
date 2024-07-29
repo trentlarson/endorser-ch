@@ -1713,6 +1713,16 @@ describe('1 - Visibility utils', () => {
      })).timeout(3000)
 
 
+  it('#4 should not be able to set invisible to #4', () =>
+    request(Server)
+    .post('/api/report/cannotSeeMe')
+    .send({ "did": creds[4].did })
+    .set('Authorization', 'Bearer ' + pushTokens[4])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body.success).that.equals(false)
+    })).timeout(3000)
+
   //// Now #4 will toggle visibility from #5.
 
   it('#5 should not see #4', () =>

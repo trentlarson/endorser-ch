@@ -92,17 +92,17 @@ class DbController {
   }
   makeMeVisibleTo(req, res) {
     addCanSee(req.body.did, res.locals.tokenIssuer)
-      .then(() => res.status(200).json({success:true}).end())
+      .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeInvisibleTo(req, res) {
     removeCanSee(req.body.did, res.locals.tokenIssuer)
-      .then(() => res.status(200).json({success:true}).end())
+      .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeGloballyVisible(req, res) {
     makeGloballyVisible(res.locals.tokenIssuer, req.body.url)
-      .then(() => res.status(200).json({success:true}).end())
+      .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getCanSeeDids(req, res) {

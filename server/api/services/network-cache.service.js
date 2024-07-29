@@ -114,15 +114,16 @@ async function addCanSee(subject, object, url) {
       || object.startsWith("did:none:")) {
     // No need to continue with this, since nobody can make a valid request with this DID method.
     // This often happens for HIDDEN, when people are confirming without looking.
-    l.trace(`Not adding a network entry since a DID is empty or has type 'none': ${subject} ${object}`)
-    return
+    l.trace(`Not adding a network entry since a DID is empty or has DID method 'none': ${subject} ${object}`)
+    return false
   }
 
   if (subject !== object) {
     await dbService.networkInsert(subject, object, url)
   } else {
-    // no need to save themselves in the DB (heck: we could do without the caching, too, since we always add this person via getAllDidsRequesterCanSee, but it's fast, so whatever)
+    // no need to save themselves in the DB
     l.trace("Not adding DB network entry since it's the same DID.")
+    return false
   }
 
   if (subject === dbService.ALL_SUBJECT_MATCH()) {
@@ -177,8 +178,8 @@ async function removeCanSee(subject, object) {
       || !object
       || object.startsWith("did:none:")) {
     // No need to continue with this, since nobody can make a valid request with this DID method.
-    l.trace(`Not removing a network entry since a DID is empty or has type 'none': ${subject} ${object}`)
-    return
+    l.trace(`Not removing a network entry since a DID is empty or has DID method 'none': ${subject} ${object}`)
+    return false
   }
 
   if (subject !== object) {
@@ -186,6 +187,7 @@ async function removeCanSee(subject, object) {
   } else {
     // we don't save themselves in the DB anyway
     l.trace("Not removing DB network entry since it's the same DID.")
+    return false
   }
 
   if (subject === dbService.ALL_SUBJECT_MATCH()) {
@@ -196,7 +198,7 @@ async function removeCanSee(subject, object) {
 
 
 
-  // Similar code is in removeCanSee
+  // Similar code is in addCanSee
 
   // The remainder sets the internal cache by removing that one subject-object pair,
   // but it really should just invalidate and reload from the DB.
@@ -228,6 +230,8 @@ async function removeCanSee(subject, object) {
     }
   }
   l.trace("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
+
+  return true
 }
 
 /**
