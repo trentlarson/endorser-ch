@@ -55,12 +55,13 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
+    const searchTermMaybeDIDs = [req.query.claimContents, req.query.issuer, req.query.subject, req.query.handleId]
     dbService.jwtsByParamsPaged(query, afterId, beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data",  []))
+      .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data",  searchTermMaybeDIDs))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }

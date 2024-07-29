@@ -1769,6 +1769,16 @@ describe('1 - Visibility utils', () => {
        expect(r.status).that.equals(200)
      })).timeout(3000)
 
+  it('#5 should get claims involving #4', () =>
+    request(Server)
+    .get('/api/v2/report/claims?claimContents=' + encodeURIComponent(creds[4].did))
+    .set('Authorization', 'Bearer ' + pushTokens[5])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body.data).to.have.length(3)
+      expect(r.status).that.equals(200)
+    })).timeout(3000)
+
   it('#4 should set invisible to #5', () =>
      request(Server)
      .post('/api/report/cannotSeeMe')
@@ -1794,11 +1804,21 @@ describe('1 - Visibility utils', () => {
   it('#5 should get claim but not see #4', () =>
     request(Server)
     .get('/api/claim/' + foodPantryClaimBy4Id)
-    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .set('Authorization', 'Bearer ' + pushTokens[5])
     .expect('Content-Type', /json/)
     .then(r => {
       expect(r.body.issuer).to.equal(HIDDEN_TEXT)
       expect(r.body.claim.party.identifier).to.equal(HIDDEN_TEXT)
+      expect(r.status).that.equals(200)
+    })).timeout(3000)
+
+  it('#5 should not get claims searching for #4', () =>
+    request(Server)
+    .get('/api/v2/report/claims?claimContents=' + encodeURIComponent(creds[4].did))
+    .set('Authorization', 'Bearer ' + pushTokens[5])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.body.data).to.have.length(0)
       expect(r.status).that.equals(200)
     })).timeout(3000)
 

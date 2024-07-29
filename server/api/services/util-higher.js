@@ -5,8 +5,8 @@ import {HIDDEN_TEXT, inputContainsDid, isDid} from './util'
 
 /**
  * Call hideDidsAndAddLinksToNetwork but where input is expected to have a
- * "data" key with the data to hide, so that the process starts there, and then
- * any "publicUrls" are moved to the top level.
+ * key (eg. "data") with the data to hide, so that the process starts there,
+ * and then any "publicUrls" are moved to the top level.
  *
  * The value in the key is expected to follow the rules for "issuer" or "issuerDid".
  *
