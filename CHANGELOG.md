@@ -12,10 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nothing
 
 
+## [3.6.3] - 2024.08.02
 ### Added
+- Update of Offer claims
 - Checks for issuer & data data in a did:peer JWANT
 ### Changed
 - Consolidate DID crypto facilities into "vc" directory
+### Removed
+- App dependency on Infura and the ethr-did-resolver (now only in tests)
 
 
 ## [3.6.2] - 2024.07.07 - 7fb49766ffd739886d7cc28871cfc3914870fd9d
