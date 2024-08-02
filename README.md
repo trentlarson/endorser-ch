@@ -89,7 +89,7 @@ docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database
 * After deploying, increment the version & add "-beta" to the package.json and `npm install` and commit.
 
 
-When running on another domain (other than EndorserSearch.com):
+When running on another domain (other than endorser.ch):
 
 * Edit the .env SERVICE_ID with the value people should supply in the object field of RegisterAction.
   (It won't break anything to keep the value, but resulting credentials could cause confusion when looking across systems.)

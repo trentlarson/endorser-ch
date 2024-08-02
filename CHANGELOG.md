@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nothing
 
 
-## [3.6.3] - 2024.08.02
+## [3.6.3] - 2024.08.02 - 18496f1bdf4faa0afa7f2e4a824c851e40b57f0f
 ### Added
 - Update of Offer claims
 - Checks for issuer & data data in a did:peer JWANT
