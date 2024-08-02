@@ -19,16 +19,13 @@ export const PEER_DID_PREFIX = 'did:peer:'
 export const JWT_VERIFY_FAILED_CODE = "JWT_VERIFY_FAILED"
 export const UNSUPPORTED_DID_METHOD_CODE = "UNSUPPORTED_DID_METHOD"
 
-// for did-jwt 6.8.0 & ethr-did-resolver 6.2.2
-const resolver = process.env.USE_INFURA === "true" ?
-  new Resolver({
-    ...ethrDidResolver({
-      infuraProjectId: process.env.INFURA_PROJECT_ID || 'fake-infura-project-id'
-    })
-  }) :
-  new Resolver({
-    'ethr': didEthLocalResolver
-  });
+const resolver = new Resolver({ 'ethr': didEthLocalResolver });
+  // Here's the previous code using the getResolver from ethr-did-resolver 6.2.2 (and did-jwt 7.4.7)
+  // new Resolver({
+  //   ...getResolver({
+  //     infuraProjectId: process.env.INFURA_PROJECT_ID
+  //   })
+  // });
 
 // return Promise of at least { issuer, payload, verified boolean }
 // ... and also if successfully verified by did-jwt (not JWANT): data, doc, signature, signer

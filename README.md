@@ -50,9 +50,6 @@ npm ci
 # set up the environment (optional)
 cp .env.local .env
 
-# If you want to use the did-jwt did:ethr resolver, set USE_INFURA=true and set the INFURA_PROJECT_ID in that .env file.
-# (This isn't used for local tests, but it's possible for server operation and for verification tests.)
-
 # setup/migrate DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
@@ -371,7 +368,7 @@ It is typically a ULID, the short `id` reference to another internal claim that 
 
 - "CORS problems": is endorser-ch running?
 
-- "Please make sure to have at least one network": check that your .env has set a value for INFURA_PROJECT_ID (see .env setup above)
+- "Please make sure to have at least one network": this happened when we used Infura but that's not the case any more; do a case-insensitive search for the word "infura" and see what you find.
 
 - "Unsupported DID method 'ethr'": dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
 

@@ -923,9 +923,9 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
       })
   }).timeout(3000)
 
-  let timeToWait = 3000
-  if (process.env.NODE_ENV === 'test-local') {
-    timeToWait = 0; // since we'll avoid the infura.io verification
+  let timeToWait = 0
+  if (process.env.INFURA_PROJECT_ID) {
+    timeToWait = 3000; // wait for the infura.io verification
   }
   it('add many gives', async () => {
     const claimGive_OthersBy1_JwtObj = R.clone(testUtil.jwtTemplate)

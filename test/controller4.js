@@ -122,9 +122,9 @@ describe('4 - Load Claims Incrementally', () => {
       })
   ).timeout(3000)
 
-  let timeToWait = 3000
-  if (process.env.NODE_ENV === 'test-local') {
-    timeToWait = 0; // since we'll avoid the infura.io verification
+  let timeToWait = 0
+  if (process.env.INFURA_PROJECT_ID) {
+    timeToWait = 3000; // wait for the infura.io verification
   }
   it('insert many, many claims', async () => {
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 124)
