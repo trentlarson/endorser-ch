@@ -447,7 +447,7 @@ http://localhost:3001/reportBestAttendance
 User stories:
 
 - in endorser-ch
-  - run test/test.sh (can quit after first set of tests for a quick, non-network validation)
+  - run test/test.sh
   - run: NODE_ENV=test-local npm run dev
 
 - in mobile app
@@ -541,7 +541,8 @@ cd metrics
 # ... with pkgx:
 pkgx +pnpm.io sh
 
-mkdir node_modules # so it doesn't search in parent directories
+# this director is so it does not search in parent directories
+mkdir node_modules
 pnpm add bent ramda
 
 # This is if you want to get private data. (See below, too.)
@@ -606,7 +607,7 @@ await fillAll()
 
 // Write all claims to JSON -- which is not recommended if you read with your credentials:
 //fs.writeFileSync('metrics.json', JSON.stringify(all, null, 2))
-// Read them:
+// Read them from a previous session:
 //const all = require('./metrics.json')
 
 // write all claims with months & issuer & types to CSV
@@ -708,7 +709,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 
 
 
-## Limits
+## Limits (Manual Tasks)
 
 * If you increase anyone's limits, make sure to increase them in the image app as well.
 

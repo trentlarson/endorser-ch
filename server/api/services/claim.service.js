@@ -741,7 +741,7 @@ class ClaimService {
     }
   }
 
-  async createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList) {
+  async createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
     const embeddedResults = {}
 
@@ -903,7 +903,7 @@ class ClaimService {
       fullClaim: canonicalize(claim),
     }
 
-    if (globalFromInternalIdentifier(jwtId) === handleId) {
+    if (isFirstClaimForHandleId) {
       // new record
       let giveId = await dbService.giveInsert(entry)
     } else {
@@ -935,7 +935,7 @@ class ClaimService {
   }
 
 
-  async createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList) {
+  async createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -971,7 +971,7 @@ class ClaimService {
                && claim['@type'] === 'GiveAction') {
 
       const newGive =
-            await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList)
+            await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
 
       // only update confirm totals if this is an update
       await this.checkOfferUpdate(
@@ -1086,9 +1086,17 @@ class ClaimService {
         validThrough: validTimeStr,
         fullClaim: canonicalize(claim),
       }
-      const offerId = await dbService.offerInsert(entry)
-      l.trace(`${this.constructor.name} New offer ${offerId} ${util.inspect(entry)}`)
-      return { offerId }
+      if (isFirstClaimForHandleId) {
+        // new record
+        const offerId = await dbService.offerInsert(entry)
+        l.trace(`${this.constructor.name} New offer ${jwtId} ${util.inspect(entry)}`)
+      } else {
+        // edit existing record
+        entry.updatedAt = new Date().toISOString()
+        const numUpdated = await dbService.offerUpdate(entry)
+        l.trace(`${this.constructor.name} Updated offer ${jwtId}, ${numUpdated} record(s): ${util.inspect(entry)}`)
+      }
+      return { offerId: jwtId }
 
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Organization'
@@ -1368,9 +1376,10 @@ class ClaimService {
    * @param handleId
    * @param claim
    * @param claimInfoList {ClaimInfo[]} list of objects for each claim referenced by claimId or handleId: {}
+   * @param isFirstClaimForHandleId {boolean} true if this is the first claim for this handleId, important for determining insert vs update
    * @return Promise<Record< embeddedResults: string, networkResults: string >>
    */
-  async createEmbeddedClaimEntries(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList) {
+  async createEmbeddedClaimEntries(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
@@ -1379,9 +1388,8 @@ class ClaimService {
     if (Array.isArray(claim)) {
 
       return { clientError: 'We do not support sending multiple at once. Send individually.' }
-
       /**
-      // Here's how we used to support it.
+      // Here's how we used to support an array of claims.
       // If you want this, you'll need to figure if and how to manage last claim IDs & handle IDs.
 
       if (Array.isArray.payloadClaim
@@ -1408,7 +1416,7 @@ class ClaimService {
     } else {
       // claim is not an array
       embeddedResults =
-        await this.createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList)
+        await this.createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
       l.trace(`${this.constructor.name} created an embedded claim record.`)
     }
 
@@ -1462,10 +1470,6 @@ class ClaimService {
   // return an error explanation for any JWTs where the data doesn't match
   gatherErrors(claim, claimInfoList) {
     const errors = []
-    if (claim['@type'] === 'Offer'
-        && (claim.lastClaimId || claim.handleId)) {
-      errors.push(`Offers cannot be updated.`)
-    }
     for (let claimInfo of claimInfoList) {
       if (claimInfo.lastClaimId
           && !claimInfo.lastClaimJwt) {
@@ -1613,12 +1617,12 @@ class ClaimService {
 
       // The following looks up a previous entry by handle ID, and if it exists
       // then we figure they want to replace it. However, it is more precise
-      // and reliable if they use a specific record (JWT ID) because it's
-      // possible for some synchronization problem where their system or the
-      // another authorized participant (the agent) has sent a change and they
-      // haven't seen the most recent version... so they should not be able to
-      // simply send a handle ID where we retrieve the latest, but rather we
-      // should require they point to the previous record -- and then notify
+      // and reliable if they use a specific record (a JWT ID via lastClaimId)
+      // because it's possible for some synchronization problem where their system
+      // or another authorized participant (the agent) has sent a change and they
+      // haven't seen the most recent version... so they should avoid simply
+      // sending a handle ID where we retrieve the latest -- and we
+      // should require they point to the previous record, and notify
       // them if there is a more recent record with that same handle ID.
 
       // Generate the local id and find or generate the global "entity" handle ID.
@@ -1632,6 +1636,7 @@ class ClaimService {
       const lastClaimJwt = lastClaimInfo?.lastClaimJwt
 
       let handleId
+      let isFirstClaimForHandleId = false // this is the first claim for this handleId, hard to derive because of handleIds from other systems
       if (lastClaimId) {
 
         // Check that the previous entry exists.
@@ -1760,8 +1765,7 @@ class ClaimService {
                 }
               }
             )
-          }
-          if (!isGlobalUri(payloadClaim.identifier)) {
+          } else if (!isGlobalUri(payloadClaim.identifier)) {
             // Don't allow any local IDs that weren't created by this server.
             // (If you allow this, ensure they can't choose any past or future jwtId.)
             return Promise.reject(
@@ -1774,6 +1778,7 @@ class ClaimService {
             )
           } else {
             // It's a non-Endorser global URI that doesn't already exist. That's fine.
+            isFirstClaimForHandleId = true
           }
         }
 
@@ -1781,6 +1786,7 @@ class ClaimService {
         // There is no lastClaimId and no identifier.
         // Make the handleId from the jwtId.
         handleId = globalFromInternalIdentifier(jwtId)
+        isFirstClaimForHandleId = true
       }
 
       const claimStr = canonicalize(payloadClaim)
@@ -1805,7 +1811,7 @@ class ClaimService {
 
       let embedded =
           await this.createEmbeddedClaimEntries(
-            jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList
+            jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
           )
           .catch(err => {
             l.error(err, `Failed to create embedded claim records.`)

@@ -1135,6 +1135,7 @@ class EndorserDatabase {
    *
    * @param payload
    * @param id
+   * @param lastClaimId
    * @param handleId
    * @param claim
    * @param claimStr a canonicalized string of the claim
@@ -1717,17 +1718,19 @@ class EndorserDatabase {
       var stmt =
           "UPDATE offer_claim set jwtId = ?"
           + ", issuedAt = datetime(?), updatedAt = datetime(?)"
-          + ", offeredByDid = ?"
-          + ", recipientDid = ?, fulfillsPlanHandleId = ?, amount = ?, unit = ?, objectDescription = ?"
+          + ", offeredByDid = ?, recipientDid = ?"
+          + ", fulfillsHandleId = ?, fulfillsLinkConfirmed = ?, fulfillsPlanHandleId = ?"
+          + ", amount = ?, unit = ?, objectDescription = ?"
           + ", validThrough = datetime(?), fullClaim = ?"
           + " WHERE handleId = ?"
       db.run(
           stmt,
           [
             entry.jwtId, entry.issuedAt, entry.updatedAt,
-            entry.offeredByDid,
-            entry.recipientDid, entry.fulfillsPlanHandleId, entry.amount, entry.unit,
-            entry.objectDescription, entry.validThrough, entry.fullClaim,
+            entry.offeredByDid, entry.recipientDid,
+            entry.fulfillsHandleId, entry.fulfillsLinkConfirmed, entry.fulfillsPlanHandleId,
+            entry.amount, entry.unit, entry.objectDescription,
+            entry.validThrough, entry.fullClaim,
             entry.handleId,
           ],
           function(err) { if (err) { reject(err) } else { resolve(entry.jwtId) } })

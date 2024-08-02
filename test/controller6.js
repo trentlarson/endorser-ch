@@ -982,7 +982,7 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
 
 
 
-let firstOfferId, anotherProjectOfferId, offerId6, validThroughDate
+let firstOfferId, anotherProjectOfferId, offerHandleId6, validThroughDate
 
 describe('6 - Check offer totals', () => {
 
@@ -1333,7 +1333,7 @@ describe('6 - Check offer totals', () => {
         }
         expect(r.headers['content-type'], /json/)
         expect(r.body.success.handleId).to.be.a('string')
-        offerId6 = r.body.success.handleId
+        offerHandleId6 = r.body.success.handleId
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1342,12 +1342,12 @@ describe('6 - Check offer totals', () => {
 
   it('offer data for #6 is correct', () => {
     return request(Server)
-      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].handleId).to.equal(offerId6)
+        expect(r.body.data[0].handleId).to.equal(offerHandleId6)
         expect(r.body.data[0].offeredByDid).to.equal(creds[4].did)
         expect(r.body.data[0].recipientDid).to.equal(creds[2].did)
         expect(r.body.data[0].fulfillsPlanHandleId).to.be.null
@@ -1364,7 +1364,7 @@ describe('6 - Check offer totals', () => {
 
   it('offer fulfiller retrieval gets none', () => {
     return request(Server)
-      .get('/api/v2/report/giveFulfillersToOffer?giveHandleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/giveFulfillersToOffer?giveHandleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2003,7 +2003,7 @@ describe('6 - Check give totals', () => {
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.agent = { identifier: creds[4].did }
     credObj.claim.recipient = { identifier: creds[2].did }
-    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerId6)
+    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerHandleId6)
     credObj.claim.description = 'Giving it up for those first graders'
     credObj.claim.object.amountOfThisGood = 4
     credObj.sub = creds[2].did
@@ -2033,7 +2033,7 @@ describe('6 - Check give totals', () => {
 
   it('offer #6 data now has a confirmed amount', () => {
     return request(Server)
-      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2073,7 +2073,7 @@ describe('6 - Check give totals', () => {
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.agent = { identifier: creds[4].did }
     credObj.claim.recipient = { identifier: creds[2].did }
-    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerId6)
+    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerHandleId6)
     credObj.claim.description = 'Thanks for the first-grade learning materials!'
     delete credObj.claim.object
     credObj.sub = creds[4].did
@@ -2103,7 +2103,7 @@ describe('6 - Check give totals', () => {
 
   it('offer #6 data now has a confirmed non-amount', () => {
     return request(Server)
-      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2126,7 +2126,7 @@ describe('6 - Check give totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.recipient = { identifier: creds[1].did }
-    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerId6)
+    credObj.claim.fulfills.lastClaimId = localFromGlobalEndorserIdentifier(offerHandleId6)
     credObj.claim.description = 'First-graders & snowboarding & horses?'
     credObj.claim.provider = [
       { "@type": "GiveAction", "identifier": secondGiveRecordHandleId },
@@ -2162,7 +2162,7 @@ describe('6 - Check give totals', () => {
 
   it('offer #6 data now has even more paid & confirmed', () => {
     return request(Server)
-      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2198,7 +2198,7 @@ describe('6 - Check give totals', () => {
 
   it('offer fulfiller retrieval gets three', () => {
     return request(Server)
-      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2286,7 +2286,7 @@ describe('6 - Check give totals', () => {
 
   it('fulfilled offer link from child gives no longer shows after link is removed', () => {
     return request(Server)
-      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2625,7 +2625,7 @@ describe('6 - Check give totals', () => {
     credObj.claim.lastClaimId = giveRecordLastClaimId6
     credObj.claim.recipient = { identifier: creds[1].did }
     credObj.claim.fulfills = [
-      { lastClaimId: localFromGlobalEndorserIdentifier(offerId6) },
+      { lastClaimId: localFromGlobalEndorserIdentifier(offerHandleId6) },
       { "@type": "DonateAction" },
     ]
     credObj.claim.description = 'First-graders & snowboarding ... that is enough'
@@ -2683,7 +2683,7 @@ describe('6 - Check give totals', () => {
 
   it('offer #6 data now has even more paid & confirmed', () => {
     return request(Server)
-      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2699,9 +2699,90 @@ describe('6 - Check give totals', () => {
       })
   }).timeout(3000)
 
+  it('update of offer #6 by someone else fails', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.lastClaimId = offerHandleId6
+    credObj.claim.offeredBy = { identifier: creds[4].did }
+    credObj.claim.recipient = { identifier: creds[3].did }
+    credObj.claim.includesObject = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
+    }
+    credObj.claim.itemOffered = {
+      description: 'First grade materials to user 3',
+    }
+    credObj.sub = creds[4].did
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[3].createVerification(credObj)
+
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: claimJwtEnc})
+    .then(r => {
+      expect(r.status).that.equals(400)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(5000)
+
+  it('update of offer #6 succeeds', async () => {
+
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.lastClaimId = localFromGlobalEndorserIdentifier(offerHandleId6)
+    credObj.claim.offeredBy = { identifier: creds[4].did }
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.claim.includesObject = {
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 60, unitCode: 'USD'
+    }
+    credObj.claim.itemOffered = {
+      description: 'First grade materials to user 5',
+    }
+    credObj.sub = creds[4].did
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: claimJwtEnc})
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.success.handleId).to.equal(offerHandleId6)
+      expect(r.status).that.equals(201)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(5000)
+
+  it('offer #6 data has new & old data', () => {
+    return request(Server)
+    .get('/api/v2/report/offers?handleId=' + encodeURIComponent(offerHandleId6))
+    .set('Authorization', 'Bearer ' + pushTokens[4])
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      console.log('offer #6 data has new & old data', r.body.data[0].fullClaim)
+      expect(r.body.data).to.be.an('array').of.length(1)
+      expect(r.body.data[0].fullClaim.itemOffered.description).to.equal('First grade materials to user 5')
+      expect(r.body.data[0].unit).to.equal('USD')
+      expect(r.body.data[0].amount).to.equal(60)
+      expect(r.body.data[0].amountGiven).to.equal(7)
+      expect(r.body.data[0].amountGivenConfirmed).to.equal(7)
+      expect(r.body.data[0].nonAmountGivenConfirmed).to.equal(2)
+      expect(r.body.data[0].recipientDid).to.equal(creds[5].did)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(3000)
+
   it('offer fulfiller retrieval gets three', () => {
     return request(Server)
-      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerId6))
+      .get('/api/v2/report/giveFulfillersToOffer?offerHandleId=' + encodeURIComponent(offerHandleId6))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -2717,7 +2798,7 @@ describe('6 - Check give totals', () => {
 
 })
 
-describe('6 - claimId & handleId Guards', () => {
+describe('6 - claimId & handleId guards', () => {
 
   // I put this here anticipating that I'd run checks on the claim service with DB data from above.
   // I didn't get to it, but I'm leaving this here in case I do later.
