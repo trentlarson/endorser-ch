@@ -61,6 +61,7 @@ NODE_ENV=dev npm run dev
 echo "INSERT INTO registration (did, maxClaims, maxRegs, epoch) VALUES ('YOUR_DID', 100, 10000, 1719348718092);" | sqlite3 ../endorser-ch-dev.sqlite3
 # ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
 ```
+If you just want to get running with initial test user, run `test/test.sh` (or do the "bare" setup below).
 
 #### Other Ways To Run
 
@@ -112,13 +113,19 @@ Run the local automated tests and build sample data with this: `./test/test.sh`
 
 * That creates a sample DB file ../endorser-ch-test-local.sqlite3 which you may then use as baseline data for running in dev mode by copying to ../endorser-ch-dev.sqlite3
 
+#### Bare DB
 
+To create a bare DB with only a sample initial user #0 and no other test data:
+
+```
+rm ../endorser-ch-test-local.sqlite3
+npm run flyway migrate
+NODE_ENV=test-local npm run test test/controller0
+```
 
 #### Manual tests
 
 `NODE_ENV=dev npm run dev` and then check that this works: http://localhost:3000/api-explorer/
-
-
 
 
 #### Test server
@@ -127,6 +134,252 @@ You can use the test server APIs at [https://test-api.endorser.ch](https://test-
 
 
 
+
+
+
+
+
+
+
+
+
+## APIs
+
+We have [Swagger docs on production](https://api.endorser.ch).
+
+... but note that these are created by hand and may not be up to date with the latest code.
+(I hope to automatically generate these from the code in the future so that both planned & existing APIs are available.)
+
+
+#### V2 endpoints
+
+More recent endpoints, especially the ones under the "api/v2" path, return an object with "data" (for GETs)
+or "success" (for POSTs), or alternatively "error" when there is a problem.
+
+#### V2 GET results
+
+The reports with "v2" in the URL include paging that will retrieve more than just the most recent matches (currently 50).
+These endpoints return an object with a "data" property that contains all the results,
+and then a "hitLimit" property that tells whether there may be more results:
+
+```
+{
+  "data": [...],
+  "hitLimit": true
+}
+```
+
+Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter.
+
+For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next batch that goes further in the past (excluding that one):
+
+```
+curl -X GET "https://api.endorser.ch/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
+```
+
+
+#### V2 POST results
+
+These endpoints return a "success" property, possibly with some data.
+
+
+#### Claim IDs
+
+Each claim is assigned a unique ID by this system. It is possible to also link to other chains by providing a full URN identifier,
+Here are the identifiers and how they're used:
+
+* JWT `id` is assigned to each verifiable credential JWT. It is used in other cached tables
+as the `jwtId` (eg. in `plan_claim`). It is a ULID, a string of 26 characters like "01GQBE7Q0RQQAGJMEEW6RSGKTF".
+
+* A `handleId` is a unique identifier used to refer to an entity which might have edits in a chain of claims.
+For example, a project could be created and then later edited, and all such claims can be tied together with this.
+By default, it is a global ID made out of the JWT `id`, eg. "http://endorser.ch/entity/01GQBE7Q0RQQAGJMEEW6RSGKTF",
+but it might be some other global `identifier` that was supplied by the user. This is metadata, typically not set directly;
+any subsequent claims sent to the server should send a `lastClaimId` to refer to the latest claim with the same `handleId`.
+
+* An `identifier` can be supplied when submitting a claim if the client wants to use their own identifier
+(such as an identifier from another chain); in those cases, it is also used as the `handleId`.
+This is a full global URN. It may be a DID. When referring to preceding claims, use `lastClaimId` instead.
+
+* A `lastClaimId` is the way to refer to a previous claim. (An `identifier` may still be accepted, but that use is deprecated.)
+It is typically a ULID, the short `id` reference to another internal claim that this should extend.
+
+  * Note that the ACDC approach has the link to previous claims outside the claim. I'm sure that will be preferable to
+  this approach where the link is inside the claim.
+
+* A `jwtId` is the `id` of the JWT that was used to submit the claim, found in the tables that cache the claim info
+(eg. in `plan_claim` and other `_claim` tables).
+
+
+
+
+
+
+
+
+
+## Troubleshooting
+
+- When the API disallows and says a user "has already claimed" or "has already registered" their maximum for the week, you can up their limit in the database registration table (or, if they haven't been set explicitly in the DB for that user, increase the DEFAULT_MAX settings at the top of jwt.service.js).
+
+- Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)
+
+- "CORS problems": is endorser-ch running?
+
+- "Please make sure to have at least one network": this happened when we used Infura but that's not the case any more; do a case-insensitive search for the word "infura" and see what you find.
+
+- "Unsupported DID method 'ethr'": dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
+
+- "Converting circular structure to JSON": network connected?
+
+- "Error: expected "Content-Type" header field" during automated tests: run them again.
+
+- This:
+```
+../fsevents.cc:85:58: error: expected ';' after top level declarator
+void FSEvents::Initialize(v8::Handle<v8::Object> exports) {
+                                                         ^
+                                                         ;
+23 warnings and 9 errors generated.
+make: *** [Release/obj.target/fse/fsevents.o] Error 1
+gyp ERR! build error
+gyp ERR! stack Error: `make` failed with exit code: 2
+...
+node-pre-gyp ERR! build error
+node-pre-gyp ERR! stack Error: Failed to execute '/Users/tlarson/.nvm/versions/node/v12.13.1/bin/node /Users/tlarson/.nvm/versions/node/v12.13.1/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js ...
+...
+npm ERR! sqlite3@4.0.4 install: `node-pre-gyp install --fallback-to-build`
+npm ERR! Exit status 1
+...
+```
+... probably means you're running a different version of node.  Prod is on node v10.15.0 and npm 6.4.1
+
+- This:
+```
+> endorser-ch@1.1.23 flyway /Users/tlarson/dev/home/endorser-ch
+> flyway -c conf/flyway.js "migrate"
+
+flyway-8.5.10/jre/lib/server/libjvm.dylib: truncated gzip input
+tar: Error exit delayed from previous errors.
+(node:12554) UnhandledPromiseRejectionWarning: Error: Error: Untaring file failed 1
+    at /Users/tlarson/dev/home/endorser-ch/node_modules/node-flywaydb/bin/flyway.js:76:19
+    at processTicksAndRejections (internal/process/task_queues.js:93:5)
+(node:12554) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). (rejection id: 1)
+(node:12554) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process with a non-zero exit code.
+```
+... may require removal of node_modules and reinstall.
+
+
+
+
+
+
+## More Manual Tests
+
+- Make sure API works: http://localhost:3000/api-explorer
+- Run test/test.sh
+- Test these :3001 URLs by running [the web app](https://github.com/trentlarson/uport-demo)
+http://localhost:3001/reportClaim?claimId=1
+
+... and see confirmations eventually (even if they're HIDDEN which causes console errors)
+http://localhost:3001/reportClaims
+
+... to see a list of claims
+http://localhost:3001/reportConfirms
+
+... plus push a button and see results
+http://localhost:3001/signClaim?claim=%7B%22%40context%22%3A%22http%3A%2F%2Fendorser.ch%22%2C%22%40type%22%3A%22Confirmation%22%2C%22originalClaims%22%3A%5B%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-elsest%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3AElsa's-sister%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%5D%7D
+
+... gives 5 confirmations
+
+... and then go to a place not logged in
+http://localhost:3001/reportBestAttendance
+
+... and see all hidden
+
+... then test the following user story if you have time.
+
+User stories:
+
+- in endorser-ch
+  - run test/test.sh
+  - run: NODE_ENV=test-local npm run dev
+
+- in mobile app
+  - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
+
+  - run: `npm run build && npm run start`
+
+  - show attendance results
+    - on Best Attendance screen
+      http://localhost:3001/reportBestAttendance
+      and see all DIDs are hidden except public 22c
+
+  - show search results for skills
+    http://localhost:3001/reportSearch
+    - search for "carpentry" and see all DIDs are hidden
+    - run in endorser-ch: npm run set-3-visible
+    - search for "carpentry" and see 332 DIDs are shown and some are transitive, eg. in identifierVisibleToDids
+
+  - show eligibility results
+    - on search screen Call Endpoint with:
+      /api/report/actionClaimsAndConfirmationsSince?dateTime=2018-01-01T00:00:00Z
+    - processed to see confirmations
+      searchResults.map((obj) => {return {did: obj.did, numActions: obj.actions.length, numConfirms: R.sum(obj.actions.map((a)=>a.confirmations.length))}})
+      ... and see 3 confirmations, two hidden and one 22c public
+
+  - show voting results
+    - see votes on search screen Call Endpoint with:
+      /api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-06-18
+    - processed to see votes
+      R.map(o=>{return {did:o.did, roles:R.map(role=>{return {votes:role.confirmations.length, roleName:role.orgRole.roleName}})(o.orgRoles)}})(searchResults)
+      ... and 2 results, three for hidden and two for 332
+
+  - show tenure results and links to find people
+    - go to Residence Report
+      http://localhost:3001/reportResidences
+    - see duplicate tenure claims, one hidden
+    - change to TEST_USER_NUM = -1 (Trent) in src/utilities/claimsTest.js
+    - in tenure claim, see a different user hidden
+    - confirm something about Annabelle did:ethr:0xaaa29f09c29fb0666b8302b64871d7029032b479
+      ... and see claim with ID 32 saved http://localhost:3001/claim?claimId=32
+    - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
+    - in tenure claim, go to see how there's now a reachable path to find out the other owner
+
+- using data generated from tests
+
+  - Users #2 & #3 want to find any common contact.
+
+  - See some records & confirmations.
+    - search on "give"
+    - confirmed by me: user #2: see 0 gave 2 hours, confirmed by connections
+    - hidden & linked: user #3: see ? gave 3 USD, not-visible is visible to others
+
+  - User #2 wants to verify skills of user #3
+    - find my own claim: user #3: search for carpentry, use second to last in list
+
+
+This will help visualize the network from the test data:
+
+* Get from DB: `select "{source:'" || substring(subject, 12, 1) || "', target:'" || substring(object, 12, 1) || "', type: 'suit'},"  from network;`
+
+* Go to https://observablehq.com/@d3/mobile-patent-suits and substitute that data into the 'links' variable, wrapped in '[]'.
+
+* See the network links at the top.
+
+
+#### Test Data for Contacts
+
+[Here is a sample CSV for contacts](https://raw.githubusercontent.com/trentlarson/endorser-ch/master/test/sample-contacts.csv), with data taken from the tests.
+
+
+#### Debug the tests
+
+... though I just saw this in the docs and I don't really know what it means.
+
+```shell
+./test/test.sh :debug
+```
 
 #### Send sample plan
 
@@ -285,249 +538,6 @@ curl -X POST http://localhost:3000/api/claim/makeMeGloballyVisible -H "Content-T
 
 
 
-## APIs
-
-We have [Swagger docs on production](https://api.endorser.ch).
-
-... but note that these are created by hand and may not be up to date with the latest code.
-(I hope to automatically generate these from the code in the future so that both planned & existing APIs are available.)
-
-
-#### V2 endpoints
-
-More recent endpoints, especially the ones under the "api/v2" path, return an object with "data" (for GETs)
-or "success" (for POSTs), or alternatively "error" when there is a problem.
-
-#### V2 GET results
-
-The reports with "v2" in the URL include paging that will retrieve more than just the most recent matches (currently 50).
-These endpoints return an object with a "data" property that contains all the results,
-and then a "hitLimit" property that tells whether there may be more results:
-
-```
-{
-  "data": [...],
-  "hitLimit": true
-}
-```
-
-Without extra parameters, these will return the most recent batch. To get results further back, add a "beforeId" parameter.
-
-For example, the default "api/v2/report/claims" will return data with the oldest having an ID of "01GQBE7Q0RQQAGJMEEW6RSGKTF", so if you call it with that as the "beforeId" then you'll get the next batch that goes further in the past (excluding that one):
-
-```
-curl -X GET "https://api.endorser.ch/api/v2/report/claims?beforeId=01GQBE7Q0RQQAGJMEEW6RSGKTF" -H  "accept: application/json"
-```
-
-
-#### V2 POST results
-
-These endpoints return a "success" property, possibly with some data.
-
-
-#### Claim IDs
-
-Each claim is assigned a unique ID by this system. It is possible to also link to other chains by providing a full URN identifier,
-Here are the identifiers and how they're used:
-
-* JWT `id` is assigned to each verifiable credential JWT. It is used in other cached tables
-as the `jwtId` (eg. in `plan_claim`). It is a ULID, a string of 26 characters like "01GQBE7Q0RQQAGJMEEW6RSGKTF".
-
-* A `handleId` is a unique identifier used to refer to an entity which might have edits in a chain of claims.
-For example, a project could be created and then later edited, and all such claims can be tied together with this.
-By default, it is a global ID made out of the JWT `id`, eg. "http://endorser.ch/entity/01GQBE7Q0RQQAGJMEEW6RSGKTF",
-but it might be some other global `identifier` that was supplied by the user. This is metadata, typically not set directly;
-any subsequent claims sent to the server should send a `lastClaimId` to refer to the latest claim with the same `handleId`.
-
-* An `identifier` can be supplied when submitting a claim if the client wants to use their own identifier
-(such as an identifier from another chain); in those cases, it is also used as the `handleId`.
-This is a full global URN. It may be a DID. When referring to preceding claims, use `lastClaimId` instead.
-
-* A `lastClaimId` is the way to refer to a previous claim. (An `identifier` may still be accepted, but that use is deprecated.)
-It is typically a ULID, the short `id` reference to another internal claim that this should extend.
-
-  * Note that the ACDC approach has the link to previous claims outside the claim. I'm sure that will be preferable to
-  this approach where the link is inside the claim.
-
-* A `jwtId` is the `id` of the JWT that was used to submit the claim, found in the tables that cache the claim info
-(eg. in `plan_claim` and other `_claim` tables).
-
-
-
-
-
-
-
-
-
-## Troubleshooting
-
-- When the API disallows and says a user "has already claimed" or "has already registered" their maximum for the week, you can up their limit in the database registration table (or, if they haven't been set explicitly in the DB for that user, increase the DEFAULT_MAX settings at the top of jwt.service.js).
-
-- Repeated sign-in (because it doesn't remember you): After sign-in, see what browser it uses after you log in from uPort, and use that from now on to start the flow.  (On some Android phones, we've noticed that it's hard to tell which browser that is because the app shows endorser.ch inside a uPort window; we eventually found it was Duck-Duck-Go... so try all the possible browsers, and watch closely as it jumps to the browser to see if there's any indication.)
-
-- "CORS problems": is endorser-ch running?
-
-- "Please make sure to have at least one network": this happened when we used Infura but that's not the case any more; do a case-insensitive search for the word "infura" and see what you find.
-
-- "Unsupported DID method 'ethr'": dependencies? see https://github.com/trentlarson/endorser-ch/commit/a836946c1b1897000dbe7e6d610df32aa32742ba
-
-- "Converting circular structure to JSON": network connected?
-
-- "Error: expected "Content-Type" header field" during automated tests: run them again.
-
-- This:
-```
-../fsevents.cc:85:58: error: expected ';' after top level declarator
-void FSEvents::Initialize(v8::Handle<v8::Object> exports) {
-                                                         ^
-                                                         ;
-23 warnings and 9 errors generated.
-make: *** [Release/obj.target/fse/fsevents.o] Error 1
-gyp ERR! build error
-gyp ERR! stack Error: `make` failed with exit code: 2
-...
-node-pre-gyp ERR! build error
-node-pre-gyp ERR! stack Error: Failed to execute '/Users/tlarson/.nvm/versions/node/v12.13.1/bin/node /Users/tlarson/.nvm/versions/node/v12.13.1/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js ...
-...
-npm ERR! sqlite3@4.0.4 install: `node-pre-gyp install --fallback-to-build`
-npm ERR! Exit status 1
-...
-```
-... probably means you're running a different version of node.  Prod is on node v10.15.0 and npm 6.4.1
-
-- This:
-```
-> endorser-ch@1.1.23 flyway /Users/tlarson/dev/home/endorser-ch
-> flyway -c conf/flyway.js "migrate"
-
-flyway-8.5.10/jre/lib/server/libjvm.dylib: truncated gzip input
-tar: Error exit delayed from previous errors.
-(node:12554) UnhandledPromiseRejectionWarning: Error: Error: Untaring file failed 1
-    at /Users/tlarson/dev/home/endorser-ch/node_modules/node-flywaydb/bin/flyway.js:76:19
-    at processTicksAndRejections (internal/process/task_queues.js:93:5)
-(node:12554) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). (rejection id: 1)
-(node:12554) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process with a non-zero exit code.
-```
-... may require removal of node_modules and reinstall.
-
-
-
-
-
-
-## Tests
-
-- Make sure API works: http://localhost:3000/api-explorer
-- Run test/test.sh
-- Test these :3001 URLs by running [the web app](https://github.com/trentlarson/uport-demo)
-http://localhost:3001/reportClaim?claimId=1
-
-... and see confirmations eventually (even if they're HIDDEN which causes console errors)
-http://localhost:3001/reportClaims
-
-... to see a list of claims
-http://localhost:3001/reportConfirms
-
-... plus push a button and see results
-http://localhost:3001/signClaim?claim=%7B%22%40context%22%3A%22http%3A%2F%2Fendorser.ch%22%2C%22%40type%22%3A%22Confirmation%22%2C%22originalClaims%22%3A%5B%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-else-else%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3Asomeone-elsest%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%2C%7B%22%40context%22%3A%22http%3A%2F%2Fschema.org%22%2C%22%40type%22%3A%22JoinAction%22%2C%22agent%22%3A%7B%22did%22%3A%22did%3Aethr%3AElsa's-sister%22%7D%2C%22event%22%3A%7B%22organizer%22%3A%7B%22name%22%3A%22Bountiful%20Voluntaryist%20Community%22%7D%2C%22name%22%3A%22Saturday%20Morning%20Meeting%22%2C%22startTime%22%3A%222020-01-25T08%3A00%3A00.000-07%3A00%22%7D%7D%5D%7D
-
-... gives 5 confirmations
-
-... and then go to a place not logged in
-http://localhost:3001/reportBestAttendance
-
-... and see all hidden
-
-... then test the following user story if you have time.
-
-User stories:
-
-- in endorser-ch
-  - run test/test.sh
-  - run: NODE_ENV=test-local npm run dev
-
-- in mobile app
-  - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
-
-  - run: `npm run build && npm run start`
-
-  - show attendance results
-    - on Best Attendance screen
-      http://localhost:3001/reportBestAttendance
-      and see all DIDs are hidden except public 22c
-
-  - show search results for skills
-    http://localhost:3001/reportSearch
-    - search for "carpentry" and see all DIDs are hidden
-    - run in endorser-ch: npm run set-3-visible
-    - search for "carpentry" and see 332 DIDs are shown and some are transitive, eg. in identifierVisibleToDids
-
-  - show eligibility results
-    - on search screen Call Endpoint with:
-      /api/report/actionClaimsAndConfirmationsSince?dateTime=2018-01-01T00:00:00Z
-    - processed to see confirmations
-      searchResults.map((obj) => {return {did: obj.did, numActions: obj.actions.length, numConfirms: R.sum(obj.actions.map((a)=>a.confirmations.length))}})
-      ... and see 3 confirmations, two hidden and one 22c public
-
-  - show voting results
-    - see votes on search screen Call Endpoint with:
-      /api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-06-18
-    - processed to see votes
-      R.map(o=>{return {did:o.did, roles:R.map(role=>{return {votes:role.confirmations.length, roleName:role.orgRole.roleName}})(o.orgRoles)}})(searchResults)
-      ... and 2 results, three for hidden and two for 332
-
-  - show tenure results and links to find people
-    - go to Residence Report
-      http://localhost:3001/reportResidences
-    - see duplicate tenure claims, one hidden
-    - change to TEST_USER_NUM = -1 (Trent) in src/utilities/claimsTest.js
-    - in tenure claim, see a different user hidden
-    - confirm something about Annabelle did:ethr:0xaaa29f09c29fb0666b8302b64871d7029032b479
-      ... and see claim with ID 32 saved http://localhost:3001/claim?claimId=32
-    - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
-    - in tenure claim, go to see how there's now a reachable path to find out the other owner
-
-- using data generated from tests
-
-  - Users #2 & #3 want to find any common contact.
-
-  - See some records & confirmations.
-    - search on "give"
-    - confirmed by me: user #2: see 0 gave 2 hours, confirmed by connections
-    - hidden & linked: user #3: see ? gave 3 USD, not-visible is visible to others
-
-  - User #2 wants to verify skills of user #3
-    - find my own claim: user #3: search for carpentry, use second to last in list
-
-
-This will help visualize the network from the test data:
-
-* Get from DB: `select "{source:'" || substring(subject, 12, 1) || "', target:'" || substring(object, 12, 1) || "', type: 'suit'},"  from network;`
-
-* Go to https://observablehq.com/@d3/mobile-patent-suits and substitute that data into the 'links' variable, wrapped in '[]'.
-
-* See the network links at the top.
-
-
-#### Test Data for Contacts
-
-[Here is a sample CSV for contacts](https://raw.githubusercontent.com/trentlarson/endorser-ch/master/test/sample-contacts.csv), with data taken from the tests.
-
-
-#### Debug the tests
-
-... though I just saw this in the docs and I don't really know what it means.
-
-```shell
-./test/test.sh :debug
-```
-
-
-
-
-
-
 ## Metrics
 
 ```shell
@@ -541,7 +551,6 @@ pkgx +pnpm.io sh
 # this director is so it does not search in parent directories
 mkdir node_modules
 pnpm add bent ramda
-
 # This is if you want to get private data. (See below, too.)
 # (For some reason, I had this pegged @5.12.4)
 pnpm add did-jwt
@@ -555,36 +564,30 @@ const bent = require('bent')
 const fs = require('node:fs')
 const R = require('ramda')
 
-// These are just if you want to get private data. (See below, too.)
-//const OWNER_DID = 'OWNER_DID'
-//const OWNER_PRIVATE_KEY_HEX = 'OWNER_PRIVATE_KEY_HEX'
-//const didJwt = await import('did-jwt')
+// This is only important if you want to get private data. (See below, too.)
+const didJwt = await import('did-jwt')
 
 // 'count' returns { data: [...], maybeMoreAfter: 'ID' }
-let count = async (moreBefore) => {
+let count = async (moreBefore, ownerDid, ownerPrivateKeyHex) => {
   let options = { "Content-Type": "application/json" }
-  /**
-   * begin private data
-   *
-  // This is just if you want to get private data.
-  const nowEpoch = Math.floor(Date.now() / 1000)
-  const endEpoch = nowEpoch + 60
-  const tokenPayload = { exp: endEpoch, iat: nowEpoch, iss: OWNER_DID }
-  const signer = didJwt.SimpleSigner(OWNER_PRIVATE_KEY_HEX)
-  const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: OWNER_DID, signer })
-  options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt }, options)
-   *
-   * end private data
-   **/
+  if (ownerDid && ownerPrivateKeyHex) {
+    // This is just if you want to get private data.
+    const nowEpoch = Math.floor(Date.now() / 1000)
+    const endEpoch = nowEpoch + 60
+    const tokenPayload = { exp: endEpoch, iat: nowEpoch, iss: ownerDid }
+    const signer = didJwt.SimpleSigner(ownerPrivateKeyHex)
+    const accessJwt = await didJwt.createJWT(tokenPayload, { issuer: ownerDid, signer })
+    options = R.mergeLeft({ "Authorization": "Bearer " + accessJwt }, options)
+  }
   const getJson = bent('json', options)
   return getJson(getServer() + '/api/v2/report/claims?beforeId=' + moreBefore)
 }
 
-let all = []
-let fillAll = async () => {
+let fillAll = async (ownerDid, ownerPrivateKeyHex) => {
   let moreBefore = 'Z'
+  let all = []
   do {
-    const result = await count(moreBefore)
+    const result = await count(moreBefore, ownerDid, ownerPrivateKeyHex)
     all = R.concat(all, result.data)
     moreBefore = result.hitLimit ? result.data[result.data.length - 1].id : ''
     console.log(all.length, moreBefore, '...')
@@ -599,13 +602,16 @@ let fillAll = async () => {
 
   // output each row in CSV format
   //all.map(record => console.log(record.issuedAt.substring(0, 7), ",", record.claimType))
+  return all
 }
-await fillAll()
 
-// Write all claims to JSON -- which is not recommended if you read with your credentials:
+// Run without credentials for these first few numbers:
+let all = await fillAll()
+
+// Write all claims to JSON -- which is not recommended if you read with your credentials because it contains all your linkages:
 //fs.writeFileSync('metrics.json', JSON.stringify(all, null, 2))
 // Read them from a previous session:
-//const all = require('./metrics.json')
+//all = require('./metrics.json')
 
 // write all claims with months & issuer & types to CSV
 fs.writeFileSync('metrics.csv', 'month,issuedAt,claimType\n')
@@ -619,10 +625,11 @@ R.map(key => fs.appendFileSync('metrics-count.csv', key + ',' + monthClaims[key]
 
 // write counts for months & selected types to CSV
 let selectedTypes = ['AgreeAction', 'GiveAction', 'Offer', 'PlanAction']
+//let selectedTypes = ['RegisterAction']
 let now = new Date()
 let nonEdits = R.filter(record => record.handleId.substring(27) === record.id, all)
 let monthClaims = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, nonEdits))
-fs.writeFileSync('metrics-claims-by-month-filtered.csv', ',' + selectedTypes.join(',') + ',total' + '\n')
+fs.writeFileSync('metrics-claims-by-month-filtered.csv', 'date,' + selectedTypes.join(',') + ',total' + '\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
   for (let month = 0; month <= highMonth; month++) {
@@ -630,7 +637,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
     const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
     let row = ''
     let total = 0
-    for (let type of selectedTypes) {
+    for (const type of selectedTypes) {
       const thisCount = monthClaims[monthStr + ',' + type] || 0
       row += ',' + thisCount
       total += thisCount
@@ -663,6 +670,9 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 
 //// The following are only available if you retrieved private data.
 
+// Run with a DID & private key hex:
+all = await fillAll('OWNER_DID', 'OWNER_PRIVATE_KEY_HEX')
+
 // write months and issuer DIDs to CSV
 fs.writeFileSync('metrics-issuer.csv', 'month,issuedAt,claimType,issuer\n')
 all.map(record => fs.appendFileSync('metrics-issuer.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + ',' + record.issuer + '\n'))
@@ -683,7 +693,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 }
 
 // write months and number of hidden DIDs
-let now = new Date()
+now = new Date()
 fs.writeFileSync('metrics-hidden-issuer-claims.csv', 'month,hidden_issuer_claims\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
