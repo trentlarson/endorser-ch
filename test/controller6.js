@@ -882,6 +882,10 @@ describe('6 - Plans', () => {
 
 
 
+let timeToWait = 0
+if (process.env.INFURA_PROJECT_ID) {
+  timeToWait = 3000; // wait for the infura.io verification
+}
 
 describe('6 - PlanAction just for BVC, partly for testing data on a local server', () => {
 
@@ -923,10 +927,7 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
       })
   }).timeout(3000)
 
-  let timeToWait = 0
-  if (process.env.INFURA_PROJECT_ID) {
-    timeToWait = 3000; // wait for the infura.io verification
-  }
+  const NUM_GIVES = 51
   it('add many gives', async () => {
     const claimGive_OthersBy1_JwtObj = R.clone(testUtil.jwtTemplate)
     claimGive_OthersBy1_JwtObj.claim = R.clone(testUtil.claimGive)
@@ -944,7 +945,7 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
     const manyGives =
       R.times(n =>
         R.clone(claimGive_OthersBy1_JwtObj),
-        51
+        NUM_GIVES
       )
       .map((vc, i) => {
         vc.claim.issuedAt = new Date().toISOString()
@@ -962,7 +963,7 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
             .then(r => {
               expect(r.status).that.equals(201)
               expect(r.body.success).does.not.have.property('embeddedRecordError')
-              //console.log('Inserted claim #', i + 1, 'of', manyGives.length)
+              //console.log('Inserted give #', i + 1, 'of', manyGives.length)
               resolve()
             }).catch((err) => {
               reject(err)
@@ -972,11 +973,50 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
       })
     })
     return await Promise.all(givesProms)
-  }).timeout(timeToWait * 51)
+  }).timeout(timeToWait * NUM_GIVES)
 
 })
 
+describe('6 - add many PlanActions, partly for scrolling UI tests', () => {
+  const NUM_PLANS = 21
+  it('add many plans', async () => {
+    const claimPlan_OthersBy1_JwtObj = R.clone(testUtil.jwtTemplate)
+    claimPlan_OthersBy1_JwtObj.claim = R.clone(testUtil.claimPlanAction)
+    claimPlan_OthersBy1_JwtObj.claim.description = "Some Great Plan"
 
+    const manyPlans =
+      R.times(n =>
+          R.clone(claimPlan_OthersBy1_JwtObj),
+        NUM_PLANS
+      )
+      .map((vc, i) => {
+        vc.claim.description += " #" + (i + 1)
+        return vc
+      })
+
+    const plansProms = manyPlans.map(async (vc, i) => {
+      return new Promise((resolve, reject) => {
+        credentials[1].createVerification(vc)
+        .then(vcJwt => {
+          return request(Server)
+          .post('/api/v2/claim')
+          .send({jwtEncoded: vcJwt})
+          .expect('Content-Type', /json/)
+          .then(r => {
+            expect(r.status).that.equals(201)
+            expect(r.body.success).does.not.have.property('embeddedRecordError')
+            //console.log('Inserted plan #', i + 1, 'of', manyPlans.length)
+            resolve()
+          }).catch((err) => {
+            reject(err)
+          })
+
+        })
+      })
+    })
+    return await Promise.all(plansProms)
+  }).timeout(timeToWait * NUM_PLANS)
+})
 
 
 
