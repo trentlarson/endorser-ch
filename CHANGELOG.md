@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nothing
 
 
-## [3.6.4] - 2024.08.25
+## [3.6.4] - 2024.08.25 - f05a786c11ae4d76fecc914155514efe40db9a5f
 ### Changed
 - Make handle ID parameters more consistent in the reports.
 
