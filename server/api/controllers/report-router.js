@@ -17,7 +17,7 @@ function getGiveTotalsMaybeGifted(req, res, next, onlyGifted) {
   const agentDid = req.query.agentDid
   const onlyTraded = req.query.onlyTraded === "true"
   const recipientId = req.query.recipientId
-  const planId = globalId(req.query.planId)
+  const planId = req.query.planHandleId || globalId(req.query.planId)
   if (recipientId && recipientId != res.locals.tokenIssuer) {
     res.status(400).json({
       // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
@@ -86,14 +86,15 @@ class DbController {
   }
 
   getGivesToPlansPaged(req, res, next) {
-    const planIdsParam = JSON.parse(req.query.planIds)
-    if (!Array.isArray(planIdsParam)) {
+    const planIdsParam = req.query.handleIds || req.query.planHandleIds || req.query.planIds
+    const planIdsParsed = JSON.parse(planIdsParam)
+    if (!Array.isArray(planIdsParsed)) {
       return res.status(400).json({
-        error: "Parameter 'planIds' should be an array but got: "
-          + req.query.planIdsParam
+        error: "Parameter 'handleIds' or 'planHandleIds' or 'planIds' should be an array but got: "
+          + planIdsParsed
       }).end()
     }
-    const planIds = planIdsParam.map(globalId)
+    const planIds = planIdsParsed.map(globalId)
     dbService.givesToPlansPaged(planIds, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>
@@ -109,7 +110,7 @@ class DbController {
   }
 
   getGiveFulfillersToGive(req, res, next) {
-    const handleId = req.query.giveHandleId
+    const handleId = req.query.handleId || req.query.giveHandleId || globalId(req.query.giveId)
     const afterId = req.query.afterId
     const beforeId = req.query.beforeId
     dbService.giveFulfillersToGive(handleId, afterId, beforeId)
@@ -125,7 +126,7 @@ class DbController {
   }
 
   getGiveFulfillersToOffer(req, res, next) {
-    const handleId = req.query.offerHandleId
+    const handleId = req.query.handleId || req.query.offerHandleId || globalId(req.query.offerId)
     const afterId = req.query.afterId
     const beforeId = req.query.beforeId
     dbService.giveFulfillersToOffer(handleId, afterId, beforeId)
@@ -160,7 +161,7 @@ class DbController {
   }
 
   getGiveProviders(req, res, next) {
-    const giveHandleId = req.query.giveHandleId
+    const giveHandleId = req.query.handleId || req.query.giveHandleId || globalId(req.query.giveId)
     dbService.giveProviderIds(giveHandleId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
@@ -168,7 +169,7 @@ class DbController {
   }
 
   getGivesProvidedBy(req, res, next) {
-    const providerId = globalId(req.query.providerId)
+    const providerId = req.query.handleId || req.query.providerHandleId || globalId(req.query.providerId)
     dbService.givesProvidedBy(providerId, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>
@@ -188,11 +189,12 @@ class DbController {
   }
 
   getOffersForPlansPaged(req, res, next) {
-    const planIdsParam = JSON.parse(req.query.planIds)
-    if (!Array.isArray(planIdsParam)) {
-      return res.status(400).json({error: "Parameter 'planIds' should be an array but got: " + planIdsParam}).end()
+    const planIdsParam = req.query.handleIds || req.query.planHandleIds || req.query.planIds
+    const planIdsParsed = JSON.parse(planIdsParam)
+    if (!Array.isArray(planIdsParsed)) {
+      return res.status(400).json({error: "Parameter 'handleIds' or 'planHandleIds' or 'planIds' should be an array but got: " + planIdsParsed}).end()
     }
-    const planIds = planIdsParam.map(globalId)
+    const planIds = planIdsParsed.map(globalId)
     dbService.offersForPlansPaged(planIds, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum =>
@@ -225,8 +227,7 @@ class DbController {
   }
 
   getOfferTotals(req, res, next) {
-    const query = req.query
-    const planId = globalId(req.query.planId)
+    const planId = req.query.handleId || req.query.planHandleId || globalId(req.query.planId)
     const recipientId = req.query.recipientId
     if (recipientId && recipientId != res.locals.tokenIssuer) {
       res.status(400).json({ error: "Request for recipient totals must be made by that recipient." }).end()
@@ -289,7 +290,7 @@ class DbController {
   }
 
   getPlanFulfilledBy(req, res, next) {
-    const handleId = req.query.planHandleId
+    const handleId = req.query.handleId || req.query.planHandleId || globalId(req.query.planId)
     dbService.planFulfilledBy(handleId)
       .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
       .then(results => { res.json(results).end() })
@@ -307,7 +308,7 @@ class DbController {
   **/
 
   getPlanFulfillersToPlan(req, res, next) {
-    const handleId = req.query.planHandleId
+    const handleId = req.query.handleId || req.query.planHandleId || globalId(req.query.planId)
     const afterId = req.query.afterId
     const beforeId = req.query.beforeId
     dbService.planFulfillersToPlan(handleId, afterId, beforeId)
@@ -417,7 +418,7 @@ export default express
  * @property {string} description
  * @property {object} fullClaim
  * @property {array.IdAndType} providers, where id is the handle ID of the provider; can be sent as inputs, but are retrieved through different endpoints
- * @see /giveProviders
+ * @see also /providersToGive
  */
 
 /**
@@ -643,7 +644,7 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveFulfillersToGive
- * @param {string} giveHandleId.query.required - the handleId of the give entry
+ * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
@@ -656,7 +657,7 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/givefulfillersToOffer
- * @param {string} giveHandleId.query.required - the handleId of the give entry
+ * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - error
@@ -689,6 +690,7 @@ export default express
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} onlyGifted.query.optional - only the ones that fulfill DonateAction (and not any TradeAction)
  * @param {string} onlyTraded.query.optional - only the ones that fulfill TradeAction
+ * @param {string} planHandleId.query.optional - handle ID of the plan which has received gives
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts

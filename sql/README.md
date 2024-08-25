@@ -111,7 +111,9 @@ CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);
 -- cache table, for quick retrieval of GiveAction claims with a provider
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction to which the provider contributes
-    providerId TEXT, -- DID or handle ID of the provider entity who helps make the give possible
+    -- handle ID of the provider entity who helps make the give possible
+    -- (DIDs are agents)
+    providerId TEXT,
 
     -- whether both giver and provider have confirmed this relationship (boolean, 1 = confirmed)
     -- (This does not mean that receipt is confirmed, but that both sides of
