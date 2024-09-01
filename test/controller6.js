@@ -414,6 +414,27 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('v2 update for external claim fails', async () => {
+    // Now can create this JWT with the ID that was assigned.
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.lastClaimId = "https://another-ledger.com/claim/123"
+    planObj.claim.description = ENTITY_NEW_DESC
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains("other system")
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
   it('v2 update plan description & location for plan #1', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
@@ -426,15 +447,15 @@ describe('6 - Plans', () => {
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
     return request(Server)
-      .post('/api/v2/claim')
-      .send({jwtEncoded: planJwtEnc})
-      .then(r => {
-        expect(r.headers['content-type'], /json/)
-        expect(r.status).that.equals(201)
-        firstPlanIdSecondClaimInternal = r.body.success.claimId
-      }).catch((err) => {
-        return Promise.reject(err)
-      })
+    .post('/api/v2/claim')
+    .send({jwtEncoded: planJwtEnc})
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.status).that.equals(201)
+      firstPlanIdSecondClaimInternal = r.body.success.claimId
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
   }).timeout(5000)
 
   it('access same exact plan by first person & internal plan claim ID, still getting initial plan but with new description', () => {

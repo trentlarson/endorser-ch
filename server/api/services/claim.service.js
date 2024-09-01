@@ -1451,7 +1451,10 @@ class ClaimService {
       // there's a claim ID which is local to this system
       const claimJwt = await dbService.jwtById(claimInfo.lastClaimId)
       if (!claimJwt) {
-        throw `No claim found with lastClaimId ${claimInfo.lastClaimId}`
+        const additionalInfo = isGlobalUri(claimInfo.lastClaimId)
+          ? ' First import from the other system with a global "identifier" and then refer to that internal claim.'
+          : ''
+        throw `No claim found with lastClaimId ${claimInfo.lastClaimId}.` + additionalInfo
       }
       claimInfo.lastClaimJwt = claimJwt
       // we know every claim has a handleId
