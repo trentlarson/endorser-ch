@@ -732,6 +732,7 @@ describe('1 - Claim', () => {
       })
   })
 
+  let firstClaimTime, firstNonce
   it('should add a new action claim with a raw createJWT call', async () => {
     const claimBvcFor0By0RawJwtProm = createJWT(
       claimBvcFor0By0JwtObj,
@@ -743,19 +744,19 @@ describe('1 - Claim', () => {
       }
     )
     const claimBvcFor0By0RawJwtEnc = await claimBvcFor0By0RawJwtProm
+    const claimStrSent = claimBvcFor0By0RawJwtEnc.split('.')[1]
+    firstClaimTime = JSON.parse(base64url.decode(claimStrSent)).iat
     return request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({"jwtEncoded": claimBvcFor0By0RawJwtEnc})
-      .expect('Content-Type', /json/)
       .then(r => {
-        expect(r.body).to.be.a('string')
-        firstId = r.body
+        expect(r.body).to.be.an('object')
+        firstId = r.body.success.claimId
+        firstNonce = r.body.success.hashNonce
+        expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
       })
   })
-
-  // All these 5000 waits are due to JWT verify, and the time doubled with ethr-did-resolver v6.
-  // Each verification takes 1-1.8 seconds (sometimes over 2) and it verifies the push token and the claim.
 
   // This is a mirror of the previous test in a simpler way.
   // it('should add a new action claim from standard createVerification call', () =>
@@ -776,16 +777,12 @@ describe('1 - Claim', () => {
     .then(r => {
       expect(r.body)
       .that.has.a.property('data')
-      .that.has.a.property('count')
+      .that.has.a.property('count').that.equals(1)
     })
   )
 
   it('should get our claim #1 with Authorization Bearer token', () => {
-    const canon = canonicalize(claimBvcFor0By0JwtObj)
-    const latestHashChainB64 = claimHashChain("", [canon])
-    const claimStrSent = claimBvcFor0By0JwtEnc.split('.')[1]
-    const claimSent = JSON.parse(base64url.decode(claimStrSent))
-    const iat = claimSent.iat
+    const canon = canonicalize(claimBvcFor0By0JwtObj.claim)
     return (
       request(Server)
       .get('/api/claim/' + firstId)
@@ -802,10 +799,38 @@ describe('1 - Claim', () => {
         expect(r.body)
         .that.has.a.property('issuer')
         .that.equals(creds[0].did)
+        const nonceAndClaimStrEtc = {
+          nonce: firstNonce,
+          claimStr: canon,
+          iat: firstClaimTime,
+          iss: creds[0].did,
+        }
+        const firstNonceHashHex = util.hashedClaimWithHashedDids(nonceAndClaimStrEtc)
+        expect(r.body)
+        .that.has.a.property('nonceHashHex')
+        .that.equals(firstNonceHashHex)
         expect(r.status).that.equals(200)
       })
       .catch(e => {
-        console.log(e);
+        console.error(e);
+        throw e
+      }) // otherwise error results don't show
+    )
+  })
+
+  it('should get our claim #1 with even more info from /full', () => {
+    return (
+      request(Server)
+      .get('/api/claim/full/' + firstId)
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.body)
+        .that.has.a.property('hashNonce')
+        expect(r.status).that.equals(200)
+      })
+      .catch(e => {
+        console.error(e);
         throw e
       }) // otherwise error results don't show
     )
@@ -826,6 +851,8 @@ describe('1 - Claim', () => {
        expect(r.body)
          .that.has.a.property('issuer')
          .that.equals(HIDDEN_TEXT)
+       expect(r.body)
+       .that.does.not.have.property('hashNonce')
        expect(r.status).that.equals(200)
      })
   ).timeout(3000)
@@ -861,8 +888,12 @@ describe('1 - Claim', () => {
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body)
-         .to.be.an('array')
-         .of.length(2)
+       .to.be.an('array')
+       .of.length(2)
+       expect(r.body[0])
+       .that.does.not.have.property('hashNonce')
+       expect(r.body[1])
+       .that.does.not.have.property('hashNonce')
        expect(r.status).that.equals(200)
      })
   ).timeout(3000)
@@ -876,6 +907,8 @@ describe('1 - Claim', () => {
        expect(r.body)
          .to.be.an('array')
          .of.length(1)
+       expect(r.body[0])
+       .that.does.not.have.property('hashNonce')
        expect(r.status).that.equals(200)
      })
   ).timeout(3000)

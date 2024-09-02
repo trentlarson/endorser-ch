@@ -131,8 +131,9 @@ CREATE TABLE jwt (
     claimContext VARCHAR(60),
     claim TEXT, -- canonical text of the JSON for the claim (but was it directly from the JWT at first?)
     claimCanonBase64 TEXT, -- base64 encoding of the canonicalized claim
-    claimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
-    hashChainB64 CHARACTER(64), -- merkle tree of claimCanonHashBase64 values
+    -- I'll probably deprecate these in favor of nonceHashHex because someone with a list of DIDs could reverse engineer a claim based on claimCanonBase64 and/or subsequent claimCanonHashBase64s.
+    --claimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
+    --hashChainB64 CHARACTER(64), -- merkle tree of claimCanonHashBase64 values
     hashNonce CHARACTER(24) -- randomized 18 bytes (currently base64-encoded), kept private, used for nonceHashHex
     handleId TEXT, -- global IRI, used to update data via later claims (see also lastClaimId)
     issuedAt DATETIME,

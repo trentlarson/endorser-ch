@@ -71,9 +71,23 @@ class ClaimService {
         claimContext: jwtRec.claimContext,
         claimType: jwtRec.claimType,
         claim: JSON.parse(jwtRec.claim),
-        handleId:jwtRec.handleId
+        handleId: jwtRec.handleId,
+        nonceHashHex: jwtRec.nonceHashHex,
       }
       return result
+    } else {
+      return null
+    }
+  }
+
+  /**
+   * BEWARE: this includes encoded data that might include private DIDs.
+   */
+  async fullJwtById(id, requesterDid) {
+    l.trace(`${this.constructor.name}.fullJwtById(${id}, ${requesterDid})`);
+    let jwtRec = await dbService.jwtById(id)
+    if (jwtRec) {
+      return jwtRec
     } else {
       return null
     }
@@ -86,24 +100,12 @@ class ClaimService {
       const thisOne = {
         id: j.id, issuer: j.issuer, issuedAt: j.issuedAt, subject: j.subject,
         claimContext: j.claimContext, claimType: j.claimType,
-        claim: JSON.parse(j.claim), handleId: j.handleId
+        claim: JSON.parse(j.claim), handleId: j.handleId,
+        nonceHashHex: j.nonceHashHex,
       }
       return thisOne
     })
     return result
-  }
-
-  /**
-   * Dangerous: this includes encoded data that might include private DIDs.
-   */
-  async fullJwtById(id, requesterDid) {
-    l.trace(`${this.constructor.name}.fullJwtById(${id}, ${requesterDid})`);
-    let jwtRec = await dbService.jwtById(id)
-    if (jwtRec) {
-      return jwtRec
-    } else {
-      return null
-    }
   }
 
   async thisClaimAndConfirmationsIssuersMatchingClaimId(claimId) {
@@ -1794,7 +1796,7 @@ class ClaimService {
             return { embeddedRecordError: err }
           })
 
-      const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId }, embedded)
+      const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId, hashNonce: jwtEntry.hashNonce }, embedded)
       l.trace(`${this.constructor.name}.createWithClaimRecord`
               + ` resulted in ${util.inspect(result)}`)
       return result

@@ -1184,7 +1184,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = null
       db.each(
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, lastClaimId, claimCanonBase64, jwtEncoded, claimCanonHashBase64, hashChainB64 FROM jwt WHERE id = ?",
+        "SELECT * FROM jwt WHERE id = ?",
         [id],
         function(err, row) {
           row.issuedAt = isoAndZonify(row.issuedAt)
@@ -1193,7 +1193,8 @@ class EndorserDatabase {
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
             handleId: row.handleId, lastClaimId: row.lastClaimId,
             claimCanonBase64: row.claimCanonBase64, jwtEncoded: row.jwtEncoded,
-            claimCanonHashBase64: row.claimCanonHashBase64, hashChainB64: row.hashChainB64
+            claimCanonHashBase64: row.claimCanonHashBase64, hashChainB64: row.hashChainB64,
+            hashNonce: row.hashNonce, nonceHashHex: row.nonceHashHex, // hashNonce will be removed later if not visible
           }
         }, function(err, num) {
           if (err) {
@@ -1229,9 +1230,7 @@ class EndorserDatabase {
 
       // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
       const sql =
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim,"
-        + " handleId, lastClaimId, claimCanonHashBase64, hashChainB64 FROM jwt"
-        + whereClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
+        "SELECT * FROM jwt" + whereClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
       //console.log('jwtsByWhere params & sql: ', whereParams, sql)
 
       db.each(
@@ -1248,7 +1247,8 @@ class EndorserDatabase {
               id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
               claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
               handleId: row.handleId, lastClaimId: row.lastClaimId,
-              claimCanonHashBase64:row.claimCanonHashBase64, hashChainB64:row.hashChainB64
+              claimCanonHashBase64:row.claimCanonHashBase64, hashChainB64:row.hashChainB64,
+              nonceHashHex: row.nonceHashHex,
             })
           }
         },
@@ -1274,7 +1274,7 @@ class EndorserDatabase {
       params,
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHashBase64', 'hashChainB64'],
       claimContents,
-      ['claim'],
+      ['claim', 'nonceHashHex'],
       [],
       excludeConfirmations
     )

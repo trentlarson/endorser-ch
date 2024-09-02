@@ -335,6 +335,8 @@ describe('2 - Visibility', () => {
        expect(r.body)
          .that.has.a.property('subject')
          .that.equals(creds[2].did)
+       expect(r.body)
+       .that.has.a.property('hashNonce')
        expect(r.status).that.equals(200)
      })).timeout(3000)
 

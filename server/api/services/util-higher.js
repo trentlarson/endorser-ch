@@ -58,15 +58,21 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
   if (Array.isArray(input)) {
     result = []
     for (let item of input) {
-      const issuerInClaim = inputContainsDid(item, requesterDid)
+      const requesterInClaim = inputContainsDid(item, requesterDid)
       if (
-        issuerInClaim
-        || (requesterDid && ((item?.issuer || item?.issuerDid) === requesterDid))
+        requesterInClaim
+        || (requesterDid && (requesterDid === (item?.issuer || item?.issuerDid)))
       ) {
         // allow all visibility for the issuer
         result = R.append(item, result)
       } else {
         const oneResult = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, item)
+
+        // the nonce is only directly accessible by participants
+        if (oneResult && !allowedDids.includes(item?.issuer || item?.issuerDid)) {
+          delete oneResult["hashNonce"]
+        }
+
         // Only include any element where the result still includes the search term
         // because we shouldn't allow someone to search for a DID (or parts) and get activity that's hidden.
         // (Other criteria are OK for searches for non-personal information, just not DID material.)
@@ -79,14 +85,18 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       }
     }
   } else {
-    const issuerInClaim = inputContainsDid(input, requesterDid)
+    const requesterInClaim = inputContainsDid(input, requesterDid)
     if (
-      issuerInClaim
-      || (requesterDid && ((input?.issuer || input?.issuerDid) === requesterDid))
+      requesterInClaim
+      || (requesterDid && (requesterDid === (input?.issuer || input?.issuerDid)))
     ) {
       result = input
     } else {
       result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
+      // the nonce is only directly accessible by participants
+      if (result && !allowedDids.includes(input?.issuer || input?.issuerDid)) {
+        delete result["hashNonce"]
+      }
     }
   }
 
