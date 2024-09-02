@@ -1148,14 +1148,19 @@ class EndorserDatabase {
       crypto.createHash('sha256').update(claimStr).digest('base64')
     const claimContext = claim['@context']
     const claimType = claim['@type']
+    const issuedAt = new Date(payload.iat * 1000).toISOString()
+    if (!payload.iat) {
+      throw new Error('JWT payload must include "iat" field.')
+    }
+    const issuer = payload.iss
     // 144 bits, base64 >= 128 bits with all character space (no padding chars)
     const hashNonce = crypto.randomBytes(18).toString('base64')
-    const nonceHashHex = util.hashedClaimWithHashedDids({nonce: hashNonce, claim: claimStr})
-    if (!payload.iat) {
-        throw new Error('JWT payload must include "iat" field.')
-    }
-    const issuedAt = new Date(payload.iat * 1000).toISOString()
-    const issuer = payload.iss
+    const nonceHashHex = util.hashedClaimWithHashedDids({
+      nonce: hashNonce,
+      claimStr: claimStr,
+      iat: payload.iat,
+      iss: payload.iss,
+    })
     const subject = payload.sub
     return {
       claim: claimStr,
@@ -1288,7 +1293,7 @@ class EndorserDatabase {
       ['claim'],
       ['issuedAt'],
       [],
-      ['claimContext', 'lastClaimId'],
+      ['claimContext', 'lastClaimId', 'nonceHashHex'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1470,13 +1475,7 @@ class EndorserDatabase {
         "SELECT id, claim, claimCanonHashBase64, hashNonce, nonceHashHex FROM jwt WHERE hashChainB64 is null ORDER BY id",
         [],
         function(err, row) {
-          data.push({
-            id: row.id,
-            claim: row.claim,
-            claimCanonHashBase64: row.claimCanonHashBase64,
-            hashNonce: row.hashNonce,
-            nonceHashHex: row.nonceHashHex
-          })
+          data.push({ id: row.id, claim: row.claim })
         }, function(err, num) {
           if (err) { reject(err) } else { resolve(data) }
         });
@@ -1505,15 +1504,15 @@ class EndorserDatabase {
   }
   **/
 
-  jwtSetMerkleHash(jwtId, claimCanonHashBase64, hashChainB64, nonceHashHex) {
+  jwtSetMerkleHash(jwtId, hashChainB64) {
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET claimCanonHashBase64 = ?, hashChainB64 = ?, nonceHashHex = ? WHERE id = ?");
-      db.run(stmt, [claimCanonHashBase64, hashChainB64, nonceHashHex, jwtId], function(err) {
+      var stmt = ("UPDATE jwt SET hashChainB64 = ? WHERE id = ?");
+      db.run(stmt, [hashChainB64, jwtId], function(err) {
         if (err) {
           reject(err)
         } else {
           if (this.changes === 1) {
-            resolve(claimCanonHashBase64)
+            resolve(hashChainB64)
           } else {
             reject("Expected to update 1 jwt row but updated " + this.changes)
           }

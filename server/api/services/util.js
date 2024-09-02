@@ -1,6 +1,8 @@
-import crypto from 'crypto';
-import * as R from 'ramda';
-import {JWT_VERIFY_FAILED_CODE, UNSUPPORTED_DID_METHOD_CODE} from "./vc";
+// Using 'require' instead of 'import' so that this file can be invoked from the command-line.
+const crypto = require('crypto')
+const R = require('ramda')
+const canonicalize = require("canonicalize");
+const {JWT_VERIFY_FAILED_CODE, UNSUPPORTED_DID_METHOD_CODE} = require('./vc');
 
 // the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
@@ -181,7 +183,7 @@ function hashNonceAndDid(nonce, did) {
 function replaceDidsWithHashes(nonce, input) {
   if (Object.prototype.toString.call(input) === "[object String]") {
     if (isDid(input)) {
-      return "did:none:hashed:" + hashNonceAndDid(nonce, input)
+      return "did:none:noncedhashed:" + hashNonceAndDid(nonce, input)
     } else {
       return input
     }
@@ -192,18 +194,33 @@ function replaceDidsWithHashes(nonce, input) {
   }
 }
 
-function claimWithHashedDids(nonceAndClaimStr) {
-  return JSON.stringify(
-    replaceDidsWithHashes(nonceAndClaimStr.nonce, JSON.parse(nonceAndClaimStr.claim))
-  )
+function claimWithHashedDids(nonceAndClaimStrEtc) {
+  const input = {
+    claim: JSON.parse(nonceAndClaimStrEtc.claimStr),
+    iat: nonceAndClaimStrEtc.iat,
+    iss: nonceAndClaimStrEtc.iss,
+  }
+  return canonicalize(replaceDidsWithHashes(nonceAndClaimStrEtc.nonce, input))
 }
 
 /**
- @param idAndClaim is { "nonce": String, "claim": Stringified JSON }
- @return hex-encoded sha256-hash JSON string where all DIDs are hashed via hashNonceAndDid (hex-encoded sha256 hash)
+ This has to include things that make it unique, and the basic claim can be repeated
+ by different people or by the same person at different times.
+ So we're making it similar to the JWT, with "claim" for the payload (since we don't need a VC type, etc)
+ and then "iss" and "iat" for the issuer and issued-at time.
+
+ The nonce is still not encoded in the claim, and can selectively reveal any DID part.
+
+ @param nonceAndClaimStrEtc is { "nonce": string, "claimStr": stringified JSON, "iss": string, "iat": number }
+ @return parse the claimStr JSON string,
+   then hash DID+nonce via hashNonceAndDid
+   then wrap in { "claim": JSON, "iss": string, "iat": number }
+   then canonicalize
+   then sha256-hash
+   then hex-encode
  **/
-function hashedClaimWithHashedDids(nonceAndClaimStr) {
-  const claimStr = claimWithHashedDids(nonceAndClaimStr)
+function hashedClaimWithHashedDids(nonceAndClaimStrEtc) {
+  const claimStr = claimWithHashedDids(nonceAndClaimStrEtc)
   const hash = crypto.createHash('sha256');
   hash.update(claimStr)
   let result = hash.digest('hex')
@@ -221,16 +238,16 @@ function hashPreviousAndNext(prev, next, encoding) {
 }
 
 // return hex of the latest merkle root of nonceHashHex values
-function nonceHashChain(seed, nonceAndClaimStrList) {
+function nonceHashChain(seed, nonceAndClaimStrEtcList) {
   return R.reduce(
-    (prev, nonceAndClaimStr) =>
-      hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStr), 'hex'),
+    (prev, nonceAndClaimStrEtc) =>
+      hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStrEtc), 'hex'),
     seed,
-    nonceAndClaimStrList
+    nonceAndClaimStrEtcList
   )
 }
 
-// return base64 of the latest merkle root of base64'd hashed claim strings (which probably should be canonical)
+// return base64 of the latest merkle root of base64'd hashed claim strings
 function claimHashChain(seed, claimStrList) {
   return R.reduce(
     (prev, claimStr) =>

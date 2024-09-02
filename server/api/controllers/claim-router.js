@@ -24,7 +24,7 @@ class Controller {
         if (err.clientError) {
           res.status(400).json({ error: { message: err.clientError.message, code: err.clientError.code } })
         } else {
-          console.log(err)
+          console.error("claim-router importClaim", err)
           res.status(500).json(""+err).end()
         }
       })

@@ -150,7 +150,7 @@ CREATE TABLE jwt (
     -- the intent of the provider(s) of this claim.
     lastClaimId TEXT, -- the previous JWT ID for this entity, which the user is conceptually overwriting (see also handleId)
 
-    nonceHashHex CHARACTER(64), -- hex of hash constructed with hashNonce to allow selective disclosure but to avoid correlation
+    nonceHashHex CHARACTER(64), -- hash of canonicalized claim (in hex) where every DID is replaced by DID + hashNonce, to allow selective disclosure but to avoid correlation
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);

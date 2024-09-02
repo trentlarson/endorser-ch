@@ -2826,7 +2826,6 @@ describe('6 - Check give totals', () => {
     .set('Authorization', 'Bearer ' + pushTokens[4])
     .then(r => {
       expect(r.headers['content-type'], /json/)
-      console.log('offer #6 data has new & old data', r.body.data[0].fullClaim)
       expect(r.body.data).to.be.an('array').of.length(1)
       expect(r.body.data[0].fullClaim.itemOffered.description).to.equal('First grade materials to user 5')
       expect(r.body.data[0].unit).to.equal('USD')

@@ -11,9 +11,11 @@ import { DateTime } from 'luxon'
 import R from 'ramda'
 
 import Server from '../server'
-import { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, nonceHashChain } from '../server/api/services/util';
+import util, { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, nonceHashChain } from '../server/api/services/util';
 import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
 import testUtil from './util'
+import canonicalize from "canonicalize";
+import base64url from "base64url";
 
 chai.use(chaiAsPromised)
 chai.use(chaiString)
@@ -534,59 +536,91 @@ describe('1 - Util', () => {
     const nonce1 = "yD/looCdBKTIi8m6YP6MJC+U"
     const nonce2 = "rqGRCPn2yJXI5wM/LWqirOl2"
     const nonce3 = "/tV/c+DndHXQBsbEx2hx5spy"
+    const time1 = 1725291728
+    const time2 = 1725300425
+    const time3 = 1725300443
+
+    expect(nonceHashChain("", [])).to.equal("")
+    /**
+     *
+     const didNonceHashed = "did:none:noncedhashed:" + crypto.createHash('sha256').update(addr0 + nonce1).digest('hex')
+     console.log('didNonceHashed', didNonceHashed)
+     // 'did:none:noncedhashed:3c867f7b737e9da8c2290313195536112bbf03ad6bb6cc40fa9b565cf0500d18'
+     // latest tx
+     crypto.createHash('sha256').update(canonicalize({"claim":{},"iat":time1,"iss":didNonceHashed})).digest('hex')
+     // '5162def759ce67c0fdf1fc08b3ce8d15cdfed5e00e358571b2f0a5a1c399dd7e'
+     // chained
+     crypto.createHash('sha256').update(
+       "" + crypto.createHash('sha256').update(canonicalize({"claim":{},"iat":time1,"iss":didNonceHashed})).digest('hex')
+     ).digest('hex')
+     // '4692164615798b8b96cad7881203d2197fa84fa3830df8033c2a1be41d99db45'
+     *
+     **/
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:"{}", iat: time1, iss: addr0}]))
+    .to.equal("4692164615798b8b96cad7881203d2197fa84fa3830df8033c2a1be41d99db45")
 
     /**
      * emulating hashedClaimWithHashedDids
      *
-    const addr0Hash =
-      crypto.createHash('sha256')
-        .update(addr0 + nonce2)
-        .digest('hex')
-    const someObj2WithHashAddr = {a: 1, b: "did:none:hashed:" + addr0Hash}
-    const someObj2Hash =
-      crypto.createHash('sha256')
-        .update(JSON.stringify(someObj2WithHashAddr))
-        .digest('base64')
-    // "da751d154b3f18d30c4b0285b8e7d1659ef73d8af1b46443f37c631c8fa0aa29"
-    console.log('someObj2Hash', someObj2Hash)
+     const addr0Hash = crypto.createHash('sha256').update(addr0 + nonce2).digest('hex')
+     console.log('addr0Hash', addr0Hash)
+     // '79d0cde16c4991be9474458feaa811ba642078fe4f70e475579334f0434e41dd'
+     const someObj2WithHashAddr = {a: 1, b: "did:none:noncedhashed:" + addr0Hash}
+     console.log('someObj2WithHashAddr', someObj2WithHashAddr)
+     const someObj2HashHex = crypto.createHash('sha256').update(canonicalize(someObj2WithHashAddr)).digest('hex')
+     console.log('someObj2Hash', someObj2HashHex)
+     // 'c4e0a93b30f40c1d5400f32d4a68586d42aaaaef08a1dd97411e46973b1a66cc'
+     const someObj2HashB64 = crypto.createHash('sha256').update(JSON.stringify(someObj2WithHashAddr)).digest('base64')
+     console.log('someObj2HashB64', someObj2HashB64)
+     // 'xOCpOzD0DB1UAPMtSmhYbUKqqu8Iod2XQR5GlzsaZsw='
 
-    const addr6Hash =
-     crypto.createHash('sha256')
-       .update(addr6 + nonce3)
-       .digest('hex')
-    const someObj3WithHashAddr = {a: "gabba", b: ["did:none:hashed:" + addr6Hash]}
-    const someObj3Hash =
-      crypto.createHash('sha256')
-        .update(JSON.stringify(someObj3WithHashAddr))
-        .digest('hex')
-    // "82dbc917e03a716ac2cf5fcc05b402bea8613bd39fbdfdcb9047d13213f76d53"
-    console.log('someObj3Hash', someObj3Hash)
+     const addr6Hash = crypto.createHash('sha256').update(addr6 + nonce3).digest('hex')
+     console.log('addr6Hash', addr6Hash)
+     // 'c1b3d0f0b6befe088db93ecd51cd415e69b2c77ef42ea79881ccebaa5ec03ad5'
+     const someObj3WithHashAddr = {a: "gabba", b: ["did:none:noncedhashed:" + addr6Hash]}
+     const someObj3HashHex = crypto.createHash('sha256').update(canonicalize(someObj3WithHashAddr)).digest('hex')
+     console.log('someObj3HashHex', someObj3HashHex)
+     // 'ee8154a725a2f2d7b7a4d8e4af75cfcb2893731a1ef1f9b088bc26a9d85415cc'
+     const someObj3HashB64 = crypto.createHash('sha256').update(canonicalize(someObj3WithHashAddr)).digest('base64')
+     console.log('someObj3HashB64', someObj3HashB64)
+     // '7oFUpyWi8te3pNjkr3XPyyiTcxoe8fmwiLwmqdhUFcw='
      *
      */
 
-    expect(nonceHashChain("", [])).to.equal("")
-    // crypto.createHash('sha256').update(crypto.createHash('sha256').update('{}').digest('hex')).digest('hex')
-    //   = 'b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495'
-    expect(nonceHashChain("", [{nonce:nonce1, claim:"{}"}])).to.equal("b8a4120408a76e335316de9a0c139291da653eaffab9cb1406bccf615a0ff495")
+    /**
+     *
+     const claimEtcNoncedCanon = canonicalize({"claim":someObj1,"iat":time1,"iss":didNonceHashed})
+     console.log('claimEtcNoncedCanon', claimEtcNoncedCanon)
+     const firstNoncedHash = crypto.createHash('sha256').update("" + crypto.createHash('sha256').update(claimEtcNoncedCanon).digest('hex')).digest('hex')
+     console.log('firstNoncedHash', firstNoncedHash)
+     // 'b6818a67534816bceefa465c7438d6a53c2726aaac6dede3f68f3f9074569776'
+     *
+     */
+    const chainedHashSomeObj1 = "b6818a67534816bceefa465c7438d6a53c2726aaac6dede3f68f3f9074569776"
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), iat:time1, iss:addr0}]))
+    .to.equal(chainedHashSomeObj1)
 
-    // crypto.createHash('sha256').update('{"a":1,"b":2}').digest('hex')
-    //   = '43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777'
-    // crypto.createHash('sha256').update(crypto.createHash('sha256').update('{"a":1,"b":2}').digest('hex')).digest('hex')
-    //   = '5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac'
-    const chainedHashSomeObj1 = "5894f452548beeb4535e6a6746ea79b1c2a3547624f5e0c915372f5828939eac"
-    expect(nonceHashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
-    // show that a change in the nonce doesn't matter if there are no DIDs
-    expect(nonceHashChain("", [{nonce:nonce2, claim:JSON.stringify(someObj1)}])).to.equal(chainedHashSomeObj1)
-
-    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
-    // show that a change in the ID matters if there are DIDs
-    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce3, claim:JSON.stringify(someObj2)}])).to.not.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
+    /**
+     *
+     const didNonceHashed2 = "did:none:noncedhashed:" + crypto.createHash('sha256').update(addr0 + nonce2).digest('hex')
+     console.log('didNonceHashed2', didNonceHashed2)
+     // '79d0cde16c4991be9474458feaa811ba642078fe4f70e475579334f0434e41dd'
+     const someObj2WithHashAddr2 = {...someObj2, b: didNonceHashed2 }
+     const claimEtcNoncedCanon2 = canonicalize({"claim":someObj2WithHashAddr2,"iat":time2,"iss":didNonceHashed2})
+     console.log('claimEtcNoncedCanon2', claimEtcNoncedCanon2)
+     crypto.createHash('sha256').update(firstNoncedHash + crypto.createHash('sha256').update(claimEtcNoncedCanon2).digest('hex')).digest('hex')
+     // '185ac19678b7c9bcb41774aad9597d85f8f9dce73c0d84d30301ae0ea9df41fe'
+     *
+     */
+    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce2, claimStr:JSON.stringify(someObj2), iat:time2, iss:addr0}]))
+    .to.equal("185ac19678b7c9bcb41774aad9597d85f8f9dce73c0d84d30301ae0ea9df41fe")
 
     // show that it's the same as a 2-item chain
-    expect(nonceHashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}])).to.equal("6282ed1671d528d99342003905d6ea99d07856e12ea3adc51af08fc69bf6488c")
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), iat:time1, iss:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), iat:time2, iss:addr0}]))
+    .to.equal("185ac19678b7c9bcb41774aad9597d85f8f9dce73c0d84d30301ae0ea9df41fe")
 
     // now an entire chain of size 3
-    expect(nonceHashChain("", [{nonce:nonce1, claim:JSON.stringify(someObj1)}, {nonce:nonce2, claim:JSON.stringify(someObj2)}, {nonce:nonce3, claim:JSON.stringify(someObj3)}])).to.equal("fda5be5b91b8f306cffdce22993cdaa176896167a63351d07e6970b041dfc2d4")
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), iat:time1, iss:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), iat:time2, iss:addr0}, {nonce:nonce3, claimStr:JSON.stringify(someObj3), iat:time3, iss:addr6}])).to.equal("34888be878d277bfe62bdb0f4859b59483545625941c53f89a957b1881a7c90c")
   })
 
 })
@@ -628,87 +662,75 @@ describe('1 - Claim', () => {
   it('should fail to claim with bad JWT: "Unexpected end of data"', () => {
     const headerPayload = pushTokens[0].substring(0, pushTokens[0].lastIndexOf('.'))
     const badlySignedJwt = headerPayload + '._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_'
-    if (process.env.NODE_ENV === 'test-local') {
-      console.log('Skipping JWT verification test that requires online verification.')
-    } else {
-      return request(Server)
-        .post('/api/claim')
-        .set('Authorization', 'Bearer ' + badlySignedJwt)
-        .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
-        .expect('Content-Type', /json/)
-        .then(r => {
-          expect(r.status).that.equals(400)
-          expect(r.body)
-            .to.be.an('object')
-            .that.has.property('error')
-            .that.has.property('code')
-            .to.equal('JWT_VERIFY_FAILED')
-        })
-    }
-  }).timeout(5000)
+    return request(Server)
+      .post('/api/claim')
+      .set('Authorization', 'Bearer ' + badlySignedJwt)
+      .send({"jwtEncoded": claimBvcFor0By0JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body)
+          .to.be.an('object')
+          .that.has.property('error')
+          .that.has.property('code')
+          .to.equal('JWT_VERIFY_FAILED')
+      })
+  })
 
   it('should fail to claim with bad JWT "Signature invalid for JWT"', () => {
     const lastChar = claimBvcFor0By0JwtEnc.charAt(claimBvcFor0By0JwtEnc.length - 1)
     // Just a guess, but I've seen 'A' and 'E' a lot and they seem to parse but fail signing checks.
     const newChar = lastChar === 'A' ? 'E' : 'A'
     const badlySignedJwt = claimBvcFor0By0JwtEnc.substring(0, claimBvcFor0By0JwtEnc.length - 1) + newChar
-    if (process.env.NODE_ENV === 'test-local') {
-      console.log('Skipping JWT verification test that requires online verification.')
-    } else {
-      return request(Server)
-        .post('/api/claim')
-        .send({"jwtEncoded": badlySignedJwt})
-        .expect('Content-Type', /json/)
-        .then(r => {
-          expect(r.status).that.equals(400)
-          expect(r.body)
-            .to.be.an('object')
-            .that.has.property('error')
-            .that.has.property('code')
-            .to.equal('JWT_VERIFY_FAILED')
-          expect(r.body)
-            .to.be.an('object')
-            .that.has.property('error')
-            .that.has.property('message')
-            .to.endsWith('no matching public key found')
-        })
-    }
-  }).timeout(3000)
+    return request(Server)
+      .post('/api/claim')
+      .send({"jwtEncoded": badlySignedJwt})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body)
+          .to.be.an('object')
+          .that.has.property('error')
+          .that.has.property('code')
+          .to.equal('JWT_VERIFY_FAILED')
+        expect(r.body)
+          .to.be.an('object')
+          .that.has.property('error')
+          .that.has.property('message')
+          .to.endsWith('no matching public key found')
+      })
+  })
 
   it('should fail to submit signed JWT for someone else', async () => {
 
-    if (process.env.NODE_ENV === 'test-local') {
-      console.log('Skipping JWT verification test that requires online verification.')
-    } else {
-      const claimBvcFor0ByEvil1JwtProm = createJWT(
-        claimBvcFor0By0JwtObj,
-        {
-          payload: claimBvcFor0By0JwtObj,
-          issuer: creds[0].did,
-          signer: credentials[1].signer,
-          alg: 'ES256K-R'
-        }
-      )
-      const claimBvcFor0ByEvil1JwtEnc = await claimBvcFor0ByEvil1JwtProm
-      return request(Server)
-        .post('/api/claim')
-        .send({"jwtEncoded": claimBvcFor0ByEvil1JwtEnc})
-        .expect('Content-Type', /json/)
-        .then(r => {
-          expect(r.status).that.equals(400)
-          expect(r.body)
-            .to.be.an('object')
-            .that.has.property('error')
-            .that.has.property('code')
-            .to.equal('JWT_VERIFY_FAILED')
-          expect(r.body)
-            .to.be.an('object')
-            .that.has.property('error')
-            .that.has.property('message')
-            .to.endsWith('no matching public key found')
-        })
-    }
-  }).timeout(3000)
+    const claimBvcFor0ByEvil1JwtProm = createJWT(
+      claimBvcFor0By0JwtObj,
+      {
+        payload: claimBvcFor0By0JwtObj,
+        issuer: creds[0].did,
+        signer: credentials[1].signer,
+        alg: 'ES256K-R'
+      }
+    )
+    const claimBvcFor0ByEvil1JwtEnc = await claimBvcFor0ByEvil1JwtProm
+    return request(Server)
+      .post('/api/claim')
+      .send({"jwtEncoded": claimBvcFor0ByEvil1JwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body)
+          .to.be.an('object')
+          .that.has.property('error')
+          .that.has.property('code')
+          .to.equal('JWT_VERIFY_FAILED')
+        expect(r.body)
+          .to.be.an('object')
+          .that.has.property('error')
+          .that.has.property('message')
+          .to.endsWith('no matching public key found')
+      })
+  })
 
   it('should add a new action claim with a raw createJWT call', async () => {
     const claimBvcFor0By0RawJwtProm = createJWT(
@@ -730,7 +752,7 @@ describe('1 - Claim', () => {
         firstId = r.body
         expect(r.status).that.equals(201)
       })
-  }).timeout(5000)
+  })
 
   // All these 5000 waits are due to JWT verify, and the time doubled with ethr-did-resolver v6.
   // Each verification takes 1-1.8 seconds (sometimes over 2) and it verifies the push token and the claim.
@@ -746,48 +768,48 @@ describe('1 - Claim', () => {
   //      firstId = r.body
   //      expect(r.status).that.equals(201)
   //    })
-  // ).timeout(5000)
+  // )
 
-  it('should get our claim #1 with Authorization Bearer token', () =>
-     request(Server)
-     .get('/api/claim/' + firstId)
-     .set('Authorization', 'Bearer ' + pushTokens[0])
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body)
-         .to.be.an('object')
-         .that.has.a.property('claimContext')
-         .that.equals('https://schema.org')
-       expect(r.body)
-         .that.has.a.property('claimType')
-         .that.equals('JoinAction')
-       expect(r.body)
-         .that.has.a.property('issuer')
-         .that.equals(creds[0].did)
-       expect(r.status).that.equals(200)
-     })
-     .catch(e => {console.log(e); throw e}) // otherwise error results don't show
-  ).timeout(3000)
-
-  it('should get our claim #1 with uPort token', () =>
+  it('should set the hashes in the chain', () =>
     request(Server)
+    .post('/api/util/updateHashChain')
+    .then(r => {
+      expect(r.body)
+      .that.has.a.property('data')
+      .that.has.a.property('count')
+    })
+  )
+
+  it('should get our claim #1 with Authorization Bearer token', () => {
+    const canon = canonicalize(claimBvcFor0By0JwtObj)
+    const latestHashChainB64 = claimHashChain("", [canon])
+    const claimStrSent = claimBvcFor0By0JwtEnc.split('.')[1]
+    const claimSent = JSON.parse(base64url.decode(claimStrSent))
+    const iat = claimSent.iat
+    return (
+      request(Server)
       .get('/api/claim/' + firstId)
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .expect('Content-Type', /json/)
       .then(r => {
         expect(r.body)
-          .to.be.an('object')
-          .that.has.a.property('claimContext')
-          .that.equals('https://schema.org')
+        .to.be.an('object')
+        .that.has.a.property('claimContext')
+        .that.equals('https://schema.org')
         expect(r.body)
-          .that.has.a.property('claimType')
-          .that.equals('JoinAction')
+        .that.has.a.property('claimType')
+        .that.equals('JoinAction')
         expect(r.body)
-          .that.has.a.property('issuer')
-          .that.equals(creds[0].did)
+        .that.has.a.property('issuer')
+        .that.equals(creds[0].did)
         expect(r.status).that.equals(200)
       })
-  ).timeout(3000)
+      .catch(e => {
+        console.log(e);
+        throw e
+      }) // otherwise error results don't show
+    )
+  })
 
   it('should get a claim with the DID hidden', () =>
      request(Server)

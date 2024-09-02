@@ -14,7 +14,6 @@ import {
   ERROR_CODES,
   findAllLastClaimIdsAndHandleIds,
   globalFromInternalIdentifier,
-  hashedClaimWithHashedDids,
   isGlobalEndorserHandleId,
   isGlobalUri,
 } from './util';
@@ -170,33 +169,7 @@ class ClaimService {
             for (let hashAndClaimStr of hashAndClaimStrArray) {
               const canon = canonicalize(JSON.parse(hashAndClaimStr.claim))
               latestHashChainB64 = claimHashChain(latestHashChainB64, [canon])
-              if (hashAndClaimStr.claimCanonHashBase64 === null) {
-                l.error(
-                  "Found entry " + hashAndClaimStr.id + " without a hashed claim. Will create."
-                )
-                hashAndClaimStr.claimCanonHashBase64 =
-                  crypto.createHash('sha256').update(canon).digest('base64')
-                if (canon !== hashAndClaimStr.claim) {
-                  l.error(
-                    "Found entry " + hashAndClaimStr.id + " with a claim that is not canonicalized."
-                  )
-                }
-                if (hashAndClaimStr.nonceHashHex == null) {
-                  l.error(
-                    "Found entry " + hashAndClaimStr.id + " without a nonceHashHex. Will set it."
-                  )
-                  hashAndClaimStr.nonceHashHex = hashedClaimWithHashedDids({
-                    nonce: hashAndClaimStr.nonce,
-                    claim: canon,
-                  })
-                }
-              }
-              updates.push(dbService.jwtSetMerkleHash(
-                hashAndClaimStr.id,
-                hashAndClaimStr.claimCanonHashBase64,
-                latestHashChainB64,
-                hashAndClaimStr.nonceHashHex
-              ))
+              updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, latestHashChainB64))
             }
             return Promise.all(updates)
           })

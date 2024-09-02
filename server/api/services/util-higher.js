@@ -90,6 +90,8 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
     }
   }
 
+  // Remove top-level nonce if it's not the issuer or a participant in this claim
+
   // Include any public URLs.
   // For arrays, this adds the publicUrls as a top-level key, which is weird... it works, but we should handle this better.
   await getDidsSeenByAll()
@@ -102,6 +104,9 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
   return result
 }
 
+// @param allowedDids {array} the DIDs that the requester can see
+// @param requesterDid {string} the DID of the user making the request
+// @param input {any} the result to be scrubbed
 async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input) {
 
   // Note that this process is similar in test util hideDids. If you change one, change both!
