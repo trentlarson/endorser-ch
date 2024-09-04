@@ -260,6 +260,7 @@ describe('2 - Visibility', () => {
        expect(r.body)
          .that.does.not.have.property('publicUrls')
        expect(testUtil.allDidsAreHidden(r.body)).to.be.true
+       expect(r.body).that.does.not.have.a.property('hashNonce')
        expect(r.status).that.equals(200)
      })).timeout(3000)
 
@@ -317,6 +318,8 @@ describe('2 - Visibility', () => {
        expect(r.body)
          .that.has.a.property('publicUrls')
          .that.deep.equals(publicUrl)
+       // right now, only the "full" endpoint can get to the hashNonce... maybe we change that
+       expect(r.body).that.does.not.have.a.property('hashNonce')
        expect(r.status).that.equals(200)
      })).timeout(3000)
 
@@ -335,8 +338,7 @@ describe('2 - Visibility', () => {
        expect(r.body)
          .that.has.a.property('subject')
          .that.equals(creds[2].did)
-       expect(r.body)
-       .that.has.a.property('hashNonce')
+       expect(r.body).that.has.a.property('hashNonce')
        expect(r.status).that.equals(200)
      })).timeout(3000)
 
