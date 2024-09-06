@@ -547,17 +547,17 @@ describe('1 - Util', () => {
      console.log('didNonceHashed', didNonceHashed)
      // 'did:none:noncedhashed:3c867f7b737e9da8c2290313195536112bbf03ad6bb6cc40fa9b565cf0500d18'
      // latest tx
-     crypto.createHash('sha256').update(canonicalize({"claim":{},"iat":time1,"iss":didNonceHashed})).digest('hex')
-     // '5162def759ce67c0fdf1fc08b3ce8d15cdfed5e00e358571b2f0a5a1c399dd7e'
+     crypto.createHash('sha256').update(canonicalize({"claim":{},"issuedAt":time1,"issuerDid":didNonceHashed})).digest('hex')
+     // 'db0aed95f7d6e1a85619523b78bd106788e683c2b9a15c2230f2b41f1e9a42af'
      // chained
      crypto.createHash('sha256').update(
-       "" + crypto.createHash('sha256').update(canonicalize({"claim":{},"iat":time1,"iss":didNonceHashed})).digest('hex')
+       "" + crypto.createHash('sha256').update(canonicalize({"claim":{},"issuedAt":time1,"issuerDid":didNonceHashed})).digest('hex')
      ).digest('hex')
-     // '4692164615798b8b96cad7881203d2197fa84fa3830df8033c2a1be41d99db45'
+     // '9911a69ac3db8026f48549cff5f2847d8526f344f6ee66eed48fbfaeca9e505b'
      *
      **/
-    expect(nonceHashChain("", [{nonce:nonce1, claimStr:"{}", iat: time1, iss: addr0}]))
-    .to.equal("4692164615798b8b96cad7881203d2197fa84fa3830df8033c2a1be41d99db45")
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:"{}", issuedAt: time1, issuerDid: addr0}]))
+    .to.equal("9911a69ac3db8026f48549cff5f2847d8526f344f6ee66eed48fbfaeca9e505b")
 
     /**
      * emulating hashedClaimWithHashedDids
@@ -589,15 +589,15 @@ describe('1 - Util', () => {
 
     /**
      *
-     const claimEtcNoncedCanon = canonicalize({"claim":someObj1,"iat":time1,"iss":didNonceHashed})
+     const claimEtcNoncedCanon = canonicalize({"claim":someObj1,"issuedAt":time1,"issuerDid":didNonceHashed})
      console.log('claimEtcNoncedCanon', claimEtcNoncedCanon)
      const firstNoncedHash = crypto.createHash('sha256').update("" + crypto.createHash('sha256').update(claimEtcNoncedCanon).digest('hex')).digest('hex')
      console.log('firstNoncedHash', firstNoncedHash)
-     // 'b6818a67534816bceefa465c7438d6a53c2726aaac6dede3f68f3f9074569776'
+     // '7bb595c7f5158653aec85af657ba4f1a8a84f6856134bfec1c8883511e38f781'
      *
      */
-    const chainedHashSomeObj1 = "b6818a67534816bceefa465c7438d6a53c2726aaac6dede3f68f3f9074569776"
-    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), iat:time1, iss:addr0}]))
+    const chainedHashSomeObj1 = "7bb595c7f5158653aec85af657ba4f1a8a84f6856134bfec1c8883511e38f781"
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), issuedAt:time1, issuerDid:addr0}]))
     .to.equal(chainedHashSomeObj1)
 
     /**
@@ -606,21 +606,36 @@ describe('1 - Util', () => {
      console.log('didNonceHashed2', didNonceHashed2)
      // '79d0cde16c4991be9474458feaa811ba642078fe4f70e475579334f0434e41dd'
      const someObj2WithHashAddr2 = {...someObj2, b: didNonceHashed2 }
-     const claimEtcNoncedCanon2 = canonicalize({"claim":someObj2WithHashAddr2,"iat":time2,"iss":didNonceHashed2})
+     const claimEtcNoncedCanon2 = canonicalize({"claim":someObj2WithHashAddr2,"issuedAt":time2,"issuerDid":didNonceHashed2})
      console.log('claimEtcNoncedCanon2', claimEtcNoncedCanon2)
-     crypto.createHash('sha256').update(firstNoncedHash + crypto.createHash('sha256').update(claimEtcNoncedCanon2).digest('hex')).digest('hex')
-     // '185ac19678b7c9bcb41774aad9597d85f8f9dce73c0d84d30301ae0ea9df41fe'
+     const secondNoncedHash = crypto.createHash('sha256').update(firstNoncedHash + crypto.createHash('sha256').update(claimEtcNoncedCanon2).digest('hex')).digest('hex')
+     console.log('secondNoncedHash', secondNoncedHash)
+     // 'a297d1f2f456c7badd41070e73d31cca80b42583f624bc72252159a4091b6e2e'
      *
      */
-    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce2, claimStr:JSON.stringify(someObj2), iat:time2, iss:addr0}]))
-    .to.equal("185ac19678b7c9bcb41774aad9597d85f8f9dce73c0d84d30301ae0ea9df41fe")
+    expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce2, claimStr:JSON.stringify(someObj2), issuedAt:time2, issuerDid:addr0}]))
+    .to.equal("a297d1f2f456c7badd41070e73d31cca80b42583f624bc72252159a4091b6e2e")
 
     // show that it's the same as a 2-item chain
-    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), iat:time1, iss:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), iat:time2, iss:addr0}]))
-    .to.equal("185ac19678b7c9bcb41774aad9597d85f8f9dce73c0d84d30301ae0ea9df41fe")
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), issuedAt:time1, issuerDid:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), issuedAt:time2, issuerDid:addr0}]))
+    .to.equal("a297d1f2f456c7badd41070e73d31cca80b42583f624bc72252159a4091b6e2e")
 
     // now an entire chain of size 3
-    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), iat:time1, iss:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), iat:time2, iss:addr0}, {nonce:nonce3, claimStr:JSON.stringify(someObj3), iat:time3, iss:addr6}])).to.equal("34888be878d277bfe62bdb0f4859b59483545625941c53f89a957b1881a7c90c")
+    /**
+     *
+     const didNonceHashed3 = "did:none:noncedhashed:" + crypto.createHash('sha256').update(addr6 + nonce3).digest('hex')
+     console.log('didNonceHashed3', didNonceHashed3)
+     // 'c1b3d0f0b6befe088db93ecd51cd415e69b2c77ef42ea79881ccebaa5ec03ad5'
+     const someObj3WithHashAddr3 = {...someObj3, b: [didNonceHashed3] }
+     const claimEtcNoncedCanon3 = canonicalize({"claim":someObj3WithHashAddr3,"issuedAt":time3,"issuerDid":didNonceHashed3})
+     console.log('claimEtcNoncedCanon3', claimEtcNoncedCanon3)
+     const thirdNoncedHash = crypto.createHash('sha256').update(secondNoncedHash + crypto.createHash('sha256').update(claimEtcNoncedCanon3).digest('hex')).digest('hex')
+     console.log('thirdNoncedHash', thirdNoncedHash)
+     // 'fad1dd65d6f98458a3d344174d500b7a09cb289c677d13251f298dc4157ec098'
+     *
+     */
+    expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), issuedAt:time1, issuerDid:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), issuedAt:time2, issuerDid:addr0}, {nonce:nonce3, claimStr:JSON.stringify(someObj3), issuedAt:time3, issuerDid:addr6}]))
+    .to.equal("fad1dd65d6f98458a3d344174d500b7a09cb289c677d13251f298dc4157ec098")
   })
 
 })

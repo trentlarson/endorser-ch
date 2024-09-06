@@ -197,8 +197,8 @@ function replaceDidsWithHashes(nonce, input) {
 function claimWithHashedDids(nonceAndClaimStrEtc) {
   const input = {
     claim: JSON.parse(nonceAndClaimStrEtc.claimStr),
-    iat: nonceAndClaimStrEtc.iat,
-    iss: nonceAndClaimStrEtc.iss,
+    issuedAt: nonceAndClaimStrEtc.issuedAt,
+    issuerDid: nonceAndClaimStrEtc.issuerDid,
   }
   return canonicalize(replaceDidsWithHashes(nonceAndClaimStrEtc.nonce, input))
 }
@@ -206,15 +206,15 @@ function claimWithHashedDids(nonceAndClaimStrEtc) {
 /**
  This has to include things that make it unique, and the basic claim can be repeated
  by different people or by the same person at different times.
- So we're making it similar to the JWT, with "claim" for the payload (since we don't need a VC type, etc)
- and then "iss" and "iat" for the issuer and issued-at time.
+ So we're using "claim" for the payload (since we don't need a VC type, etc)
+ and then "issuerDid" and "issuedAt" for the issuer and issued-at time.
 
  The nonce is still not encoded in the claim, and can selectively reveal any DID part.
 
- @param nonceAndClaimStrEtc is { "nonce": string, "claimStr": stringified JSON, "iss": string, "iat": number }
+ @param nonceAndClaimStrEtc is { "nonce": string, "claimStr": stringified JSON, "issuerDid": string, "issuedAt": number }
  @return parse the claimStr JSON string,
    then hash DID+nonce via hashNonceAndDid
-   then wrap in { "claim": JSON, "iss": string, "iat": number }
+   then wrap in { "claim": JSON, "issuerDid": string, "issuedAt": number }
    then canonicalize
    then sha256-hash
    then hex-encode
