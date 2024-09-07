@@ -176,7 +176,7 @@ function inputContainsDid(input, did) {
 function hashNonceAndDid(nonce, did) {
   const hash = crypto.createHash('sha256')
   hash.update(did + nonce)
-  return hash.digest('hex')
+  return hash.digest('hex') // let's avoid special characters in the DID, even a fake one
 }
 
 // return the input with all DIDs hashed
@@ -223,25 +223,25 @@ function hashedClaimWithHashedDids(nonceAndClaimStrEtc) {
   const claimStr = claimWithHashedDids(nonceAndClaimStrEtc)
   const hash = crypto.createHash('sha256');
   hash.update(claimStr)
-  let result = hash.digest('hex')
+  let result = hash.digest('base64url')
   //console.log("hash(", claimStr, ") =", result)
   return result
 }
 
-function hashPreviousAndNext(prev, next, encoding) {
+function hashPreviousAndNext(prev, next) {
   const hash = crypto.createHash('sha256');
   hash.update(prev)
   hash.update(next)
-  let result = hash.digest(encoding)
+  let result = hash.digest('base64url')
   //console.log("hash(", prev, "+", next, ") =", result)
   return result
 }
 
-// return hex of the latest merkle root of nonceHashHex values
+// return hex of the latest merkle root of nonceHashB64 values
 function nonceHashChain(seed, nonceAndClaimStrEtcList) {
   return R.reduce(
     (prev, nonceAndClaimStrEtc) =>
-      hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStrEtc), 'hex'),
+      hashPreviousAndNext(prev, hashedClaimWithHashedDids(nonceAndClaimStrEtc)),
     seed,
     nonceAndClaimStrEtcList
   )
@@ -253,8 +253,7 @@ function claimHashChain(seed, claimStrList) {
     (prev, claimStr) =>
       hashPreviousAndNext(
         prev,
-        crypto.createHash('sha256').update(claimStr).digest('base64'),
-        'base64'
+        crypto.createHash('sha256').update(claimStr).digest('base64url'),
       ),
     seed,
     claimStrList

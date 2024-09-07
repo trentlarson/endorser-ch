@@ -1,0 +1,5 @@
+
+-- see README.md in this directory for explanations
+
+update jwt set nonceHashHex = null;
+alter table jwt rename column nonceHashHex to nonceHashB64;

@@ -1011,7 +1011,6 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       let data = [], rowErr
 
-      // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
       const sql = 'select providerId as identifier, linkConfirmed from give_provider'
           // for extra detail: + ' left join jwt on jwt.handleId = give_provider.providerId'
           + ' where give_provider.giveHandleId = ?'
@@ -1139,13 +1138,12 @@ class EndorserDatabase {
    * @param handleId
    * @param claim
    * @param claimStr a canonicalized string of the claim
-   * @param claimCanonBase64
    * @param jwtEncoded
-   * @returns {{claim: string, claimContext: string, claimCanonBase64: string, claimCanonHashBase64: string, claimType: string, handleId: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, nonceHashHex: string, subject: string}}
+   * @returns {{claim: string, claimContext: string, claimCanonHashBase64: string, claimType: string, handleId: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, nonceHashB64: string, subject: string}}
    */
-  buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, claimCanonBase64, jwtEncoded) {
+  buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, jwtEncoded) {
     const claimCanonHash =
-      crypto.createHash('sha256').update(claimStr).digest('base64')
+      crypto.createHash('sha256').update(claimStr).digest('base64url')
     const claimContext = claim['@context']
     const claimType = claim['@type']
     const issuedAt = new Date(payload.iat * 1000).toISOString()
@@ -1154,8 +1152,8 @@ class EndorserDatabase {
     }
     const issuer = payload.iss
     // 144 bits, base64 >= 128 bits with all character space (no padding chars)
-    const hashNonce = crypto.randomBytes(18).toString('base64')
-    const nonceHashHex = util.hashedClaimWithHashedDids({
+    const hashNonce = crypto.randomBytes(18).toString('base64url')
+    const nonceHashB64 = util.hashedClaimWithHashedDids({
       nonce: hashNonce,
       claimStr: claimStr,
       iat: payload.iat,
@@ -1165,7 +1163,6 @@ class EndorserDatabase {
     return {
       claim: claimStr,
       claimContext: claimContext,
-      claimCanonBase64: claimCanonBase64,
       claimCanonHashBase64: claimCanonHash,
       claimType: claimType,
       handleId: handleId,
@@ -1175,7 +1172,7 @@ class EndorserDatabase {
       issuer: issuer,
       jwtEncoded: jwtEncoded,
       lastClaimId: lastClaimId,
-      nonceHashHex: nonceHashHex,
+      nonceHashB64: nonceHashB64,
       subject: subject,
     }
   }
@@ -1192,9 +1189,9 @@ class EndorserDatabase {
             id: row.id, issuedAt: row.issuedAt, issuer: row.issuer, subject: row.subject,
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
             handleId: row.handleId, lastClaimId: row.lastClaimId,
-            claimCanonBase64: row.claimCanonBase64, jwtEncoded: row.jwtEncoded,
+            jwtEncoded: row.jwtEncoded, // jwtEncoded won't be returned in results to the user unless visible
             claimCanonHashBase64: row.claimCanonHashBase64, hashChainB64: row.hashChainB64,
-            hashNonce: row.hashNonce, nonceHashHex: row.nonceHashHex, // hashNonce will be removed later if not visible
+            hashNonce: row.hashNonce, nonceHashB64: row.nonceHashB64, // hashNonce won't be returned in results to the user unless visible
           }
         }, function(err, num) {
           if (err) {
@@ -1228,7 +1225,6 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       let data = [], rowErr
 
-      // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
       const sql =
         "SELECT * FROM jwt" + whereClause + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
       //console.log('jwtsByWhere params & sql: ', whereParams, sql)
@@ -1244,11 +1240,12 @@ class EndorserDatabase {
               row.issuedAt = isoAndZonify(row.issuedAt)
             }
             data.push({
+              // don't include things like hashNonce & jwtEncoded because they contain secret info
               id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
               claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
               handleId: row.handleId, lastClaimId: row.lastClaimId,
               claimCanonHashBase64:row.claimCanonHashBase64, hashChainB64:row.hashChainB64,
-              nonceHashHex: row.nonceHashHex,
+              nonceHashB64: row.nonceHashB64,
             })
           }
         },
@@ -1274,7 +1271,7 @@ class EndorserDatabase {
       params,
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHashBase64', 'hashChainB64'],
       claimContents,
-      ['claim', 'nonceHashHex'],
+      ['claim', 'nonceHashB64'],
       [],
       excludeConfirmations
     )
@@ -1293,7 +1290,7 @@ class EndorserDatabase {
       ['claim'],
       ['issuedAt'],
       [],
-      ['claimContext', 'lastClaimId', 'nonceHashHex'],
+      ['claimContext', 'lastClaimId', 'nonceHashB64'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1307,7 +1304,7 @@ class EndorserDatabase {
   jwtByClaim(claimStr) {
     return new Promise((resolve, reject) => {
       var data = []
-      // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
+      // don't include things like jwtEncoded because is contains all info (not hidden later)
       db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, claimCanonHashBase64, hashChainB64 FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
         row.issuedAt = isoAndZonify(row.issuedAt)
         data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, handleId:row.handleId, claimCanonHashBase64:row.claimCanonHashBase64, hashChainB64:row.hashChainB64})
@@ -1325,14 +1322,14 @@ class EndorserDatabase {
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
-        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonBase64, claimCanonHashBase64, claimType, handleId, lastClaimId, nonceHashHex, hashNonce, jwtEncoded)"
-        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHashBase64, claimType, handleId, lastClaimId, nonceHashB64, hashNonce, jwtEncoded)"
+        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       db.run(
         stmt,
         [
           entry.id, entry.issuedAt, entry.issuer, entry.subject,
-          entry.claim, entry.claimContext, entry.claimCanonBase64, entry.claimCanonHashBase64, entry.claimType,
-          entry.handleId, entry.lastClaimId, entry.nonceHashHex, entry.hashNonce, entry.jwtEncoded
+          entry.claim, entry.claimContext, entry.claimCanonHashBase64, entry.claimType,
+          entry.handleId, entry.lastClaimId, entry.nonceHashB64, entry.hashNonce, entry.jwtEncoded
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
@@ -1346,10 +1343,10 @@ class EndorserDatabase {
    *
   jwtUpdateClaimFields(entry) {
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET claimType = ?, claimContext = ?, claim = ?, claimCanonBase64 = ? WHERE id = ?")
+      var stmt = ("UPDATE jwt SET claimType = ?, claimContext = ?, claim = ?, WHERE id = ?")
       db.run(
         stmt,
-        [entry.claimType, entry.claimContext, entry.claim, entry.claimCanonBase64, entry.id],
+        [entry.claimType, entry.claimContext, entry.claim, entry.id],
         function(err) {
           if (err) {
             reject(err)
@@ -1388,8 +1385,7 @@ class EndorserDatabase {
       let data = []
       let rowErr
       db.each(
-        // don't include things like claimCanonBase64 & jwtEncoded
-        // because they contain all info (not hidden later)
+        // don't include things like jwtEncoded because is contains all info (not hidden later)
         "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim"
           + ", handleId, lastClaimId, claimCanonHashBase64, hashChainB64 FROM jwt WHERE" + moreClause
           + " issuer = ? AND claimType in (" + inListStr + ")"
@@ -1433,7 +1429,7 @@ class EndorserDatabase {
   jwtLastByHandleIdRaw(identifier) {
     return new Promise((resolve, reject) => {
       db.get(
-        // don't include things like claimCanonBase64 & jwtEncoded because they contain all info (not hidden later)
+        // don't include things like jwtEncoded because it contains all info (not hidden later)
         "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, lastClaimId, claimCanonHashBase64, hashChainB64"
         + " FROM jwt WHERE handleId = ? ORDER BY id DESC LIMIT 1",
         [identifier],
@@ -1472,7 +1468,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT id, claim, claimCanonHashBase64, hashNonce, nonceHashHex FROM jwt WHERE hashChainB64 is null ORDER BY id",
+        "SELECT id, claim, claimCanonHashBase64, hashNonce, nonceHashB64 FROM jwt WHERE hashChainB64 is null ORDER BY id",
         [],
         function(err, row) {
           data.push({ id: row.id, claim: row.claim })

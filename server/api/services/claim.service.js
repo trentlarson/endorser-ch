@@ -72,7 +72,7 @@ class ClaimService {
         claimType: jwtRec.claimType,
         claim: JSON.parse(jwtRec.claim),
         handleId: jwtRec.handleId,
-        nonceHashHex: jwtRec.nonceHashHex,
+        nonceHashB64: jwtRec.nonceHashB64,
       }
       return result
     } else {
@@ -101,7 +101,7 @@ class ClaimService {
         id: j.id, issuer: j.issuer, issuedAt: j.issuedAt, subject: j.subject,
         claimContext: j.claimContext, claimType: j.claimType,
         claim: JSON.parse(j.claim), handleId: j.handleId,
-        nonceHashHex: j.nonceHashHex,
+        nonceHashB64: j.nonceHashB64,
       }
       return thisOne
     })
@@ -1768,9 +1768,8 @@ class ClaimService {
       }
 
       const claimStr = canonicalize(payloadClaim)
-      const claimCanonBase64 = base64url.encode(claimStr)
       const jwtEntry = dbService.buildJwtEntry(
-        payload, jwtId, lastClaimId, handleId, payloadClaim, claimStr, claimCanonBase64, jwtEncoded
+        payload, jwtId, lastClaimId, handleId, payloadClaim, claimStr, jwtEncoded
       )
       const jwtRowId =
           await dbService.jwtInsert(jwtEntry)
