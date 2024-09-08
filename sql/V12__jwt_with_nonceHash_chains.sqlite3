@@ -7,13 +7,13 @@ CREATE TABLE "jwt2" (
   id TEXT PRIMARY KEY, issuedAt DATETIME, issuer CHARACTER(100), subject VARCHAR(100), claim TEXT,
   claimContext VARCHAR(30), claimType VARCHAR(30), jwtEncoded TEXT,
   claimCanonHash VARCHAR(44), handleId TEXT, hashNonce CHARACTER(24),
-  lastClaimId TEXT, nonceHash CHARACTER(44), nonceHashAllChain CHARACTER(44), nonceHashIssuerChain CHARACTER(44)
+  lastClaimId TEXT, noncedHash CHARACTER(44), noncedHashAllChain CHARACTER(44), noncedHashIssuerChain CHARACTER(44)
 );
 INSERT INTO jwt2 SELECT
   id, issuedAt, issuer, subject, claim,
   claimContext, claimType, jwtEncoded,
   claimCanonHashBase64 as claimCanonHash, handleId, null as hashNonce,
-  lastClaimId, null as nonceHash, null as nonceHashAllChain, null as nonceHashIssuerChain FROM jwt;
+  lastClaimId, null as noncedHash, null as noncedHashAllChain, null as noncedHashIssuerChain FROM jwt;
 DROP TABLE jwt;
 ALTER TABLE jwt2 RENAME TO jwt;
 

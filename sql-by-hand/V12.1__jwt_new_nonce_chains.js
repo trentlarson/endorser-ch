@@ -19,7 +19,7 @@ const crypto = require("crypto");
     const rowsCount = rows.length;
 
     let errResult = [];
-    let prevNonceHashAllChain = "";
+    let prevNoncedHashAllChain = "";
     for (const row of rows) {
       const hashNonce = crypto.randomBytes(18).toString('base64url');
       const nonceAndClaimStr = {
@@ -29,20 +29,20 @@ const crypto = require("crypto");
         "issuerDid": row.issuer,
       };
       const claimCanonHash = crypto.createHash('sha256').update(row.claim).digest('base64url')
-      const nonceHash = util.hashedClaimWithHashedDids(nonceAndClaimStr);
-      const nonceHashAllChain = util.hashPreviousAndNext(prevNonceHashAllChain, nonceHash);
-      const prevNonceHashIssuerChain = (await dbService.jwtLastMerkleHashForIssuerBefore(row.issuer, row.id))?.nonceHashIssuerChain || "";
-      const nonceHashIssuerChain = util.hashPreviousAndNext(prevNonceHashIssuerChain, nonceHash);
+      const noncedHash = util.hashedClaimWithHashedDids(nonceAndClaimStr);
+      const noncedHashAllChain = util.hashPreviousAndNext(prevNoncedHashAllChain, noncedHash);
+      const prevNoncedHashIssuerChain = (await dbService.jwtLastMerkleHashForIssuerBefore(row.issuer, row.id))?.noncedHashIssuerChain || "";
+      const noncedHashIssuerChain = util.hashPreviousAndNext(prevNoncedHashIssuerChain, noncedHash);
       // if (row.id==='01J76DAFHY7T2PN9JAWGNN6TP2') {
-      //   console.log('nonceHash:', nonceHash);
-      //   console.log('prevNonceHashIssuerChain:', prevNonceHashIssuerChain);
-      //   console.log('nonceHashIssuerChain:', nonceHashIssuerChain);
+      //   console.log('noncedHash:', noncedHash);
+      //   console.log('prevNoncedHashIssuerChain:', prevNoncedHashIssuerChain);
+      //   console.log('noncedHashIssuerChain:', noncedHashIssuerChain);
       // }
 
       await new Promise((resolve, reject) => {
         db.run(
-          'UPDATE jwt SET claimCanonHash = ?, hashNonce = ?, nonceHash = ?, nonceHashAllChain = ?, nonceHashIssuerChain = ? WHERE id = ?',
-          [claimCanonHash, hashNonce, nonceHash, nonceHashAllChain, nonceHashIssuerChain, row.id],
+          'UPDATE jwt SET claimCanonHash = ?, hashNonce = ?, noncedHash = ?, noncedHashAllChain = ?, noncedHashIssuerChain = ? WHERE id = ?',
+          [claimCanonHash, hashNonce, noncedHash, noncedHashAllChain, noncedHashIssuerChain, row.id],
           function (err2) {
             if (err2) {
               errResult.push(err2);
@@ -58,7 +58,7 @@ const crypto = require("crypto");
         );
       });
 
-      prevNonceHashAllChain = nonceHashAllChain;
+      prevNoncedHashAllChain = noncedHashAllChain;
     }
 
     console.log('Finished with ' + rowsCount + ' rows. Accumulated errors:', errResult);

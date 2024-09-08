@@ -71,7 +71,7 @@ class ClaimService {
         claimType: jwtRec.claimType,
         claim: JSON.parse(jwtRec.claim),
         handleId: jwtRec.handleId,
-        nonceHash: jwtRec.nonceHash,
+        noncedHash: jwtRec.noncedHash,
       }
       return result
     } else {
@@ -100,7 +100,7 @@ class ClaimService {
         id: j.id, issuer: j.issuer, issuedAt: j.issuedAt, subject: j.subject,
         claimContext: j.claimContext, claimType: j.claimType,
         claim: JSON.parse(j.claim), handleId: j.handleId,
-        nonceHash: j.nonceHash,
+        noncedHash: j.noncedHash,
       }
       return thisOne
     })
@@ -163,7 +163,7 @@ class ClaimService {
           .then(hashHexArray => {
             let seed = ""
             if (hashHexArray?.length > 0) {
-              seed = hashHexArray[0].nonceHashAllChain
+              seed = hashHexArray[0].noncedHashAllChain
             }
             const updates = []
             let latestHashChain = seed
@@ -175,7 +175,7 @@ class ClaimService {
 
               // compute the previous individual chain
               const latestHashChainForIssuer =
-                dbService.jwtLastMerkleHashForIssuerBefore(hashAndClaimStr.issuer, hashAndClaimStr.id)
+                dbService.jwtLastMerkleHashForIssuerBefore(hashAndClaimStr.issuer, hashAndClaimStr.id)?.nonceHashIssuerChain || ""
               const newHashChainForIssuer = claimHashChain(latestHashChainForIssuer, [canon])
 
               updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, newGlobalHashChain, newHashChainForIssuer))

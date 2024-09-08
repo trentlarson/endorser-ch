@@ -1139,7 +1139,7 @@ class EndorserDatabase {
    * @param claim
    * @param claimStr a canonicalized string of the claim
    * @param jwtEncoded
-   * @returns {{claim: string, claimContext: string, claimCanonHash: string, claimType: string, handleId: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, nonceHash: string, subject: string}}
+   * @returns {{claim: string, claimContext: string, claimCanonHash: string, claimType: string, handleId: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, noncedHash: string, subject: string}}
    */
   buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, jwtEncoded) {
     const claimCanonHash =
@@ -1153,7 +1153,7 @@ class EndorserDatabase {
     const issuer = payload.iss
     // 144 bits, base64 >= 128 bits with all character space (no padding chars)
     const hashNonce = crypto.randomBytes(18).toString('base64url')
-    const nonceHash = util.hashedClaimWithHashedDids({
+    const noncedHash = util.hashedClaimWithHashedDids({
       nonce: hashNonce,
       claimStr: claimStr,
       iat: payload.iat,
@@ -1172,7 +1172,7 @@ class EndorserDatabase {
       issuer: issuer,
       jwtEncoded: jwtEncoded,
       lastClaimId: lastClaimId,
-      nonceHash: nonceHash,
+      noncedHash: noncedHash,
       subject: subject,
     }
   }
@@ -1190,8 +1190,8 @@ class EndorserDatabase {
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
             handleId: row.handleId, lastClaimId: row.lastClaimId,
             jwtEncoded: row.jwtEncoded, // jwtEncoded won't be returned in results to the user unless visible
-            claimCanonHash: row.claimCanonHash, nonceHashAllChain: row.nonceHashAllChain,
-            hashNonce: row.hashNonce, nonceHash: row.nonceHash, // hashNonce won't be returned in results to the user unless visible
+            claimCanonHash: row.claimCanonHash, noncedHashAllChain: row.noncedHashAllChain,
+            hashNonce: row.hashNonce, noncedHash: row.noncedHash, // hashNonce won't be returned in results to the user unless visible
           }
         }, function(err, num) {
           if (err) {
@@ -1244,8 +1244,8 @@ class EndorserDatabase {
               id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject,
               claimContext:row.claimContext, claimType:row.claimType, claim:row.claim,
               handleId: row.handleId, lastClaimId: row.lastClaimId,
-              claimCanonHash:row.claimCanonHash, nonceHashAllChain:row.nonceHashAllChain,
-              nonceHash: row.nonceHash,
+              claimCanonHash:row.claimCanonHash, noncedHashAllChain:row.noncedHashAllChain,
+              noncedHash: row.noncedHash,
             })
           }
         },
@@ -1269,9 +1269,9 @@ class EndorserDatabase {
     delete params.excludeConfirmations
     let where = constructWhere(
       params,
-      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHash', 'nonceHashAllChain'],
+      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHash', 'noncedHashAllChain'],
       claimContents,
-      ['claim', 'nonceHash'],
+      ['claim', 'noncedHash'],
       [],
       excludeConfirmations
     )
@@ -1286,11 +1286,11 @@ class EndorserDatabase {
     return tableEntriesByParamsPaged(
       'jwt',
       'id',
-      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHash', 'nonceHashAllChain'],
+      ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHash', 'noncedHashAllChain'],
       ['claim'],
       ['issuedAt'],
       [],
-      ['claimContext', 'lastClaimId', 'nonceHash'],
+      ['claimContext', 'lastClaimId', 'noncedHash'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1305,9 +1305,9 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       // don't include things like jwtEncoded because is contains all info (not hidden later)
-      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, claimCanonHash, nonceHashAllChain FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
+      db.each("SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, claimCanonHash, noncedHashAllChain FROM jwt WHERE claim = ?", [claimStr], function(err, row) {
         row.issuedAt = isoAndZonify(row.issuedAt)
-        data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, handleId:row.handleId, claimCanonHash:row.claimCanonHash, nonceHashAllChain:row.nonceHashAllChain})
+        data.push({id:row.id, issuedAt:row.issuedAt, issuer:row.issuer, subject:row.subject, claimContext:row.claimContext, claimType:row.claimType, claim:row.claim, handleId:row.handleId, claimCanonHash:row.claimCanonHash, noncedHashAllChain:row.noncedHashAllChain})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -1322,14 +1322,14 @@ class EndorserDatabase {
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
-        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHash, claimType, handleId, lastClaimId, nonceHash, hashNonce, jwtEncoded)"
+        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHash, claimType, handleId, lastClaimId, noncedHash, hashNonce, jwtEncoded)"
         + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       db.run(
         stmt,
         [
           entry.id, entry.issuedAt, entry.issuer, entry.subject,
           entry.claim, entry.claimContext, entry.claimCanonHash, entry.claimType,
-          entry.handleId, entry.lastClaimId, entry.nonceHash, entry.hashNonce, entry.jwtEncoded
+          entry.handleId, entry.lastClaimId, entry.noncedHash, entry.hashNonce, entry.jwtEncoded
         ],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
@@ -1387,7 +1387,7 @@ class EndorserDatabase {
       db.each(
         // don't include things like jwtEncoded because is contains all info (not hidden later)
         "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim"
-          + ", handleId, lastClaimId, claimCanonHash, nonceHashAllChain FROM jwt WHERE" + moreClause
+          + ", handleId, lastClaimId, claimCanonHash, noncedHashAllChain FROM jwt WHERE" + moreClause
           + " issuer = ? AND claimType in (" + inListStr + ")"
           + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT,
         allParams,
@@ -1402,7 +1402,7 @@ class EndorserDatabase {
               claimType: row.claimType, claim: row.claim,
               handleId: row.handleId, lastClaimId: row.lastClaimId,
               claimCanonHash: row.claimCanonHash,
-              nonceHashAllChain: row.nonceHashAllChain
+              noncedHashAllChain: row.noncedHashAllChain
             })
           }
         },
@@ -1430,7 +1430,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       db.get(
         // don't include things like jwtEncoded because it contains all info (not hidden later)
-        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, lastClaimId, claimCanonHash, nonceHashAllChain"
+        "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, lastClaimId, claimCanonHash, noncedHashAllChain"
         + " FROM jwt WHERE handleId = ? ORDER BY id DESC LIMIT 1",
         [identifier],
         function(err, row) { if (err) { reject(err) } else { resolve(row) } })
@@ -1454,7 +1454,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.get(
-        "SELECT nonceHashAllChain FROM jwt WHERE nonceHashAllChain is not null ORDER BY id DESC LIMIT 1",
+        "SELECT noncedHashAllChain FROM jwt WHERE noncedHashAllChain is not null ORDER BY id DESC LIMIT 1",
         [],
         function(err, row) {
           if (err) {
@@ -1463,7 +1463,7 @@ class EndorserDatabase {
             if (!row) {
               resolve(null)
             } else {
-              resolve({ nonceHashAllChain: row.nonceHashAllChain })
+              resolve({ noncedHashAllChain: row.noncedHashAllChain })
             }
           }
         }
@@ -1475,18 +1475,18 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.get(
-        "SELECT nonceHashIssuerChain FROM jwt WHERE issuer = ? and id < ? ORDER BY id DESC LIMIT 1",
+        "SELECT noncedHashIssuerChain FROM jwt WHERE issuer = ? and id < ? ORDER BY id DESC LIMIT 1",
         [issuerDid, jwtId],
         function(err, row) {
           if (err) {
             reject(err)
           } else if (!row) {
             resolve(null)
-          } else if (!row.nonceHashIssuerChain) {
+          } else if (!row.noncedHashIssuerChain) {
             // since this is an async back-end process, we won't interrupt user claim issuance
-            reject('Expected non-null nonceHashIssuerChain for issuer ' + issuerDid + ' before JWT ID ' + jwtId)
+            reject('Expected non-null noncedHashIssuerChain for issuer ' + issuerDid + ' before JWT ID ' + jwtId)
           } else {
-            resolve({ nonceHashIssuerChain: row.nonceHashIssuerChain })
+            resolve({ noncedHashIssuerChain: row.noncedHashIssuerChain })
           }
         }
       );
@@ -1497,7 +1497,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT id, claim, issuer, claimCanonHash, hashNonce, nonceHash FROM jwt WHERE nonceHashAllChain is null ORDER BY id",
+        "SELECT id, claim, issuer, claimCanonHash, hashNonce, noncedHash FROM jwt WHERE noncedHashAllChain is null ORDER BY id",
         [],
         function(err, row) {
           data.push({ id: row.id, claim: row.claim, issuer: row.issuer })
@@ -1529,15 +1529,15 @@ class EndorserDatabase {
   }
   **/
 
-  jwtSetMerkleHash(jwtId, nonceHashAllChain, nonceHashIssuerChain) {
+  jwtSetMerkleHash(jwtId, noncedHashAllChain, noncedHashIssuerChain) {
     return new Promise((resolve, reject) => {
-      var stmt = ("UPDATE jwt SET nonceHashAllChain = ?, nonceHashIssuerChain = ? WHERE id = ?");
-      db.run(stmt, [nonceHashAllChain, nonceHashIssuerChain, jwtId], function(err) {
+      var stmt = ("UPDATE jwt SET noncedHashAllChain = ?, noncedHashIssuerChain = ? WHERE id = ?");
+      db.run(stmt, [noncedHashAllChain, noncedHashIssuerChain, jwtId], function(err) {
         if (err) {
           reject(err)
         } else {
           if (this.changes === 1) {
-            resolve(nonceHashAllChain)
+            resolve(noncedHashAllChain)
           } else {
             reject("Expected to update 1 jwt row but updated " + this.changes)
           }

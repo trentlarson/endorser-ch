@@ -804,7 +804,7 @@ describe('1 - Claim', () => {
         }
         const firstNonceHash = util.hashedClaimWithHashedDids(nonceAndClaimStrEtc)
         expect(r.body)
-        .that.has.a.property('nonceHash')
+        .that.has.a.property('noncedHash')
         .that.equals(firstNonceHash)
         expect(r.status).that.equals(200)
       })
