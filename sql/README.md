@@ -129,9 +129,8 @@ CREATE TABLE jwt (
     subject VARCHAR(100),
     claimType VARCHAR(60),
     claimContext VARCHAR(60),
-    claim TEXT, -- canonical text of the JSON for the claim (but was it directly from the JWT at first?)
-    claimCanonBase64 TEXT, -- base64 encoding of the canonicalized claim
-    claimCanonHashBase64 CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
+    claim TEXT, -- text of the JSON for the claim, canonicalized
+    claimCanonHash CHARACTER(44), -- base64 encoding of sha256 hash of the canonicalized claim
     -- I'll probably deprecate this in favor of nonceHashAllChainB64 because someone with a list of DIDs could reverse engineer a claim based on claimCanonBase64 and/or subsequent claimCanonHashBase64s.
     --hashChainB64 CHARACTER(64), -- merkle tree of claimCanonHashBase64 values
     hashNonce CHARACTER(24) -- randomized 18 bytes (currently base64-encoded), kept private, used for nonceHashHex
@@ -151,7 +150,9 @@ CREATE TABLE jwt (
     -- the intent of the provider(s) of this claim.
     lastClaimId TEXT, -- the previous JWT ID for this entity, which the user is conceptually overwriting (see also handleId)
 
-    nonceHashB64 CHARACTER(44), -- hash of canonicalized claim where every DID is replaced by DID + hashNonce, to allow selective disclosure but to avoid correlation
+    nonceHash CHARACTER(44), -- hash of canonicalized claim where every DID is replaced by DID + hashNonce, to allow selective disclosure but to avoid correlation
+    nonceHashAllChain CHARACTER(44), -- merkle tree of nonceHash values for every claim
+    nonceHashIssuerChain CHARACTER(44) -- merkle tree of nonceHash values issued by this issuer (which they can take over)
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);

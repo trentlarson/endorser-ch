@@ -2,7 +2,6 @@
 const crypto = require('crypto')
 const R = require('ramda')
 const canonicalize = require("canonicalize");
-const {JWT_VERIFY_FAILED_CODE, UNSUPPORTED_DID_METHOD_CODE} = require('./vc');
 
 // the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
@@ -10,11 +9,11 @@ const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token' // deprecated: use Authorizat
 
 const ERROR_CODES = {
   CANNOT_REGISTER_TOO_SOON: 'CANNOT_REGISTER_TOO_SOON',
-  JWT_VERIFY_FAILED: JWT_VERIFY_FAILED_CODE,
+  JWT_VERIFY_FAILED: 'JWT_VERIFY_FAILED', // copied from ./vc/index.js, not 'import'ed because we've been running this in raw JS sql-by-hand scripts
   OVER_CLAIM_LIMIT: 'OVER_CLAIM_LIMIT',
   OVER_REGISTRATION_LIMIT: 'OVER_REGISTRATION_LIMIT',
   UNREGISTERED_USER: 'UNREGISTERED_USER',
-  UNSUPPORTED_DID_METHOD: UNSUPPORTED_DID_METHOD_CODE,
+  UNSUPPORTED_DID_METHOD: 'UNSUPPORTED_DID_METHOD', // copied from ./vc/index.js, not 'import'ed because we've been running this in raw JS sql-by-hand scripts
 }
 
 // This is an expected ID prefix for this system.
@@ -144,6 +143,28 @@ function allDidsInside(input) {
   }
 }
 
+function allEmbeddedRecordErrorsInside(input) {
+  if (input instanceof Object) {
+    var result = []
+    if (!Array.isArray(input)) {
+      // it's an object
+      for (let key of R.keys(input)) {
+        if (key === 'embeddedRecordError') {
+          result.push(input['embeddedRecordError'])
+        } else {
+          result.push(allEmbeddedRecordErrorsInside(input[key]))
+        }
+      }
+    } else {
+      // it's an array
+      result = R.flatten(input.map(allEmbeddedRecordErrorsInside))
+    }
+    return R.flatten(result)
+  } else {
+    return []
+  }
+}
+
 function inputContainsDid(input, did) {
 
   if (Object.prototype.toString.call(input) === "[object String]") {
@@ -222,22 +243,19 @@ function claimWithHashedDids(nonceAndClaimStrEtc) {
 function hashedClaimWithHashedDids(nonceAndClaimStrEtc) {
   const claimStr = claimWithHashedDids(nonceAndClaimStrEtc)
   const hash = crypto.createHash('sha256');
-  hash.update(claimStr)
-  let result = hash.digest('base64url')
+  let result = hash.update(claimStr).digest('base64url')
   //console.log("hash(", claimStr, ") =", result)
   return result
 }
 
 function hashPreviousAndNext(prev, next) {
   const hash = crypto.createHash('sha256');
-  hash.update(prev)
-  hash.update(next)
-  let result = hash.digest('base64url')
+  let result = hash.update(prev + next).digest('base64url')
   //console.log("hash(", prev, "+", next, ") =", result)
   return result
 }
 
-// return hex of the latest merkle root of nonceHashB64 values
+// return hex of the latest merkle root of nonceHash values
 function nonceHashChain(seed, nonceAndClaimStrEtcList) {
   return R.reduce(
     (prev, nonceAndClaimStrEtc) =>
@@ -294,4 +312,4 @@ function findAllLastClaimIdsAndHandleIds(clause) {
   return clauseIdsAndHandleIds
 }
 
-module.exports = { allDidsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, HIDDEN_TEXT, inputContainsDid, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, allEmbeddedRecordErrorsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT, inputContainsDid, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

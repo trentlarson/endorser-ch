@@ -2,7 +2,7 @@ import * as express from 'express'
 import R from 'ramda'
 
 import ClaimService from '../services/claim.service'
-import { GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from '../services/util'
+import { allEmbeddedRecordErrorsInside, GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from '../services/util'
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 class ClaimController {
 
@@ -14,7 +14,7 @@ class ClaimController {
         if (r) res.json(r);
         else res.status(404).end();
       })
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
 
   async getFullClaimById(req, res) {
@@ -52,7 +52,7 @@ class ClaimController {
           res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.tokenIssuer}.  Use a different endpoint to get scrubbed data.`).end();
         }
       })
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
 
   getByQuery(req, res) {
@@ -60,7 +60,7 @@ class ClaimController {
     ClaimService.byQuery(req.query)
       .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, searchTermMaybeDIDs))
       .then(r => res.json(r))
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
 
   importClaim(req, res) {
@@ -73,6 +73,17 @@ class ClaimController {
       // no need to check for visible data because they sent it
       .then(r => {
         const result = r.claimId
+
+        // show a message about other values
+        const allKeys = Object.keys(r)
+        if (allKeys.length > 1) {
+          //console.log("Got extra values in deprecated importClaim which will not be reported to creator of", r.claimId, JSON.stringify(allKeys))
+          const embeddedValues = allEmbeddedRecordErrorsInside(r)
+          if (embeddedValues.length > 0) {
+            console.error("Got embeddedRecordError in deprecated importClaim which will not be reported to creator of", r.claimId, embeddedValues)
+          }
+        }
+
         return res
           .status(201)
           .location(`<%= apiRoot %>/api/claim/${r.id}`)
@@ -82,7 +93,7 @@ class ClaimController {
         if (err.clientError) {
           res.status(400).json({ error: { message: err.clientError.message, code: err.clientError.code } })
         } else {
-          console.log(err)
+          console.error(err)
           res.status(500).json({ error: "" + err }).end()
         }
       })
@@ -109,7 +120,7 @@ class DbController {
         }
       })
       .then(r => { if (r) { res.json(r) } else { res.status(404).end() } })
-      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
 }
 let dbController = new DbController()
@@ -134,17 +145,6 @@ export default express
  * @typedef EncodedJwt
  * @property {string} jwtEncoded.required
  */
-
-/**
- * Add a Claim JWT and insert claims into their own tables
- * @group claims v1 - Claim Entry (with limited feedback)
- * @route POST /api/claim
- * @param {EncodedJwt.model} jwtEncoded.body.required
- * @returns {object} 200 - internal ID of Claim JWT
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .post('/', claimController.importClaim)
 
 /**
  * Get many Claim JWTs
@@ -198,3 +198,16 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/full/:id', claimController.getFullClaimById)
+
+/**
+ * Add a Claim JWT and insert claims into their own tables
+ * @deprecated use the v2 version (or you'll miss info like the nonce)
+ *
+ * @group claims v1 deprecated - Claim Entry (without complete feedback)
+ * @route POST /api/claim
+ * @param {EncodedJwt.model} jwtEncoded.body.required
+ * @returns {object} 200 - internal ID of Claim JWT
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.post('/', claimController.importClaim)

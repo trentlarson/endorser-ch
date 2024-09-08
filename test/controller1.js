@@ -424,7 +424,6 @@ describe('1 - Util', () => {
     const addr0 = 'did:ethr:0x00000000C0293c8cA34Dac9BCC0F953532D34e4d'
     const addr6 = 'did:ethr:0x6666662aC054fEd267a5818001104EB0B5E8BAb3'
     const addra = 'did:ethr:0xaaee47210032962f7f6aa2a2324a7a453d205761'
-    const addrd = 'did:ethr:0xddd6c03f186c9e27bc150d3629d14d5dbea0effd'
     const addru = 'did:uport:2osnfJ4Wy7LBAm2nPBXire1WfQn75RrV6Ts'
     const someObj1 = {a: 1, b: addr0,       c: {d: addr6,       e: [], f: [9, {g: addru}]}}
     const repObj11 = {a: 1, b: HIDDEN_TEXT, c: {d: HIDDEN_TEXT, e: [], f: [9, {g: HIDDEN_TEXT}]}}
@@ -543,6 +542,7 @@ describe('1 - Util', () => {
     expect(nonceHashChain("", [])).to.equal("")
     /**
      *
+
      const didNonceHashed = "did:none:noncedhashed:" + crypto.createHash('sha256').update(addr0 + nonce1).digest('hex')
      console.log('didNonceHashed', didNonceHashed)
      // 'did:none:noncedhashed:0cf61e83d00c36f3bddebfdbdf75d04b419b19fc6fdcf605db9118eb67854007'
@@ -554,6 +554,7 @@ describe('1 - Util', () => {
        "" + crypto.createHash('sha256').update(canonicalize({"claim":{},"issuedAt":time1,"issuerDid":didNonceHashed})).digest('base64url')
      ).digest('base64url')
      // 'o0zk4DSLYLT4a8-ihiub078BRnB4p9sGOoe85pfIBxE'
+
      *
      **/
     expect(nonceHashChain("", [{nonce:nonce1, claimStr:"{}", issuedAt: time1, issuerDid: addr0}]))
@@ -562,28 +563,13 @@ describe('1 - Util', () => {
     /**
      * emulating hashedClaimWithHashedDids
      *
-     const addr0Hash = crypto.createHash('sha256').update(addr0 + nonce2).digest('hex')
-     console.log('addr0Hash', addr0Hash)
-     // 'f62c5a03f4bd2faa9f436abce4c09e3a9d48cf41d8fd9083be603aec0b49ce7c'
-     const someObj2WithHashAddr = {a: 1, b: "did:none:noncedhashed:" + addr0Hash}
-     console.log('someObj2WithHashAddr', someObj2WithHashAddr)
-     const someObj2HashBase64 = crypto.createHash('sha256').update(canonicalize(someObj2WithHashAddr)).digest('base64url')
-     console.log('someObj2Hash', someObj2HashBase64)
-     // 'JkC3Ij_ISY2nRIwsp12Wi6s8RlqkpR6tyUD_GkrBcQU'
-
-     const addr6Hash = crypto.createHash('sha256').update(addr6 + nonce3).digest('hex')
-     console.log('addr6Hash', addr6Hash)
-     // 'e6378fb8b89de7784180a9edab1e56330f14ec6fe257df30b0899b47bf6c36ba'
-     const someObj3WithHashAddr = {a: "gabba", b: ["did:none:noncedhashed:" + addr6Hash]}
-     const someObj3HashB64 = crypto.createHash('sha256').update(canonicalize(someObj3WithHashAddr)).digest('base64url')
-     console.log('someObj3HashB64', someObj3HashB64)
-     // 'mIB60IYNJRG4XnTQ5BvSnlV4yWuy4MPr45IvRLwpq30'
 
      const claimEtcNoncedCanon = canonicalize({"claim":someObj1,"issuedAt":time1,"issuerDid":didNonceHashed})
      console.log('claimEtcNoncedCanon', claimEtcNoncedCanon)
      const firstNoncedHash = crypto.createHash('sha256').update("" + crypto.createHash('sha256').update(claimEtcNoncedCanon).digest('base64url')).digest('base64url')
      console.log('firstNoncedHash', firstNoncedHash)
      // '-k7Mk8qfc84mmXVEv4TNWITrGYFqfV-9FIFPmXLQrXM'
+
      *
      */
     const chainedHashSomeObj1 = "-k7Mk8qfc84mmXVEv4TNWITrGYFqfV-9FIFPmXLQrXM"
@@ -592,15 +578,18 @@ describe('1 - Util', () => {
 
     /**
      *
+
      const didNonceHashed2 = "did:none:noncedhashed:" + crypto.createHash('sha256').update(addr0 + nonce2).digest('hex')
      console.log('didNonceHashed2', didNonceHashed2)
      // 'f62c5a03f4bd2faa9f436abce4c09e3a9d48cf41d8fd9083be603aec0b49ce7c'
      const someObj2WithHashAddr2 = {...someObj2, b: didNonceHashed2 }
      const claimEtcNoncedCanon2 = canonicalize({"claim":someObj2WithHashAddr2,"issuedAt":time2,"issuerDid":didNonceHashed2})
      console.log('claimEtcNoncedCanon2', claimEtcNoncedCanon2)
-     const secondNoncedHash = crypto.createHash('sha256').update(firstNoncedHash + crypto.createHash('sha256').update(claimEtcNoncedCanon2).digest('base64url')).digest('base64url')
-     console.log('secondNoncedHash', secondNoncedHash)
+     const noncedCanon2Hash = crypto.createHash('sha256').update(claimEtcNoncedCanon2).digest('base64url')
+     const secondNoncedHashChain = crypto.createHash('sha256').update(firstNoncedHash + noncedCanon2Hash).digest('base64url')
+     console.log('secondNoncedHashChain', secondNoncedHashChain)
      // 'i22T-hFDTQy9wAYzZKDJChD9mdvu0BXtlCne3uBx__Q'
+
      *
      */
     expect(nonceHashChain(chainedHashSomeObj1, [{nonce:nonce2, claimStr:JSON.stringify(someObj2), issuedAt:time2, issuerDid:addr0}]))
@@ -613,15 +602,18 @@ describe('1 - Util', () => {
     // now an entire chain of size 3
     /**
      *
+
      const didNonceHashed3 = "did:none:noncedhashed:" + crypto.createHash('sha256').update(addr6 + nonce3).digest('hex')
      console.log('didNonceHashed3', didNonceHashed3)
      // 'e6378fb8b89de7784180a9edab1e56330f14ec6fe257df30b0899b47bf6c36ba'
      const someObj3WithHashAddr3 = {...someObj3, b: [didNonceHashed3] }
      const claimEtcNoncedCanon3 = canonicalize({"claim":someObj3WithHashAddr3,"issuedAt":time3,"issuerDid":didNonceHashed3})
      console.log('claimEtcNoncedCanon3', claimEtcNoncedCanon3)
-     const thirdNoncedHash = crypto.createHash('sha256').update(secondNoncedHash + crypto.createHash('sha256').update(claimEtcNoncedCanon3).digest('base64url')).digest('base64url')
-     console.log('thirdNoncedHash', thirdNoncedHash)
+     const noncedCanon3Hash = crypto.createHash('sha256').update(claimEtcNoncedCanon3).digest('base64url')
+     const thirdNoncedHashChain = crypto.createHash('sha256').update(secondNoncedHashChain + noncedCanon3Hash).digest('base64url')
+     console.log('thirdNoncedHashChain', thirdNoncedHashChain)
      // 'Wunf2muBF6Vd6ycyXshGE00ubWdchgJbL8s_JpPbUCo'
+
      *
      */
     expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), issuedAt:time1, issuerDid:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), issuedAt:time2, issuerDid:addr0}, {nonce:nonce3, claimStr:JSON.stringify(someObj3), issuedAt:time3, issuerDid:addr6}]))
@@ -810,10 +802,10 @@ describe('1 - Claim', () => {
           iat: firstClaimTime,
           iss: creds[0].did,
         }
-        const firstNonceHashB64 = util.hashedClaimWithHashedDids(nonceAndClaimStrEtc)
+        const firstNonceHash = util.hashedClaimWithHashedDids(nonceAndClaimStrEtc)
         expect(r.body)
-        .that.has.a.property('nonceHashB64')
-        .that.equals(firstNonceHashB64)
+        .that.has.a.property('nonceHash')
+        .that.equals(firstNonceHash)
         expect(r.status).that.equals(200)
       })
       .catch(e => {

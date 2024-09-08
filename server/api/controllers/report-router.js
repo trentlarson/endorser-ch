@@ -7,8 +7,8 @@ import {
 } from '../services/util-higher'
 
 import ClaimService from '../services/claim.service'
-import { dbService, MUST_FILTER_TOTALS_ERROR } from '../services/endorser.db.service';
-import {globalId} from "../services/util";
+import { dbService } from '../services/endorser.db.service';
+import { globalId } from "../services/util";
 
 // Why does it not work to put this in the class?
 // When it's in the class, "this" is undefined so "this.getGiveTotalsMaybeGifted" fails when called.
@@ -35,7 +35,7 @@ function getGiveTotalsMaybeGifted(req, res, next, onlyGifted) {
     dbService.giveTotals(agentDid, recipientId, planId, unit, onlyGifted, onlyTraded, afterId, beforeId)
     .then(results => { res.json(results).end() })
     .catch(err => {
-      if (err == MUST_FILTER_TOTALS_ERROR) {
+      if (err == dbService.MUST_FILTER_TOTALS_ERROR) {
         res.status(400).json({
           error: "Client must filter by plan or recipient when asking for totals."
         }).end()
@@ -239,7 +239,7 @@ class DbController {
       dbService.offerTotals(planId, recipientId, unit, afterId, beforeId)
         .then(results => { res.json(results).end() })
         .catch(err => {
-          if (err == MUST_FILTER_TOTALS_ERROR) {
+          if (err == dbService.MUST_FILTER_TOTALS_ERROR) {
             res.status(400).json(
               "Client must filter by plan or recipient when asking for totals."
             ).end()

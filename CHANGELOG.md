@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [Unreleased]
+## [4.0.0]
+### Changed
+- Merkle tree is now recreated to include nonces.
+### Fixed
+- Hidden error on confirmations for action & orgRole & tenure
 ### Changed in DB or environment
-- Nothing
+- Automated SQL script 12
+- Manual SQL script 12.1 - which will change our published merkle roots
 
 
 ## [3.6.4] - 2024.08.25 - f05a786c11ae4d76fecc914155514efe40db9a5f

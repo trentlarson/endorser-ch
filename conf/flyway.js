@@ -1,5 +1,5 @@
 
-if (!process.env.NODE_ENV) {
+if (!process.env.NODE_ENV && !process.env.APP_DB_FILE) {
   // Express is the canonical example: http://expressjs.com/en/api.html#app.settings.table
   console.log('NODE_ENV variable should be set.')
   process.exit(1)

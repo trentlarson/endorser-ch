@@ -1,4 +1,3 @@
-import base64url from 'base64url'
 import canonicalize from 'canonicalize'
 import crypto from 'crypto'
 import {DateTime, Duration} from 'luxon'
@@ -72,7 +71,7 @@ class ClaimService {
         claimType: jwtRec.claimType,
         claim: JSON.parse(jwtRec.claim),
         handleId: jwtRec.handleId,
-        nonceHashB64: jwtRec.nonceHashB64,
+        nonceHash: jwtRec.nonceHash,
       }
       return result
     } else {
@@ -101,7 +100,7 @@ class ClaimService {
         id: j.id, issuer: j.issuer, issuedAt: j.issuedAt, subject: j.subject,
         claimContext: j.claimContext, claimType: j.claimType,
         claim: JSON.parse(j.claim), handleId: j.handleId,
-        nonceHashB64: j.nonceHashB64,
+        nonceHash: j.nonceHash,
       }
       return thisOne
     })
@@ -162,16 +161,26 @@ class ClaimService {
       .then(hashAndClaimStrArray => {
         return dbService.jwtLastMerkleHash()
           .then(hashHexArray => {
-            let seedHex = ""
-            if (hashHexArray.length > 0) {
-              seedHex = hashHexArray[0].hashChainB64
+            let seed = ""
+            if (hashHexArray?.length > 0) {
+              seed = hashHexArray[0].nonceHashAllChain
             }
             const updates = []
-            let latestHashChainB64 = seedHex
+            let latestHashChain = seed
             for (let hashAndClaimStr of hashAndClaimStrArray) {
               const canon = canonicalize(JSON.parse(hashAndClaimStr.claim))
-              latestHashChainB64 = claimHashChain(latestHashChainB64, [canon])
-              updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, latestHashChainB64))
+
+              // compute the new global hash
+              const newGlobalHashChain = claimHashChain(latestHashChain, [canon])
+
+              // compute the previous individual chain
+              const latestHashChainForIssuer =
+                dbService.jwtLastMerkleHashForIssuerBefore(hashAndClaimStr.issuer, hashAndClaimStr.id)
+              const newHashChainForIssuer = claimHashChain(latestHashChainForIssuer, [canon])
+
+              updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, newGlobalHashChain, newHashChainForIssuer))
+
+              latestHashChain = newGlobalHashChain
             }
             return Promise.all(updates)
           })
@@ -405,7 +414,7 @@ class ClaimService {
 
         let origClaimStr = canonicalize(origClaim)
         let origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
         // note that this insert is repeated in each case, so might be consolidatable
         result =
@@ -519,15 +528,15 @@ class ClaimService {
 
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
       // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, actionClaimJwtId, origClaimStr, origClaimCanonHashBase64, actionClaim.rowid, null, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result} added`
-              + ` for actionClaimId ${actionClaimId}`
+              + ` for actionClaimId ${actionClaimJwtId}`
              )
-      return {confirmationId:result, actionClaimId}
+      return {confirmationId:result, actionClaimJwtId}
 
 
 
@@ -536,7 +545,7 @@ class ClaimService {
 
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
       // note that this insert is repeated in each case, so might be consolidatable
       const result =
@@ -593,15 +602,15 @@ class ClaimService {
 
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
       // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, orgRoleClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, orgRoleClaim.rowid)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
-          + ` added for orgRoleClaimId ${orgRoleClaimId}`
+          + ` added for orgRoleClaimId ${orgRoleClaimJwtId}`
       )
-      return {confirmationId:result, orgRoleClaimId}
+      return {confirmationId:result, orgRoleClaimJwtId}
 
 
     } else if (isContextSchemaOrg(origClaim['@context'])
@@ -613,7 +622,7 @@ class ClaimService {
 
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
       // note that this insert is repeated in each case, so might be consolidatable
       const result =
@@ -665,14 +674,14 @@ class ClaimService {
 
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
       // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, tenureClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, tenureClaim.rowid, null)
       l.trace(`${this.constructor.name}.createOneConfirmation # ${result}`
-              + ` added for tenureClaimId ${tenureClaimId}`)
-      return {confirmationId:result, tenureClaimId}
+              + ` added for tenureClaimId ${tenureClaimJwtId}`)
+      return {confirmationId:result, tenureClaimJwtId}
 
 
     } else {
@@ -690,7 +699,7 @@ class ClaimService {
 
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
-          crypto.createHash('sha256').update(origClaimStr).digest('base64')
+          crypto.createHash('sha256').update(origClaimStr).digest('base64url')
 
       // If we choose to add the subject, it's found in these places (as of today):
       //   claim.[ agent | member.member | party | participant ].identifier
@@ -1577,7 +1586,7 @@ class ClaimService {
       // Now check that all claimId + handleId references are consistent.
       // We do this basic sanity check here because we want to fail before
       // storing the JWT and give the client an HTTP error code (rather than
-      // a 201 result with an embeddedError result).
+      // a 201 result with an embeddedRecordError result).
       const claimIdsList = findAllLastClaimIdsAndHandleIds(payloadClaim)
       let claimIdDataList
       try {

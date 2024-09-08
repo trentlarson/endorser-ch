@@ -1,0 +1,20 @@
+
+-- see README.md in this directory for explanations
+
+-- This is to update some column sizes to be 44 (because they were 64).
+-- Note that it also throws away the previous nonceHashHex values.
+CREATE TABLE "jwt2" (
+  id TEXT PRIMARY KEY, issuedAt DATETIME, issuer CHARACTER(100), subject VARCHAR(100), claim TEXT,
+  claimContext VARCHAR(30), claimType VARCHAR(30), jwtEncoded TEXT,
+  claimCanonHash VARCHAR(44), handleId TEXT, hashNonce CHARACTER(24),
+  lastClaimId TEXT, nonceHash CHARACTER(44), nonceHashAllChain CHARACTER(44), nonceHashIssuerChain CHARACTER(44)
+);
+INSERT INTO jwt2 SELECT
+  id, issuedAt, issuer, subject, claim,
+  claimContext, claimType, jwtEncoded,
+  claimCanonHashBase64 as claimCanonHash, handleId, null as hashNonce,
+  lastClaimId, null as nonceHash, null as nonceHashAllChain, null as nonceHashIssuerChain FROM jwt;
+DROP TABLE jwt;
+ALTER TABLE jwt2 RENAME TO jwt;
+
+ALTER TABLE confirmation RENAME COLUMN origClaimCanonHashBase64 TO origClaimCanonHash;
