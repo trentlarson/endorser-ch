@@ -774,7 +774,9 @@ describe('1 - Claim', () => {
     .then(r => {
       expect(r.body)
       .that.has.a.property('data')
-      .that.has.a.property('count').that.equals(1)
+      const data = r.body.data
+      expect(data).that.has.a.property('count').that.equals(1)
+      expect(data).that.has.a.property('lastNoncedHashAllChain').that.is.not.empty
     })
   )
 
@@ -1942,4 +1944,18 @@ describe('1 - Transitive Connections', () => {
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
+})
+
+describe('1 - Update hashes again', () => {
+  it('should set the hashes in the chain', () =>
+    request(Server)
+    .post('/api/util/updateHashChain')
+    .then(r => {
+      expect(r.body)
+      .that.has.a.property('data')
+      const data = r.body.data
+      expect(data).that.has.a.property('count').that.equals(28)
+      expect(data).that.has.a.property('lastNoncedHashAllChain').that.is.not.empty
+    })
+  )
 })

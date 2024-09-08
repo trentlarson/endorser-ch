@@ -160,13 +160,14 @@ class ClaimService {
     return dbService.jwtClaimsAndHashesUnmerkled()
       .then(hashAndClaimStrArray => {
         return dbService.jwtLastMerkleHash()
-          .then(hashHexArray => {
+          .then(async hashHexArray => {
             let seed = ""
             if (hashHexArray?.length > 0) {
               seed = hashHexArray[0].noncedHashAllChain
             }
             const updates = []
             let latestHashChain = seed
+            // note that this has to run sequentially due to the issuer chains
             for (let hashAndClaimStr of hashAndClaimStrArray) {
               const canon = canonicalize(JSON.parse(hashAndClaimStr.claim))
 
@@ -174,8 +175,8 @@ class ClaimService {
               const newGlobalHashChain = claimHashChain(latestHashChain, [canon])
 
               // compute the previous individual chain
-              const latestHashChainForIssuer =
-                dbService.jwtLastMerkleHashForIssuerBefore(hashAndClaimStr.issuer, hashAndClaimStr.id)?.nonceHashIssuerChain || ""
+              const latestHashChainForIssuerRecord = await dbService.jwtLastMerkleHashForIssuerBefore(hashAndClaimStr.issuer, hashAndClaimStr.id)
+              const latestHashChainForIssuer = latestHashChainForIssuerRecord?.nonceHashIssuerChain || ""
               const newHashChainForIssuer = claimHashChain(latestHashChainForIssuer, [canon])
 
               updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, newGlobalHashChain, newHashChainForIssuer))

@@ -1,3 +1,13 @@
+/**
+ This script will update the hashNonce, noncedHash, noncedHashAllChain, and noncedHashIssuerChain fields in the jwt table.
+
+ Run thus, from the endorser-ch directory:
+
+ cp sql-by-hand/V12.1__jwt_new_nonce_chains.js .
+ APP_DB_FILE=... node V12.1__jwt_new_nonce_chains.js
+
+ */
+
 const sqlite3 = require('sqlite3').verbose()
 const dbInfo = require('./conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)

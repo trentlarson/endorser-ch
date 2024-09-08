@@ -39,6 +39,6 @@ export default express
   .post('/updateHashChain',
         (req, res) =>
           ClaimService.merkleUnmerkled()
-          .then(r => res.status(201).json({data: {count:r.length, lastClaimCanonBase64:R.last(r)}}).end())
-          .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+          .then(r => res.status(201).json({data: {count:r.length, lastNoncedHashAllChain:R.last(r)}}).end())
+          .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   )
