@@ -4,7 +4,7 @@
 import chai from 'chai'
 import chaiAsPromised from "chai-as-promised"
 import chaiString from 'chai-string'
-//import crypto from 'crypto'
+import crypto from 'crypto'
 import { createJWT } from 'did-jwt'
 import request from 'supertest'
 import { DateTime } from 'luxon'
@@ -1904,49 +1904,53 @@ describe('1 - Visibility utils', () => {
 
 describe('1 - Transitive Connections', () => {
 
+  let prevConfirmClaimIdBy1
   it('should claim attendance for 1', () =>
      request(Server)
-     .post('/api/claim')
+     .post('/api/v2/claim')
      .send({"jwtEncoded": claimIIW2019aFor1By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('string')
+       expect(r.body.success.claimId).to.be.a('string')
+       prevConfirmClaimIdBy1 = r.body.success.claimId
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
   it('should claim attendance for 2', () =>
      request(Server)
-     .post('/api/claim')
+     .post('/api/v2/claim')
      .send({"jwtEncoded": claimIIW2019aFor2By2JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('string')
+       expect(r.body.success.claimId).to.be.a('string')
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
+  let prevConfirmClaimIdByAnyone
   it('should confirm attendance for 1 by 0', () =>
      request(Server)
-     .post('/api/claim')
+     .post('/api/v2/claim')
      .send({"jwtEncoded": confirmIIW2019aFor1By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('string')
+       expect(r.body.success.claimId).to.be.a('string')
+       prevConfirmClaimIdByAnyone = r.body.success.claimId
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
+  let latestClaimId, latestHashNonce
   it('should confirm attendance for 2 by 1', () =>
      request(Server)
-     .post('/api/claim')
+     .post('/api/v2/claim')
      .send({"jwtEncoded": confirmIIW2019aFor2By1JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body).to.be.a('string')
+       expect(r.body.success.claimId).to.be.a('string')
+       latestClaimId = r.body.success.claimId
+       latestHashNonce = r.body.success.hashNonce
        expect(r.status).that.equals(201)
      })).timeout(5000)
 
-})
-
-describe('1 - Update hashes again', () => {
   it('should set the hashes in the chain', () =>
     request(Server)
     .post('/api/util/updateHashChain')
@@ -1958,4 +1962,82 @@ describe('1 - Update hashes again', () => {
       expect(data).that.has.a.property('lastNoncedHashAllChain').that.is.not.empty
     })
   )
+
+  it('should validate the nonced hash chains', async () => {
+    let twoPrevNoncedHashAllChain, twoPrevNoncedHashIssuerChain,
+      latestNoncedHashAllChain, latestNoncedHashIssuerChain
+
+    await request(Server)
+    .get('/api/claim/full/' + prevConfirmClaimIdBy1)
+    .set('Authorization', 'Bearer ' + pushTokens[0])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      twoPrevNoncedHashIssuerChain = r.body.noncedHashIssuerChain
+      expect(r.status).that.equals(200)
+    })
+
+    await request(Server)
+    .get('/api/claim/full/' + prevConfirmClaimIdByAnyone)
+    .set('Authorization', 'Bearer ' + pushTokens[0])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      twoPrevNoncedHashAllChain = r.body.noncedHashAllChain
+      expect(r.status).that.equals(200)
+    })
+
+    await request(Server)
+    .get('/api/claim/full/' + latestClaimId)
+    .set('Authorization', 'Bearer ' + pushTokens[1])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      latestNoncedHashAllChain = r.body.noncedHashAllChain
+      latestNoncedHashIssuerChain = r.body.noncedHashIssuerChain
+      expect(r.status).that.equals(200)
+    })
+
+    const latestClaim = confirmIIW2019aFor2By1JwtObj.claim
+    const latestIssuerDid = creds[1].did
+    // get the issued time from the JWT
+    const latestJwt =
+      confirmIIW2019aFor2By1JwtEnc.substring(confirmIIW2019aFor2By1JwtEnc.indexOf('.') + 1, confirmIIW2019aFor2By1JwtEnc.lastIndexOf('.'))
+    const latestPayload = JSON.parse(Buffer.from(latestJwt, 'base64').toString())
+    const latestIat = latestPayload.iat
+
+    const nonceAndClaimEtc = {
+      nonce: latestHashNonce,
+      claimStr: JSON.stringify(latestClaim),
+      issuedAt: latestIat,
+      issuerDid: latestIssuerDid,
+    }
+
+    /**
+     *
+
+    // Here is the manual calculation
+    const didNonceHashed1 = "did:none:noncedhashed:" + crypto.createHash('sha256').update(creds[1].did + latestHashNonce).digest('hex')
+    const didNonceHashed2 = "did:none:noncedhashed:" + crypto.createHash('sha256').update(creds[2].did + latestHashNonce).digest('hex')
+    console.log('didNonceHashed1', didNonceHashed1)
+    console.log('didNonceHashed2', didNonceHashed2)
+    const latestClaimWithNonces = R.clone(latestClaim)
+    latestClaimWithNonces.object = [
+      { ...latestClaimWithNonces.object[0], agent: { identifier: didNonceHashed2 } },
+    ]
+    console.log('latestClaimWithNonces', latestClaimWithNonces, latestClaimWithNonces.object[0].agent.identifier)
+    const claimNonced = canonicalize({"claim":latestClaimWithNonces,"issuedAt":latestIat,"issuerDid":didNonceHashed1})
+    console.log('claimNonced', claimNonced)
+    const claimNoncedHashed = crypto.createHash('sha256').update(claimNonced).digest('base64url')
+    console.log('claimNoncedHashed', claimNoncedHashed)
+    const latestNoncedHashAllChainCalculated = crypto.createHash('sha256').update(twoPrevNoncedHashAllChain + claimNoncedHashed).digest('base64url')
+    console.log('latestNoncedHashAllChainCalculated', latestNoncedHashAllChainCalculated)
+
+     *
+     */
+
+    const currentAllChain = nonceHashChain(twoPrevNoncedHashAllChain, [nonceAndClaimEtc])
+    expect(currentAllChain).to.equal(latestNoncedHashAllChain)
+    const currentIssuerChain = nonceHashChain(twoPrevNoncedHashIssuerChain, [nonceAndClaimEtc])
+    expect(currentIssuerChain).to.equal(latestNoncedHashIssuerChain)
+
+  })
+
 })

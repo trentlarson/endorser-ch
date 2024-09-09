@@ -1190,8 +1190,9 @@ class EndorserDatabase {
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
             handleId: row.handleId, lastClaimId: row.lastClaimId,
             jwtEncoded: row.jwtEncoded, // jwtEncoded won't be returned in results to the user unless visible
-            claimCanonHash: row.claimCanonHash, noncedHashAllChain: row.noncedHashAllChain,
+            claimCanonHash: row.claimCanonHash,
             hashNonce: row.hashNonce, noncedHash: row.noncedHash, // hashNonce won't be returned in results to the user unless visible
+            noncedHashAllChain: row.noncedHashAllChain, noncedHashIssuerChain: row.noncedHashIssuerChain,
           }
         }, function(err, num) {
           if (err) {
@@ -1452,7 +1453,6 @@ class EndorserDatabase {
 
   jwtLastMerkleHash() {
     return new Promise((resolve, reject) => {
-      var data = []
       db.get(
         "SELECT noncedHashAllChain FROM jwt WHERE noncedHashAllChain is not null ORDER BY id DESC LIMIT 1",
         [],
@@ -1473,7 +1473,6 @@ class EndorserDatabase {
 
   jwtLastMerkleHashForIssuerBefore(issuerDid, jwtId) {
     return new Promise((resolve, reject) => {
-      var data = []
       db.get(
         "SELECT noncedHashIssuerChain FROM jwt WHERE issuer = ? and id < ? ORDER BY id DESC LIMIT 1",
         [issuerDid, jwtId],
@@ -1497,10 +1496,10 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each(
-        "SELECT id, claim, issuer, claimCanonHash, hashNonce, noncedHash FROM jwt WHERE noncedHashAllChain is null ORDER BY id",
+        "SELECT id, claim, issuer, issuedAt, claimCanonHash, hashNonce, noncedHash FROM jwt WHERE noncedHashAllChain is null ORDER BY id",
         [],
         function(err, row) {
-          data.push({ id: row.id, claim: row.claim, issuer: row.issuer })
+          data.push({ id: row.id, claim: row.claim, issuer: row.issuer, issuedAt: isoAndZonify(row.issuedAt), hashNonce: row.hashNonce })
         }, function(err, num) {
           if (err) { reject(err) } else { resolve(data) }
         });

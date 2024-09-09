@@ -68,7 +68,7 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       } else {
         const oneResult = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, item)
 
-        // the nonce is only directly accessible by participants
+        // the nonce is only directly accessible by participants and those allowed
         if (oneResult && !allowedDids.includes(item?.issuer || item?.issuerDid)) {
           delete oneResult["hashNonce"]
         }
@@ -93,7 +93,7 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       result = input
     } else {
       result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
-      // the nonce is only directly accessible by participants
+      // the nonce is only directly accessible by participants and those allowed
       if (result && !allowedDids.includes(input?.issuer || input?.issuerDid)) {
         delete result["hashNonce"]
       }

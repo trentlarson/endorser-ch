@@ -26,19 +26,27 @@ class ClaimController {
             { error: { message: "No claim found with ID " + req.params.id } }
           )
         }
+        // the issuer can see everything, so just let the claim ones be undefined (and thus R.equal)
+        if (res.locals.tokenIssuer === (result.issuer || result.issuerDid)) {
+            resolve({
+              fullJwt: result,
+              scrubbedJwt: result,
+            })
+        }
         hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, [])
           .then(scrubbed => {
+            // the claim string needs to be examined for embedded DIDs
             let resultClaim = JSON.parse(result.claim)
             hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, resultClaim, [])
-              .then(scrubbedClaim => {
-                resolve({
-                  fullJwt: result,
-                  fullClaim: resultClaim,
-                  scrubbedJwt: R.omit(['publicUrls'], scrubbed),
-                  scrubbedClaim: R.omit(['publicUrls'], scrubbedClaim)
-                })
+            .then(scrubbedClaim => {
+              resolve({
+                fullJwt: result,
+                fullClaim: resultClaim,
+                scrubbedJwt: R.omit(['publicUrls'], scrubbed),
+                scrubbedClaim: R.omit(['publicUrls'], scrubbedClaim)
               })
-              .catch(err => reject(err))
+            })
+            .catch(err => reject(err))
           })
           .catch(err => reject(err))
       }))
@@ -49,7 +57,7 @@ class ClaimController {
            ) {
           res.json(r.fullJwt);
         } else {
-          res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.tokenIssuer}.  Use a different endpoint to get scrubbed data.`).end();
+          res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.tokenIssuer}. Use a different endpoint to get scrubbed data.`).end();
         }
       })
       .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
@@ -203,7 +211,7 @@ export default express
  * Add a Claim JWT and insert claims into their own tables
  * @deprecated use the v2 version (or you'll miss info like the nonce)
  *
- * @group claims v1 deprecated - Claim Entry (without complete feedback)
+ * @group claims v1 deprecated - Claim Entry (without adequate feedback)
  * @route POST /api/claim
  * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 - internal ID of Claim JWT

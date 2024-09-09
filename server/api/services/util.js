@@ -255,7 +255,10 @@ function hashPreviousAndNext(prev, next) {
   return result
 }
 
-// return hex of the latest merkle root of nonceHash values
+/**
+ * @see hashedClaimWithHashedDids for the nonceAndClaimStrEtc format
+ * @return hex of the latest merkle root of nonceHash values
+ */
 function nonceHashChain(seed, nonceAndClaimStrEtcList) {
   return R.reduce(
     (prev, nonceAndClaimStrEtc) =>

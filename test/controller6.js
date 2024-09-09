@@ -1339,7 +1339,7 @@ describe('6 - Check offer totals', () => {
     const claimJwtEnc = await credentials[4].createVerification(credObj)
 
     return request(Server)
-      .post('/api/claim')
+      .post('/api/v2/claim')
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
@@ -1347,7 +1347,7 @@ describe('6 - Check offer totals', () => {
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
-        expect(r.body).to.be.a('string')
+        expect(r.body.success.claimId).to.be.a('string')
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)

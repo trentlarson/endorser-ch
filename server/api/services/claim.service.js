@@ -9,12 +9,12 @@ import {dbService} from './endorser.db.service'
 import {
   allDidsInside,
   calcBbox,
-  claimHashChain,
   ERROR_CODES,
   findAllLastClaimIdsAndHandleIds,
   globalFromInternalIdentifier,
   isGlobalEndorserHandleId,
   isGlobalUri,
+  nonceHashChain,
 } from './util';
 import {addCanSee} from './network-cache.service'
 import {decodeAndVerifyJwt} from "./vc";
@@ -169,15 +169,20 @@ class ClaimService {
             let latestHashChain = seed
             // note that this has to run sequentially due to the issuer chains
             for (let hashAndClaimStr of hashAndClaimStrArray) {
-              const canon = canonicalize(JSON.parse(hashAndClaimStr.claim))
+              const nonceAndClaimStrEtc = {
+                nonce: hashAndClaimStr.hashNonce,
+                claimStr: hashAndClaimStr.claim,
+                issuerDid: hashAndClaimStr.issuer,
+                issuedAt: new Date(hashAndClaimStr.issuedAt).getTime() / 1000,
+              }
 
               // compute the new global hash
-              const newGlobalHashChain = claimHashChain(latestHashChain, [canon])
+              const newGlobalHashChain = nonceHashChain(latestHashChain, [nonceAndClaimStrEtc])
 
               // compute the previous individual chain
               const latestHashChainForIssuerRecord = await dbService.jwtLastMerkleHashForIssuerBefore(hashAndClaimStr.issuer, hashAndClaimStr.id)
-              const latestHashChainForIssuer = latestHashChainForIssuerRecord?.nonceHashIssuerChain || ""
-              const newHashChainForIssuer = claimHashChain(latestHashChainForIssuer, [canon])
+              const latestHashChainForIssuer = latestHashChainForIssuerRecord?.noncedHashIssuerChain || ""
+              const newHashChainForIssuer = nonceHashChain(latestHashChainForIssuer, [nonceAndClaimStrEtc])
 
               updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, newGlobalHashChain, newHashChainForIssuer))
 
