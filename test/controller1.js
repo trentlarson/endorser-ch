@@ -1225,13 +1225,10 @@ describe('1 - Action', () => {
 
   it('should get complaint about a missing JWT', () =>
      request(Server)
-     .get('/api/report/canSeeMe')
+     .post('/api/report/canSeeMe')
      .expect('Content-Type', /json/)
      .then(r => {
-       expect(r.body)
-         .that.equals("Missing Bearer JWT In Authorization header")
-       expect(400)
-       expect(r.status).that.equals(401)
+       expect(r.body.success).that.equals(false)
      })
   ).timeout(3000)
 
@@ -1800,6 +1797,16 @@ describe('1 - Visibility utils', () => {
      .then(r => {
        expect(r.status).that.equals(200)
      }))
+
+  it('unregistered #16 should set visible to unregistered #17', () =>
+    request(Server)
+    .post('/api/report/canSeeMe')
+    .send({ "did": creds[17].did })
+    .set('Authorization', 'Bearer ' + pushTokens[16])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(200)
+    }))
 
   it('#5 should see #4', () =>
      request(Server)

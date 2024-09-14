@@ -2596,8 +2596,8 @@ class EndorserDatabase {
    **/
   networkInsert(subject, object, url) {
     return new Promise((resolve, reject) => {
-      var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?, ?)")
-      db.run(stmt, [subject, object, url], function(err) {
+      var stmt = ("INSERT OR IGNORE INTO network VALUES (?, ?, ?, ?)")
+      db.run(stmt, [subject, object, url, new Date().toISOString()], function(err) {
         if (err) {
           // This SQLite check is no longer necessary due to "OR IGNORE". Nuke it when you've tested.
           if (err.errno === 19) {

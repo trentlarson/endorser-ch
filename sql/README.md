@@ -162,6 +162,7 @@ CREATE TABLE network (
     subject VARCHAR(100), -- DID of the entity who can see/reach the object
     object VARCHAR(100), -- DID of the entity who can be seen/reached by the subject
     url TEXT,
+    createdAt DATETIME, -- new in 2024
     CONSTRAINT both_unique UNIQUE (subject, object)
 );
 

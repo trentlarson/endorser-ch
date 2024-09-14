@@ -64,26 +64,13 @@ function requesterInfo(req, res, next) {
   } else {
     jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
   }
-  if (!jwt || jwt == "undefined") { // maybe I can eliminate the "undefined" case from uport-demo
-    // Is every endpoint OK to access now that we're hiding DIDs?
-    if (req.originalUrl.startsWith("/api/action")
-        || req.originalUrl.startsWith("/api/claim") // POST checks for jwtEncoded, GET hides all DIDs
-        || req.originalUrl.startsWith("/api/event")
-        || req.originalUrl.startsWith("/api/plan")
-        || req.originalUrl.startsWith("/api/project")
-        || req.originalUrl.startsWith("/api/report/actionClaimsAndConfirmationsSince?")
-        || req.originalUrl.startsWith("/api/report/tenureClaimsAndConfirmationsAtPoint?")
-        || req.originalUrl.startsWith("/api/report/issuersWhoClaimedOrConfirmed?")
-        || req.originalUrl.startsWith("/api/reportAll/claims?")
-        || req.originalUrl.startsWith("/api/tenure")
-        || req.originalUrl.startsWith("/api/util")
-        || req.originalUrl.startsWith("/api/v2/claim")
-        || req.originalUrl.startsWith("/api/v2/report")
-       ) {
-      // these endcpoints are OK to hit without a token... so won't even set tokenIssuer
-      next()
-    } else {
+  if (!jwt || jwt == "undefined") { // maybe we can eliminate the "undefined" case from uport-demo
+    if (req.originalUrl.startsWith("/api/userUtil")) {
+      // refactor to handle this endpoint in the router like all the rest
       res.status(401).json('Missing Bearer JWT In Authorization header').end()
+    } else {
+      // most endpoints are OK to hit without a token so won't even set tokenIssuer
+      next()
     }
   } else {
     decodeAndVerifyJwt(jwt)

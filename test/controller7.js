@@ -224,6 +224,19 @@ describe('7 - Selected Contact Correlation', () => {
       .catch(err => Promise.reject(err))
   }).timeout(3000)
 
+  it('anonymous user sending contact hashes fails', async () => {
+    return request(Server)
+      .post(
+        '/api/userUtil/cacheContactList?counterparty='
+        + encodeURIComponent(creds[2].did)
+      )
+      .send({ contactHashes: user1ContactsHashed })
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(401)
+      }).catch(err => Promise.reject(err))
+  }).timeout(3000)
+
   it('user 1 sends contact hashes', async () => {
     return request(Server)
       .post(
@@ -287,6 +300,15 @@ describe('7 - Selected Contact Correlation', () => {
         expect(r.body).to.deep.equal({data: RESULT_NO_MATCH})
       })
       .catch(err => Promise.reject(err))
+  }).timeout(3000)
+
+  it('anonymous user fails to clear caches', async () => {
+    const endpoint = '/api/userUtil/clearContactCaches?counterparty=' + encodeURIComponent(creds[2].did)
+    return request(Server).delete(endpoint)
+    .then(r => {
+      expect(r.status).that.equals(401)
+    })
+    .catch(err => Promise.reject(err))
   }).timeout(3000)
 
   it('user 1 asks to clear caches for round 2', async () => {

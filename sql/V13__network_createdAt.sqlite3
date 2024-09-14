@@ -1,0 +1,4 @@
+
+alter table network add column createdAt datetime;
+
+update network set createdAt = datetime();
