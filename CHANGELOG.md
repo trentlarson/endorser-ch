@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [?]
+### Changed
+- Added a date to the network table.
+### Changed in DB or environment
+- SQL script 13
+
+
 ## [4.0.2]
 ### Changed
 - Merkle tree is now recreated to include nonces.
