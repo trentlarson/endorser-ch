@@ -4,6 +4,7 @@ import {
   clearContactCaches,
   getContactMatch,
 } from "../services/contact-correlation.service";
+import { dbService } from '../services/endorser.db.service'
 
 export default express
   .Router()
@@ -44,7 +45,12 @@ export default express
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post(
     '/cacheContactList',
-    (req, res) => {
+    async (req, res) => {
+      const limits = await dbService.registrationByDid(res.locals.tokenIssuer)
+      if (!limits) {
+        res.status(400).json({ error: { message: 'You are not registered for this service.' } }).end()
+        return
+      }
       const counterpartyId = req.query.counterparty || req.body.counterparty
       const result =
         cacheContactList(
@@ -80,7 +86,12 @@ export default express
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get(
     '/getContactMatch',
-    (req, res) => {
+    async (req, res) => {
+      const limits = await dbService.registrationByDid(res.locals.tokenIssuer)
+      if (!limits) {
+        res.status(400).json({ error: { message: 'You are not registered for this service.' } }).end()
+        return
+      }
       const result = getContactMatch(res.locals.tokenIssuer, req.query.counterparty)
       res.status(200).json(result).end()
     }
@@ -107,7 +118,12 @@ export default express
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .delete(
     '/clearContactCaches',
-    (req, res) => {
+    async (req, res) => {
+      const limits = await dbService.registrationByDid(res.locals.tokenIssuer)
+      if (!limits) {
+        res.status(400).json({ error: { message: 'You are not registered for this service.' } }).end()
+        return
+      }
       const counterpartyId = req.query.counterparty || req.body.counterparty
       const result = clearContactCaches(res.locals.tokenIssuer, counterpartyId)
       res.status(200).json(result).end()
