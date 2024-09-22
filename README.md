@@ -89,6 +89,11 @@ docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database
 
 * After deploying, increment the version & add "-beta" to the package.json and `npm install` and commit.
 
+Other environment variables:
+
+* `APP_DB_FILE` is the path to the SQLite file. Default: `../endorser-ch-$NODE_ENV.sqlite3`
+
+* `NOSTR_PRIVATE_KEY_NSEC` is the nsec-formatted private key to relay events to nostr (eg. for Trustroots).
 
 When running on another domain (other than endorser.ch):
 
@@ -210,6 +215,7 @@ It is typically a ULID, the short `id` reference to another internal claim that 
 * A `jwtId` is the `id` of the JWT that was used to submit the claim, found in the tables that cache the claim info
 (eg. in `plan_claim` and other `_claim` tables).
 
+See also: https://endorser.ch/doc/html/server.html
 
 
 

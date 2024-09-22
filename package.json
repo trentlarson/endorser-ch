@@ -20,6 +20,7 @@
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"
   },
   "dependencies": {
+    "@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.32.0",
     "@peculiar/asn1-ecc": "^2.3.8",
     "@peculiar/asn1-schema": "^2.3.8",
     "body-parser": "^1.18.2",
@@ -36,6 +37,7 @@
     "node-cache": "^5.1.2",
     "node-flywaydb": "^3.0.7",
     "pino": "^5.10.2",
+    "pluscodes": "^2.6.0",
     "ramda": "^0.26.1",
     "sqlite3": "^5.1.1",
     "ulidx": "^0.3.0"
