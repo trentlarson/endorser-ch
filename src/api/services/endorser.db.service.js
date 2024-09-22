@@ -6,7 +6,7 @@ const ulidx = require('ulidx')
 const ulid = ulidx.monotonicFactory()
 
 const logger = require('../../common/logger')
-const dbInfo = require('../../../conf/flyway.js')
+const dbInfo = require('../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
 const util = require('./util')
 

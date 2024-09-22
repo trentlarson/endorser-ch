@@ -8,8 +8,8 @@ import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
-import Server from '../server'
-import { dbService } from '../server/api/services/endorser.db.service'
+import Server from '../dist'
+import { dbService } from '../dist/api/services/endorser.db.service'
 import testUtil from './util'
 
 chai.use(chaiAsPromised);

@@ -6,8 +6,8 @@ import request from 'supertest'
 import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
-import Server from '../server'
-import { dbService } from '../server/api/services/endorser.db.service'
+import Server from '../dist'
+import { dbService } from '../dist/api/services/endorser.db.service'
 import testUtil from './util'
 
 const expect = chai.expect

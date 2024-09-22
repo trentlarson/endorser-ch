@@ -7,13 +7,13 @@ import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
-import Server from '../server'
+import Server from '../dist'
 import {
   findAllLastClaimIdsAndHandleIds,
   HIDDEN_TEXT,
   globalId,
   localFromGlobalEndorserIdentifier,
-} from '../server/api/services/util';
+} from '../dist/api/services/util';
 import testUtil, {INITIAL_DESCRIPTION} from './util'
 
 const expect = chai.expect

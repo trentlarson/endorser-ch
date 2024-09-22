@@ -2,7 +2,7 @@
 // Set Up Tests
 
 import { DateTime } from "luxon"
-import { dbService } from '../server/api/services/endorser.db.service'
+import { dbService } from '../dist/api/services/endorser.db.service'
 import testUtil from './util'
 
 describe('0 - Setup', () => {

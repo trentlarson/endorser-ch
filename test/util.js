@@ -4,8 +4,8 @@
    Some of this is copied in the endorser-auth package (eg. test.js).
 **/
 
-import R, {any} from 'ramda'
-import { ERROR_CODES, HIDDEN_TEXT, isDid } from '../server/api/services/util'
+import R from 'ramda'
+import { ERROR_CODES, HIDDEN_TEXT, isDid } from '../dist/api/services/util'
 
 const { Credentials } = require('uport-credentials')
 

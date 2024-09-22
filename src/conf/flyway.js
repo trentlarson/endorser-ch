@@ -14,6 +14,7 @@ module.exports = {
     url: 'jdbc:sqlite:' + FILE_LOC,
     schemas: 'main',
     locations: 'filesystem:./sql',
+    reportFilename: 'flyway-report.html',
     sqlMigrationSuffixes: '.sqlite3',
     user: process.env.DBUSER,
     password: process.env.DBPASS

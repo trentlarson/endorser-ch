@@ -16,9 +16,9 @@ import {
   RESULT_NEED_THIS_USER_DATA,
   RESULT_ONE_CLEARED,
 }
-  from "../server/api/services/contact-correlation.service"
-import Server from '../server'
-import { HIDDEN_TEXT } from '../server/api/services/util';
+  from "../dist/api/services/contact-correlation.service"
+import Server from '../dist'
+import { HIDDEN_TEXT } from '../dist/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect

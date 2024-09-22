@@ -10,9 +10,9 @@ import request from 'supertest'
 import { DateTime } from 'luxon'
 import R from 'ramda'
 
-import Server from '../server'
-import util, { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, nonceHashChain } from '../server/api/services/util';
-import { hideDidsAndAddLinksToNetworkSub } from '../server/api/services/util-higher';
+import Server from '../dist'
+import util, { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, nonceHashChain } from '../dist/api/services/util';
+import { hideDidsAndAddLinksToNetworkSub } from '../dist/api/services/util-higher';
 import testUtil from './util'
 import canonicalize from "canonicalize";
 import base64url from "base64url";

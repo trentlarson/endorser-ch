@@ -7,8 +7,8 @@ import { DateTime } from 'luxon'
 import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
-import Server from '../server'
-import { HIDDEN_TEXT } from '../server/api/services/util';
+import Server from '../dist'
+import { HIDDEN_TEXT } from '../dist/api/services/util';
 import testUtil from './util'
 
 const expect = chai.expect

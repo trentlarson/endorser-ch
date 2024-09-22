@@ -108,7 +108,7 @@ function requesterInfo(req, res, next) {
   }
 }
 
-export default class ExpressServer {
+export default class Server {
   constructor() {
     const root = path.normalize(`${__dirname}/../..`);
     app.set('appPath', `${root}client`);
