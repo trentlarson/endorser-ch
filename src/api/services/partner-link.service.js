@@ -24,9 +24,9 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, userNostrPubKeyH
   if (!userNostrPubKeyHex) {
       return { clientError: { message: "No Trustroots public key was provided." } }
   }
-  const jwtLinkInfo = await dbService.jwtAndPartnerLinkForCode(jwtId)
+  const jwtLinkInfo = await dbService.jwtAndPartnerLinkForCode(jwtId, linkCode)
   if (!jwtLinkInfo) {
-    return { clientError: { message: "No JWT exists with ID " + jwtId } }
+    return { clientError: { message: "No JWT exists for " + linkCode + " with ID " + jwtId } }
   } else if (jwtLinkInfo.issuer !== issuer) {
     return { clientError: { message: "You are not the issuer of JWT " + jwtId } }
   } else if (jwtLinkInfo.linkCode) {
@@ -75,20 +75,29 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, userNostrPubKeyH
       const relay = await Relay.connect(DEFAULT_RELAY)
       const serverPubKeyHex = getPublicKey(privateKeyBytes)
       relay.subscribe(
-        [ { kinds: [30398], authors: [serverPubKeyHex] } ],
+        [ { ids: [signedEvent.id] } ],
         { onevent(event) { l.info('Event recognized by relay:', event) } }
       )
+      // remove after testing
+      // relay.subscribe(
+      //   [ { kinds: [30398], authors: [serverPubKeyHex] } ],
+      //   { onevent(event) { l.info('Server events recognized by relay:', event) } }
+      // )
       await relay.publish(signedEvent)
-      const partnerLinkData = JSON.stringify({ id: signedEvent.id })
-      await dbService.partnerLinkInsert(jwtId, linkCode, partnerLinkData)
+      const partnerLinkData = JSON.stringify({})
+      await dbService.partnerLinkInsert(
+        { jwtId, linkCode, externalId: signedEvent.id, data: partnerLinkData }
+      )
       setTimeout(
         () => { relay.close(); l.info("Closed relay.") },
-        3000
-      ) // wait to see if we get an onevent from the subscription
+        // wait so that we record an onevent from the subscription
+        3000,
+      )
 
       return { signedEvent }
     } catch (e) {
-      return { error: "Error creating event: " + e }
+      l.error("Error creating " + linkCode + " event for JWT " + jwtId + ": " + e)
+      return { error: "Error creating " + linkCode + " event for JWT " + jwtId + ": " + e }
     }
   } else {
     return { clientError: { message: "Unknown link code '" + linkCode + "'" } }

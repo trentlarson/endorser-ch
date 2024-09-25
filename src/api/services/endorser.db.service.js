@@ -1889,10 +1889,12 @@ class EndorserDatabase {
 
   partnerLinkInsert(entry) {
     return new Promise((resolve, reject) => {
-      const stmt = "INSERT INTO partner_link (jwtId, linkCode, createdAt, data) VALUES (?, ?, datetime(), ?)"
+      const stmt =
+        "INSERT INTO partner_link (jwtId, linkCode, externalId, createdAt, data)"
+        + " VALUES (?, ?, ?, dateTime(), ?)"
       db.run(
         stmt,
-        [entry.jwtId, entry.linkCode, entry.data],
+        [entry.jwtId, entry.linkCode, entry.externalId, entry.data],
         function(err) {
           if (err) {
             reject(err)
@@ -1908,6 +1910,7 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       db.get(
         "SELECT * FROM jwt"
+        // outer join w/ link code inside so that we get the JWT values but blank partner_link values
         + " LEFT OUTER JOIN partner_link ON partner_link.jwtId = jwt.id and linkCode = ?"
         + " WHERE jwt.id = ?",
         [linkCode, jwtId],

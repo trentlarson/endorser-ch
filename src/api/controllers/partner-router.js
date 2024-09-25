@@ -34,6 +34,7 @@ export default express
     if (result.clientError) {
       res.status(400).json({ error: result.clientError }).end()
     } else if (result.error) {
+      // this is a server error, not a client error; we assume something went to the logs inside the method call
       res.status(500).json({ error: result }).end()
     } else {
       res.status(201).json({ success: result }).end()
