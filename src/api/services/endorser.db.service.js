@@ -1011,9 +1011,9 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       let data = [], rowErr
 
-      const sql = 'select providerId as identifier, linkConfirmed from give_provider'
+      const sql = 'SELECT providerId AS identifier, linkConfirmed FROM give_provider'
           // for extra detail: + ' left join jwt on jwt.handleId = give_provider.providerId'
-          + ' where give_provider.giveHandleId = ?'
+          + ' WHERE give_provider.giveHandleId = ?'
 
       db.each(
         sql,
@@ -1434,7 +1434,16 @@ class EndorserDatabase {
         "SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, lastClaimId, claimCanonHash, noncedHashAllChain"
         + " FROM jwt WHERE handleId = ? ORDER BY id DESC LIMIT 1",
         [identifier],
-        function(err, row) { if (err) { reject(err) } else { resolve(row) } })
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.issuedAt = isoAndZonify(row.issuedAt)
+            }
+            resolve(row)
+          }
+        })
     })
   }
 
@@ -1815,7 +1824,17 @@ class EndorserDatabase {
       db.get(
         "SELECT rowid, * FROM org_role_claim WHERE orgName = ? AND roleName = ?" + startDateSql + endDateSql + " AND memberDid = ?",
         [orgName, roleName, memberDid],
-        function(err, row) { if (err) { reject(err) } else { resolve(row) } })
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.startDate = isoAndZonify(row.startDate)
+              row.endDate = isoAndZonify(row.endDate)
+            }
+            resolve(row)
+          }
+        })
     })
   }
 
@@ -1843,7 +1862,7 @@ class EndorserDatabase {
           let both = {
             orgRole: {
               id: row.rid, memberDid: row.memberDid, orgName: row.orgName, roleName: row.roleName,
-              startDate: row.startDate, endDate: row.endDate
+              startDate: isoAndZonify(row.startDate), endDate: isoAndZonify(row.endDate)
             },
             confirmation: confirmation,
           }
@@ -1855,6 +1874,56 @@ class EndorserDatabase {
     })
   }
 
+
+
+
+
+
+
+
+
+
+  /****************************************************************
+   * Partner
+   **/
+
+  partnerLinkInsert(entry) {
+    return new Promise((resolve, reject) => {
+      const stmt = "INSERT INTO partner_link (jwtId, linkCode, createdAt, data) VALUES (?, ?, datetime(), ?)"
+      db.run(
+        stmt,
+        [entry.jwtId, entry.linkCode, entry.data],
+        function(err) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this.lastID)
+          }
+        }
+      )
+    })
+  }
+
+  jwtAndPartnerLinkForCode(jwtId, linkCode) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM jwt"
+        + " LEFT OUTER JOIN partner_link ON partner_link.jwtId = jwt.id and linkCode = ?"
+        + " WHERE jwt.id = ?",
+        [linkCode, jwtId],
+        function (err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.issuedAt = isoAndZonify(row.issuedAt)
+              row.createdAt = isoAndZonify(row.createdAt)
+            }
+            resolve(row)
+          }
+        })
+    })
+  }
 
 
 

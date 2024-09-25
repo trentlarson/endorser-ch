@@ -1,5 +1,6 @@
 import claimV2Router from '../api/controllers/claim-router';
 import claimRouter from '../api/controllers/claim-v1-router';
+import partnerRouter from  '../api/controllers/partner-router';
 import reportV2Router from '../api/controllers/report-router';
 import reportRouter from '../api/controllers/report-v1-router';
 
@@ -15,6 +16,7 @@ import utilUserRouter from '../api/controllers/util-user-router';
 export default function routes(app) {
   app.use('/api/v2/claim', claimV2Router)
   app.use('/api/claim', claimRouter)
+  app.use('/api/partner', partnerRouter)
   app.use('/api/v2/report', reportV2Router)
   app.use('/api/reportAll', reportV2Router) // deprecate after mobile is updated
   app.use('/api/report', reportRouter)

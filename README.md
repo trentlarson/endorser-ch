@@ -87,6 +87,8 @@ docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database
 
 * Before deploying, ask yourself: do you need to run a migration?
 
+* See .env.local for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
+
 * After deploying, increment the version & add "-beta" to the package.json and `npm install` and commit.
 
 
@@ -210,6 +212,7 @@ It is typically a ULID, the short `id` reference to another internal claim that 
 * A `jwtId` is the `id` of the JWT that was used to submit the claim, found in the tables that cache the claim info
 (eg. in `plan_claim` and other `_claim` tables).
 
+See also: https://endorser.ch/doc/html/server.html
 
 
 

@@ -194,6 +194,24 @@ function inputContainsDid(input, did) {
   }
 }
 
+// insert a space before any capital letters except the initial letter
+// (and capitalize initial letter, just in case)
+function capitalizeAndInsertSpacesBeforeCaps(text) {
+  return !text
+    ? ""
+    : text[0].toUpperCase() + text.substr(1).replace(/([A-Z])/g, " $1");
+};
+
+function basicClaimDescription(claim) {
+  let typeName = capitalizeAndInsertSpacesBeforeCaps(claim['@type'])
+  if (typeName.endsWith(" Action")) {
+    typeName = typeName.substring(0, typeName.length - " Action".length)
+  }
+  const name = claim.name ? " '" + claim.name + "'" : ""
+  const descr = claim.description ? " - " + claim.description : ""
+  return typeName + name + descr;
+}
+
 function hashNonceAndDid(nonce, did) {
   const hash = crypto.createHash('sha256')
   hash.update(did + nonce)
@@ -315,4 +333,4 @@ function findAllLastClaimIdsAndHandleIds(clause) {
   return clauseIdsAndHandleIds
 }
 
-module.exports = { allDidsInside, allEmbeddedRecordErrorsInside, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT, inputContainsDid, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+module.exports = { allDidsInside, allEmbeddedRecordErrorsInside, basicClaimDescription, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT, inputContainsDid, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }

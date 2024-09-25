@@ -228,6 +228,13 @@ CREATE TABLE org_role_claim (
     memberDid TEXT -- DID of the member with the role; did:ethr are 52 chars
 );
 
+CREATE TABLE partner_link (
+    jwtId VARCHAR(26),
+    createdAt DATETIME,
+    linkCode VARCHAR(32), -- eg. 'NOSTR-EVENT-TRUSTROOTS', 'ATTEST.SH'
+    data TEXT -- JSON data, where format depends on linkCode
+);
+
 -- cache table, for quick retrieval of claims with type PlanAction
 CREATE TABLE plan_claim (
     handleId TEXT,

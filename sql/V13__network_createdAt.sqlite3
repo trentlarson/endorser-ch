@@ -1,4 +1,13 @@
 
-alter table network add column createdAt datetime;
+ALTER TABLE network ADD COLUMN createdAt datetime;
 
-update network set createdAt = datetime();
+UPDATE network SET createdAt = datetime();
+
+CREATE TABLE partner_link (
+    jwtId VARCHAR(26),
+    linkCode VARCHAR(32),
+    createdAt DATETIME,
+    data TEXT,
+    FOREIGN KEY (jwtId) REFERENCES jwt(id)
+);
+

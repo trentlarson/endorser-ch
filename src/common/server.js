@@ -7,7 +7,7 @@ import * as os from 'os';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
-import { ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util';
+import { ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util.js';
 import { decodeAndVerifyJwt } from "../api/services/vc";
 import l from './logger';
 const app = new Express();
