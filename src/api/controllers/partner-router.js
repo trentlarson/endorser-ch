@@ -18,7 +18,7 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route POST /api/partner/link
- * @param {string} jwtId.query.required - the claim to relay to the partner
+ * @param {string} jwtId.body.required - the claim to relay to the partner
  * @param {string} linkCode.body.required - the partner link code, eg. 'NOSTR-EVENT' (or someday: 'ATTEST.SH')
  * @returns 201
  *
@@ -30,7 +30,7 @@ export default express
   async (req, res) => {
     // this will check if the issuer actually created the JWT, so no need to check registration limits
     const result =
-      await sendAndStoreLink(res.locals.tokenIssuer, req.query.jwtId, req.query.linkCode, req.query.nostrPubKeyHex, req.query.inputJson)
+      await sendAndStoreLink(res.locals.tokenIssuer, req.body.jwtId, req.body.linkCode, req.body.inputJson, req.body.nostrPubKeyHex)
     if (result.clientError) {
       res.status(400).json({ error: result.clientError }).end()
     } else if (result.error) {

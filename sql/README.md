@@ -229,9 +229,9 @@ CREATE TABLE org_role_claim (
 );
 
 CREATE TABLE partner_link (
-    jwtId VARCHAR(26) NOT NULL,
+    handleId TEXT NOT NULL, -- currently handleId because we don't support updates to events
     linkCode VARCHAR(32) NOT NULL, -- eg. 'NOSTR-EVENT-TRUSTROOTS', 'ATTEST.SH'
-    createdAt DATETIME DEFAULT datetime() NOT NULL,
+    createdAt DATETIME NOT NULL,
     externalId VARCHAR(256),
     data TEXT -- JSON data, where format depends on linkCode
 );

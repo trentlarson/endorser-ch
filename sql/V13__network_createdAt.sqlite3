@@ -4,11 +4,11 @@ ALTER TABLE network ADD COLUMN createdAt datetime;
 UPDATE network SET createdAt = datetime();
 
 CREATE TABLE partner_link (
-    jwtId VARCHAR(26) NOT NULL,
+    handleId TEXT NOT NULL,
     linkCode VARCHAR(32) NOT NULL,
     createdAt DATETIME NOT NULL,
     externalId VARCHAR(256),
     data TEXT,
-    FOREIGN KEY (jwtId) REFERENCES jwt(id)
+    FOREIGN KEY (handleId) REFERENCES jwt(handleId)
 );
 
