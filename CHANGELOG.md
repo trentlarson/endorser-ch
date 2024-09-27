@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [?]
+### Added
+- Link to partner systems: Trustroots & TripHopping via nostr
 ### Changed
 - Added a date to the network table.
 - Added an Authorization header to the contact utilities functions
