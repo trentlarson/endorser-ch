@@ -969,7 +969,9 @@ describe('6 - PlanAction just for BVC, partly for testing data on a local server
         NUM_GIVES
       )
       .map((vc, i) => {
-        vc.claim.issuedAt = new Date().toISOString()
+        // count back i seconds ago to ensure none have exact same time and get rejected
+        const newTime = new Date().getTime() - (i * 1000)
+        vc.claim.issuedAt = new Date(newTime).toISOString()
         return vc
       })
 

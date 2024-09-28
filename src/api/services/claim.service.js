@@ -1551,115 +1551,183 @@ class ClaimService {
     }
 
     const payloadClaim = this.extractClaim(payload)
-    if (payloadClaim) {
-      if (isEndorserRegistrationClaim(payloadClaim)) {
+    if (!payloadClaim) {
+      l.warn(`${this.constructor.name} JWT received without a claim.`)
+      return Promise.reject("JWT had no 'claim' property.")
+    }
+    if (isEndorserRegistrationClaim(payloadClaim)) {
 
-        // disallow registering the same day they got registered
-        const registeredDate = DateTime.fromSeconds(registered.epoch)
-        if (DateTime.now().hasSame(registeredDate, 'day')) {
-          return Promise.reject({ clientError: {
-              message: `You cannot register anyone on the same day you got registered.`,
-              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
-            }})
-        }
-
-        // during the first month, disallow registering more than one per day
-        const startOfDayEpoch = DateTime.utc().startOf('day').toSeconds()
-        const regCountToday = await dbService.registrationCountByAfter(payload.iss, startOfDayEpoch)
-        if (DateTime.now().hasSame(registeredDate, 'month')
-            && regCountToday > 0) {
-          return Promise.reject({ clientError: {
-            message: `You can only register one person per day during the first month.`,
-            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+      // disallow registering the same day they got registered
+      const registeredDate = DateTime.fromSeconds(registered.epoch)
+      if (DateTime.now().hasSame(registeredDate, 'day')) {
+        return Promise.reject({ clientError: {
+            message: `You cannot register anyone on the same day you got registered.`,
+            code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
           }})
-        }
-
-        // disallow registering above the monthly limit
-        const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
-        const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
-        // 0 shouldn't mean DEFAULT
-        const maxAllowedRegs =
-              registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
-        if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: {
-            message: `You have already registered ${maxAllowedRegs} this month.`
-              + ` Contact an administrator for a higher limit.`,
-            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
-          }})
-        }
       }
 
-      // Now check that all claimId + handleId references are consistent.
-      // We do this basic sanity check here because we want to fail before
-      // storing the JWT and give the client an HTTP error code (rather than
-      // a 201 result with an embeddedRecordError result).
-      const claimIdsList = findAllLastClaimIdsAndHandleIds(payloadClaim)
-      let claimIdDataList
-      try {
-        claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdsList))
-      } catch (err) {
-        return Promise.reject({ clientError: { message: err } })
-      }
-      // If any of that data is not consistent, reject.
-      const claimErrors = this.gatherErrors(payloadClaim, claimIdDataList)
-      if (claimErrors.length > 0) {
-        return Promise.reject({
-          clientError: { message: claimErrors.join(' ') }
-        })
+      // during the first month, disallow registering more than one per day
+      const startOfDayEpoch = DateTime.utc().startOf('day').toSeconds()
+      const regCountToday = await dbService.registrationCountByAfter(payload.iss, startOfDayEpoch)
+      if (DateTime.now().hasSame(registeredDate, 'month')
+          && regCountToday > 0) {
+        return Promise.reject({ clientError: {
+          message: `You can only register one person per day during the first month.`,
+          code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+        }})
       }
 
-      // The following looks up a previous entry by handle ID, and if it exists
-      // then we figure they want to replace it. However, it is more precise
-      // and reliable if they use a specific record (a JWT ID via lastClaimId)
-      // because it's possible for some synchronization problem where their system
-      // or another authorized participant (the agent) has sent a change and they
-      // haven't seen the most recent version... so they should avoid simply
-      // sending a handle ID where we retrieve the latest -- and we
-      // should require they point to the previous record, and notify
-      // them if there is a more recent record with that same handle ID.
+      // disallow registering above the monthly limit
+      const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
+      const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
+      // 0 shouldn't mean DEFAULT
+      const maxAllowedRegs =
+            registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+      if (regCount >= maxAllowedRegs) {
+        return Promise.reject({ clientError: {
+          message: `You have already registered ${maxAllowedRegs} this month.`
+            + ` Contact an administrator for a higher limit.`,
+          code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+        }})
+      }
+    }
 
-      // Generate the local id and find or generate the global "entity" handle ID.
-      const jwtId = dbService.newUlid()
+    // Now check that all claimId + handleId references are consistent.
+    // We do this basic sanity check here because we want to fail before
+    // storing the JWT and give the client an HTTP error code (rather than
+    // a 201 result with an embeddedRecordError result).
+    const claimIdsList = findAllLastClaimIdsAndHandleIds(payloadClaim)
+    let claimIdDataList
+    try {
+      claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdsList))
+    } catch (err) {
+      return Promise.reject({ clientError: { message: err } })
+    }
+    // If any of that data is not consistent, reject.
+    const claimErrors = this.gatherErrors(payloadClaim, claimIdDataList)
+    if (claimErrors.length > 0) {
+      return Promise.reject({
+        clientError: { message: claimErrors.join(' ') }
+      })
+    }
 
-      const lastClaimId = payloadClaim.lastClaimId
-      const lastClaimInfo =
-          lastClaimId
-              ? R.find(x => x.lastClaimId === lastClaimId, claimIdDataList)
-              : null
-      const lastClaimJwt = lastClaimInfo?.lastClaimJwt
+    // The following looks up a previous entry by handle ID, and if it exists
+    // then we figure they want to replace it. However, it is more precise
+    // and reliable if they use a specific record (a JWT ID via lastClaimId)
+    // because it's possible for some synchronization problem where their system
+    // or another authorized participant (the agent) has sent a change and they
+    // haven't seen the most recent version... so they should avoid simply
+    // sending a handle ID where we retrieve the latest -- and we
+    // should require they point to the previous record, and notify
+    // them if there is a more recent record with that same handle ID.
 
-      let handleId
-      let isFirstClaimForHandleId = false // this is the first claim for this handleId, hard to derive because of handleIds from other systems
-      if (lastClaimId) {
+    // Generate the local id and find or generate the global "entity" handle ID.
+    const jwtId = dbService.newUlid()
 
-        // Check that the previous entry exists.
-        if (!lastClaimJwt) {
-          return Promise.reject(
+    const lastClaimId = payloadClaim.lastClaimId
+    const lastClaimInfo =
+        lastClaimId
+            ? R.find(x => x.lastClaimId === lastClaimId, claimIdDataList)
+            : null
+    const lastClaimJwt = lastClaimInfo?.lastClaimJwt
+
+    let handleId
+    let isFirstClaimForHandleId = false // this is the first claim for this handleId, hard to derive because of handleIds from other systems
+    if (lastClaimId) {
+
+      // Check that the previous entry exists.
+      if (!lastClaimJwt) {
+        return Promise.reject(
+          {
+            clientError: {
+              message: `If you supply a lastClaimId then it must have been sent earlier.`
+            }
+          }
+        )
+      }
+
+      // The previous entry exists.
+      // Check if the new context & type matches the old.
+      if (payloadClaim["@context"] != lastClaimJwt.claimContext
+          || payloadClaim["@type"] != lastClaimJwt.claimType) {
+        return Promise.reject(
             {
               clientError: {
-                message: `If you supply a lastClaimId then it must have been sent earlier.`
+                message: `You cannot change the context & type of an existing entry from ${lastClaimJwt.claimContext} & ${lastClaimJwt.claimType} to ${payloadClaim["@context"]} & ${payloadClaim["@type"]}.`
               }
             }
-          )
-        }
+        )
+      }
 
-        // The previous entry exists.
-        // Check if the new context & type matches the old.
-        if (payloadClaim["@context"] != lastClaimJwt.claimContext
-            || payloadClaim["@type"] != lastClaimJwt.claimType) {
+      // This handleId must have been set by the lastClaimId, so we can accept it because we've run checks for lastClaimId already.
+      handleId = lastClaimJwt.handleId
+
+      if (payload.iss == lastClaimJwt.issuer) {
+        // The issuer is the same as the previous.
+        // We're OK to continue.
+      } else if (payload.iss == handleId) {
+        // The issuer matches the global handle so they're the whole subject of the claim.
+        // We're OK to continue.
+      } else {
+        // The issuer doesn't match the previous entry issuer or person record.
+        // They likely shouldn't be allowed, but we'll allow if they're the agent.
+        const prevClaim = JSON.parse(lastClaimJwt.claim)
+        if (payload.iss == prevClaim.agent?.identifier) {
+          // The issuer was assigned as an agent.
+          // We're OK to continue.
+        } else {
+          // someday check other properties, eg 'member' in Organization (requiring a role check)
           return Promise.reject(
               {
                 clientError: {
-                  message: `You cannot change the context & type of an existing entry from ${lastClaimJwt.claimContext} & ${lastClaimJwt.claimType} to ${payloadClaim["@context"]} & ${payloadClaim["@type"]}.`
+                  message: `You cannot edit a claim if you did not create the original or get assigned as an agent.`
                 }
               }
           )
         }
+      }
 
-        // This handleId must have been set by the lastClaimId, so we can accept it because we've run checks for lastClaimId already.
-        handleId = lastClaimJwt.handleId
+    } else if (payloadClaim.identifier) {
+      // There is no lastClaimId but there's an identifier, so we need to run checks that they have permissions.
 
-        if (payload.iss == lastClaimJwt.issuer) {
+      // Check that the previous entry exists.
+      if (isGlobalEndorserHandleId(payloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
+        return Promise.reject(
+          {
+            clientError: {
+              message: `If you supply an Endorser identifier then it must have been sent earlier.`
+            }
+          }
+        )
+      }
+
+      // This has an identifier so check the previous instance to see if they are allowed to edit.
+      // (Is this redundant now that we've got lastClaimId?)
+      // 'identifier' is a schema.org convention; may add others
+      handleId =
+        isGlobalUri(payloadClaim.identifier)
+          ? payloadClaim.identifier
+          : globalFromInternalIdentifier(payloadClaim.identifier)
+
+      const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
+      if (prevEntry) {
+        // There is a previous entry.
+
+        // use that entry handleId, just in case this was a lastClaimId and the handleId is different
+        handleId = prevEntry.handleId
+
+        // check that the context nor type has changed
+        if (payloadClaim["@context"] != prevEntry.claimContext
+            || payloadClaim["@type"] != prevEntry.claimType) {
+          return Promise.reject(
+            { clientError: {
+                message: `You cannot change the type of an existing entry.`
+              } }
+          )
+        }
+
+        // check that the issuer matches
+        if (payload.iss == prevEntry.issuer) {
           // The issuer is the same as the previous.
           // We're OK to continue.
         } else if (payload.iss == handleId) {
@@ -1668,157 +1736,99 @@ class ClaimService {
         } else {
           // The issuer doesn't match the previous entry issuer or person record.
           // They likely shouldn't be allowed, but we'll allow if they're the agent.
-          const prevClaim = JSON.parse(lastClaimJwt.claim)
+          const prevClaim = JSON.parse(prevEntry.claim)
           if (payload.iss == prevClaim.agent?.identifier) {
             // The issuer was assigned as an agent.
             // We're OK to continue.
           } else {
             // someday check other properties, eg 'member' in Organization (requiring a role check)
             return Promise.reject(
-                {
-                  clientError: {
-                    message: `You cannot edit a claim if you did not create the original or get assigned as an agent.`
-                  }
-                }
+              { clientError: {
+                message: `You cannot use a local URI identifier if you did not create the original.`
+              } }
             )
           }
         }
-
-      } else if (payloadClaim.identifier) {
-        // There is no lastClaimId but there's an identifier, so we need to run checks that they have permissions.
-
-        // Check that the previous entry exists.
-        if (isGlobalEndorserHandleId(payloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
+      } else {
+        // no previous record with that handle exists
+        if (isGlobalEndorserHandleId(payloadClaim.identifier)) {
+          // Don't allow any global IDs for this server that weren't created by this server.
           return Promise.reject(
             {
               clientError: {
-                message: `If you supply an Endorser identifier then it must have been sent earlier.`
+                message:
+                  `That references a identifier on this system that doesn't exist. You can use one the system created; you cannot set it on your own.`
               }
             }
           )
-        }
-
-        // This has an identifier so check the previous instance to see if they are allowed to edit.
-        // (Is this redundant now that we've got lastClaimId?)
-        // 'identifier' is a schema.org convention; may add others
-        handleId =
-          isGlobalUri(payloadClaim.identifier)
-            ? payloadClaim.identifier
-            : globalFromInternalIdentifier(payloadClaim.identifier)
-
-        const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
-        if (prevEntry) {
-          // There is a previous entry.
-
-          // use that entry handleId, just in case this was a lastClaimId and the handleId is different
-          handleId = prevEntry.handleId
-
-          // check that the context nor type has changed
-          if (payloadClaim["@context"] != prevEntry.claimContext
-              || payloadClaim["@type"] != prevEntry.claimType) {
-            return Promise.reject(
-              { clientError: {
-                  message: `You cannot change the type of an existing entry.`
-                } }
-            )
-          }
-
-          // check that the issuer matches
-          if (payload.iss == prevEntry.issuer) {
-            // The issuer is the same as the previous.
-            // We're OK to continue.
-          } else if (payload.iss == handleId) {
-            // The issuer matches the global handle so they're the whole subject of the claim.
-            // We're OK to continue.
-          } else {
-            // The issuer doesn't match the previous entry issuer or person record.
-            // They likely shouldn't be allowed, but we'll allow if they're the agent.
-            const prevClaim = JSON.parse(prevEntry.claim)
-            if (payload.iss == prevClaim.agent?.identifier) {
-              // The issuer was assigned as an agent.
-              // We're OK to continue.
-            } else {
-              // someday check other properties, eg 'member' in Organization (requiring a role check)
-              return Promise.reject(
-                { clientError: {
-                  message: `You cannot use a local URI identifier if you did not create the original.`
-                } }
-              )
+        } else if (!isGlobalUri(payloadClaim.identifier)) {
+          // Don't allow any local IDs that weren't created by this server.
+          // (If you allow this, ensure they can't choose any past or future jwtId.)
+          return Promise.reject(
+            {
+              clientError: {
+                message:
+                `That references a local URI identifier that doesn't exist. You can use one the system created; you cannot set it on your own.`
+              }
             }
-          }
+          )
         } else {
-          // no previous record with that handle exists
-          if (isGlobalEndorserHandleId(payloadClaim.identifier)) {
-            // Don't allow any global IDs for this server that weren't created by this server.
-            return Promise.reject(
-              {
-                clientError: {
-                  message:
-                    `That references a identifier on this system that doesn't exist. You can use one the system created; you cannot set it on your own.`
-                }
-              }
-            )
-          } else if (!isGlobalUri(payloadClaim.identifier)) {
-            // Don't allow any local IDs that weren't created by this server.
-            // (If you allow this, ensure they can't choose any past or future jwtId.)
-            return Promise.reject(
-              {
-                clientError: {
-                  message:
-                  `That references a local URI identifier that doesn't exist. You can use one the system created; you cannot set it on your own.`
-                }
-              }
-            )
-          } else {
-            // It's a non-Endorser global URI that doesn't already exist. That's fine.
-            isFirstClaimForHandleId = true
-          }
+          // It's a non-Endorser global URI that doesn't already exist. That's fine.
+          isFirstClaimForHandleId = true
         }
-
-      } else {
-        // There is no lastClaimId and no identifier.
-        // Make the handleId from the jwtId.
-        handleId = globalFromInternalIdentifier(jwtId)
-        isFirstClaimForHandleId = true
       }
 
-      const claimStr = canonicalize(payloadClaim)
-      const jwtEntry = dbService.buildJwtEntry(
-        payload, jwtId, lastClaimId, handleId, payloadClaim, claimStr, jwtEncoded
-      )
-      const jwtRowId =
-          await dbService.jwtInsert(jwtEntry)
-          .catch((err) => {
-            return Promise.reject(err)
-          })
-
-      //l.trace(doc, `${this.constructor.name} resolved doc`)
-      //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
-      //l.trace(issuer, `${this.constructor.name} resolved issuer`)
-
-      const issuerDid = payload.iss
-
-      // this is the same as the doc.publicKey in my example
-      //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
-
-      let embedded =
-          await this.createEmbeddedClaimEntries(
-            jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
-          )
-          .catch(err => {
-            l.error(err, `Failed to create embedded claim records.`)
-            return { embeddedRecordError: err }
-          })
-
-      const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId, hashNonce: jwtEntry.hashNonce }, embedded)
-      l.trace(`${this.constructor.name}.createWithClaimRecord`
-              + ` resulted in ${util.inspect(result)}`)
-      return result
-
     } else {
-      l.warn(`${this.constructor.name} JWT received without a claim.`)
-      return Promise.reject("JWT had no 'claim' property.")
+      // There is no lastClaimId and no identifier.
+      // Make the handleId from the jwtId.
+      handleId = globalFromInternalIdentifier(jwtId)
+      isFirstClaimForHandleId = true
     }
+
+    const claimStr = canonicalize(payloadClaim)
+    const jwtEntry = dbService.buildJwtEntry(
+      payload, jwtId, lastClaimId, handleId, payloadClaim, claimStr, jwtEncoded
+    )
+    // guard against a duplicate claim
+    const existingJwtId =
+      await dbService.jwtClaimExists(jwtEntry.claimCanonHash, jwtEntry.issuer, jwtEntry.issuedAt)
+    if (existingJwtId) {
+      return Promise.reject(
+        {
+          clientError: {
+            message: `That claim is a duplicate of one already sent with ID ${existingJwtId}.`
+          }
+        }
+      )
+    }
+    const jwtRowId =
+        await dbService.jwtInsert(jwtEntry)
+        .catch((err) => {
+          return Promise.reject(err)
+        })
+
+    //l.trace(doc, `${this.constructor.name} resolved doc`)
+    //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
+    //l.trace(issuer, `${this.constructor.name} resolved issuer`)
+
+    const issuerDid = payload.iss
+
+    // this is the same as the doc.publicKey in my example
+    //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
+
+    let embedded =
+        await this.createEmbeddedClaimEntries(
+          jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
+        )
+        .catch(err => {
+          l.error(err, `Failed to create embedded claim records.`)
+          return { embeddedRecordError: err }
+        })
+
+    const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId, hashNonce: jwtEntry.hashNonce }, embedded)
+    l.trace(`${this.constructor.name}.createWithClaimRecord`
+            + ` resulted in ${util.inspect(result)}`)
+    return result
   }
 
 }

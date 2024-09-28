@@ -158,10 +158,10 @@ const claimBvcFor1 = R.clone(claimBvc)
 claimBvcFor1.agent.identifier = creds[1].did
 claimBvcFor1.event.startTime = "2019-01-13T08:00:00.000-07:00"
 
-const claimBvcFor1By1JwtObj = R.clone(testUtil.jwtTemplate)
-claimBvcFor1By1JwtObj.claim = R.clone(claimBvcFor1)
-claimBvcFor1By1JwtObj.sub = creds[1].did
-const claimBvcFor1By1JwtProm = credentials[0].createVerification(claimBvcFor1By1JwtObj)
+const claimBvcFor1By0JwtObj = R.clone(testUtil.jwtTemplate)
+claimBvcFor1By0JwtObj.claim = R.clone(claimBvcFor1)
+claimBvcFor1By0JwtObj.sub = creds[1].did
+const claimBvcFor1By0JwtProm = credentials[0].createVerification(claimBvcFor1By0JwtObj)
 
 
 
@@ -275,7 +275,7 @@ let pushTokens, registerBy0JwtEncs, registerPeerBy0JwtEnc,
     claimDebugFor0By0JwtEnc, confirmMultipleFor0By0JwtEnc,
     confirmBvcForConfirm0By1JwtEnc,
     // claims for 1
-    claimBvcFor1By1JwtEnc,
+    claimBvcFor1By0JwtEnc,
     confirmIIW2019aFor1By0JwtEnc,
     claimIIW2019aFor1By1JwtEnc,
     // claims for 2
@@ -314,7 +314,7 @@ before(async () => {
     confirmBvcFor0By1JwtProm,
     confirmBvcFor0By3JwtProm,
     claimMyNightFor0By0JwtProm,
-    claimBvcFor1By1JwtProm,
+    claimBvcFor1By0JwtProm,
     claimDebugFor0By0JwtProm,
     confirmMultipleFor0By0JwtProm,
     confirmBvcForConfirm0By1JwtProm,
@@ -335,7 +335,7 @@ before(async () => {
       confirmBvcFor0By1JwtEnc,
       confirmBvcFor0By3JwtEnc,
       claimMyNightFor0By0JwtEnc,
-      claimBvcFor1By1JwtEnc,
+      claimBvcFor1By0JwtEnc,
       claimDebugFor0By0JwtEnc,
       confirmMultipleFor0By0JwtEnc,
       confirmBvcForConfirm0By1JwtEnc,
@@ -952,7 +952,7 @@ describe('1 - Claim', () => {
   it('should add yet another new claim', () =>
      request(Server)
      .post('/api/claim')
-     .send({"jwtEncoded": claimBvcFor1By1JwtEnc})
+     .send({"jwtEncoded": claimBvcFor1By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body).to.be.a('string')
@@ -993,6 +993,16 @@ describe('1 - Claim', () => {
         expect(r.status).that.equals(200)
       })
   }).timeout(3000)
+
+  it('should not add another duplicate claim', () =>
+    request(Server)
+    .post('/api/claim')
+    .send({"jwtEncoded": claimBvcFor1By0JwtEnc})
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(400)
+    })
+  ).timeout(5000)
 
   it('#0 should see themselves', () =>
      request(Server)
@@ -1408,9 +1418,7 @@ describe('1 - Event', () => {
      .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
      .expect('Content-Type', /json/)
      .then(r => {
-       // It creates a JWT record but not a new confirmation.
-       expect(r.body).to.be.a('string')
-       expect(r.status).that.equals(201)
+       expect(r.status).that.equals(400)
      })).timeout(5000)
 
   it('should warn when adding a confirmation of a confirmation', () =>
@@ -1965,7 +1973,7 @@ describe('1 - Transitive Connections', () => {
       expect(r.body)
       .that.has.a.property('data')
       const data = r.body.data
-      expect(data).that.has.a.property('count').that.equals(28)
+      expect(data).that.has.a.property('count').that.equals(27)
       expect(data).that.has.a.property('lastNoncedHashAllChain').that.is.not.empty
     })
   )

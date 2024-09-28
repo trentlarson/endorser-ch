@@ -727,21 +727,12 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
-          return Promise.reject(r.body.error)
-        } else if (r.body.success.embeddedRecordError) {
-          console.log(
-              'Something went wrong, but nothing critical. Here is the error:',
-              r.body.success.embeddedRecordError
-          )
+          // good
+        } else {
+          // console.log('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body)
         }
-        expect(r.headers['content-type'], /json/)
-        expect(r.body.success.handleId).to.be.a('string')
-        expect(r.body.success.confirmations[0])
-          .has.property("embeddedRecordError")
-        expect(r.status).that.equals(201)
-      }).catch((err) => {
-        return Promise.reject(err)
+        expect(r.status).that.equals(400)
       })
   }).timeout(3000)
 

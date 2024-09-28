@@ -1222,6 +1222,21 @@ class EndorserDatabase {
     })
   }
 
+  jwtClaimExists(claimCanonHash, issuerDid, issuedAt) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT id FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?)",
+        [claimCanonHash, issuerDid, issuedAt],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(row?.id)
+          }
+        })
+    })
+  }
+
   jwtsByWhere(whereClause, whereParams) {
     return new Promise((resolve, reject) => {
       let data = [], rowErr
