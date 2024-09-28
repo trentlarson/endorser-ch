@@ -2870,6 +2870,7 @@ describe('6 - Check plans as providers to gives', () => {
     credObj.claim.provider = {
       "@type": "PlanAction",  lastClaimId: firstPlanIdSecondClaimInternal
     }
+    credObj.claim.recipient = { identifier: creds[5].did }
     const claimJwtEnc = await credentials[4].createVerification(credObj)
     return request(Server)
     .post('/api/v2/claim')
@@ -2914,8 +2915,10 @@ describe('6 - Check plans as providers to gives', () => {
         console.log('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
+      expect(r.body.data[0].agentDid).to.equal(null)
       expect(r.body.data[0].handleId).to.equal(newGiveHandleId)
       expect(r.body.data[0].providerId).to.equals(firstPlanIdExternal)
+      expect(r.body.data[0].recipientDid).to.equal(creds[5].did)
       expect(r.status).that.equals(200)
       expect(r.headers['content-type'], /json/)
     }).catch((err) => {
