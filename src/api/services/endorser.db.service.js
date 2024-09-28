@@ -1057,7 +1057,7 @@ class EndorserDatabase {
         + ' INNER JOIN give_provider ON give_provider.giveHandleId = give_claim.handleId'
         + ' WHERE give_provider.providerId = ?'
         + moreWhere
-        + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+        + ' ORDER BY jwtId DESC LIMIT ' + DEFAULT_LIMIT
 
     let data = [], rowErr
     return new Promise((resolve, reject) => {

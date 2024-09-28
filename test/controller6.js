@@ -2,7 +2,6 @@
 // Tests for Projects
 
 import chai from 'chai'
-import chaiAsPromised from "chai-as-promised"
 import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
@@ -55,6 +54,7 @@ const badPlanBy1JwtObj = R.clone(testUtil.jwtTemplate)
 badPlanBy1JwtObj.claim = R.clone(testUtil.claimPlanAction)
 badPlanBy1JwtObj.claim.agent.identifier = creds[1].did
 badPlanBy1JwtObj.claim.identifier = 'SomeNonGlobalID' // disallow internal IDs
+badPlanBy1JwtObj.claim.name = badPlanBy1JwtObj.claim.name + " - bad"
 badPlanBy1JwtObj.iss = creds[1].did
 const badPlanBy1JwtProm = credentials[1].createVerification(badPlanBy1JwtObj)
 
@@ -344,7 +344,8 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(HIDDEN_TEXT)
         expect(r.body.issuerDid).that.equals(HIDDEN_TEXT)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
-      }).catch((err) => {
+      }).catch(
+        (err) => {
         return Promise.reject(err)
       })
   }).timeout(3000)
@@ -1008,12 +1009,10 @@ describe('6 - add many PlanActions, partly for scrolling UI tests', () => {
     claimPlan_OthersBy1_JwtObj.claim.description = "Some Great Plan"
 
     const manyPlans =
-      R.times(n =>
-          R.clone(claimPlan_OthersBy1_JwtObj),
-        NUM_PLANS
-      )
+      R.times(() => R.clone(claimPlan_OthersBy1_JwtObj), NUM_PLANS)
       .map((vc, i) => {
         vc.claim.description += " #" + (i + 1)
+        vc.claim.name += " #" + (i + 1)
         return vc
       })
 
@@ -1486,9 +1485,6 @@ describe('6 - Check offer totals', () => {
 
 
 
-
-
-
 describe('6 - Check give totals', () => {
 
   let firstGiveRecordHandleId, secondGiveRecordHandleId, thirdGiveRecordHandleId
@@ -1669,7 +1665,7 @@ describe('6 - Check give totals', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].agentDid).to.equal(creds[2].did)
+        expect(r.body.data[0].agentDid).to.equal(null)
         expect(r.body.data[0].issuedAt).to.be.not.null
         expect(r.body.data[0].amount).to.equal(1)
         expect(r.body.data[0].amountConfirmed).to.equal(0)
@@ -1717,7 +1713,7 @@ describe('6 - Check give totals', () => {
         expect(r.body.data[0].fullClaim.object[0].unitCode).to.equal('HUR')
         expect(r.body.data[0].handleId).to.equal(secondGiveRecordHandleId)
         expect(r.body.data[0].issuedAt).to.be.not.null
-        expect(r.body.data[0].agentDid).to.equal(creds[2].did)
+        expect(r.body.data[0].agentDid).to.equal(null)
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2340,7 +2336,7 @@ describe('6 - Check give totals', () => {
       expect(r.headers['content-type'], /json/)
       expect(r.body).to.be.an('object')
       expect(r.body.data).to.be.an('array').of.length(1)
-      expect(r.body.data[0].amount).to.equal(0)
+      expect(r.body.data[0].amount).to.equal(null)
       expect(r.status).that.equals(200)
     }).catch((err) => {
       return Promise.reject(err)
@@ -2859,6 +2855,77 @@ describe('6 - Check give totals', () => {
   }).timeout(3000)
 
 })
+
+
+
+
+
+describe('6 - Check plans as providers to gives', () => {
+  let newGiveHandleId
+
+  it('can add a plan as a provider to a give', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Colorful first-grade learning materials"
+    credObj.claim.provider = {
+      "@type": "PlanAction",  lastClaimId: firstPlanIdSecondClaimInternal
+    }
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: claimJwtEnc})
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.body.success.handleId).to.be.a('string')
+      newGiveHandleId = r.body.success.handleId
+      expect(r.status).that.equals(201)
+      expect(r.headers['content-type'], /json/)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+
+  it('gets the correct providers for a give', async () => {
+    return request(Server)
+    .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(newGiveHandleId))
+    .set('Authorization', 'Bearer ' + pushTokens[5])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.body.data).to.deep.equal([{ identifier: firstPlanIdExternal, linkConfirmed: false }])
+      expect(r.status).that.equals(200)
+      expect(r.headers['content-type'], /json/)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+
+  it('gets the correct give for a provider', async () => {
+    return request(Server)
+    .get('/api/v2/report/givesProvidedBy?handleId=' + encodeURIComponent(firstPlanIdExternal))
+    .set('Authorization', 'Bearer ' + pushTokens[5])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.body.data[0].handleId).to.equal(newGiveHandleId)
+      expect(r.body.data[0].providerId).to.equals(firstPlanIdExternal)
+      expect(r.status).that.equals(200)
+      expect(r.headers['content-type'], /json/)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+})
+
+
+
 
 describe('6 - claimId & handleId guards', () => {
 

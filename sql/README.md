@@ -112,7 +112,7 @@ CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction to which the provider contributes
     -- handle ID of the provider entity who helps make the give possible
-    -- (DIDs are agents)
+    -- (DIDs are agents -- but maybe this shouldn't include people... they should be agents in separate gives, aggregated by a plan/organization if necessary)
     providerId TEXT,
 
     -- whether both giver and provider have confirmed this relationship (boolean, 1 = confirmed)

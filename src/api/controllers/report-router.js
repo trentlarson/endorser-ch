@@ -497,8 +497,8 @@ export default express
  */
 
 /**
- * @typedef PersonLink
- * @Property {string} identifier DID
+ * @typedef ProviderLink
+ * @Property {string} identifier DID or handleId
  * @Property {boolean} linkConfirmed
  */
 
@@ -843,7 +843,7 @@ export default express
  *  @group reports - Reports (with paging)
  * @route GET /api/v2/report/providersToGive
  * @param {string} giveHandleId.query.optional - the jwtId of the give entry
- * @returns {array.PersonLink} 200 - 'data' property with each of the providers with known types
+ * @returns {array.ProviderLink} 200 - 'data' property with each of the providers with known types
  * @returns {Error} 400 - error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

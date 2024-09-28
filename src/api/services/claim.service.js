@@ -877,6 +877,7 @@ class ClaimService {
       issuedAt,
       updatedAt: issuedAt,
       issuerDid,
+      // a give might be from someone unknown (while an offer is always from someone known)
       agentDid: claim.agent?.identifier,
       recipientDid: claim.recipient?.identifier,
       fulfillsHandleId,
@@ -911,12 +912,33 @@ class ClaimService {
         providers = [providers]
       }
       for (const provider of providers) {
+        // find the right handle ID, and also check whether the link is confirmed because it's the same issuer
+        let provHandleId, provJwt
         if (provider.identifier) {
+          const provJwtInfo =
+            claimIdDataList.find(claimIdData => claimIdData.handleId === provider.identifier)
+          if (provJwtInfo) {
+            provHandleId = provJwtInfo.handleId
+            provJwt = provJwtInfo.handleJwt
+          }
+        } else if (provider.lastClaimId) {
+          const provJwtInfo =
+            claimIdDataList.find(claimIdData => claimIdData.lastClaimId === provider.lastClaimId)
+          if (provJwtInfo) {
+            provHandleId = provJwtInfo.handleId
+            provJwt = provJwtInfo.lastClaimJwt
+          }
+        }
+        if (provHandleId) {
           await dbService.giveProviderInsert({
             giveHandleId: handleId,
-            providerId: provider.identifier,
-            linkConfirmed: provider.identifier === issuerDid,
+            providerId: provHandleId,
+            linkConfirmed: provJwt.issuer === issuerDid,
           })
+        } else {
+          embeddedResults.embeddedRecordWarning =
+            (embeddedResults.embeddedRecordWarning || "")
+            + " This provider cannot be found to link to the give: " + JSON.stringify(provider)
         }
       }
     }
@@ -1063,6 +1085,7 @@ class ClaimService {
         issuedAt,
         updatedAt: issuedAt,
         issuerDid,
+        // a give might be from someone unknown but an offer is always from someone known
         offeredByDid: claim.offeredBy?.identifier || issuerDid,
         recipientDid: claim.recipient?.identifier,
         fulfillsHandleId,
@@ -1429,7 +1452,7 @@ class ClaimService {
   // return Promise of object with the lastClaimId's JWT loaded into the lastClaimJwt field,
   // or (if that doesn't exist) the handleId's JWT loaded into the handleJwt field
   //
-  // The claim object is augmented with the following:
+  // The claimInfo object is augmented with the following:
   // {
   //   lastClaimId: '01D25AVGQG1N8E9JNGK7C7DZRD' // if a system ID is supplied at any level in the claim
   //   lastClaimJwt: { CLAIM_JWT_RECORD } // if claimId is supplied
