@@ -12,3 +12,18 @@ CREATE TABLE partner_link (
     FOREIGN KEY (handleId) REFERENCES jwt(handleId)
 );
 
+-- to preview rows: select count(*) from give_claim where description is not null and amount = 0 and unit is null;
+update give_claim set amount = null where description is not null and amount = 0 and unit is null;
+
+-- to see all 0 rows: select count(*) from give_claim where agentDid is null;
+UPDATE give_claim
+SET agentDid = (
+    SELECT JSON_EXTRACT(claim, '$.agent.identifier') AS identifier
+    FROM jwt
+    WHERE jwt.id = give_claim.jwtId
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM jwt
+    WHERE jwt.id = give_claim.jwtId
+);
