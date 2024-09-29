@@ -1,4 +1,5 @@
-import { finalizeEvent, getPublicKey } from 'nostr-tools/pure'
+import { encodeBase32 as geohashEncodeBase32 } from 'geohashing';
+import { finalizeEvent } from 'nostr-tools/pure'
 import { Relay, useWebSocketImplementation } from 'nostr-tools/relay'
 import { decode } from 'nostr-tools/nip19'
 import * as pluscodes from "pluscodes"
@@ -11,12 +12,12 @@ import { basicClaimDescription } from "./util"
 const NOSTR_PRIVATE_KEY_NSEC = process.env.NOSTR_PRIVATE_KEY_NSEC
 
 const DEFAULT_RELAYS = [
+  "wss://nos.lol",
   "wss://relay.damus.io",
   "wss://relay.primal.net",
   "wss://nostr.manasiwibi.com",
-  "wss://nos.lol",
 ]
-const DEFAULT_RELAY = DEFAULT_RELAYS[2] // manasiwibi seems to be the most reliable of the four
+const DEFAULT_RELAY = DEFAULT_RELAYS[3] // manasiwibi seems to be the most reliable of the four, at least for showing on https://lightningk0ala.github.io/nostr-wtf/query
 
 useWebSocketImplementation(WebSocket)
 
@@ -40,6 +41,7 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       longitude: claim.location.geo.longitude,
     })
     const moreTags = [
+      ["e", jwtLinkInfo.id],
       ["L", "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
       ["l", plusCode, "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
     ]
@@ -51,23 +53,23 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
     if (!claim.location?.geo?.latitude || !claim.location?.geo?.longitude) {
       return {clientError: {message: "A nostr event for TripHopping requires a claim with location.geo.latitude and location.geo.longitude"}}
     }
-    const plusCode10 = pluscodes.encode({
-      latitude: claim.location.geo.latitude,
-      longitude: claim.location.geo.longitude,
-    })
-    const plusCode8 = pluscodes.encode({
-      latitude: claim.location.geo.latitude,
-      longitude: claim.location.geo.longitude,
-    }, 8)
-    const plusCode4 = pluscodes.encode({
-      latitude: claim.location.geo.latitude,
-      longitude: claim.location.geo.longitude,
-    }, 4)
+    const geohash8 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 8)
+    const geohash6 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 6)
+    const geohash4 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 4)
+    const geohash2 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 2)
+    console.log("geohashes", geohash8, geohash6, geohash4, geohash2)
     const moreTags = [
+      ["g", geohash8],
+      ["g", geohash6],
+      ["g", geohash4],
+      ["g", geohash2],
       ["t", "timesafari"],
-      ["g", plusCode10],
-      ["g", plusCode8],
-      ["g", plusCode4],
+      // ["location", "Lusaka, Zambia"],
+      // ["price", "0", "USD"],
+      // ["published_at", `${Math.floor(new Date(jwtLinkInfo.issuedAt).getTime() / 1000)}`],
+      // ["status", "sold"],
+      // ["summary", JSON.parse(inputJson)],
+      // ["title", JSON.parse(inputJson)],
     ]
     const kind = 30402 // creator says to use the classifieds for his map
     return createAndSendNostr(jwtLinkInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
@@ -92,6 +94,7 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       created_at: createdSecs,
       kind: kind,
       tags: [
+        ["d", userNostrPubKeyHex + ":" + jwtLinkInfo.id],
         ["p", userNostrPubKeyHex],
         ...moreTags,
       ],
@@ -130,8 +133,12 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
     } finally {
       setTimeout(
         () => {
-          relay.close();
-          l.info("Closed relay.")
+          try {
+            relay.close()
+            l.info("Closed relay.")
+          } catch (e) {
+            l.error("Error closing relay: " + e)
+          }
         },
         // wait so that we record an onevent from the subscription
         3000,

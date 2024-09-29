@@ -10,11 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [?]
 ### Added
 - Link to partner systems: Trustroots & TripHopping via nostr
+- Providers added by lastClaimId, with lookup for confirmation flag, and test for plan as provider
 ### Changed
 - Added a date to the network table.
 - Added an Authorization header to the contact utilities functions
 ### Changed in DB or environment
-- SQL script 13
+- Automated SQL script 13
 
 
 ## [4.0.2]
@@ -24,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hidden error on confirmations for action & orgRole & tenure
 ### Changed in DB or environment
 - Automated SQL script 12
-- Manual SQL script 12.1 - which will change our published merkle roots
+- Manual node script 12.1 - which will change our published merkle roots
 
 
 ## [3.6.4] - 2024.08.25 - f05a786c11ae4d76fecc914155514efe40db9a5f
