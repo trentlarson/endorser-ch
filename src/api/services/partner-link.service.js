@@ -44,6 +44,7 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       ["e", jwtLinkInfo.id],
       ["L", "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
       ["l", plusCode, "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
+      ["original_created_at", `${Math.floor(new Date(jwtLinkInfo.issuedAt).getTime() / 1000)}`],
     ]
     const kind = 30398 // MAP_NOTE_REPOST_KIND, custom to them
     return createAndSendNostr(jwtLinkInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
