@@ -1,3 +1,7 @@
+/**
+ * See partner-link.service.js for an explanation why these endpoints are kept separate.
+ */
+
 import * as express from 'express'
 import { sendAndStoreLink } from "../services/partner-link.service";
 

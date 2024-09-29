@@ -8,6 +8,8 @@ const ulid = ulidx.monotonicFactory()
 const logger = require('../../common/logger')
 const dbInfo = require('../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc)
+const partnerDbInfo = require('../../conf/flyway-partner.js')
+const partnerDb = new sqlite3.Database(partnerDbInfo.fileLoc)
 const util = require('./util')
 
 
@@ -1907,7 +1909,7 @@ class EndorserDatabase {
       const stmt =
         "INSERT INTO partner_link (handleId, linkCode, externalId, createdAt, data)"
         + " VALUES (?, ?, ?, dateTime(), ?)"
-      db.run(
+      partnerDb.run(
         stmt,
         [entry.handleId, entry.linkCode, entry.externalId, entry.data],
         function(err) {
@@ -1923,18 +1925,14 @@ class EndorserDatabase {
 
   jwtAndPartnerLinkForCode(jwtId, linkCode) {
     return new Promise((resolve, reject) => {
-      db.get(
-        "SELECT *, jwt.handleId as jwtHandleId FROM jwt"
-        // outer join w/ link code inside so that we get the JWT values but blank partner_link values
-        + " LEFT OUTER JOIN partner_link ON partner_link.handleId = jwt.handleId and linkCode = ?"
-        + " WHERE jwt.id = ?",
-        [linkCode, jwtId],
+      partnerDb.get(
+        "SELECT * FROM partner_link WHERE handleId = ? and linkCode = ?",
+        [jwtId, linkCode],
         function (err, row) {
           if (err) {
             reject(err)
           } else {
             if (row) {
-              row.issuedAt = isoAndZonify(row.issuedAt)
               row.createdAt = isoAndZonify(row.createdAt)
             }
             resolve(row)

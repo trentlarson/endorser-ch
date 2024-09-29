@@ -1,3 +1,13 @@
+/**
+ * You'll notice that this functionality is not only separated by functionality
+ * but the DB is also entirely separate: this data includes info from outside
+ * services and can be used to correlate the user across domains. We want to
+ * avoid that, and eventually make this into an entirely separate server all
+ * on it's own. That way we can have a service that makes money and offers
+ * extended services but we have architectural lines that keep us from
+ * correlating customer data by accident.
+ */
+
 import { encodeBase32 as geohashEncodeBase32 } from 'geohashing';
 import { finalizeEvent } from 'nostr-tools/pure'
 import { Relay, useWebSocketImplementation } from 'nostr-tools/relay'
@@ -23,15 +33,21 @@ useWebSocketImplementation(WebSocket)
 
 export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userNostrPubKeyHex) {
   const jwtLinkInfo = await dbService.jwtAndPartnerLinkForCode(jwtId, linkCode)
-  if (!jwtLinkInfo) {
-    return { clientError: { message: "No JWT exists for " + linkCode + " with ID " + jwtId } }
-  } else if (jwtLinkInfo.issuer !== issuer) {
+
+  // When we separate this into another service, this will have to be an API call.
+  // See the image-api server for an example of how to leverage JWTs to get
+  // permission to access data from the other service.
+  const jwtInfo = await dbService.jwtById(jwtId)
+
+  if (!jwtInfo) {
+    return { clientError: { message: "No JWT exists for " + jwtId } }
+  } else if (jwtInfo.issuer !== issuer) {
     return { clientError: { message: "You are not the issuer of JWT " + jwtId } }
-  } else if (jwtLinkInfo.linkCode) {
+  } else if (jwtLinkInfo) {
     return { clientError: { message: "JWT " + jwtId + " already has '" + jwtLinkInfo.linkCode + "' link with data: " + jwtLinkInfo.data } }
   }
   if (linkCode === 'NOSTR-EVENT-TRUSTROOTS') {
-    const claim = JSON.parse(jwtLinkInfo.claim)
+    const claim = JSON.parse(jwtInfo.claim)
     // see constants at https://github.com/Trustroots/nostroots-server/blob/48517a866994092e1112683ad1acea652b2b0f0a/common/constants.ts
     if (!claim.location?.geo?.latitude || !claim.location?.geo?.longitude) {
       return {clientError: {message: "A nostr event for Trustroots requires a claim with location.geo.latitude and location.geo.longitude"}}
@@ -41,13 +57,13 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       longitude: claim.location.geo.longitude,
     })
     const moreTags = [
-      ["e", jwtLinkInfo.id],
+      ["e", jwtInfo.id],
       ["L", "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
       ["l", plusCode, "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
-      ["original_created_at", `${Math.floor(new Date(jwtLinkInfo.issuedAt).getTime() / 1000)}`],
+      ["original_created_at", `${Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)}`],
     ]
     const kind = 30398 // MAP_NOTE_REPOST_KIND, custom to them
-    return createAndSendNostr(jwtLinkInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
+    return createAndSendNostr(jwtInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
 
   } else if (linkCode === 'NOSTR-EVENT-TRIPHOPPING') {
     const claim = JSON.parse(jwtLinkInfo.claim)
@@ -73,29 +89,29 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       // ["title", JSON.parse(inputJson)],
     ]
     const kind = 30402 // creator says to use the classifieds for his map
-    return createAndSendNostr(jwtLinkInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
+    return createAndSendNostr(jwtInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
 
   } else {
     return { clientError: { message: "Unknown link code '" + linkCode + "'" } }
   }
 
-  async function createAndSendNostr(jwtLinkInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags) {
+  async function createAndSendNostr(jwtInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags) {
     if (!NOSTR_PRIVATE_KEY_NSEC) {
       return {clientError: {message: "This server is not set up to relay to nostr."}}
     }
     if (!userNostrPubKeyHex) {
       return { clientError: { message: "No nostr public key was provided." } }
     }
-    const claim = JSON.parse(jwtLinkInfo.claim)
+    const claim = JSON.parse(jwtInfo.claim)
     const input = JSON.parse(inputJson)
     const content = input || basicClaimDescription(claim)
-    const createdSecs = Math.floor(new Date(jwtLinkInfo.issuedAt).getTime() / 1000)
+    const createdSecs = Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)
     const event = {
       content,
       created_at: createdSecs,
       kind: kind,
       tags: [
-        ["d", userNostrPubKeyHex + ":" + jwtLinkInfo.id],
+        ["d", userNostrPubKeyHex + ":" + jwtInfo.id],
         ["p", userNostrPubKeyHex],
         ...moreTags,
       ],
@@ -125,7 +141,7 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       await relay.publish(signedEvent)
       const partnerLinkData = JSON.stringify({content: content, pubKeyHex: userNostrPubKeyHex})
       await dbService.partnerLinkInsert(
-        {handleId: jwtLinkInfo.jwtHandleId, linkCode, externalId: signedEvent.id, data: partnerLinkData}
+        {handleId: jwtInfo.handleId, linkCode, externalId: signedEvent.id, data: partnerLinkData}
       )
       return {signedEvent}
     } catch (e) {

@@ -1,16 +1,9 @@
 
+-- see README.md in this directory for explanations
+
 ALTER TABLE network ADD COLUMN createdAt datetime;
 
 UPDATE network SET createdAt = datetime();
-
-CREATE TABLE partner_link (
-    handleId TEXT NOT NULL,
-    linkCode VARCHAR(32) NOT NULL,
-    createdAt DATETIME NOT NULL,
-    externalId VARCHAR(256),
-    data TEXT,
-    FOREIGN KEY (handleId) REFERENCES jwt(handleId)
-);
 
 -- to preview rows: select count(*) from give_claim where description is not null and amount = 0 and unit is null;
 update give_claim set amount = null where description is not null and amount = 0 and unit is null;

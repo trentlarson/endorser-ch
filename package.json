@@ -13,7 +13,7 @@
     "dev:debug": "nodemon src --exec ts-node --config .nodemonrc.json --inspect | pino-pretty",
     "lint": "eslint -c .eslintrc.json {src,test}/**",
     "lint:fix": "eslint --fix -c .eslintrc.json {src,test}/**",
-    "flyway": "flyway -c src/conf/flyway.js",
+    "flyway": "bash -c 'flyway -c src/conf/flyway.js \"$1\"; flyway -c src/conf/flyway-partner.js \"$1\"' --",
     "test": "tsc && mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
     "reset-claim-fields": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-claim-fields.js --exit",

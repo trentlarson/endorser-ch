@@ -1,0 +1,10 @@
+
+-- see README.md in this directory for explanations
+
+CREATE TABLE partner_link (
+    handleId TEXT NOT NULL,
+    linkCode VARCHAR(32) NOT NULL,
+    createdAt DATETIME NOT NULL,
+    externalId VARCHAR(256),
+    data TEXT
+);
