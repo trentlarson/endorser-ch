@@ -68,8 +68,8 @@ CREATE TABLE give_claim (
 
     recipientDid TEXT, -- global ID of recipient
 
-    fulfillsHandleId TEXT, -- global ID to the item to which this Give applies, currently always an offer
-    fulfillsType TEXT, -- type of that ID (assuming context of schema.org), currently always "Offer"
+    fulfillsHandleId TEXT, -- global ID to the item to which this Give applies
+    fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
 
     -- whether both giver and recipient have confirmed the fulfill relationship (boolean, 1 = confirmed)
     --
@@ -110,6 +110,7 @@ CREATE INDEX give_fulfillsPlanId ON give_claim(fulfillsPlanId);
 CREATE INDEX confirmed_jwt ON confirmation(origClaimJwtId);
 
 -- cache table, for quick retrieval of GiveAction claims with a provider
+-- but note that we intend to deprecate multiple providers... each giver will be assigned a separate give
 CREATE TABLE give_provider (
     giveHandleId TEXT, -- handleId of the GiveAction to which the provider contributes
     -- handle ID of the provider entity who helps make the give possible

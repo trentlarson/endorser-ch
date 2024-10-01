@@ -7,15 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [?]
+## [4.1.0]
 ### Added
 - Link to partner systems: Trustroots & TripHopping via nostr
 - Providers added by lastClaimId, with lookup for confirmation flag, and test for plan as provider
 ### Changed
 - Added a date to the network table.
 - Added an Authorization header to the contact utilities functions
+### Fixed
+- In the give_claim table, fix the agentDid and the amounts that should be null
 ### Changed in DB or environment
 - Automated SQL script 13
+- For "partner" domains: DNS, haproxy, certificate
 
 
 ## [4.0.2]
