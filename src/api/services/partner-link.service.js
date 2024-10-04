@@ -8,15 +8,17 @@
  * correlating customer data by accident.
  */
 
-import { encodeBase32 as geohashEncodeBase32 } from 'geohashing';
-import { finalizeEvent } from 'nostr-tools/pure'
-import { Relay, useWebSocketImplementation } from 'nostr-tools/relay'
-import { decode } from 'nostr-tools/nip19'
+import crypto from "crypto"
+import { encodeBase32 as geohashEncodeBase32 } from "geohashing"
+import {Event, finalizeEvent, verifyEvent, verifiedSymbol, getEventHash} from "nostr-tools/pure"
+import { Relay, useWebSocketImplementation } from "nostr-tools/relay"
+import { decode } from "nostr-tools/nip19"
 import * as pluscodes from "pluscodes"
-import WebSocket from 'ws'
+import { schnorr } from "@noble/curves/secp256k1" // used for nostr, imported by nostr-tools
+import WebSocket from "ws"
 
-import l from '../../common/logger'
-import { dbService } from './endorser.db.service'
+import l from "../../common/logger"
+import { dbService } from "./endorser.db.service"
 import { basicClaimDescription } from "./util"
 
 const NOSTR_PRIVATE_KEY_NSEC = process.env.NOSTR_PRIVATE_KEY_NSEC
@@ -31,8 +33,16 @@ const DEFAULT_RELAY = DEFAULT_RELAYS[3] // manasiwibi seems to be the most relia
 
 useWebSocketImplementation(WebSocket)
 
-export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userNostrPubKeyHex) {
-  const jwtLinkInfo = await dbService.jwtAndPartnerLinkForCode(jwtId, linkCode)
+export async function sendAndStoreLink(
+  issuer,
+  jwtId,
+  linkCode,
+  inputJson,
+  pubKeyHex,
+  pubKeyImage,
+  pubKeySigHex,
+) {
+  const linkInfo = await dbService.partnerLinkForCode(jwtId, linkCode)
 
   // When we separate this into another service, this will have to be an API call.
   // See the image-api server for an example of how to leverage JWTs to get
@@ -43,14 +53,22 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
     return { clientError: { message: "No JWT exists for " + jwtId } }
   } else if (jwtInfo.issuer !== issuer) {
     return { clientError: { message: "You are not the issuer of JWT " + jwtId } }
-  } else if (jwtLinkInfo) {
-    return { clientError: { message: "JWT " + jwtId + " already has '" + jwtLinkInfo.linkCode + "' link with data: " + jwtLinkInfo.data } }
+  } else if (linkInfo) {
+    return { clientError: { message: "JWT " + jwtId + " already has '" + linkInfo.linkCode + "' link with data: " + linkInfo.data } }
   }
-  if (linkCode === 'NOSTR-EVENT-TRUSTROOTS') {
+  // check that public key matches this issuer's DID
+
+  if (linkCode === "NOSTR-EVENT-TRUSTROOTS") {
+    // Check that the Ethereum derived address matches the Nostr public key
+    const pubKeyCheck = validateNostrSignature(pubKeyImage, pubKeyHex, pubKeySigHex)
+    if (!pubKeyCheck) {
+      return { clientError: { message: "The signature does not match the public key provided." } }
+    }
+
     const claim = JSON.parse(jwtInfo.claim)
     // see constants at https://github.com/Trustroots/nostroots-server/blob/48517a866994092e1112683ad1acea652b2b0f0a/common/constants.ts
     if (!claim.location?.geo?.latitude || !claim.location?.geo?.longitude) {
-      return {clientError: {message: "A nostr event for Trustroots requires a claim with location.geo.latitude and location.geo.longitude"}}
+      return { clientError: { message: "A nostr event for Trustroots requires a claim with location.geo.latitude and location.geo.longitude" } }
     }
     const plusCode = pluscodes.encode({
       latitude: claim.location.geo.latitude,
@@ -60,15 +78,32 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       ["e", jwtInfo.id],
       ["L", "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
       ["l", plusCode, "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
-      ["original_created_at", `${Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)}`],
+      [
+        "original_created_at",
+        `${Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)}`,
+      ],
     ]
     const kind = 30398 // MAP_NOTE_REPOST_KIND, custom to them
-    return createAndSendNostr(jwtInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
+    return createAndSendNostr(
+      jwtInfo,
+      linkCode,
+      kind,
+      inputJson,
+      moreTags,
+      pubKeyHex,
+      pubKeyImage,
+      pubKeySigHex,
+    )
+  } else if (linkCode === "NOSTR-EVENT-TRIPHOPPING") {
+    // Check that the Ethereum derived address matches the Nostr public key
+    const pubKeyCheck = validateNostrSignature(pubKeyImage, pubKeyHex, pubKeySigHex)
+    if (!pubKeyCheck) {
+      return { clientError: { message: "The signature does not match the public key provided." } }
+    }
 
-  } else if (linkCode === 'NOSTR-EVENT-TRIPHOPPING') {
-    const claim = JSON.parse(jwtLinkInfo.claim)
+    const claim = JSON.parse(jwtInfo.claim)
     if (!claim.location?.geo?.latitude || !claim.location?.geo?.longitude) {
-      return {clientError: {message: "A nostr event for TripHopping requires a claim with location.geo.latitude and location.geo.longitude"}}
+      return { clientError: { message: "A nostr event for TripHopping requires a claim with location.geo.latitude and location.geo.longitude" } }
     }
     const geohash8 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 8)
     const geohash6 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 6)
@@ -83,23 +118,53 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       ["t", "timesafari"],
       // ["location", "Lusaka, Zambia"],
       // ["price", "0", "USD"],
-      // ["published_at", `${Math.floor(new Date(jwtLinkInfo.issuedAt).getTime() / 1000)}`],
+      // ["published_at", `${Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)}`],
       // ["status", "sold"],
       // ["summary", JSON.parse(inputJson)],
       // ["title", JSON.parse(inputJson)],
     ]
     const kind = 30402 // creator says to use the classifieds for his map
-    return createAndSendNostr(jwtInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags)
-
+    return createAndSendNostr(
+      jwtInfo,
+      linkCode,
+      kind,
+      inputJson,
+      moreTags,
+      pubKeyHex,
+      pubKeyImage,
+      pubKeySigHex,
+    )
   } else {
     return { clientError: { message: "Unknown link code '" + linkCode + "'" } }
   }
 
-  async function createAndSendNostr(jwtInfo, linkCode, kind, inputJson, userNostrPubKeyHex, moreTags) {
+  // We have validated that the sender with the Authorization header is the sender,
+  // and we are also sending a public key so we need to verify that they own it.
+  function validateNostrSignature(eventImage, pubKeyHex, sigHex) {
+    // I actually tried to use the nostr-tools verifyEvent but it didn't recognize "kind" as a number. :-S
+    const hash = crypto.createHash("sha256").update(new TextEncoder().encode(eventImage)).digest("hex")
+    const sigCheck = schnorr.verify(sigHex, hash, pubKeyHex)
+    return sigCheck
+  }
+
+  async function createAndSendNostr(
+    jwtInfo,
+    linkCode,
+    kind,
+    inputJson,
+    moreTags,
+    pubKeyHex,
+    pubKeyImage,
+    pubKeySigHex,
+  ) {
     if (!NOSTR_PRIVATE_KEY_NSEC) {
-      return {clientError: {message: "This server is not set up to relay to nostr."}}
+      return {
+        clientError: {
+          message: "This server is not set up to relay to nostr.",
+        },
+      }
     }
-    if (!userNostrPubKeyHex) {
+    if (!pubKeyHex) {
       return { clientError: { message: "No nostr public key was provided." } }
     }
     const claim = JSON.parse(jwtInfo.claim)
@@ -111,16 +176,19 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       created_at: createdSecs,
       kind: kind,
       tags: [
-        ["d", userNostrPubKeyHex + ":" + jwtInfo.id],
-        ["p", userNostrPubKeyHex],
+        ["d", pubKeyHex + ":" + jwtInfo.id],
+        ["p", pubKeyHex],
         ...moreTags,
       ],
-    };
+    }
     if (claim.endTime || claim.validThrough) {
-      const expirationTime = Math.floor(new Date(claim.endTime || claim.validThrough).getTime() / 1000)
-      event.tags.push([ "expiration", `${expirationTime}` ])
-    } else if (process.env.NODE_ENV !== 'prod') { // add expiration in non-prod environments
-      event.tags.push([ "expiration", `${createdSecs + 60 * 60 * 24 * 2}` ])
+      const expirationTime = Math.floor(
+        new Date(claim.endTime || claim.validThrough).getTime() / 1000,
+      )
+      event.tags.push(["expiration", `${expirationTime}`])
+    } else if (process.env.NODE_ENV !== "prod") {
+      // add expiration in non-prod environments
+      event.tags.push(["expiration", `${createdSecs + 60 * 60 * 24 * 2}`])
     }
     let relay
     try {
@@ -128,10 +196,11 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       // this adds: pubkey, id, sig
       const signedEvent = await finalizeEvent(event, privateKeyBytes)
       relay = await Relay.connect(DEFAULT_RELAY)
-      relay.subscribe(
-        [ { ids: [signedEvent.id] } ],
-        { onevent(event) { l.info('Event recognized by relay:', event) } }
-      )
+      relay.subscribe([{ ids: [signedEvent.id] }], {
+        onevent(event) {
+          l.info("Event recognized by relay:", event)
+        },
+      })
       // remove after testing
       // const serverPubKeyHex = getPublicKey(privateKeyBytes)
       // relay.subscribe(
@@ -139,14 +208,20 @@ export async function sendAndStoreLink(issuer, jwtId, linkCode, inputJson, userN
       //   { onevent(event) { l.info('Server events recognized by relay:', event) } }
       // )
       await relay.publish(signedEvent)
-      const partnerLinkData = JSON.stringify({content: content, pubKeyHex: userNostrPubKeyHex})
-      await dbService.partnerLinkInsert(
-        {handleId: jwtInfo.handleId, linkCode, externalId: signedEvent.id, data: partnerLinkData}
-      )
-      return {signedEvent}
+      const partnerLinkData = JSON.stringify({ content, pubKeyHex })
+      await dbService.partnerLinkInsert({
+        handleId: jwtInfo.handleId,
+        linkCode,
+        externalId: signedEvent.id,
+        data: partnerLinkData,
+        pubKeyHex,
+        pubKeyImage,
+        pubKeySigHex,
+      })
+      return { signedEvent }
     } catch (e) {
       l.error("Error creating " + linkCode + " event for JWT " + jwtId + ": " + e)
-      return {error: "Error creating " + linkCode + " event for JWT " + jwtId + ": " + e}
+      return { error: "Error creating " + linkCode + " event for JWT " + jwtId + ": " + e }
     } finally {
       setTimeout(
         () => {

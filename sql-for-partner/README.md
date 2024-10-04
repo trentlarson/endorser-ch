@@ -12,5 +12,8 @@ CREATE TABLE partner_link (
     createdAt DATETIME NOT NULL,
     externalId VARCHAR(256),
     data TEXT -- JSON data, where format depends on linkCode
+    pubKeyHex TEXT, -- public key, eg. used in relayed nostr event
+    pubKeyImage TEXT, -- content that is signed
+    pubKeySigHex TEXT, -- signature of pubKeyPayload
 );
 ```

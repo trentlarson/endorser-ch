@@ -1907,11 +1907,14 @@ class EndorserDatabase {
   partnerLinkInsert(entry) {
     return new Promise((resolve, reject) => {
       const stmt =
-        "INSERT INTO partner_link (handleId, linkCode, externalId, createdAt, data)"
-        + " VALUES (?, ?, ?, dateTime(), ?)"
+        "INSERT INTO partner_link"
+        + " (handleId, linkCode, externalId, createdAt, data, pubKeyHex, pubKeyImage, pubKeySigHex)"
+        + " VALUES (?, ?, ?, dateTime(), ?, ?, ?, ?)"
       partnerDb.run(
         stmt,
-        [entry.handleId, entry.linkCode, entry.externalId, entry.data],
+        [
+          entry.handleId, entry.linkCode, entry.externalId, entry.data,
+          entry.pubKeyHex, entry.pubKeyImage, entry.pubKeySigHex],
         function(err) {
           if (err) {
             reject(err)
@@ -1923,7 +1926,7 @@ class EndorserDatabase {
     })
   }
 
-  jwtAndPartnerLinkForCode(jwtId, linkCode) {
+  partnerLinkForCode(jwtId, linkCode) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
         "SELECT * FROM partner_link WHERE handleId = ? and linkCode = ?",

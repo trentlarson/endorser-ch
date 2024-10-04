@@ -1,6 +1,6 @@
 {
   "name": "endorser-ch",
-  "version": "4.1.0",
+  "version": "4.1.1-beta",
   "description": "Server for recording assertions and reporting on signatures",
   "author": "Trent Larson <trent@trentlarson.com>",
   "license": "SQLite Blessing",
@@ -41,7 +41,7 @@
     "pino": "^5.10.2",
     "pluscodes": "^2.6.0",
     "ramda": "^0.26.1",
-    "sqlite3": "^5.1.1",
+    "sqlite3": "^5.1.7",
     "ulidx": "^0.3.0",
     "websocket-ts": "^2.1.5"
   },

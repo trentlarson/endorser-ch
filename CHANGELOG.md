@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [4.1.1]
+### Changed
+- Nostr endpoints verify signature based on the public key.
+### Changed in DB or environment
+- Automated partner SQL script 2
+
+
 ## [4.1.0]
 ### Added
 - Link to partner systems: Trustroots & TripHopping via nostr
@@ -17,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - In the give_claim table, fix the agentDid and the amounts that should be null
 ### Changed in DB or environment
-- Automated SQL script 13
+- Automated SQL script 13 & partner SQL script 1
 - For "partner" domains: DNS, haproxy, certificate
 
 

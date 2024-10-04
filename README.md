@@ -470,7 +470,7 @@ Let's create some claims. First, we'll create a claim of attendance. Here's the 
 {
   "@context": "http://schema.org",
   "@type": "JoinAction",
-  "agent": { "did": "did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e" },
+  "agent": { "did": "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F" },
   "event": {
     "organizer": { "name": "Bountiful Voluntaryist Community" },
     "name": "Saturday Morning Meeting",
@@ -490,7 +490,7 @@ Now to confirm that activity, place all the previous into the `object` of an `Ag
   "@type": "AgreeAction",
   "object": {
     "@type": "JoinAction",
-    "agent": { "did": "did:ethr:0xdf0d8e5fd234086f6649f77bb0059de1aebd143e" },
+    "agent": { "did": "did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F" },
     "event": {
       "organizer": { "name": "Bountiful Voluntaryist Community" },
       "name": "Saturday Morning Meeting",

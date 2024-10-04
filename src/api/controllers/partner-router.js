@@ -34,7 +34,15 @@ export default express
   async (req, res) => {
     // this will check if the issuer actually created the JWT, so no need to check registration limits
     const result =
-      await sendAndStoreLink(res.locals.tokenIssuer, req.body.jwtId, req.body.linkCode, req.body.inputJson, req.body.nostrPubKeyHex)
+      await sendAndStoreLink(
+        res.locals.tokenIssuer,
+        req.body.jwtId,
+        req.body.linkCode,
+        req.body.inputJson,
+        req.body.pubKeyHex || req.body.nostrPubKeyHex, // the latter was only used for a short time
+        req.body.pubKeyImage,
+        req.body.pubKeySigHex,
+      )
     if (result.clientError) {
       res.status(400).json({ error: result.clientError }).end()
     } else if (result.error) {
