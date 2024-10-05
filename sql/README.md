@@ -138,11 +138,11 @@ CREATE TABLE IF NOT EXISTS invite_one (
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expiresAt DATETIME NOT NULL,
   id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
-  inviteIdentifier TEXT NOT NULL UNIQUE,
+  inviteIdentifier TEXT NOT NULL UNIQUE, -- necessary for rate-limiting
   issuerDid TEXT NOT NULL,
-  jwt TEXT NOT NULL,
+  jwt TEXT, -- they may choose not to share their JWT with the server
   keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0, -- default is to make issuer visible when redeemed
-  notes TEXT, -- we encourage issuers to erase these notes ASAP
+  notes TEXT, -- they may choose not to share their notes with the server
   redeemedBy TEXT
 );
 
