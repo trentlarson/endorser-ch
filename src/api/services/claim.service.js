@@ -1526,6 +1526,109 @@ class ClaimService {
     return errors
   }
 
+  // return null or undefined if checks pass, or an error object if they don't
+  async checkClaimLimits(issuerDid, payloadClaim) {
+    const registration = await dbService.registrationByDid(issuerDid)
+    if (!registration) {
+      return {
+        clientError: {
+          message: `User ${issuerDid} is not registered to make claims. Contact an existing user for help.`,
+          code: ERROR_CODES.UNREGISTERED_USER
+        }
+      }
+    }
+
+    if (isEndorserRegistrationClaim(payloadClaim)) {
+
+      if (payloadClaim.identifier && !payloadClaim.participant) {
+        // someone is redeeming an invite from another user so check it out
+        const invite = await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
+        if (!invite) {
+          return {
+            clientError: {
+              message:
+                `No participant was provides and invite with identifier ${payloadClaim.identifier} does not exist.`
+            }
+          }
+        }
+        if (invite.redeemedBy) {
+          return {
+            clientError: {
+              message:
+                `Invite with identifier ${payloadClaim.identifier} has already been redeemed.`
+            }
+          }
+        }
+        if (new Date(invite.expiresAt) < DateTime.now()) {
+          return {
+            clientError: {
+              message:
+                `Invite with identifier ${payloadClaim.identifier} has expired.`
+            }
+          }
+        }
+      }
+
+      // look at registration limits
+
+      // disallow registering the same day of registration
+      const registrationDate = DateTime.fromSeconds(registration.epoch)
+      if (DateTime.now().hasSame(registrationDate, 'day')) {
+        return {
+          clientError: {
+            message: `You cannot register anyone on the same day you got registered.`,
+            code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
+          }
+        }
+      }
+
+      const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
+      const regCount = await dbService.registrationCountByAfter(registration.did, startOfMonthEpoch)
+      const maxAllowedRegs = registration.maxRegs ?? DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+
+      // during the first month for default settings, disallow registering more than 1/31 of their limit for each remaining day
+      if (maxAllowedRegs === DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+        && DateTime.now().hasSame(registrationDate, 'month')
+        && regCount > (31 - DateTime.now().day())) {
+        return {
+          clientError: {
+            message: `You can only register one person per day during the first month.`,
+            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+          }
+        }
+      }
+
+      // disallow registering above the monthly limit
+      // 0 shouldn't mean DEFAULT
+      if (regCount >= maxAllowedRegs) {
+        return {
+          clientError: {
+            message: `You have already registered ${maxAllowedRegs} this month.`
+              + ` Contact an administrator for a higher limit.`,
+            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+          }
+        }
+      }
+
+    } else {
+      const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
+      const startOfWeekString = startOfWeekDate.toISO()
+      const claimedCount = await dbService.jwtCountByAfter(issuerDid, startOfWeekString)
+      // 0 shouldn't mean DEFAULT
+      const maxAllowedClaims =
+        registration.maxClaims != null ? registration.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
+      if (claimedCount >= maxAllowedClaims) {
+        return {
+          clientError: {
+            message: `You have already made ${maxAllowedClaims} claims this week.`
+              + ` Contact an administrator for a higher limit.`,
+            code: ERROR_CODES.OVER_CLAIM_LIMIT
+          }
+        }
+      }
+    }
+  }
+
   /**
      @param authIssuerId is the issuer if an Authorization Bearer JWT is sent
 
@@ -1567,94 +1670,11 @@ class ClaimService {
       return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss} and claim is not an invite.`)
     }
 
-    const registered = await dbService.registrationByDid(payload.iss)
-    if (!registered) {
-      return Promise.reject(
-        { clientError: {
-          message: `User ${payload.iss} is not registered to make claims. Contact an existing user for help.`,
-          code: ERROR_CODES.UNREGISTERED_USER
-        }}
-      )
-    }
-
     //// Check limits
 
-    if (isEndorserRegistrationClaim(payloadClaim) && payloadClaim.identifier && !payloadClaim.participant) {
-      // someone is redeeming an invite from another user so check it out
-      const invite = await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
-      if (!invite) {
-        return Promise.reject({ clientError: { message:
-          `No participant was provides and invite with identifier ${payloadClaim.identifier} does not exist.`
-        }})
-      }
-      if (invite.redeemedBy) {
-        return Promise.reject({ clientError: { message:
-          `Invite with identifier ${payloadClaim.identifier} has already been redeemed.`
-        }})
-      }
-      if (new Date(invite.expiresAt) < DateTime.now()) {
-        return Promise.reject({ clientError: { message:
-          `Invite with identifier ${payloadClaim.identifier} has expired.`
-        }})
-      }
-
-      // otherwise, we depend on the invite-creation process to limit the number of invites
-
-    } else {
-      // this is some other claim
-
-      // start with claim limit
-      const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
-      const startOfWeekString = startOfWeekDate.toISO()
-      const claimedCount = await dbService.jwtCountByAfter(payload.iss, startOfWeekString)
-      // 0 shouldn't mean DEFAULT
-      const maxAllowedClaims =
-            registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
-      if (claimedCount >= maxAllowedClaims) {
-        return Promise.reject(
-          { clientError: { message: `You have already made ${maxAllowedClaims} claims this week.`
-                          + ` Contact an administrator for a higher limit.`,
-                          code: ERROR_CODES.OVER_CLAIM_LIMIT } }
-        )
-      }
-
-      // now look at registration limit
-      if (isEndorserRegistrationClaim(payloadClaim)) {
-
-        // disallow registering the same day they got registered
-        const registeredDate = DateTime.fromSeconds(registered.epoch)
-        if (DateTime.now().hasSame(registeredDate, 'day')) {
-          return Promise.reject({ clientError: {
-              message: `You cannot register anyone on the same day you got registered.`,
-              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
-            }})
-        }
-
-        // during the first month, disallow registering more than one per day
-        const startOfDayEpoch = DateTime.utc().startOf('day').toSeconds()
-        const regCountToday = await dbService.registrationCountByAfter(payload.iss, startOfDayEpoch)
-        if (DateTime.now().hasSame(registeredDate, 'month')
-            && regCountToday > 0) {
-          return Promise.reject({ clientError: {
-            message: `You can only register one person per day during the first month.`,
-            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
-          }})
-        }
-
-        // disallow registering above the monthly limit
-        const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
-        const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
-        // 0 shouldn't mean DEFAULT
-        const maxAllowedRegs =
-              registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
-        if (regCount >= maxAllowedRegs) {
-          return Promise.reject({ clientError: {
-            message: `You have already registered ${maxAllowedRegs} this month.`
-              + ` Contact an administrator for a higher limit.`,
-            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
-          }})
-        }
-      }
+    const checkError = await this.checkClaimLimits(payload.iss, payloadClaim)
+    if (checkError) {
+      return Promise.reject(checkError)
     }
 
     //// Check for edit

@@ -155,24 +155,6 @@ export default express
  */
 
 /**
- * Get many Claim JWTs
- *
- * Beware: this array may include a "publicUrls" key within it.
- *
- * @group claims v1 - Claim Entry (with limited feedback)
- * @route GET /api/claim
- * @param {string} claimContents.query.optional
- * @param {string} claimContext.query.optional
- * @param {string} claimType.query.optional
- * @param {string} issuedAt.query.optional
- * @param {string} subject.query.optional
- * @returns {array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
- * @returns {Error} 400 - error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/', claimController.getByQuery)
-
-/**
  * Get a Claim JWT
  * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim/{id}
@@ -206,6 +188,24 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/full/:id', claimController.getFullClaimById)
+
+/**
+ * Get many Claim JWTs
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
+ * @group claims v1 - Claim Entry (with limited feedback)
+ * @route GET /api/claim
+ * @param {string} claimContents.query.optional
+ * @param {string} claimContext.query.optional
+ * @param {string} claimType.query.optional
+ * @param {string} issuedAt.query.optional
+ * @param {string} subject.query.optional
+ * @returns {array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/', claimController.getByQuery)
 
 /**
  * Add a Claim JWT and insert claims into their own tables

@@ -71,6 +71,7 @@ describe('5 - Registration', () => {
   it('check that User 0 cannot insert too many registrations', async () => {
     // first, bump up claims so that it doesn't get caught by claims limit (only reg limit)
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 123)
+    // now, try to register
     await request(Server)
       .post('/api/claim')
       .set('Authorization', 'Bearer ' + pushTokens[0])
@@ -81,6 +82,29 @@ describe('5 - Registration', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
+
+    // try an invite
+    const registerUnknownBy0Obj = R.clone(testUtil.jwtTemplate)
+    registerUnknownBy0Obj.claim = R.clone(testUtil.registrationTemplate)
+    registerUnknownBy0Obj.claim.agent.identifier = creds[0].did
+    delete registerUnknownBy0Obj.participant
+    const identifier =
+      Math.random().toString(36).substring(2)
+      + Math.random().toString(36).substring(2)
+      + Math.random().toString(36).substring(2);
+    registerUnknownBy0Obj.claim.identifier = identifier
+    const registerUnknownBy0Enc = await credentials[0].createVerification(registerUnknownBy0Obj)
+    await request(Server)
+      .post('/api/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send({ jwtEncoded: registerUnknownBy0Enc })
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+
     // now, reset claims limit
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 122)
   }).timeout(5000)

@@ -19,7 +19,7 @@ before(async () => {
 })
 
 // create the identifier out of random characters (at least 20 characters)
-const identifier =
+const inviteIdentifier =
   Math.random().toString(36).substring(2)
   + Math.random().toString(36).substring(2)
   + Math.random().toString(36).substring(2);
@@ -28,7 +28,7 @@ const registerUnknownBy0Obj = R.clone(testUtil.jwtTemplate)
 registerUnknownBy0Obj.claim = R.clone(testUtil.registrationTemplate)
 registerUnknownBy0Obj.claim.agent.identifier = creds[0].did
 delete registerUnknownBy0Obj.participant
-registerUnknownBy0Obj.claim.identifier = identifier
+registerUnknownBy0Obj.claim.identifier = inviteIdentifier
 
 const someGiveBy5Obj = R.clone(testUtil.jwtTemplate)
 someGiveBy5Obj.claim = R.clone(testUtil.claimGive)
@@ -46,11 +46,41 @@ describe('8 - Asynchronous Invitations', () => {
 
   const inviteNotes = "Invitation for neighbor #5";
 
+  let registerUnknownBy0Enc
   it('unregistered user cannot create an invite', async () => {
+    // ensure the user is not registered
+    await new Promise((resolve, reject) => request(Server)
+      .get('/api/report/rateLimits')
+      .set('Authorization', 'Bearer ' + pushTokens[13])
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(400)
+        expect(r.body).to.have.property("error")
+        resolve(r.body)
+      })
+      .catch(err => reject(err))
+    )
+    registerUnknownBy0Enc = await credentials[13].createVerification(registerUnknownBy0Obj)
+    return request(Server)
+      .post('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[13])
+      .send({ inviteJwt: registerUnknownBy0Enc, notes: inviteNotes })
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(400)
+        expect(r.body).to.have.property("error")
+      })
+      .catch(err => Promise.reject(err));
+  })
+
+  it('user cannot sent a non-register claim for an invite, or a claim for another user', async () => {
+    const someGiveBy4Obj = R.clone(someGiveBy5Obj)
+    someGiveBy4Obj.claim.agent = {identifier: creds[4].did}
+    const someGiveBy4JwtEnc = await credentials[4].createVerification(someGiveBy4Obj)
     return request(Server)
     .post('/api/userUtil/invite')
-    .set('Authorization', 'Bearer ' + pushTokens[5])
-    .send({ inviteJwt: registerUnknownBy0Enc, notes: inviteNotes })
+    .set('Authorization', 'Bearer ' + pushTokens[4])
+    .send({inviteJwt: someGiveBy4JwtEnc, notes: inviteNotes})
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.status).that.equals(400)
@@ -59,10 +89,21 @@ describe('8 - Asynchronous Invitations', () => {
     .catch(err => Promise.reject(err));
   })
 
-  let registerUnknownBy0Enc
+  it('user cannot sent a register claim for another user', async () => {
+    registerUnknownBy0Enc = await credentials[0].createVerification(registerUnknownBy0Obj)
+    return request(Server)
+      .post('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .send({ inviteJwt: registerUnknownBy0Enc, notes: inviteNotes })
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(400)
+        expect(r.body).to.have.property("error")
+      })
+      .catch(err => Promise.reject(err));
+  })
+
   it('registered user can create an invite record', async () => {
-    // generate an expiration date for next week
-    const expiresAt = new Date(Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60 * 1000)).toISOString();
     registerUnknownBy0Enc = await credentials[0].createVerification(registerUnknownBy0Obj)
     return request(Server)
       .post('/api/userUtil/invite')
@@ -81,11 +122,14 @@ describe('8 - Asynchronous Invitations', () => {
 
   it('registered user can retrieve an invite record', () => {
     return request(Server)
-      .get('/api/userUtil/invite/' + identifier)
+      .get('/api/userUtil/invite/' + inviteIdentifier)
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
+        if (r.body.error) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
         expect(r.headers['content-type']).to.match(/json/)
-        expect(r.body.data).to.have.property("inviteIdentifier", identifier)
+        expect(r.body.data).to.have.property("inviteIdentifier", inviteIdentifier)
         expect(r.body.data).to.have.property("notes")
         expect(r.body.data).to.have.property("expiresAt")
         expect(r.status).that.equals(200)
@@ -93,13 +137,34 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
-  it('user #5 can sign up from the registration', async() => {
+  it('registered user can retrieve all their invite records', () => {
+    return request(Server)
+      .get('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .then(r => {
+        if (r.body.error) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0]).to.have.property("inviteIdentifier", inviteIdentifier)
+        expect(r.body.data[0]).to.have.property("notes")
+        expect(r.body.data[0]).to.have.property("expiresAt")
+        expect(r.status).that.equals(200)
+      })
+      .catch(err => Promise.reject(err))
+  });
+
+  it('user #13 can sign up from the registration', async() => {
     // That JWT is passed to someone else who can use it to register.
     return request(Server)
       .post('/api/v2/claim')
-      .set('Authorization', 'Bearer ' + pushTokens[5])
+      .set('Authorization', 'Bearer ' + pushTokens[13])
       .send({ jwtEncoded: registerUnknownBy0Enc })
       .then(r => {
+        if (r.body.error) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.body).to.have.property("success")
         expect(r.status).that.equals(201)
@@ -107,12 +172,15 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
-  it('user #5 can now make a claim', async () => {
-    const someGiveBy5JwtEnc = await credentials[5].createVerification(someGiveBy5Obj)
+  it('user #13 can now make a claim', async () => {
+    const someGiveBy5JwtEnc = await credentials[13].createVerification(someGiveBy5Obj)
     return request(Server)
       .post('/api/v2/claim')
       .send({ jwtEncoded: someGiveBy5JwtEnc })
       .then(r => {
+        if (r.body.error) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.body).to.have.property("success")
         expect(r.status).that.equals(201)
@@ -120,9 +188,9 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
-  it('other registered user cannot retrieve an invite record', () => {
+  it('other registered user cannot retrieve an invite record by someone else', () => {
     return request(Server)
-      .get('/api/userUtil/invite/' + identifier)
+      .get('/api/userUtil/invite/' + inviteIdentifier)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.headers['content-type']).to.match(/json/)
