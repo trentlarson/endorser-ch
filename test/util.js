@@ -11,7 +11,7 @@ const { Credentials } = require('uport-credentials')
 
 const NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
 const NEXT_MINUTE_EPOCH = NOW_EPOCH + (24 * 60 * 60)
-
+const NEXT_WEEK_EPOCH = NOW_EPOCH + (7 * 24 * 60 * 60)
 
 /**
  @return true if all DIDs are either hidden or exceptDid
@@ -155,8 +155,10 @@ module.exports = {
     "@context": "https://schema.org",
     "@type": "RegisterAction",
     "agent": { "identifier": null }, // supply DID
+    "endTime": NEXT_WEEK_EPOCH,
+    //"identifier": null, // used for invites, alternative to "participant"
     "object": "endorser.ch",
-    "participant": { "identifier": null }, // supply DID
+    "participant": { "identifier": null }, // supply DID, alternative to invite "identifier"
   },
 
   confirmationTemplate: {

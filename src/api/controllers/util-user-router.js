@@ -1,10 +1,12 @@
 import * as express from 'express'
+
 import {
   cacheContactList,
   clearContactCaches,
   getContactMatch,
 } from "../services/contact-correlation.service";
 import { dbService } from '../services/endorser.db.service'
+import { decodeAndVerifyJwt } from "../services/vc";
 
 export default express
   .Router()
@@ -127,5 +129,100 @@ export default express
       const counterpartyId = req.query.counterparty || req.body.counterparty
       const result = clearContactCaches(res.locals.tokenIssuer, counterpartyId)
       res.status(200).json(result).end()
+    }
+  )
+
+/**
+ * Save info about an invitation so that redemption is recognized.
+ * Note that we ask for the invite JWT now for audit purposes.
+ * We also still get an authorization JWT separately so that there's an expiration on it.
+ *
+ * @group user utils - User Utils
+ * @route POST /api/userUtil/invite
+ * @param {string} inviteJwt.body.required - issuer code to specify invitee, must be 20 characters or more and should be random
+ * @param {string} expiresAt.body.optional - ISO 8601 date string for when the invite expires
+ * @param {string} notes.body.optional - issuer notes to remember the invitee
+ * @returns 200 - the internal ID of the invite with a
+ * @returns {Error} 500 - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post(
+    '/invite',
+    async (req, res) => {
+      try {
+        if (!req.body.inviteJwt) {
+          res.status(400).json({ error: { message: 'You must specify an inviteJwt.' } }).end()
+          return
+        }
+        const verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
+        const identifier = verifiedInvite.payload.claim.identifier
+        const date = new Date(verifiedInvite.payload.exp).toISOString()
+        if (!identifier || identifier.length < 20) {
+          res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, used inside the RegisterAction given to the invitee.' } }).end()
+        } else if (!verifiedInvite.payload.exp) {
+          res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation. Use the same date as the RegisterAction.' } }).end()
+        } else {
+          await dbService.inviteOneInsert(res.locals.tokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
+          res.status(200).json({ success: true }).end()
+        }
+      } catch (error) {
+        res.status(500).json({ error: { message: error.message } }).end()
+      }
+    }
+  )
+
+/**
+ * Redeem an invite
+ *
+ * @group user utils - User Utils
+ * @route POST /api/userUtil/invite
+ * @param {string} notes.body.optional - issuer notes to remember the invitee
+ * @returns 200 - the internal ID of the invite with a
+ * @returns {Error} 500 - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post(
+    '/redeemInvite',
+    async (req, res) => {
+      try {
+        const verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
+        console.log("verified", verifiedInvite)
+        const identifier = verifiedInvite.payload.claim.identifier
+        const date = new Date(verifiedInvite.payload.exp).toISOString()
+        if (!identifier || identifier.length < 20) {
+          res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, used inside the RegisterAction given to the invitee.' } }).end()
+        } else if (!verifiedInvite.payload.exp) {
+          res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation. Use the same date as the RegisterAction.' } }).end()
+        } else {
+          await dbService.inviteOneInsert(res.locals.tokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
+          res.status(200).json({ success: true }).end()
+        }
+      } catch (error) {
+        res.status(500).json({ error: { message: error.message } }).end()
+      }
+    }
+  )
+
+/**
+ * Retrieve invite for this identifier
+ *
+ * @group user utils - User Utils
+ * @route GET /api/userUtil/invite/:identifier
+ * @param {string} identifier.query.required - identifier originally sent
+ * @returns 200
+ * @returns {Error} 500 - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get(
+    '/invite/:identifier',
+    async (req, res) => {
+      const invite = await dbService.getInviteOneByInvitationId(req.params.identifier)
+      if (!invite) {
+        res.status(400).json({ error: { message: 'There is no invite with that identifier.' } }).end()
+      } else if (invite.issuerDid !== res.locals.tokenIssuer) {
+        res.status(400).json({ error: { message: 'You do not own the invite with that identifier.' } }).end()
+      } else {
+        res.status(200).json({ data: invite }).end()
+      }
     }
   )

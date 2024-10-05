@@ -947,7 +947,7 @@ class ClaimService {
   }
 
 
-  async createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createEmbeddedClaimEntry(jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -966,13 +966,13 @@ class ClaimService {
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (let claim of origClaim) {
             // this must await (see note above)
-            const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, claim, claimIdDataList)
+            const conf = await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, claim, claimIdDataList)
                 .catch(e => ({ embeddedRecordError: e }))
             recordings.push(conf)
           }
         } else if (origClaim) {
           // this must await (see note above)
-          const conf = await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim, claimIdDataList)
+          const conf = await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, origClaim, claimIdDataList)
             .catch(e => ({ embeddedRecordError: e }))
           recordings.push(conf)
         }
@@ -983,11 +983,11 @@ class ClaimService {
                && claim['@type'] === 'GiveAction') {
 
       const newGive =
-            await this.createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
+            await this.createGive(jwtId, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
 
       // only update confirm totals if this is an update
       await this.checkOfferUpdate(
-          issuerDid, issuedAt, newGive.recipientDid, newGive.unit, newGive.amount,
+          payloadIssuerDid, issuedAt, newGive.recipientDid, newGive.unit, newGive.amount,
           newGive.fulfillsHandleId, newGive.fulfillsType, newGive.fulfillsPlanHandleId, false
       )
 
@@ -1047,7 +1047,7 @@ class ClaimService {
 
       }
 
-      const actionId = await dbService.actionClaimInsert(issuerDid, agentDid, jwtId, event)
+      const actionId = await dbService.actionClaimInsert(payloadIssuerDid, agentDid, jwtId, event)
       l.trace(`${this.constructor.name} New action # ${actionId}`)
       return { actionId }
 
@@ -1056,7 +1056,7 @@ class ClaimService {
                && claim['@type'] === 'Offer') {
 
       const isPartOfInfo =
-          await this.retrieveClauseClaimAndIssuer(claim.itemOffered?.isPartOf, claimIdDataList, null, issuerDid)
+          await this.retrieveClauseClaimAndIssuer(claim.itemOffered?.isPartOf, claimIdDataList, null, payloadIssuerDid)
       const fulfillsHandleId = isPartOfInfo?.clauseHandleId
       const fulfillsLastClaimId = isPartOfInfo?.clauseLastClaimId
 
@@ -1068,7 +1068,7 @@ class ClaimService {
 
       const fulfillsLinkConfirmed =
           this.issuerSameAsPersonInLinkedJwt(
-              issuerDid,
+              payloadIssuerDid,
               isPartOfInfo?.clauseClaim,
               isPartOfInfo?.clauseIssuerDid
           )
@@ -1084,9 +1084,9 @@ class ClaimService {
         handleId,
         issuedAt,
         updatedAt: issuedAt,
-        issuerDid,
+        issuerDid: payloadIssuerDid,
         // a give might be from someone unknown but an offer is always from someone known
-        offeredByDid: claim.offeredBy?.identifier || issuerDid,
+        offeredByDid: claim.offeredBy?.identifier || payloadIssuerDid,
         recipientDid: claim.recipient?.identifier,
         fulfillsHandleId,
         fulfillsLastClaimId,
@@ -1119,7 +1119,7 @@ class ClaimService {
 
       const entry = {
         jwtId: jwtId,
-        issuerDid: issuerDid,
+        issuerDid: payloadIssuerDid,
         orgName: claim.name,
         roleName: claim.member.roleName,
         startDate: claim.member.startDate,
@@ -1140,12 +1140,12 @@ class ClaimService {
       const agentDid = claim.agent?.identifier || claim.agent?.did
 
       const planFulfills =
-        await this.retrieveClauseClaimAndIssuer(claim.fulfills, claimIdDataList, 'PlanAction', issuerDid)
+        await this.retrieveClauseClaimAndIssuer(claim.fulfills, claimIdDataList, 'PlanAction', payloadIssuerDid)
       const fulfillsPlanHandleId = planFulfills?.clauseHandleId
       const fulfillsPlanLastClaimId = planFulfills?.clauseLastClaimId
       const fulfillsLinkConfirmed =
         this.issuerSameAsPersonInLinkedJwt(
-            issuerDid,
+            payloadIssuerDid,
             planFulfills?.clauseClaim,
             planFulfills?.clauseIssuerDid
         )
@@ -1173,7 +1173,7 @@ class ClaimService {
       const entry = {
         jwtId: jwtId,
         agentDid: agentDid,
-        issuerDid: issuerDid,
+        issuerDid: payloadIssuerDid,
         handleId: handleId,
         name: claim.name,
         description: claim.description,
@@ -1236,7 +1236,7 @@ class ClaimService {
       const entry = {
         jwtId: jwtId,
         agentDid: agentDid,
-        issuerDid: issuerDid,
+        issuerDid: payloadIssuerDid,
         handleId: handleId,
         name: claim.name,
         description: claim.description,
@@ -1267,14 +1267,24 @@ class ClaimService {
     } else if (isEndorserRegistrationClaim(claim)) {
 
       // agent.did is for legacy data, some still in the mobile app
-      const agentDid = claim.agent?.identifier || claim.agent?.did || issuerDid
+      const agentDid = claim.agent?.identifier || claim.agent?.did || payloadIssuerDid
 
-      if (agentDid != null && agentDid !== issuerDid) {
+      if (agentDid != null && agentDid !== payloadIssuerDid) {
         return { embeddedRecordError: "You cannot claim an agent other than yourself as registrar." }
       }
 
       // participant.did is for legacy data, some still in the mobile app
-      const participantDid = claim.participant?.identifier || claim.participant?.did
+      let participantDid = claim.participant?.identifier || claim.participant?.did
+
+      if (!participantDid && claim.identifier) {
+        // this is an invite
+        // we've already checked that the invite exists, is unused, and is not expired
+
+        participantDid = authIssuerDid
+
+        // now we'll mark it as redeemed
+        await dbService.updateInviteOne(claim.identifier, participantDid)
+      }
 
       if (!participantDid) {
         return { embeddedRecordError: "You did not send a participant's identifier for registration." }
@@ -1301,7 +1311,7 @@ class ClaimService {
       const entry =
           {
             jwtId: jwtId,
-            issuerDid: issuerDid,
+            issuerDid: payloadIssuerDid,
             partyDid: partyDid,
             polygon: claim.spatialUnit.geo.polygon,
             westLon: bbox.westLon,
@@ -1320,7 +1330,7 @@ class ClaimService {
 
       const entry = {
         jwtId: jwtId,
-        issuerDid: issuerDid,
+        issuerDid: payloadIssuerDid,
         actionOption: claim.actionOption,
         candidate: claim.candidate,
         eventName: claim.object.event.name,
@@ -1342,7 +1352,7 @@ class ClaimService {
       { // handle a single claim
         const origClaim = claim['originalClaim']
         recordings.push(
-          await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim, claimIdDataList)
+          await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, origClaim, claimIdDataList)
             .catch(e => ({ embeddedRecordError: e }))
         )
       }
@@ -1357,7 +1367,7 @@ class ClaimService {
           // (when we haven't inserted previous ones in time for the duplicate check)
           for (let origClaim of origClaims) {
             recordings.push(
-              await this.createOneConfirmation(jwtId, issuerDid, issuedAt, origClaim, claimIdDataList)
+              await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, origClaim, claimIdDataList)
                 .catch(e => ({ embeddedRecordError: e }))
             )
           }
@@ -1384,7 +1394,8 @@ class ClaimService {
   /**
    *
    * @param jwtId
-   * @param issuerDid
+   * @param authIssuerDid -- the issuer of the JWT that is sending this claim, set in Authorization header
+   * @param payloadIssuerDid -- the issuer of the payload JWT, sent in the body 'jwtEncoded' property
    * @param issuedAt
    * @param handleId
    * @param claim
@@ -1392,9 +1403,9 @@ class ClaimService {
    * @param isFirstClaimForHandleId {boolean} true if this is the first claim for this handleId, important for determining insert vs update
    * @return Promise<Record< embeddedResults: string, networkResults: string >>
    */
-  async createEmbeddedClaimEntries(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createEmbeddedClaimEntries(jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
-    l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${issuerDid}, ...)`);
+    l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${payloadIssuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
 
     let embeddedResults
@@ -1417,7 +1428,7 @@ class ClaimService {
       { // handle multiple claims
         for (let subClaim of claim) {
           recordings.push(
-            this.createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, subClaim)
+            this.createEmbeddedClaimEntry(jwtId, payloadIssuerDid, issuedAt, handleId, subClaim)
           )
         }
       }
@@ -1429,14 +1440,14 @@ class ClaimService {
     } else {
       // claim is not an array
       embeddedResults =
-        await this.createEmbeddedClaimEntry(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
+        await this.createEmbeddedClaimEntry(jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
       l.trace(`${this.constructor.name} created an embedded claim record.`)
     }
 
     // now record all the "sees" relationships to the issuer
     const netRecords = []
     for (let did of allDidsInside(claim)) {
-      netRecords.push(addCanSee(did, issuerDid))
+      netRecords.push(addCanSee(did, payloadIssuerDid))
     }
     // since addCanSee doesn't return anything, this is a list of nulls
     let allNetRecords = await Promise.all(netRecords)
@@ -1545,75 +1556,108 @@ class ClaimService {
           return Promise.reject(err)
         })
 
-    if (authIssuerId && payload.iss !== authIssuerId) {
-      return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss}`)
+    const payloadClaim = this.extractClaim(payload)
+    if (!payloadClaim) {
+      l.warn(`${this.constructor.name} JWT received without a claim.`)
+      return Promise.reject("JWT had no 'claim' property.")
+    }
+
+    // reject if they send an auth JWT but it doesn't match the sent claim & sent claim isn't an invite
+    if (authIssuerId && payload.iss !== authIssuerId && !payloadClaim.identifier) {
+      return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss} and claim is not an invite.`)
     }
 
     const registered = await dbService.registrationByDid(payload.iss)
     if (!registered) {
       return Promise.reject(
         { clientError: {
-          message: `You are not registered to make claims. Contact an existing user for help.`,
+          message: `User ${payload.iss} is not registered to make claims. Contact an existing user for help.`,
           code: ERROR_CODES.UNREGISTERED_USER
         }}
       )
     }
 
-    const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
-    const startOfWeekString = startOfWeekDate.toISO()
-    const claimedCount = await dbService.jwtCountByAfter(payload.iss, startOfWeekString)
-    // 0 shouldn't mean DEFAULT
-    const maxAllowedClaims =
-          registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
-    if (claimedCount >= maxAllowedClaims) {
-      return Promise.reject(
-        { clientError: { message: `You have already made ${maxAllowedClaims} claims this week.`
-                         + ` Contact an administrator for a higher limit.`,
-                         code: ERROR_CODES.OVER_CLAIM_LIMIT } }
-      )
-    }
+    //// Check limits
 
-    const payloadClaim = this.extractClaim(payload)
-    if (!payloadClaim) {
-      l.warn(`${this.constructor.name} JWT received without a claim.`)
-      return Promise.reject("JWT had no 'claim' property.")
-    }
-    if (isEndorserRegistrationClaim(payloadClaim)) {
-
-      // disallow registering the same day they got registered
-      const registeredDate = DateTime.fromSeconds(registered.epoch)
-      if (DateTime.now().hasSame(registeredDate, 'day')) {
-        return Promise.reject({ clientError: {
-            message: `You cannot register anyone on the same day you got registered.`,
-            code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
-          }})
+    if (isEndorserRegistrationClaim(payloadClaim) && payloadClaim.identifier && !payloadClaim.participant) {
+      // someone is redeeming an invite from another user so check it out
+      const invite = await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
+      if (!invite) {
+        return Promise.reject({ clientError: { message:
+          `No participant was provides and invite with identifier ${payloadClaim.identifier} does not exist.`
+        }})
       }
-
-      // during the first month, disallow registering more than one per day
-      const startOfDayEpoch = DateTime.utc().startOf('day').toSeconds()
-      const regCountToday = await dbService.registrationCountByAfter(payload.iss, startOfDayEpoch)
-      if (DateTime.now().hasSame(registeredDate, 'month')
-          && regCountToday > 0) {
-        return Promise.reject({ clientError: {
-          message: `You can only register one person per day during the first month.`,
-          code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+      if (invite.redeemedBy) {
+        return Promise.reject({ clientError: { message:
+          `Invite with identifier ${payloadClaim.identifier} has already been redeemed.`
+        }})
+      }
+      if (new Date(invite.expiresAt) < DateTime.now()) {
+        return Promise.reject({ clientError: { message:
+          `Invite with identifier ${payloadClaim.identifier} has expired.`
         }})
       }
 
-      // disallow registering above the monthly limit
-      const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
-      const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
+      // otherwise, we depend on the invite-creation process to limit the number of invites
+
+    } else {
+      // this is some other claim
+
+      // start with claim limit
+      const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
+      const startOfWeekString = startOfWeekDate.toISO()
+      const claimedCount = await dbService.jwtCountByAfter(payload.iss, startOfWeekString)
       // 0 shouldn't mean DEFAULT
-      const maxAllowedRegs =
-            registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
-      if (regCount >= maxAllowedRegs) {
-        return Promise.reject({ clientError: {
-          message: `You have already registered ${maxAllowedRegs} this month.`
-            + ` Contact an administrator for a higher limit.`,
-          code: ERROR_CODES.OVER_REGISTRATION_LIMIT
-        }})
+      const maxAllowedClaims =
+            registered.maxClaims != null ? registered.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
+      if (claimedCount >= maxAllowedClaims) {
+        return Promise.reject(
+          { clientError: { message: `You have already made ${maxAllowedClaims} claims this week.`
+                          + ` Contact an administrator for a higher limit.`,
+                          code: ERROR_CODES.OVER_CLAIM_LIMIT } }
+        )
+      }
+
+      // now look at registration limit
+      if (isEndorserRegistrationClaim(payloadClaim)) {
+
+        // disallow registering the same day they got registered
+        const registeredDate = DateTime.fromSeconds(registered.epoch)
+        if (DateTime.now().hasSame(registeredDate, 'day')) {
+          return Promise.reject({ clientError: {
+              message: `You cannot register anyone on the same day you got registered.`,
+              code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
+            }})
+        }
+
+        // during the first month, disallow registering more than one per day
+        const startOfDayEpoch = DateTime.utc().startOf('day').toSeconds()
+        const regCountToday = await dbService.registrationCountByAfter(payload.iss, startOfDayEpoch)
+        if (DateTime.now().hasSame(registeredDate, 'month')
+            && regCountToday > 0) {
+          return Promise.reject({ clientError: {
+            message: `You can only register one person per day during the first month.`,
+            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+          }})
+        }
+
+        // disallow registering above the monthly limit
+        const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
+        const regCount = await dbService.registrationCountByAfter(payload.iss, startOfMonthEpoch)
+        // 0 shouldn't mean DEFAULT
+        const maxAllowedRegs =
+              registered.maxRegs != null ? registered.maxRegs : DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+        if (regCount >= maxAllowedRegs) {
+          return Promise.reject({ clientError: {
+            message: `You have already registered ${maxAllowedRegs} this month.`
+              + ` Contact an administrator for a higher limit.`,
+            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+          }})
+        }
       }
     }
+
+    //// Check for edit
 
     // Now check that all claimId + handleId references are consistent.
     // We do this basic sanity check here because we want to fail before
@@ -1635,8 +1679,8 @@ class ClaimService {
     }
 
     // The following looks up a previous entry by handle ID, and if it exists
-    // then we figure they want to replace it. However, it is more precise
-    // and reliable if they use a specific record (a JWT ID via lastClaimId)
+    // then we figure they want to replace it. Note that it is more precise
+    // and reliable if they use a JWT ID via lastClaimId (for the latest previous)
     // because it's possible for some synchronization problem where their system
     // or another authorized participant (the agent) has sent a change and they
     // haven't seen the most recent version... so they should avoid simply
@@ -1710,8 +1754,9 @@ class ClaimService {
         }
       }
 
-    } else if (payloadClaim.identifier) {
-      // There is no lastClaimId but there's an identifier, so we need to run checks that they have permissions.
+    } else if (payloadClaim.identifier && !isEndorserRegistrationClaim(payloadClaim)) {
+      // There is no lastClaimId but there's an identifier and it's not from an invite,
+      // so we need to run checks that they have permissions to replace a previous entry.
 
       // Check that the previous entry exists.
       if (isGlobalEndorserHandleId(payloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
@@ -1808,6 +1853,8 @@ class ClaimService {
       isFirstClaimForHandleId = true
     }
 
+    //// Insert the claim
+
     const claimStr = canonicalize(payloadClaim)
     const jwtEntry = dbService.buildJwtEntry(
       payload, jwtId, lastClaimId, handleId, payloadClaim, claimStr, jwtEncoded
@@ -1830,18 +1877,9 @@ class ClaimService {
           return Promise.reject(err)
         })
 
-    //l.trace(doc, `${this.constructor.name} resolved doc`)
-    //l.trace(authenticators, `${this.constructor.name} resolved authenticators`)
-    //l.trace(issuer, `${this.constructor.name} resolved issuer`)
-
-    const issuerDid = payload.iss
-
-    // this is the same as the doc.publicKey in my example
-    //const signer = VerifierAlgorithm(header.alg)(data, signature, authenticators)
-
     let embedded =
         await this.createEmbeddedClaimEntries(
-          jwtEntry.id, issuerDid, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
+          jwtEntry.id, authIssuerId, payload.iss, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
         )
         .catch(err => {
           l.error(err, `Failed to create embedded claim records.`)

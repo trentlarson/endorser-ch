@@ -984,6 +984,12 @@ class EndorserDatabase {
 
 
 
+
+
+
+
+
+
   /****************************************************************
    * Give_Provider, a join table between gives & their providers
    **/
@@ -1116,6 +1122,109 @@ class EndorserDatabase {
       })
     })
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /****************************************************************
+   * Invite
+   **/
+
+  // insert an invite for one individual
+  inviteOneInsert(issuerDid, inviteIdentifier, notes, expiresAt, jwt) {
+    return new Promise((resolve, reject) => {
+      const stmt =
+        "INSERT INTO invite_one (issuerDid, inviteIdentifier, notes, createdAt, expiresAt, jwt)"
+        + " VALUES (?, ?, ?, datetime(), datetime(?), ?)";
+      db.run(stmt, [issuerDid, inviteIdentifier, notes, expiresAt, jwt], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.lastID);
+        }
+      });
+    });
+  }
+
+  // retrieve a single invite by identifier
+  getInviteOneByInvitationId(inviteIdentifier) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM invite_one WHERE inviteIdentifier = ?",
+        [inviteIdentifier],
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            if (row) {
+              delete row.id
+              row.createdAt = isoAndZonify(row.createdAt)
+              row.expiresAt = isoAndZonify(row.expiresAt)
+            }
+            resolve(row);
+          }
+        }
+     );
+    });
+  }
+
+  // retrieve all invites by issuer
+  getInvitesByIssuer(issuerDid) {
+    return new Promise((resolve, reject) => {
+      db.all(
+        "SELECT * FROM invite_one WHERE issuerDid = ?",
+        [issuerDid],
+        (err, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            rows.forEach(row => {
+              delete row.id
+              row.createdAt = isoAndZonify(row.createdAt)
+              row.expiresAt = isoAndZonify(row.expiresAt)
+            })
+            resolve(rows);
+          }
+        }
+      );
+    });
+  }
+
+  updateInviteOne(inviteIdentifier, redeemedBy) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE invite_one SET redeemedBy = ? WHERE inviteIdentifier = ?";
+      db.run(stmt, [redeemedBy, inviteIdentifier], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes);
+        }
+      });
+    });
+  }
+
+
+
+
+
+
+
+
+
+
 
 
 

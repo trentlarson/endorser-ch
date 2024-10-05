@@ -1,5 +1,4 @@
 import chai from 'chai'
-import chaiAsPromised from "chai-as-promised"
 const crypto = require('crypto')
 import R from 'ramda'
 import request from 'supertest'

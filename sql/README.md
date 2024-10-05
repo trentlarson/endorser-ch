@@ -1,9 +1,13 @@
 
-Update this file with any changes to the schema.
+DB Schema Documentation for Endorser
 
 This file exists to explain data because sometimes the comments inside the
 .sqlite3 files need subsequent clarification or get outdated (and they can't
 be edited after flyway has run).
+
+The tables follow the snake-case convention (with underscores) while the
+columns follow camelCase (with capital letters after the first word).
+(We apologize for the inconsistency! Maybe we'll fix it in the future.)
 
 ```sql
 
@@ -124,6 +128,26 @@ CREATE TABLE give_provider (
 );
 CREATE INDEX give_provider_give ON give_provider(giveHandleId);
 CREATE INDEX give_provider_provider ON give_provider(providerHandleId);
+
+CREATE TABLE invite_person {
+
+}
+
+-- for one-time personal invites
+CREATE TABLE IF NOT EXISTS invite_one (
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expiresAt DATETIME NOT NULL,
+  id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
+  inviteIdentifier TEXT NOT NULL UNIQUE,
+  issuerDid TEXT NOT NULL,
+  jwt TEXT NOT NULL,
+  keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0, -- default is to make issuer visible when redeemed
+  notes TEXT, -- we encourage issuers to erase these notes ASAP
+  redeemedBy TEXT
+);
+
+CREATE INDEX idx_invite_one_issuerDid ON invite_one(issuerDid);
+CREATE INDEX idx_invite_one_inviteIdentifier ON invite_one(inviteIdentifier);
 
 -- table for all the raw incoming claims, before they are parsed and potentially stored in the other tables
 CREATE TABLE jwt (

@@ -1,0 +1,17 @@
+
+-- see README.md in this directory for explanations
+
+CREATE TABLE invite_one (
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expiresAt DATETIME NOT NULL,
+  id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
+  inviteIdentifier TEXT NOT NULL UNIQUE,
+  issuerDid TEXT NOT NULL,
+  jwt TEXT NOT NULL,
+  keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0,
+  notes TEXT,
+  redeemedBy TEXT
+);
+
+CREATE INDEX idx_invite_one_issuerDid ON invite_one(issuerDid);
+CREATE INDEX idx_invite_one_inviteIdentifier ON invite_one(inviteIdentifier);

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [4.1.1]
+## [4.1.1-beta]
 ### Changed
 - Nostr endpoints verify signature based on the public key.
 ### Changed in DB or environment
