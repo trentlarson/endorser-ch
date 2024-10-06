@@ -53,9 +53,9 @@ describe('8 - Asynchronous Invitations', () => {
       .get('/api/report/rateLimits')
       .set('Authorization', 'Bearer ' + pushTokens[13])
       .then(r => {
+        expect(r.body).to.have.property("error")
         expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
-        expect(r.body).to.have.property("error")
         resolve(r.body)
       })
       .catch(err => reject(err))
@@ -66,9 +66,9 @@ describe('8 - Asynchronous Invitations', () => {
       .set('Authorization', 'Bearer ' + pushTokens[13])
       .send({ inviteJwt: registerUnknownBy0Enc, notes: inviteNotes })
       .then(r => {
+        expect(r.body).to.have.property("error")
         expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
-        expect(r.body).to.have.property("error")
       })
       .catch(err => Promise.reject(err));
   })
@@ -82,9 +82,9 @@ describe('8 - Asynchronous Invitations', () => {
     .set('Authorization', 'Bearer ' + pushTokens[4])
     .send({inviteJwt: someGiveBy4JwtEnc, notes: inviteNotes})
     .then(r => {
+      expect(r.body).to.have.property("error")
       expect(r.headers['content-type'], /json/)
       expect(r.status).that.equals(400)
-      expect(r.body).to.have.property("error")
     })
     .catch(err => Promise.reject(err));
   })
@@ -96,9 +96,9 @@ describe('8 - Asynchronous Invitations', () => {
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .send({ inviteJwt: registerUnknownBy0Enc, notes: inviteNotes })
       .then(r => {
+        expect(r.body).to.have.property("error")
         expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(400)
-        expect(r.body).to.have.property("error")
       })
       .catch(err => Promise.reject(err));
   })
@@ -128,10 +128,10 @@ describe('8 - Asynchronous Invitations', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.headers['content-type']).to.match(/json/)
         expect(r.body.data).to.have.property("inviteIdentifier", inviteIdentifier)
         expect(r.body.data).to.have.property("notes")
         expect(r.body.data).to.have.property("expiresAt")
+        expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(200)
       })
       .catch(err => Promise.reject(err))
@@ -145,14 +145,27 @@ describe('8 - Asynchronous Invitations', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.headers['content-type']).to.match(/json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0]).to.have.property("inviteIdentifier", inviteIdentifier)
         expect(r.body.data[0]).to.have.property("notes")
         expect(r.body.data[0]).to.have.property("expiresAt")
+        expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(200)
       })
       .catch(err => Promise.reject(err))
+  });
+
+  it('user #13 cannot make a claim', async () => {
+    const someGiveBy5JwtEnc = await credentials[13].createVerification(someGiveBy5Obj)
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({ jwtEncoded: someGiveBy5JwtEnc })
+    .then(r => {
+      expect(r.body).to.have.property("error")
+      expect(r.headers['content-type']).to.match(/json/)
+      expect(r.status).that.equals(400)
+    })
+    .catch(err => Promise.reject(err))
   });
 
   it('user #13 can sign up from the registration', async() => {
@@ -165,8 +178,8 @@ describe('8 - Asynchronous Invitations', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.headers['content-type']).to.match(/json/)
         expect(r.body).to.have.property("success")
+        expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
       })
       .catch(err => Promise.reject(err))
@@ -181,8 +194,8 @@ describe('8 - Asynchronous Invitations', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.headers['content-type']).to.match(/json/)
         expect(r.body).to.have.property("success")
+        expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
       })
       .catch(err => Promise.reject(err))
@@ -193,8 +206,8 @@ describe('8 - Asynchronous Invitations', () => {
       .get('/api/userUtil/invite/' + inviteIdentifier)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
-        expect(r.headers['content-type']).to.match(/json/)
         expect(r.body).to.have.property("error")
+        expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(400)
       })
       .catch(err => Promise.reject(err))
