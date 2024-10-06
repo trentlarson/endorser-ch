@@ -137,7 +137,6 @@ export default express
  * @group user utils - User Utils
  * @route POST /api/userUtil/invite
  * @param {string} inviteJwt.body.required - issuer code to specify invitee, must be 20 characters or more and should be random
- * @param {string} expiresAt.body.optional - ISO 8601 date string for when the invite expires
  * @param {string} notes.body.optional - issuer notes to remember the invitee
  * @returns 200 - the internal ID of the invite with a
  * @returns {Error} 500 - Unexpected error
@@ -152,13 +151,14 @@ export default express
           return
         }
         const verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
-        if (verifiedInvite.payload.claim["@type"] !== 'RegisterAction') {
+        const payloadClaim = ClaimService.extractClaim(verifiedInvite.payload)
+        if (payloadClaim["@type"] !== 'RegisterAction') {
           res.status(400).json({ error: { message: 'The JWT for an invite must be a RegisterAction claim.' } }).end()
           return
         }
-        const identifier = verifiedInvite.payload.claim.identifier
+        const identifier = payloadClaim.identifier
         const date = new Date(verifiedInvite.payload.exp).toISOString()
-        const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, verifiedInvite.payload.claim)
+        const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, payloadClaim, true)
         if (!identifier || identifier.length < 20) {
           res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, used inside the RegisterAction given to the invitee.' } }).end()
         } else if (!verifiedInvite.payload.exp) {
@@ -170,7 +170,7 @@ export default express
           res.status(200).json({ success: true }).end()
         }
       } catch (error) {
-        res.status(500).json({ error: { message: error.message } }).end()
+        res.status(500).json({ error: error }).end()
       }
     }
   )

@@ -27,7 +27,7 @@ const inviteIdentifier =
 const registerUnknownBy0Obj = R.clone(testUtil.jwtTemplate)
 registerUnknownBy0Obj.claim = R.clone(testUtil.registrationTemplate)
 registerUnknownBy0Obj.claim.agent.identifier = creds[0].did
-delete registerUnknownBy0Obj.participant
+delete registerUnknownBy0Obj.claim.participant
 registerUnknownBy0Obj.claim.identifier = inviteIdentifier
 
 const someGiveBy5Obj = R.clone(testUtil.jwtTemplate)

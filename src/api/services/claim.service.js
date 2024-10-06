@@ -1526,8 +1526,14 @@ class ClaimService {
     return errors
   }
 
-  // return null or undefined if checks pass, or an error object if they don't
-  async checkClaimLimits(issuerDid, payloadClaim) {
+  /**
+   return null or undefined if checks pass, or an error object if they don't
+
+   @param checkPayloadAsInvite indicates that this is an invite claim
+    which doesn't yet exist but may in the future, so the checks should be
+    done against the payloadClaim and not looked up from the DB.
+   **/
+  async checkClaimLimits(issuerDid, payloadClaim, checkPayloadAsInvite) {
     const registration = await dbService.registrationByDid(issuerDid)
     if (!registration) {
       return {
@@ -1538,16 +1544,21 @@ class ClaimService {
       }
     }
 
+    // This check allows someone to make all their claims and then add registrations on top.
+    // It's potentially confusing to users to not get any registrations, so it's worth the separation.
+    // The number of registrations is less than claims, so it's not such a big deal.
     if (isEndorserRegistrationClaim(payloadClaim)) {
 
       if (payloadClaim.identifier && !payloadClaim.participant) {
         // someone is redeeming an invite from another user so check it out
-        const invite = await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
+        const invite = checkPayloadAsInvite
+          ? payloadClaim
+          : await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
         if (!invite) {
           return {
             clientError: {
               message:
-                `No participant was provides and invite with identifier ${payloadClaim.identifier} does not exist.`
+                `No participant was provided and no invite exists with identifier ${payloadClaim.identifier}`
             }
           }
         }
@@ -1559,7 +1570,7 @@ class ClaimService {
             }
           }
         }
-        if (new Date(invite.expiresAt) < DateTime.now()) {
+        if (new Date(invite.expiresAt) < Math.floor(DateTime.now() / 1000)) {
           return {
             clientError: {
               message:
