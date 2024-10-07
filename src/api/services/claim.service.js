@@ -1897,7 +1897,7 @@ class ClaimService {
       return Promise.reject(
         {
           clientError: {
-            message: `That claim is a duplicate of one already sent with ID ${existingJwtId}.`
+            message: `That claim is a duplicate of one already sent with ID ${existingJwtId}`
           }
         }
       )

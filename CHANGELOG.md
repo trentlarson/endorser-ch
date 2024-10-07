@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Nostr endpoints verify signature based on the public key.
 ### Changed in DB or environment
+- Automated SQL script 14
 - Automated partner SQL script 2
 
 

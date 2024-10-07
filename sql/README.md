@@ -135,9 +135,9 @@ CREATE TABLE invite_person {
 
 -- for one-time personal invites
 CREATE TABLE IF NOT EXISTS invite_one (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expiresAt DATETIME NOT NULL,
-  id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
   inviteIdentifier TEXT NOT NULL UNIQUE, -- necessary for rate-limiting
   issuerDid TEXT NOT NULL,
   jwt TEXT, -- they may choose not to share their JWT with the server
