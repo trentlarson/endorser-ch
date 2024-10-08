@@ -56,6 +56,11 @@ const isEndorserRegistrationClaim = (claim) =>
       && claim['@type'] === 'RegisterAction'
       && claim['object'] === SERVICE_ID
 
+const isEndorserInviteClaim = (claim) =>
+  isEndorserRegistrationClaim(claim)
+  && claim.identifier
+  && !claim.participant
+
 class ClaimService {
 
   async byId(id, requesterDid) {
@@ -1549,7 +1554,7 @@ class ClaimService {
     // The number of registrations is less than claims, so it's not such a big deal.
     if (isEndorserRegistrationClaim(payloadClaim)) {
 
-      if (payloadClaim.identifier && !payloadClaim.participant) {
+      if (isEndorserInviteClaim(payloadClaim)) {
         // someone is redeeming an invite from another user so check it out
         const invite = checkPayloadAsInvite
           ? payloadClaim
@@ -1561,6 +1566,9 @@ class ClaimService {
                 `No participant was provided and no invite exists with identifier ${payloadClaim.identifier}`
             }
           }
+        }
+        if (invite.issuerDid === issuerDid) {
+
         }
         if (invite.redeemedBy) {
           return {
@@ -1676,9 +1684,13 @@ class ClaimService {
       return Promise.reject("JWT had no 'claim' property.")
     }
 
-    // reject if they send an auth JWT but it doesn't match the sent claim & sent claim isn't an invite
-    if (authIssuerId && payload.iss !== authIssuerId && !payloadClaim.identifier) {
-      return Promise.reject(`JWT issuer ${authIssuerId} does not match claim issuer ${payload.iss} and claim is not an invite.`)
+    // reject if they send an auth JWT but it doesn't match the sent claim where the claim isn't an invite
+    if (authIssuerId && payload.iss !== authIssuerId && !isEndorserInviteClaim(payloadClaim)) {
+      return Promise.reject(`Requesting issuer ${authIssuerId} does not match claim issuer ${payload.iss}, which is only allowed for invites.`)
+    }
+    // reject if they send an invite for themselves
+    if (authIssuerId && payload.iss === authIssuerId && isEndorserInviteClaim(payloadClaim)) {
+      return Promise.reject(`Requesting issuer ${authIssuerId} is the same as on the invite.`)
     }
 
     //// Check limits
