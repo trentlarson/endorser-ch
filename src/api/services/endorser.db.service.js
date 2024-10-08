@@ -1216,6 +1216,20 @@ class EndorserDatabase {
     });
   }
 
+  // retrieve all invites by issuer
+  deleteInviteForIssuer(issuerDid, inviteIdentifier) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM invite_one WHERE issuerDid = ? AND inviteIdentifier = ?";
+      db.run(stmt, [issuerDid, inviteIdentifier], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(this.changes);
+        }
+      });
+    });
+  }
+
 
 
 

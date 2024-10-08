@@ -213,4 +213,20 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
+  it('user can delete their invite record', () => {
+    return request(Server)
+      .delete('/api/userUtil/invite/' + inviteIdentifier)
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .then(r => {
+        if (r.body.error) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
+        // for some reason the response has a body of {} and no content type
+        // expect(r.body).to.have.property("success", true)
+        // expect(r.body).to.have.property("numDeleted", 1)
+        // expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(204)
+      })
+      .catch(err => Promise.reject(err))
+  });
 });

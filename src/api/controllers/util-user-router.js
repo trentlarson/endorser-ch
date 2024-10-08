@@ -215,3 +215,25 @@ export default express
       res.status(200).json({ data: invites }).end()
     }
   )
+
+/**
+ * Delete the invite for this identifier
+ *
+ * @group user utils - User Utils
+ * @route DELETE /api/userUtil/invite/:identifier
+ * @returns 204
+ * @returns {Error} 500 - Unexpected error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .delete(
+    '/invite/:identifier',
+    async (req, res) => {
+      const numDeleted = await dbService.deleteInviteForIssuer(res.locals.tokenIssuer, req.params.identifier)
+      console.log('Deleted', numDeleted, 'invites for', res.locals.tokenIssuer, 'with id', req.params.identifier)
+      if (numDeleted == 1) {
+        res.status(204).json({ success: true, numDeleted }).end()
+      } else {
+        res.status(400).json({ error: { message: `No invite deleted with identifier ${req.params.identifier}` } }).end()
+      }
+    }
+  )
