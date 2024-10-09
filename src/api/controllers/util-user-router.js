@@ -229,7 +229,6 @@ export default express
     '/invite/:identifier',
     async (req, res) => {
       const numDeleted = await dbService.deleteInviteForIssuer(res.locals.tokenIssuer, req.params.identifier)
-      console.log('Deleted', numDeleted, 'invites for', res.locals.tokenIssuer, 'with id', req.params.identifier)
       if (numDeleted == 1) {
         res.status(204).json({ success: true, numDeleted }).end()
       } else {
