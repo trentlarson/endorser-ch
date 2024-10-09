@@ -185,6 +185,7 @@ CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
 
 -- track all the visibility, where each subject can see each object
 CREATE TABLE network (
+    jwt TEXT, -- the JWT authorizing or declining the visibility
     subject VARCHAR(100), -- DID of the entity who can see/reach the object
     object VARCHAR(100), -- DID of the entity who can be seen/reached by the subject
     url TEXT,

@@ -10,8 +10,11 @@ CREATE TABLE invite_one (
   jwt TEXT, -- they may choose not to share their JWT with the server
   keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0, -- default is to make issuer visible when redeemed
   notes TEXT, -- they may choose not to share their notes with the server
+  redeemedAt DATETIME,
   redeemedBy TEXT
 );
 
 CREATE INDEX idx_invite_one_issuerDid ON invite_one(issuerDid);
 CREATE INDEX idx_invite_one_inviteIdentifier ON invite_one(inviteIdentifier);
+
+ALTER TABLE network ADD COLUMN jwt TEXT;

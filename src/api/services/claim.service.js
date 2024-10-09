@@ -952,7 +952,7 @@ class ClaimService {
   }
 
 
-  async createEmbeddedClaimEntry(jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createEmbeddedClaimEntry(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -1281,14 +1281,15 @@ class ClaimService {
       // participant.did is for legacy data, some still in the mobile app
       let participantDid = claim.participant?.identifier || claim.participant?.did
 
-      if (!participantDid && claim.identifier) {
+      if (isEndorserInviteClaim(claim)) {
         // this is an invite
         // we've already checked that the invite exists, is unused, and is not expired
 
         participantDid = authIssuerDid
 
         // now we'll mark it as redeemed
-        await dbService.updateInviteOne(claim.identifier, participantDid)
+        await dbService.updateInviteOneAsRedeemed(claim.identifier, participantDid)
+        addCanSee(participantDid, payloadIssuerDid, null, jwtEncoded);
       }
 
       if (!participantDid) {
@@ -1408,7 +1409,7 @@ class ClaimService {
    * @param isFirstClaimForHandleId {boolean} true if this is the first claim for this handleId, important for determining insert vs update
    * @return Promise<Record< embeddedResults: string, networkResults: string >>
    */
-  async createEmbeddedClaimEntries(jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createEmbeddedClaimEntries(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${payloadIssuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
@@ -1433,7 +1434,7 @@ class ClaimService {
       { // handle multiple claims
         for (let subClaim of claim) {
           recordings.push(
-            this.createEmbeddedClaimEntry(jwtId, payloadIssuerDid, issuedAt, handleId, subClaim)
+            this.createEmbeddedClaimEntry(jwtEncoded, jwtId, payloadIssuerDid, issuedAt, handleId, subClaim)
           )
         }
       }
@@ -1445,14 +1446,14 @@ class ClaimService {
     } else {
       // claim is not an array
       embeddedResults =
-        await this.createEmbeddedClaimEntry(jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
+        await this.createEmbeddedClaimEntry(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
       l.trace(`${this.constructor.name} created an embedded claim record.`)
     }
 
     // now record all the "sees" relationships to the issuer
     const netRecords = []
     for (let did of allDidsInside(claim)) {
-      netRecords.push(addCanSee(did, payloadIssuerDid))
+      netRecords.push(addCanSee(did, payloadIssuerDid, null, jwtEncoded))
     }
     // since addCanSee doesn't return anything, this is a list of nulls
     let allNetRecords = await Promise.all(netRecords)
@@ -1922,7 +1923,7 @@ class ClaimService {
 
     let embedded =
         await this.createEmbeddedClaimEntries(
-          jwtEntry.id, authIssuerId, payload.iss, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
+          jwtEncoded, jwtEntry.id, authIssuerId, payload.iss, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
         )
         .catch(err => {
           l.error(err, `Failed to create embedded claim records.`)

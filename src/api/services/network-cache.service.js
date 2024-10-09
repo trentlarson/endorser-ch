@@ -106,7 +106,7 @@ async function getAllDidsWhoCanSeeObject(object) {
 /**
    add subject-can-see-object relationship to DB and caches
 **/
-async function addCanSee(subject, object, url) {
+async function addCanSee(subject, object, url, jwt) {
 
   if (!subject
       || subject.startsWith("did:none:")
@@ -119,7 +119,7 @@ async function addCanSee(subject, object, url) {
   }
 
   if (subject !== object) {
-    await dbService.networkInsert(subject, object, url)
+    await dbService.networkInsert(subject, object, url, jwt)
   } else {
     // no need to save themselves in the DB
     l.trace("Not adding DB network entry since it's the same DID.")

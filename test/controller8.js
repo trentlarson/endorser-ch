@@ -185,6 +185,22 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
+  it('user #13 can see details from user #0', async() => {
+    // That JWT is passed to someone else who can use it to register.
+    return request(Server)
+    .get('/api/claim?issuer=' + creds[0].did)
+    .set('Authorization', 'Bearer ' + pushTokens[13])
+    .then(r => {
+      if (r.body.error) {
+        throw new Error(JSON.stringify(r.body.error))
+      }
+      expect(r.body[0].issuer).to.equal(creds[0].did)
+      expect(r.headers['content-type']).to.match(/json/)
+      expect(r.status).that.equals(200)
+    })
+    .catch(err => Promise.reject(err))
+  });
+
   it('user #13 can now make a claim', async () => {
     const someGiveBy5JwtEnc = await credentials[13].createVerification(someGiveBy5Obj)
     return request(Server)
