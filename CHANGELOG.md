@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [4.1.1-beta]
+## [4.1.1]
 ### Added
 - Invite for a contact to join immediately
 ### Changed
@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the give_claim table, fix the agentDid and the amounts that should be null
 ### Changed in DB or environment
 - Automated SQL script 13 & partner SQL script 1
+- NOSTR_PRIVATE_KEY_NSEC into the .env file
 - For "partner" domains: DNS, haproxy, certificate
 
 

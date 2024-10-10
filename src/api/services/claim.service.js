@@ -1682,16 +1682,28 @@ class ClaimService {
     const payloadClaim = this.extractClaim(payload)
     if (!payloadClaim) {
       l.warn(`${this.constructor.name} JWT received without a claim.`)
-      return Promise.reject("JWT had no 'claim' property.")
+      return Promise.reject({
+        clientError: {
+          message: "JWT had no 'claim' property."
+        }
+      })
     }
 
     // reject if they send an auth JWT but it doesn't match the sent claim where the claim isn't an invite
     if (authIssuerId && payload.iss !== authIssuerId && !isEndorserInviteClaim(payloadClaim)) {
-      return Promise.reject(`Requesting issuer ${authIssuerId} does not match claim issuer ${payload.iss}, which is only allowed for invites.`)
+      return Promise.reject({
+        clientError: {
+          message: `Requesting issuer ${authIssuerId} does not match claim issuer ${payload.iss}, which is only allowed for invites.`
+        }
+      })
     }
     // reject if they send an invite for themselves
     if (authIssuerId && payload.iss === authIssuerId && isEndorserInviteClaim(payloadClaim)) {
-      return Promise.reject(`Requesting issuer ${authIssuerId} is the same as on the invite.`)
+      return Promise.reject({
+        clientError: {
+          message: `Requesting issuer ${authIssuerId} is the same as on the invite.`
+        }
+      })
     }
 
     //// Check limits
