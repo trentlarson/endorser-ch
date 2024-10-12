@@ -1535,42 +1535,57 @@ class ClaimService {
   /**
    return null or undefined if checks pass, or an error object if they don't
 
-   @param checkPayloadAsInvite indicates that this is an invite claim
-    which doesn't yet exist but may in the future, so the checks should be
+   @param authIssuerDid is the ID of the user whose request is processing -- owner of the Authorization JWT, eg. a new user if relaying an invite
+
+   @param claimIssuerDid is the user who issued the payload
+
+   @param isInitialInvitePost indicates that this is an invite registration claim
+    which hasn't yet been receemed but may in the future, so some checks should be
     done against the payloadClaim and not looked up from the DB.
    **/
-  async checkClaimLimits(issuerDid, payloadClaim, checkPayloadAsInvite) {
-    const registration = await dbService.registrationByDid(issuerDid)
+  async checkClaimLimits(authIssuerDid, claimIssuerDid, payloadClaim, isInitialInvitePost) {
+    const registration = await dbService.registrationByDid(claimIssuerDid)
     if (!registration) {
       return {
         clientError: {
-          message: `User ${issuerDid} is not registered to make claims. Contact an existing user for help.`,
+          message: `User ${claimIssuerDid} is not registered to make claims. Contact an existing user for help.`,
           code: ERROR_CODES.UNREGISTERED_USER
         }
       }
     }
 
-    // This check allows someone to make all their claims and then add registrations on top.
-    // It's potentially confusing to users to not get any registrations, so it's worth the separation.
-    // The number of registrations is less than claims, so it's not such a big deal.
     if (isEndorserRegistrationClaim(payloadClaim)) {
 
       if (isEndorserInviteClaim(payloadClaim)) {
-        // someone is redeeming an invite from another user so check it out
-        const invite = checkPayloadAsInvite
-          ? payloadClaim
-          : await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
-        if (!invite) {
-          return {
-            clientError: {
-              message:
-                `No participant was provided and no invite exists with identifier ${payloadClaim.identifier}`
+        // we're checking an invite
+
+        // Note that this clause will return (& bypass timing checks) if it's a redemption
+
+        let invite = await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
+
+        // it may be a new issuer-created invite or it may be one that is being redeeme
+        if (isInitialInvitePost) {
+          // it's a new invite
+          if (invite) {
+            return {
+              clientError: {
+                message: `An invite already exists with identifier ${payloadClaim.identifier}`
+              }
+            }
+          }
+          invite = payloadClaim
+        } else {
+          // it's a redemption
+          if (!invite) {
+            return {
+              clientError: {
+                message:
+                  `No participant was provided and no invite exists with identifier ${payloadClaim.identifier}`
+              }
             }
           }
         }
-        if (invite.issuerDid === issuerDid) {
 
-        }
         if (invite.redeemedBy) {
           return {
             clientError: {
@@ -1587,6 +1602,13 @@ class ClaimService {
             }
           }
         }
+
+        if (!isInitialInvitePost && authIssuerDid !== invite.issuerDid) {
+          // this invite is being redeemed, so there's no need to check limits
+          // because they were checked when the invite was created
+
+          return
+        }
       }
 
       // look at registration limits
@@ -1596,7 +1618,7 @@ class ClaimService {
       if (DateTime.now().hasSame(registrationDate, 'day')) {
         return {
           clientError: {
-            message: `You cannot register anyone on the same day you got registered.`,
+            message: `You cannot register or invite anyone on the same day you got registered.`,
             code: ERROR_CODES.CANNOT_REGISTER_TOO_SOON
           }
         }
@@ -1605,25 +1627,36 @@ class ClaimService {
       const startOfMonthEpoch = DateTime.utc().startOf('month').toSeconds()
       const regCount = await dbService.registrationCountByAfter(registration.did, startOfMonthEpoch)
       const maxAllowedRegs = registration.maxRegs ?? DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+      const openInviteCount = await dbService.getInviteOneUnredeemedCount(claimIssuerDid)
 
-      // during the first month for default settings, disallow registering more than 1/31 of their limit for each remaining day
-      if (maxAllowedRegs === DEFAULT_MAX_REGISTRATIONS_PER_MONTH
-        && DateTime.now().hasSame(registrationDate, 'month')
-        && regCount > (31 - DateTime.now().day())) {
-        return {
-          clientError: {
-            message: `You can only register one person per day during the first month.`,
-            code: ERROR_CODES.OVER_REGISTRATION_LIMIT
-          }
-        }
-      }
+      // This is an interesting idea, but now it doesn't seem like a worthwhile rule.
+      // // during the first month (for default users), disallow registering more than one for each remaining day
+      // if (maxAllowedRegs === DEFAULT_MAX_REGISTRATIONS_PER_MONTH // only for default users
+      //   && DateTime.now().hasSame(registrationDate, 'month')
+      //   && regCount + openInviteCount > (31 - DateTime.now().day)) {
+      //   const openInviteMessage = openInviteCount > 0
+      //     ? ` You have ${openInviteCount} open invite${openInviteCount === 1 ? "" : "s"} so you could delete one of those.`
+      //     : ''
+      //   return {
+      //     clientError: {
+      //       message: `You can only register or invite one person per day during the first month.`
+      //         + openInviteMessage
+      //         + ` Contact an administrator for a higher limit.`,
+      //       code: ERROR_CODES.OVER_REGISTRATION_LIMIT
+      //     }
+      //   }
+      // }
 
       // disallow registering above the monthly limit
       // 0 shouldn't mean DEFAULT
-      if (regCount >= maxAllowedRegs) {
+      if (regCount + openInviteCount >= maxAllowedRegs) {
+        const openInviteMessage = openInviteCount > 0
+          ? ` You have ${openInviteCount} open invite${openInviteCount === 1 ? "" : "s"} so you could delete one of those.`
+          : ''
         return {
           clientError: {
-            message: `You have already registered ${maxAllowedRegs} this month.`
+            message: `You have already registered or invited ${maxAllowedRegs} this month.`
+              + openInviteMessage
               + ` Contact an administrator for a higher limit.`,
             code: ERROR_CODES.OVER_REGISTRATION_LIMIT
           }
@@ -1631,9 +1664,10 @@ class ClaimService {
       }
 
     } else {
+      // it's a non-registration claim
       const startOfWeekDate = DateTime.utc().startOf('week') // luxon weeks start on Mondays
       const startOfWeekString = startOfWeekDate.toISO()
-      const claimedCount = await dbService.jwtCountByAfter(issuerDid, startOfWeekString)
+      const claimedCount = await dbService.jwtCountByAfter(claimIssuerDid, startOfWeekString)
       // 0 shouldn't mean DEFAULT
       const maxAllowedClaims =
         registration.maxClaims != null ? registration.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
@@ -1650,13 +1684,13 @@ class ClaimService {
   }
 
   /**
-     @param authIssuerId is the issuer if an Authorization Bearer JWT is sent
+     @param authIssuerDid is the issuer if an Authorization Bearer JWT is sent
 
      @return object with:
      - id of claim
      - extra info for other created data, eg. planId if one was generated
    **/
-  async createWithClaimEntry(jwtEncoded, authIssuerId) {
+  async createWithClaimEntry(jwtEncoded, authIssuerDid) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
@@ -1690,25 +1724,25 @@ class ClaimService {
     }
 
     // reject if they send an auth JWT but it doesn't match the sent claim where the claim isn't an invite
-    if (authIssuerId && payload.iss !== authIssuerId && !isEndorserInviteClaim(payloadClaim)) {
+    if (authIssuerDid && payload.iss !== authIssuerDid && !isEndorserInviteClaim(payloadClaim)) {
       return Promise.reject({
         clientError: {
-          message: `Requesting issuer ${authIssuerId} does not match claim issuer ${payload.iss}, which is only allowed for invites.`
+          message: `Requesting issuer ${authIssuerDid} does not match claim issuer ${payload.iss}, which is only allowed for invites.`
         }
       })
     }
     // reject if they send an invite for themselves
-    if (authIssuerId && payload.iss === authIssuerId && isEndorserInviteClaim(payloadClaim)) {
+    if (authIssuerDid && payload.iss === authIssuerDid && isEndorserInviteClaim(payloadClaim)) {
       return Promise.reject({
         clientError: {
-          message: `Requesting issuer ${authIssuerId} is the same as on the invite.`
+          message: `Requesting issuer ${authIssuerDid} is the same as on the invite.`
         }
       })
     }
 
     //// Check limits
 
-    const checkError = await this.checkClaimLimits(payload.iss, payloadClaim)
+    const checkError = await this.checkClaimLimits(authIssuerDid, payload.iss, payloadClaim)
     if (checkError) {
       return Promise.reject(checkError)
     }
@@ -1935,7 +1969,7 @@ class ClaimService {
 
     let embedded =
         await this.createEmbeddedClaimEntries(
-          jwtEncoded, jwtEntry.id, authIssuerId, payload.iss, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
+          jwtEncoded, jwtEntry.id, authIssuerDid, payload.iss, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
         )
         .catch(err => {
           l.error(err, `Failed to create embedded claim records.`)

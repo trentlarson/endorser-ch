@@ -7,7 +7,6 @@ import R from 'ramda'
 const { Credentials } = require('uport-credentials')
 
 import Server from '../dist'
-import { dbService } from '../dist/api/services/endorser.db.service'
 import testUtil from './util'
 
 const expect = chai.expect
@@ -127,7 +126,6 @@ describe('4 - Load Claims Incrementally', () => {
     timeToWait = 3000; // wait for the infura.io verification
   }
   it('insert many, many claims', async () => {
-    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 124)
     const allResults = manyClaimsJwtEnc.map((jwtEnc, i) => {
       return new Promise((resolve, reject) => {
           request(Server)

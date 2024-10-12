@@ -158,7 +158,7 @@ export default express
         }
         const identifier = payloadClaim.identifier
         const date = new Date(verifiedInvite.payload.exp * 1000).toISOString()
-        const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, payloadClaim, true)
+        const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, res.locals.tokenIssuer, payloadClaim, true)
         if (!identifier || identifier.length < 20) {
           res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, used inside the RegisterAction given to the invitee.' } }).end()
         } else if (!verifiedInvite.payload.exp) {

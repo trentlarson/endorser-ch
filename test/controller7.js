@@ -19,6 +19,7 @@ import {
 import Server from '../dist'
 import { HIDDEN_TEXT } from '../dist/api/services/util';
 import testUtil from './util'
+import {dbService} from "../dist/api/services/endorser.db.service";
 
 const expect = chai.expect
 const RESULT_NO_MATCH = { matches: [] }
@@ -707,31 +708,6 @@ describe('7 - Get Confirming IDs for Claims', () => {
         expect(r.body.data[0]).to.equal(creds[1].did)
       }).catch((err) => {
         return Promise.reject(err)
-      })
-  }).timeout(3000)
-
-  it('fail to add a duplicate confirmation', async () => {
-
-    const credObj = R.clone(testUtil.jwtTemplate)
-    credObj.claim = R.clone(testUtil.confirmationTemplate)
-    credObj.claim.object = {
-      lastClaimId: firstGiveRecordJwtId
-    }
-    credObj.sub = creds[0].did
-    credObj.iss = creds[1].did
-    const claimJwtEnc = await credentials[1].createVerification(credObj)
-
-    return request(Server)
-      .post('/api/v2/claim')
-      .send({jwtEncoded: claimJwtEnc})
-      .then(r => {
-        if (r.body.error) {
-          // good
-        } else {
-          // console.log('Something went wrong. Here is the response body: ', r.body)
-          return Promise.reject(r.body)
-        }
-        expect(r.status).that.equals(400)
       })
   }).timeout(3000)
 

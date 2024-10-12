@@ -1203,6 +1203,24 @@ class EndorserDatabase {
     });
   }
 
+  getInviteOneUnredeemedCount(issuer) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT count(*) as numInvites FROM invite_one WHERE issuerDid = ? AND redeemedAt IS NULL",
+        [issuer],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else if (row) {
+            resolve(row.numInvites)
+          } else {
+            // should never happen
+            reject('Got no result from invite_one count query.')
+          }
+        })
+    })
+  }
+
   updateInviteOneAsRedeemed(inviteIdentifier, redeemedBy) {
     return new Promise((resolve, reject) => {
       const stmt = "UPDATE invite_one SET redeemedAt = datetime(?), redeemedBy = ? WHERE inviteIdentifier = ?";

@@ -349,6 +349,7 @@ describe('2 - Visibility', () => {
 
 describe('2 - Role Claims on Date', async () => {
 
+  let prevMaxRegs
   R.times(
     num => {
       const thisNum = num + 5
@@ -360,6 +361,8 @@ describe('2 - Role Claims on Date', async () => {
             expect(r.body).to.be.a('string')
             expect(r.status).that.equals(201)
           })
+        // save current max claims for restoration later
+        if (thisNum === 5) { prevMaxRegs = (await dbService.registrationByDid(creds[0].did)).maxRegs }
         if (thisNum === 8) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 13)
         if (thisNum === 9) await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 11)
       }).timeout(5000)
@@ -367,34 +370,37 @@ describe('2 - Role Claims on Date', async () => {
     5
   )
 
-  it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc)).timeout(5000)
-  it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc)).timeout(5000)
-  it('should add another new President role claim', () => postClaim(4, claimPresidentFor4By4JwtEnc)).timeout(5000)
-  it('should confirm 3 as President role claim by 5', () => postClaim(5, confirmPresidentFor3By5JwtEnc)).timeout(5000)
-  it('should confirm 3 as President role claim by 6', () => postClaim(6, confirmPresidentFor3By6JwtEnc)).timeout(5000)
-  it('should confirm 4 as President role claim by 7', () => postClaim(7, confirmPresidentFor4By7JwtEnc)).timeout(5000)
-  it('should confirm 4 as President role claim by 8', () => postClaim(8, confirmPresidentFor4By8JwtEnc)).timeout(5000)
-  it('should confirm 4 as President role claim by 9', () => postClaim(9, confirmPresidentFor4By9JwtEnc)).timeout(5000)
+  it('should add a new Secretary role claim', () => postClaim(2, claimSecretaryFor2By2JwtEnc))
+  it('should add a new President role claim', () => postClaim(3, claimPresidentFor3By3JwtEnc))
+  it('should add another new President role claim', () => postClaim(4, claimPresidentFor4By4JwtEnc))
+  it('should confirm 3 as President role claim by 5', () => postClaim(5, confirmPresidentFor3By5JwtEnc))
+  it('should confirm 3 as President role claim by 6', () => postClaim(6, confirmPresidentFor3By6JwtEnc))
+  it('should confirm 4 as President role claim by 7', () => postClaim(7, confirmPresidentFor4By7JwtEnc))
+  it('should confirm 4 as President role claim by 8', () => postClaim(8, confirmPresidentFor4By8JwtEnc))
+  it('should confirm 4 as President role claim by 9', () => postClaim(9, confirmPresidentFor4By9JwtEnc))
 
   it('should get org role claims & confirmations', () =>
-     request(Server)
-     .get('/api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-07-01')
-     .set('Authorization', 'Bearer ' + pushTokens[3])
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.body).to.be.an('array').of.length(2)
-       expect(testUtil.allDidsAreHidden(r.body[0])).to.be.false
-       expect(r.body[0].orgRoles[0].confirmations).to.be.an('array').of.length(2)
-       expect(r.body[0].orgRoles[0].orgRole.memberDid).to.equal(creds[3].did)
-       expect(testUtil.allDidsAreHidden(r.body[1])).to.be.true
-       expect(r.body[1].orgRoles[0].confirmations).to.be.an('array').of.length(3)
-       expect(r.status).that.equals(200)
-     }))
+    request(Server)
+      .get('/api/report/orgRoleClaimsAndConfirmationsOnDate?orgName=Cottonwood%20Cryptography%20Club&roleName=President&onDate=2019-07-01')
+      .set('Authorization', 'Bearer ' + pushTokens[3])
+      .expect('Content-Type', /json/)
+      .then(r => {
+         expect(r.body).to.be.an('array').of.length(2)
+         expect(testUtil.allDidsAreHidden(r.body[0])).to.be.false
+         expect(r.body[0].orgRoles[0].confirmations).to.be.an('array').of.length(2)
+         expect(r.body[0].orgRoles[0].orgRole.memberDid).to.equal(creds[3].did)
+         expect(testUtil.allDidsAreHidden(r.body[1])).to.be.true
+         expect(r.body[1].orgRoles[0].confirmations).to.be.an('array').of.length(3)
+         expect(r.status).that.equals(200)
+      }))
 
+  it('restore registration limits', async () => {
+    console.log('restoring', prevMaxRegs);
+    await dbService.registrationUpdateMaxRegsForTests(creds[0].did, prevMaxRegs);
+  })
 })
 
 describe('2 - Vote', async () => {
-
   it('should place a vote', async () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimVote)
@@ -407,9 +413,12 @@ describe('2 - Vote', async () => {
       .send({"jwtEncoded": claimJwtEnc})
       .expect('Content-Type', /json/)
       .then(r => {
+        if (r.body.error || r.status != 201) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
         expect(r.body).to.be.a('string')
         expect(r.status).that.equals(201)
       })
-  }).timeout(5000)
+  })
 
 })

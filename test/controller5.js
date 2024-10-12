@@ -68,8 +68,26 @@ before(async () => {
 
 describe('5 - Registration', () => {
 
+  let prevMaxClaims, prevMaxRegs
   it('check that User 0 cannot insert too many registrations', async () => {
-    // first, bump up claims so that it doesn't get caught by claims limit (only reg limit)
+
+    // save current max claims for restoration later
+    const claimLimits = await new Promise((resolve, reject) =>
+      request(Server)
+        .get('/api/report/rateLimits')
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.headers['content-type'], /json/)
+          expect(r.status).that.equals(200)
+          resolve(r.body)
+        })
+        .catch(err => reject(err))
+    )
+    prevMaxClaims = claimLimits.maxClaimsPerWeek
+    prevMaxRegs = claimLimits.maxRegistrationsPerWeek
+
+    await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 13)
+    // bump up claims so that it doesn't get caught by claims limit (only reg limit)
     await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 123)
     // now, try to register
     await request(Server)
@@ -104,9 +122,6 @@ describe('5 - Registration', () => {
       }).catch((err) => {
         return Promise.reject(err)
       })
-
-    // now, reset claims limit
-    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 122)
   }).timeout(5000)
 
   it('check that User 1 cannot register on the same day', async () => {
@@ -154,27 +169,28 @@ describe('5 - Registration', () => {
 
   it('check that user 12 can claim', () =>
      request(Server)
-     .get('/api/v2/report/canClaim')
-     .set('Authorization', 'Bearer ' + pushTokens[12])
-     .expect('Content-Type', /json/)
-     .then(r => {
-       expect(r.status).that.equals(200)
-       expect(r.body).to.be.an('object')
-       expect(r.body).that.has.a.property('data')
-       expect(r.body.data).to.be.a('boolean')
-       expect(r.body.data).to.be.true
-     }).catch((err) => {
-       return Promise.reject(err)
-     })
+       .get('/api/v2/report/canClaim')
+       .set('Authorization', 'Bearer ' + pushTokens[12])
+       .expect('Content-Type', /json/)
+       .then(r => {
+         expect(r.status).that.equals(200)
+         expect(r.body).to.be.an('object')
+         expect(r.body).that.has.a.property('data')
+         expect(r.body.data).to.be.a('boolean')
+         expect(r.body.data).to.be.true
+       }).catch((err) => {
+         return Promise.reject(err)
+       })
   ).timeout(3000)
 
   it('check that User 1 can register one the next day', async () => {
     // change User 1's registration to a day ago
-    const yesterdayEpoch = DateTime.utc().minus({ month: 1 }).toSeconds()
+    const yesterdayEpoch = DateTime.utc().minus({day: 1}).toSeconds()
+    const prevEpoch = (await dbService.registrationByDid(creds[1].did)).epoch
     dbService.registrationUpdateIssueDateForTests(testUtil.ethrCredData[1].did, yesterdayEpoch)
 
     // we know user 12 is already registered, so this won't affect state
-    await request(Server)
+    return await request(Server)
       .post('/api/claim')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({jwtEncoded: register12By1JwtEnc})
@@ -183,12 +199,16 @@ describe('5 - Registration', () => {
         expect(r.status).that.equals(201)
       }).catch((err) => {
         return Promise.reject(err)
+      }).finally(() => {
+        // restore registration date
+        dbService.registrationUpdateIssueDateForTests(testUtil.ethrCredData[1].did, prevEpoch)
       })
-  }).timeout(5000)
-
-  it('bump up User 0 abilities (since this generated test data is often used on the test server)', async () => {
-    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, 10000)
-    await dbService.registrationUpdateMaxRegsForTests(creds[0].did, 1000)
   }).timeout(3000)
+
+  it('reset claim limits', async () => {
+    // now, reset claims limit
+    await dbService.registrationUpdateMaxClaimsForTests(creds[0].did, prevMaxClaims)
+    await dbService.registrationUpdateMaxRegsForTests(creds[0].did, prevMaxRegs)
+  })
 
 })

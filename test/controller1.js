@@ -876,7 +876,7 @@ describe('1 - Claim', () => {
     .send({"jwtEncoded": confirmBvcFor0By0JwtEnc})
     .expect('Content-Type', /json/)
     .then(r => {
-      expect(r.status).that.equals(500) // should be 400 -- must change result of Promise.reject
+      expect(r.status).that.equals(400)
     })
   ).timeout(3000)
 
