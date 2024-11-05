@@ -211,7 +211,7 @@ CREATE TABLE offer_claim (
     -- true if recipient (itemOffered.isPartOf) issuer has confirmed the link
     fulfillsLinkConfirmed INTEGER DEFAULT 0,
 
-    -- full ID of PlanAction (if itemOffered.isPartOf is one)
+    -- full ID of PlanAction (if itemOffered.isPartOf is one of that type)
     -- This is set if there's a last claim ID.
     fulfillsPlanHandleId TEXT,
 

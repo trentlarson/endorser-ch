@@ -1048,6 +1048,40 @@ let firstOfferId, anotherProjectOfferId, offerHandleId6, validThroughDate
 
 describe('6 - Check offer totals', () => {
 
+  it('plan owner has no offers', async () => {
+    return request(Server)
+    .get('/api/v2/report/offersToPlansOwnedByMe')
+    .set('Authorization', 'Bearer ' + pushTokens[1])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('array').of.length(0)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+
+  it('other person has no plans with offers', async () => {
+    return request(Server)
+    .get('/api/v2/report/offersToPlansOwnedByMe')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('array').of.length(0)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+
   it('insert offer #1 that is for a project', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
@@ -1160,6 +1194,40 @@ describe('6 - Check offer totals', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+  it('plan owner now has an offer', async () => {
+    return request(Server)
+    .get('/api/v2/report/offersToPlansOwnedByMe')
+    .set('Authorization', 'Bearer ' + pushTokens[1])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('array').of.length(1)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+
+  it('other person still has no plans with offers', async () => {
+    return request(Server)
+    .get('/api/v2/report/offersToPlansOwnedByMe')
+    .set('Authorization', 'Bearer ' + pushTokens[2])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('array').of.length(0)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
 
   it('insert offer #2 that is for the same project', async () => {
 
@@ -1479,6 +1547,23 @@ describe('6 - Check offer totals', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+  it('plan owner #1 now has 3 offers', async () => {
+    return request(Server)
+    .get('/api/v2/report/offersToPlansOwnedByMe')
+    .set('Authorization', 'Bearer ' + pushTokens[1])
+    .then(r => {
+      if (r.body.error) {
+        console.log('Something went wrong. Here is the response body: ', r.body)
+        return Promise.reject(r.body.error)
+      }
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data).to.be.an('array').of.length(5)
+      expect(r.status).that.equals(200)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
 
 })
 

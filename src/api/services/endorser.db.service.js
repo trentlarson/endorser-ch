@@ -1849,6 +1849,67 @@ class EndorserDatabase {
     })
   }
 
+  /**
+   Start after afterIdInput (optional) and before beforeIdinput (optional)
+   and retrieve all offers where ownerDid is the issuer or agent
+   in reverse chronological order.
+
+   Returns Promise of { data: [], hitLimit: true|false }
+   **/
+  offersForPlanOwnerPaged(ownerDid, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      let allParams = [ownerDid, ownerDid]
+
+      let whereClause = ""
+      if (afterIdInput) {
+        whereClause += ' AND ? < o.jwtId'
+        allParams = allParams.concat([afterIdInput])
+      }
+      if (beforeIdInput) {
+        whereClause += ' AND o.jwtId < ?'
+        allParams = allParams.concat([beforeIdInput])
+      }
+
+      let data = []
+      let rowErr
+      const sql =
+        "SELECT o.jwtId, o.handleId, o.issuedAt, o.updatedAt, offeredByDid, amount, unit"
+        + ", objectDescription, validThrough, o.fullClaim"
+        + ", p.handleId as planHandleId, p.name as planName"
+        + " FROM offer_claim o"
+        + " INNER JOIN plan_claim p on p.handleId = o.fulfillsPlanHandleId"
+        + " WHERE (p.issuerDid = ? OR p.agentDid = ?)"
+        + whereClause
+        + " ORDER BY o.jwtId DESC LIMIT " + DEFAULT_LIMIT
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            row.updatedAt = isoAndZonify(row.updatedAt)
+            row.issuedAt = isoAndZonify(row.issuedAt)
+            row.validThrough = isoAndZonify(row.validThrough)
+            data.push(row)
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result["hitLimit"] = true
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
   offerTotals(planId, recipientDid, unit, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       let allParams = []

@@ -207,6 +207,19 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getOffersForPlanOwnerPaged(req, res, next) {
+    dbService.offersForPlanOwnerPaged(res.locals.tokenIssuer, req.query.afterId, req.query.beforeId)
+    .then(results => ({
+      data: results.data.map(datum =>
+        R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+      ),
+      hitLimit: results.hitLimit,
+    }))
+    .then(results => hideDidsAndAddLinksToNetworkInKey(res.locals.tokenIssuer, results, "data", []))
+    .then(results => { res.json(results).end() })
+    .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   getOffersPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -731,6 +744,19 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/offersToPlans', dbController.getOffersForPlansPaged)
+
+/**
+ * Get offers dedicated to any project owned by the requestor (as issuer or agent)
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/offersToPlansOwnedBy
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/offersToPlansOwnedByMe', dbController.getOffersForPlanOwnerPaged)
 
 /**
  * Get totals of offers
