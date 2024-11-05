@@ -187,7 +187,7 @@ export async function sendAndStoreLink(
       )
       event.tags.push(["expiration", `${expirationTime}`])
     } else if (process.env.NODE_ENV !== "prod") {
-      // add expiration in non-prod environments
+      // add an expiration in non-prod environments
       event.tags.push(["expiration", `${createdSecs + 60 * 60 * 24 * 2}`])
     }
     let relay
