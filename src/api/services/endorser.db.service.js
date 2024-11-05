@@ -1874,8 +1874,8 @@ class EndorserDatabase {
       let rowErr
       const sql =
         "SELECT o.jwtId, o.handleId, o.issuedAt, o.updatedAt, offeredByDid, amount, unit"
-        + ", objectDescription, validThrough, o.fullClaim"
-        + ", p.handleId as planHandleId, p.name as planName"
+        + ", objectDescription, validThrough, o.fullClaim, o.fulfillsPlanHandleId"
+        + ", p.name as planName, p.image as planImage"
         + " FROM offer_claim o"
         + " INNER JOIN plan_claim p on p.handleId = o.fulfillsPlanHandleId"
         + " WHERE (p.issuerDid = ? OR p.agentDid = ?)"
