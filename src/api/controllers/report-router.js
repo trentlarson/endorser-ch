@@ -528,7 +528,7 @@ export default express
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
  * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with matching array of Jwt entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/claims', dbController.getAllJwtsPaged)
@@ -542,7 +542,7 @@ export default express
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with array of Jwt claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/claimsForIssuerWithTypes', dbController.getAllIssuerClaimTypesPaged)
@@ -553,7 +553,7 @@ export default express
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/canClaim
  * @returns {object} 200 - 'data' boolean property tells whether this user is allowed to create a claim
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/canClaim', dbController.getCanClaim)
@@ -565,7 +565,7 @@ export default express
  * @route GET /api/v2/report/confirmers
  * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/confirmers', serviceController.getConfirmerIds)
@@ -578,7 +578,7 @@ export default express
  * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
  * ... and, yes, a 200 is weird for a POST, but this is just for convenience and a GET is recommended anyway
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/confirmers', serviceController.getConfirmerIds)
@@ -594,7 +594,7 @@ export default express
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
  * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get('/giftedTotals', dbController.getGiftedTotals)
@@ -616,7 +616,7 @@ export default express
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
  *  'hitLimit' boolean property if there may be more;
  *  but note that the `providers` property of each entry is not populated
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/gives', dbController.getGivesPaged)
@@ -632,7 +632,7 @@ export default express
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
  *   'hitLimit' boolean property if there may be more;
  *   but note that the `providers` property of each entry is not populated
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/givesToPlans', dbController.getGivesToPlansPaged)
@@ -646,7 +646,7 @@ export default express
  * @route GET /api/v2/report/giveFulfilledByGive
  * @param {string} giveHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @returns {GiveWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 // (not yet implemented)
@@ -660,7 +660,7 @@ export default express
  * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/giveFulfillersToGive', dbController.getGiveFulfillersToGive)
@@ -673,7 +673,7 @@ export default express
  * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/giveFulfillersToOffer', dbController.getGiveFulfillersToOffer)
@@ -689,7 +689,7 @@ export default express
  * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
  * 'hitLimit' boolean property if there may be more;
  * but note that the `providers` property of each entry is not populated
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/givesProvidedBy', dbController.getGivesProvidedBy)
@@ -708,7 +708,7 @@ export default express
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
  * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/giveTotals', dbController.getGiveTotals)
@@ -726,7 +726,7 @@ export default express
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
  * @param {string} validThrough.query.optional - date up to which offers are valid
  * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/offers', dbController.getOffersPaged)
@@ -740,7 +740,7 @@ export default express
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received offers
  * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/offersToPlans', dbController.getOffersForPlansPaged)
@@ -749,11 +749,11 @@ export default express
  * Get offers dedicated to any project owned by the requestor (as issuer or agent)
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/offersToPlansOwnedBy
+ * @route GET /api/v2/report/offersToPlansOwnedByMe
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get('/offersToPlansOwnedByMe', dbController.getOffersForPlanOwnerPaged)
@@ -769,7 +769,7 @@ export default express
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
  * @param {string} unit.query.optional - unit code to restrict amounts
  * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total offers for them
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/offerTotals', dbController.getOfferTotals)
@@ -792,7 +792,7 @@ export default express
  * @param {string} startTime.query.optional
  * @param {string} resultIdentifier.query.optional
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plans', dbController.getAllPlansPaged)
@@ -807,7 +807,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByIssuer', dbController.getPlansByIssuerPaged)
@@ -826,7 +826,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationPaged)
@@ -840,7 +840,7 @@ export default express
  * @route GET /api/v2/report/planFulfilledByPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @returns {PlanWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/planFulfilledByPlan', dbController.getPlanFulfilledBy)
@@ -856,7 +856,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/planFulfillersToPlan', dbController.getPlanFulfillersToPlan)
@@ -870,7 +870,7 @@ export default express
  * @route GET /api/v2/report/providersToGive
  * @param {string} giveHandleId.query.optional - the jwtId of the give entry
  * @returns {array.ProviderLink} 200 - 'data' property with each of the providers with known types
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/providersToGive', dbController.getGiveProviders)

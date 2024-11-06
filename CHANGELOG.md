@@ -5,7 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [4.1.2]
+## [4.1.3] - 2024.11.05
+### Fixed
+- Some swagger docs
+
+
+## [4.1.2] - 2024.11.05 - 9aecfb2b0798ac5678ebf642211fa96e5a06b296
 ### Added
 - Endpoint for the recent offers to a user's projects
 - Limit on invites when created

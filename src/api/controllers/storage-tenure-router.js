@@ -38,7 +38,7 @@ export default express
  * @group storage of tenures - Tenure storage
  * @route GET /api/tenure/
  * @returns {array.object} 200 - many tenures (up to 50)
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', tenureController.getByQuery)
@@ -49,7 +49,7 @@ export default express
  * @route GET /api/tenure/{id}
  * @param {number} id.path.required - the ID of the Tenure record to retrieve
  * @returns {object} 200 - Tenure if it exists, otherwise 404
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', tenureController.getById)

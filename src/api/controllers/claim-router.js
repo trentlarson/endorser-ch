@@ -65,7 +65,7 @@ export default express
  * &nbsp; },
  * &nbsp; error: { code: string, message: string }
  * }
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('', controller.importClaim)

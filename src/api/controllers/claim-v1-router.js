@@ -159,8 +159,9 @@ export default express
  * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim/{id}
  * @param {string} id.path.required - the ID of the Claim JWT entry to retrieve
- * @returns {object} 200 - Claim JWT if it exists, otherwise 404
- * @returns {Error} 400 - error
+ * @returns {object} 200 - Claim JWT if it exists
+ * @returns {''} 404 - if not found
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', claimController.getById)
@@ -170,10 +171,10 @@ export default express
  *
  * @group claims v1 - Claim Entry (with limited feedback)
  * @route GET /api/claim/byHandle/{id}
- * @param {string} id.params.required - the persistent "entity" handle ID
+ * @param {string} id.path.required - the persistent "entity" handle ID
  * @returns {Jwt} 200 - the Claim JWT entry with the most recent changes for that handle ID
- * @returns {''} 404 - if nothing found
- * @returns {Error} default - Unexpected error
+ * @returns {''} 404 - if not found
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/byHandle/:id', dbController.getLastClaimWithHandleId)
@@ -184,7 +185,7 @@ export default express
  * @route GET /api/claim/full/{id}
  * @param {string} id.path.required - the ID of the Claim JWT entry to retrieve
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/full/:id', claimController.getFullClaimById)
@@ -202,7 +203,7 @@ export default express
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
  * @returns {array.object} 200 - many Claim JWTs (up to 50), with claimEncoded only if issued by this requester
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', claimController.getByQuery)
@@ -215,7 +216,7 @@ export default express
  * @route POST /api/claim
  * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 - internal ID of Claim JWT
- * @returns {Error} 400 - error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .post('/', claimController.importClaim)

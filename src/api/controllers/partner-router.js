@@ -24,9 +24,8 @@ export default express
  * @route POST /api/partner/link
  * @param {string} jwtId.body.required - the claim to relay to the partner
  * @param {string} linkCode.body.required - the partner link code, eg. 'NOSTR-EVENT' (or someday: 'ATTEST.SH')
- * @returns 201
- *
- * @returns {Error} 500 - Unexpected error
+ * @returns 201 - success
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .post(

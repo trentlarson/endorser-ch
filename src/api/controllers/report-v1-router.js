@@ -146,6 +146,7 @@ export default express
  * @group reports on network - Visibility
  * @route POST /api/report/canSeeMe
  * @param {DidBody.model} body.body.required
+ * @returns {object} 200 - success
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/canSeeMe', dbController.makeMeVisibleTo)
@@ -156,6 +157,7 @@ export default express
  * @group reports on network - Visibility
  * @route POST /api/report/cannotSeeMe
  * @param {DidBody.model} body.body.required
+ * @returns {object} 200 - success
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
@@ -166,6 +168,7 @@ export default express
  * @group reports on network - Visibility
  * @route POST /api/report/makeMeGloballyVisible
  * @param {UrlBody.model} body.body.optional
+ * @returns {object} 200 - success
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
@@ -176,7 +179,7 @@ export default express
  * @group reports on network - Visibility
  * @route GET /api/report/whichDidsICanSee
  * @returns {array.object} 200 - list of DIDs user can see
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/whichDidsICanSee', dbController.getCanSeeDids)
@@ -189,20 +192,20 @@ export default express
  * @route GET /api/report/canDidExplicitlySeeMe
  * @param {string} did.query.required
  * @returns boolean 200 - true if the DID can see the caller
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/canDidExplicitlySeeMe', dbController.getCanSeeMeExplicitly)
 
 /**
- * @typedef RateLimits
- * @property {string} doneClaimsThisWeek
- * @property {string} doneRegistrationsThisMonth
- * @property {string} maxClaimsPerWeek
- * @property {string} maxRegistrationsPerMonth
- * @property {string} nextMonthBeginDateTime
- * @property {string} nextWeekBeginDateTime
+ * Retrieve all globally-visible DIDs
+ *
+ * @group reports v1 - Reports
+ * @route GET /api/report/globallyVisibleDids
+ * @returns {array.string} 200 - list of DIDs that are globally visible
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/globallyVisibleDids', dbController.getSeenByAll)
 
 /**
  * Get issuers for a claim
@@ -213,7 +216,7 @@ export default express
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
  * @param {string} claimId.query.required - the ID of the claim
  * @returns {array.String} 200 - issuers who have claimed or confirmed same claim
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/issuersWhoClaimedOrConfirmed', claimController.getIssuersMatchingClaim)
@@ -227,7 +230,7 @@ export default express
  * @route GET /api/report/actionClaimsAndConfirmationsSince
  * @param {datetime} date.query.optional - the date from which to show actionclaims
  * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/actionClaimsAndConfirmationsSince', actionController.getActionClaimsAndConfirmationsSince)
@@ -240,7 +243,7 @@ export default express
  * @param {number} lat.query.required
  * @param {number} lon.query.required
  * @returns {array.object} 200 - claimed tenures (up to 50)
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/tenureClaimsAtPoint', tenureController.getAtPoint)
@@ -255,7 +258,7 @@ export default express
  * @param {number} lat.query.required
  * @param {number} lon.query.required
  * @returns {array.object} 200 - claimed tenures (up to 50)
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/tenureClaimsAndConfirmationsAtPoint', tenureController.getClaimsAndConfirmationsAtPoint)
@@ -271,7 +274,7 @@ export default express
  * @param {string} roleName.query.required
  * @param {date} onDate.query.required
  * @returns {array.object} 200 - claimed tenures (up to 50)
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/orgRoleClaimsAndConfirmationsOnDate', orgRoleController.getClaimsAndConfirmationsOnDate)
@@ -282,27 +285,28 @@ export default express
  * @group reports v1 - Reports
  * @route GET /api/report/voteCounts
  * @returns {array.object} 200 - { speaker, title, count }
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 //  .get('/voteCounts', dbController.getVoteCounts)
 
 /**
- * Retrieve all globally-visible DIDs
- *
- * @group reports v1 - Reports
- * @route GET /api/report/globallyVisibleDids
+ * @typedef RateLimits
+ * @property {string} doneClaimsThisWeek
+ * @property {string} doneRegistrationsThisMonth
+ * @property {string} maxClaimsPerWeek
+ * @property {string} maxRegistrationsPerMonth
+ * @property {string} nextMonthBeginDateTime
+ * @property {string} nextWeekBeginDateTime
  */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/globallyVisibleDids', dbController.getSeenByAll)
 
-/**
+ /**
  * Get this DID's registration and claim limits.
  *
  * @group reports v1 - Reports
  * @route GET /api/report/rateLimits
  * @returns {RateLimits} 200 - the count & limits of claims & registrations
- * @returns {Error} default - Unexpected error
+ * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/rateLimits', claimController.getRateLimits)

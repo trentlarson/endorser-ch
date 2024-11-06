@@ -179,7 +179,7 @@ export default express
  * Retrieve invite for this identifier
  *
  * @group user utils - User Utils
- * @route GET /api/userUtil/invite/:identifier
+ * @route GET /api/userUtil/invite/{identifier}
  * @param {string} identifier.query.required - identifier originally sent
  * @returns 200
  * @returns {Error} 500 - Unexpected error
@@ -220,7 +220,7 @@ export default express
  * Delete the invite for this identifier
  *
  * @group user utils - User Utils
- * @route DELETE /api/userUtil/invite/:identifier
+ * @route DELETE /api/userUtil/invite/{identifier}
  * @returns 204
  * @returns {Error} 500 - Unexpected error
  */
