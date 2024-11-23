@@ -180,8 +180,8 @@ export default express
  *
  * @group user utils - User Utils
  * @route GET /api/userUtil/invite/{identifier}
- * @param {string} identifier.query.required - identifier originally sent
- * @returns 200
+ * @param {string} identifier.path.required - identifier originally sent
+ * @returns 200 - { data: { id, inviteIdentifier, ... } }
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -221,6 +221,7 @@ export default express
  *
  * @group user utils - User Utils
  * @route DELETE /api/userUtil/invite/{identifier}
+ * @param {string} identifier.path.required - identifier originally sent
  * @returns 204
  * @returns {Error} 500 - Unexpected error
  */

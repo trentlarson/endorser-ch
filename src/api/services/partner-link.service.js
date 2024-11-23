@@ -10,7 +10,8 @@
 
 import crypto from "crypto"
 import { encodeBase32 as geohashEncodeBase32 } from "geohashing"
-import {Event, finalizeEvent, verifyEvent, verifiedSymbol, getEventHash} from "nostr-tools/pure"
+// import { SimplePool } from 'nostr-tools/pool'
+import { Event, finalizeEvent } from "nostr-tools/pure"
 import { Relay, useWebSocketImplementation } from "nostr-tools/relay"
 import { decode } from "nostr-tools/nip19"
 import * as pluscodes from "pluscodes"
@@ -25,11 +26,12 @@ const NOSTR_PRIVATE_KEY_NSEC = process.env.NOSTR_PRIVATE_KEY_NSEC
 
 const DEFAULT_RELAYS = [
   "wss://nos.lol",
+  "wss://nostr.manasiwibi.com",
   "wss://relay.damus.io",
   "wss://relay.primal.net",
-  "wss://nostr.manasiwibi.com",
+  "wss://relay.trustroots.org",
 ]
-const DEFAULT_RELAY = DEFAULT_RELAYS[3] // manasiwibi seems to be the most reliable of the four, at least for showing on https://lightningk0ala.github.io/nostr-wtf/query
+const DEFAULT_RELAY = DEFAULT_RELAYS[4] // besides trustroots, manasiwibi seems to be the most reliable, at least for showing on https://lightningk0ala.github.io/nostr-wtf/query
 
 useWebSocketImplementation(WebSocket)
 
@@ -141,7 +143,7 @@ export async function sendAndStoreLink(
   // We have validated that the sender with the Authorization header is the sender,
   // and we are also sending a public key so we need to verify that they own it.
   function validateNostrSignature(eventImage, pubKeyHex, sigHex) {
-    // I actually tried to use the nostr-tools verifyEvent but it didn't recognize "kind" as a number. :-S
+    // I actually tried to use the nostr-tools/pure verifyEvent but it didn't recognize "kind" as a number. :-S
     const hash = crypto.createHash("sha256").update(new TextEncoder().encode(eventImage)).digest("hex")
     const sigCheck = schnorr.verify(sigHex, hash, pubKeyHex)
     return sigCheck
@@ -195,19 +197,39 @@ export async function sendAndStoreLink(
       const privateKeyBytes = decode(NOSTR_PRIVATE_KEY_NSEC).data
       // this adds: pubkey, id, sig
       const signedEvent = await finalizeEvent(event, privateKeyBytes)
+
+      // Pool of relays
+      // const pool = new SimplePool()
+      // const closer = pool.subscribeMany(
+      //   DEFAULT_RELAYS,
+      //   [ { ids: [signedEvent.id] } ],
+      //   {
+      //     onevent(event) {
+      //       // this will only be called once the first time the event is received
+      //       l.info("Event recognized by relay:", event)
+      //     },
+      //     oneose() {
+      //       closer.close()
+      //     }
+      //   }
+      // )
+      // await Promise.any(pool.publish(DEFAULT_RELAYS, signedEvent))
+
+      // One relay
       relay = await Relay.connect(DEFAULT_RELAY)
       relay.subscribe([{ ids: [signedEvent.id] }], {
         onevent(event) {
           l.info("Event recognized by relay:", event)
         },
       })
-      // remove after testing
+      // useful for listing events
       // const serverPubKeyHex = getPublicKey(privateKeyBytes)
       // relay.subscribe(
       //   [ { kinds: [kind], authors: [serverPubKeyHex] } ],
       //   { onevent(event) { l.info('Server events recognized by relay:', event) } }
       // )
       await relay.publish(signedEvent)
+
       const partnerLinkData = JSON.stringify({ content, pubKeyHex })
       await dbService.partnerLinkInsert({
         handleId: jwtInfo.handleId,
