@@ -2128,11 +2128,11 @@ class EndorserDatabase {
     })
   }
 
-  partnerLinkForCode(jwtId, linkCode) {
+  partnerLinkForCode(handleId, linkCode) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
         "SELECT * FROM partner_link WHERE handleId = ? and linkCode = ?",
-        [jwtId, linkCode],
+        [handleId, linkCode],
         function (err, row) {
           if (err) {
             reject(err)

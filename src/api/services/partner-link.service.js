@@ -10,7 +10,7 @@
 
 import crypto from "crypto"
 import { encodeBase32 as geohashEncodeBase32 } from "geohashing"
-// import { SimplePool } from 'nostr-tools/pool'
+import { SimplePool } from 'nostr-tools/pool'
 import { Event, finalizeEvent } from "nostr-tools/pure"
 import { Relay, useWebSocketImplementation } from "nostr-tools/relay"
 import { decode } from "nostr-tools/nip19"
@@ -44,12 +44,12 @@ export async function sendAndStoreLink(
   pubKeyImage,
   pubKeySigHex,
 ) {
-  const linkInfo = await dbService.partnerLinkForCode(jwtId, linkCode)
-
   // When we separate this into another service, this will have to be an API call.
   // See the image-api server for an example of how to leverage JWTs to get
   // permission to access data from the other service.
   const jwtInfo = await dbService.jwtById(jwtId)
+
+  const linkInfo = await dbService.partnerLinkForCode(jwtInfo.handleId, linkCode)
 
   if (!jwtInfo) {
     return { clientError: { message: "No JWT exists for " + jwtId } }
@@ -77,9 +77,9 @@ export async function sendAndStoreLink(
       longitude: claim.location.geo.longitude,
     })
     const moreTags = [
-      ["e", jwtInfo.id],
       ["L", "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
       ["l", plusCode, "open-location-code"], // OPEN_LOCATION_CODE_NAMESPACE_TAG
+      ["t", "timesafari"],
       [
         "original_created_at",
         `${Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)}`,
@@ -111,7 +111,6 @@ export async function sendAndStoreLink(
     const geohash6 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 6)
     const geohash4 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 4)
     const geohash2 = geohashEncodeBase32(claim.location.geo.latitude, claim.location.geo.longitude, 2)
-    console.log("geohashes", geohash8, geohash6, geohash4, geohash2)
     const moreTags = [
       ["g", geohash8],
       ["g", geohash6],
@@ -198,37 +197,31 @@ export async function sendAndStoreLink(
       // this adds: pubkey, id, sig
       const signedEvent = await finalizeEvent(event, privateKeyBytes)
 
-      // Pool of relays
-      // const pool = new SimplePool()
-      // const closer = pool.subscribeMany(
-      //   DEFAULT_RELAYS,
-      //   [ { ids: [signedEvent.id] } ],
-      //   {
-      //     onevent(event) {
-      //       // this will only be called once the first time the event is received
-      //       l.info("Event recognized by relay:", event)
-      //     },
-      //     oneose() {
-      //       closer.close()
-      //     }
-      //   }
-      // )
-      // await Promise.any(pool.publish(DEFAULT_RELAYS, signedEvent))
+      //console.log("Signed event:", signedEvent)
 
-      // One relay
-      relay = await Relay.connect(DEFAULT_RELAY)
-      relay.subscribe([{ ids: [signedEvent.id] }], {
-        onevent(event) {
-          l.info("Event recognized by relay:", event)
-        },
-      })
-      // useful for listing events
-      // const serverPubKeyHex = getPublicKey(privateKeyBytes)
+      // Pool of relays
+      const pool = new SimplePool()
+      const closer = pool.subscribeMany(
+        DEFAULT_RELAYS,
+        [ { ids: [signedEvent.id] } ],
+        {
+          // this will only be called once the first time the event is received
+          onevent(event) { l.info("Event recognized by relay pool:", event) },
+          oneose() { closer.close() }
+        }
+      )
+      await Promise.any(pool.publish(DEFAULT_RELAYS, signedEvent))
+
+      // // One relay
+      // relay = await Relay.connect(DEFAULT_RELAY)
       // relay.subscribe(
-      //   [ { kinds: [kind], authors: [serverPubKeyHex] } ],
-      //   { onevent(event) { l.info('Server events recognized by relay:', event) } }
-      // )
-      await relay.publish(signedEvent)
+      //   [{ ids: [signedEvent.id] }], /* ... kinds: [kind], authors: [getPublicKey(privateKeyBytes)] */
+      //   {
+      //     onevent(event) { l.info("Event recognized by one relay:", event) },
+      //     oneose() { relay.close() }
+      //   }
+      // );
+      // await relay.publish(signedEvent)
 
       const partnerLinkData = JSON.stringify({ content, pubKeyHex })
       await dbService.partnerLinkInsert({
@@ -244,19 +237,6 @@ export async function sendAndStoreLink(
     } catch (e) {
       l.error("Error creating " + linkCode + " event for JWT " + jwtId + ": " + e)
       return { error: "Error creating " + linkCode + " event for JWT " + jwtId + ": " + e }
-    } finally {
-      setTimeout(
-        () => {
-          try {
-            relay.close()
-            l.info("Closed relay.")
-          } catch (e) {
-            l.error("Error closing relay: " + e)
-          }
-        },
-        // wait so that we record an onevent from the subscription
-        3000,
-      )
     }
   }
 }
