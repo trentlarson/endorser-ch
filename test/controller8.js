@@ -117,7 +117,7 @@ describe('8 - Asynchronous Invitations', () => {
         }
         expect(r.body).to.have.property("success", true)
         expect(r.headers['content-type']).to.match(/json/)
-        expect(r.status).that.equals(200)
+        expect(r.status).that.equals(201)
       })
       .catch(err => Promise.reject(err))
   });
@@ -174,7 +174,7 @@ describe('8 - Asynchronous Invitations', () => {
               }
               expect(r.body).to.have.property("success", true)
               expect(r.headers['content-type']).to.match(/json/)
-              expect(r.status).that.equals(200)
+              expect(r.status).that.equals(201)
               Promise.resolve(r.body)
             })
             .catch(err => Promise.reject(err))

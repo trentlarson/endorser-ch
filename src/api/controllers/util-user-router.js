@@ -138,7 +138,7 @@ export default express
  * @route POST /api/userUtil/invite
  * @param {string} inviteJwt.body.required - issuer code to specify invitee, must be 20 characters or more and should be random
  * @param {string} notes.body.optional - issuer notes to remember the invitee
- * @returns 200 - the internal ID of the invite with a
+ * @returns 201 - with a body of { success: true }
  * @returns {Error} 500 - Unexpected error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -167,7 +167,7 @@ export default express
           res.status(400).json({ error: checks.clientError }).end()
         } else {
           await dbService.inviteOneInsert(res.locals.tokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
-          res.status(200).json({ success: true }).end()
+          res.status(201).json({ success: true }).end()
         }
       } catch (error) {
         res.status(500).json({ error: error }).end()
