@@ -1185,7 +1185,7 @@ class EndorserDatabase {
   getInvitesByIssuer(issuerDid) {
     return new Promise((resolve, reject) => {
       db.all(
-        "SELECT * FROM invite_one WHERE issuerDid = ?",
+        "SELECT * FROM invite_one WHERE issuerDid = ? ORDER BY createdAt DESC",
         [issuerDid],
         (err, rows) => {
           if (err) {

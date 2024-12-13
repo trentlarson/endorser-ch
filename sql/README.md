@@ -129,10 +129,6 @@ CREATE TABLE give_provider (
 CREATE INDEX give_provider_give ON give_provider(giveHandleId);
 CREATE INDEX give_provider_provider ON give_provider(providerHandleId);
 
-CREATE TABLE invite_person {
-
-}
-
 -- for one-time personal invites
 CREATE TABLE IF NOT EXISTS invite_one (
   id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
