@@ -559,7 +559,7 @@ export default express
   .get('/canClaim', dbController.getCanClaim)
 
 /**
- * Retrieve all confirmers for a set of claims. (Same as POST version, just like Elasticsearch.)
+ * Retrieve all confirmers for a set of claims. (Same as POST version. Similar to Elasticsearch approach with parameter in the body.)
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/confirmers
@@ -571,7 +571,7 @@ export default express
   .get('/confirmers', serviceController.getConfirmerIds)
 
 /**
- * Retrieve all confirmers for a set of claims. (Same as GET version, just like Elasticsearch.)
+ * Retrieve all confirmers for a set of claims. (Same as GET version. Similar to Elasticsearch approach for a large number of inputs.)
  *
  * @group reports - Reports (with paging)
  * @route POST /api/v2/report/confirmers

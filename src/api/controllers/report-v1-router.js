@@ -209,6 +209,7 @@ export default express
 
 /**
  * Get issuers for a claim
+ * @deprecated Use /api/v2/report/confirmers instead for pagination someday.
  *
  * Beware: this array may include a "publicUrls" key within it.
  *

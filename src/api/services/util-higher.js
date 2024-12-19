@@ -37,9 +37,10 @@ async function hideDidsAndAddLinksToNetworkInKey(requesterDid, input, key, searc
         - value is an array of all DIDs who the requester can see & who can see the hidden DID
       - if any DIDs are public, add a "publicUrls" key at the top level with value of a map from DID to URL
 
-  Note that this object or each element of this array (recursively) is expected
-  to have a key of either "issuer" or "issuerDid" if it contains any DIDs (so
-  that the data isn't hidden from this person who might be the issuer).
+  Note that we want this object or each element of this array (recursively)
+  to have a key of either "issuer" or "issuerDid" if it contains any DIDs
+  so that the data isn't hidden from this person who might be the issuer.
+  (If it's there we can show everything. If not, we'll run the algo to hide.)
 
   @param requesterDid {string} the DID of the user making the request
   @param input {object|array|string} the result to be scrubbed
@@ -52,12 +53,18 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
     throw new Error("Parameter searchTermMaybeDIDs is required to ensure no DID-based search parameter gives data to someone without visibility.")
   }
 
+  // the result is wrapped, so operate on the actual data
+  // (This is important especially for the check where they might be the
+  //  issuer: when we check inputContainsDid, any element of the list could
+  //  have their DID, so we need to check them separately in order to not
+  //  allow too much data to leak.)
+  let inputData = input.data || input;
   const validSearchTermMaybeDIDs = searchTermMaybeDIDs.filter(R.identity) // exclude any undefined/null/empty
   let allowedDids = await getAllDidsRequesterCanSee(requesterDid)
   let result
-  if (Array.isArray(input)) {
+  if (Array.isArray(inputData)) {
     result = []
-    for (let item of input) {
+    for (let item of inputData) {
       const requesterInClaim = inputContainsDid(item, requesterDid)
       if (
         requesterInClaim
@@ -85,19 +92,23 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       }
     }
   } else {
-    const requesterInClaim = inputContainsDid(input, requesterDid)
+    const requesterInClaim = inputContainsDid(inputData, requesterDid)
     if (
       requesterInClaim
-      || (requesterDid && (requesterDid === (input?.issuer || input?.issuerDid)))
+      || (requesterDid && (requesterDid === (inputData?.issuer || inputData?.issuerDid)))
     ) {
-      result = input
+      result = inputData
     } else {
-      result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input)
+      result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, inputData)
       // the nonce is only directly accessible by participants and those allowed
-      if (result && !allowedDids.includes(input?.issuer || input?.issuerDid)) {
+      if (result && !allowedDids.includes(inputData?.issuer || inputData?.issuerDid)) {
         delete result["hashNonce"]
       }
     }
+  }
+  if (input.data) {
+    // we extracted the data, so put it back
+    result = { ...input, data: result }
   }
 
   // Remove top-level nonce if it's not the issuer or a participant in this claim
