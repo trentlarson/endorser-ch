@@ -11,17 +11,16 @@ import {HIDDEN_TEXT, inputContainsDid, isDid} from './util'
  * The value in the key is expected to follow the rules for "issuer" or "issuerDid".
  *
  * @see #hideDidsAndAddLinksToNetwork
- * @param key {string} the key to use to find the data to hide (eg "data")
  * @returns {Promise<object>} which returns the input but with the key replaced
  * and with any publicUrls moved to the top level
  */
-async function hideDidsAndAddLinksToNetworkInKey(requesterDid, input, key, searchTermMaybeDIDs) {
-  const result = await hideDidsAndAddLinksToNetwork(requesterDid, input[key], searchTermMaybeDIDs)
-  if (result["publicUrls"]) {
+async function hideDidsAndAddLinksToNetworkInDataKey(requesterDid, input, searchTermMaybeDIDs) {
+  const result = await hideDidsAndAddLinksToNetwork(requesterDid, input["data"], searchTermMaybeDIDs)
+  if (result && result["publicUrls"]) {
     input["publicUrls"] = result["publicUrls"]
     delete result["publicUrls"]
   }
-  input[key] = result
+  input["data"] = result
   return input
 }
 
@@ -48,34 +47,27 @@ async function hideDidsAndAddLinksToNetworkInKey(requesterDid, input, key, searc
   @returns {Promise<object|array|string>} the result with DIDs hidden, key + "VisibleToDids" added,
     and links to DIDs with published URLs added as "publicUrls" key (for both objects and arrays)
  **/
-async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybeDIDs) {
+async function hideDidsAndAddLinksToNetwork(requesterDid, inputData, searchTermMaybeDIDs) {
   if (!searchTermMaybeDIDs) {
     throw new Error("Parameter searchTermMaybeDIDs is required to ensure no DID-based search parameter gives data to someone without visibility.")
   }
+  if (inputData?.data) {
+    throw new Error("With an embedded 'data' key in the result, you probably intended to use hideDidsAndAddLinksToNetworkInDataKey instead.")
+  }
 
-  // the result is wrapped, so operate on the actual data
-  // (This is important especially for the check where they might be the
-  //  issuer: when we check inputContainsDid, any element of the list could
-  //  have their DID, so we need to check them separately in order to not
-  //  allow too much data to leak.)
-  let inputData = input.data || input;
   const validSearchTermMaybeDIDs = searchTermMaybeDIDs.filter(R.identity) // exclude any undefined/null/empty
   let allowedDids = await getAllDidsRequesterCanSee(requesterDid)
   let result
   if (Array.isArray(inputData)) {
     result = []
     for (let item of inputData) {
-      const requesterInClaim = inputContainsDid(item, requesterDid)
-      if (
-        requesterInClaim
-        || (requesterDid && (requesterDid === (item?.issuer || item?.issuerDid)))
-      ) {
-        // allow all visibility for the issuer
+      if (inputContainsDid(item, requesterDid)) {
+        // allow all visibility for those contained in the claim
         result = R.append(item, result)
       } else {
         const oneResult = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, item)
 
-        // the nonce is only directly accessible by participants and those allowed
+        // the nonce is only directly accessible by those who can see the issuer
         if (oneResult && !allowedDids.includes(item?.issuer || item?.issuerDid)) {
           delete oneResult["hashNonce"]
         }
@@ -92,26 +84,16 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, input, searchTermMaybe
       }
     }
   } else {
-    const requesterInClaim = inputContainsDid(inputData, requesterDid)
-    if (
-      requesterInClaim
-      || (requesterDid && (requesterDid === (inputData?.issuer || inputData?.issuerDid)))
-    ) {
+    if (inputContainsDid(inputData, requesterDid)) {
       result = inputData
     } else {
       result = await hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, inputData)
-      // the nonce is only directly accessible by participants and those allowed
+      // the nonce is only directly accessible by those who can see the issuer
       if (result && !allowedDids.includes(inputData?.issuer || inputData?.issuerDid)) {
         delete result["hashNonce"]
       }
     }
   }
-  if (input.data) {
-    // we extracted the data, so put it back
-    result = { ...input, data: result }
-  }
-
-  // Remove top-level nonce if it's not the issuer or a participant in this claim
 
   // Include any public URLs.
   // For arrays, this adds the publicUrls as a top-level key, which is weird... it works, but we should handle this better.
@@ -229,4 +211,4 @@ async function makeGloballyVisible(issuerDid, url) {
     })
 }
 
-module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInKey, hideDidsAndAddLinksToNetworkSub /* for tests */, getPublicDidUrl, makeGloballyVisible }
+module.exports = { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInDataKey, hideDidsAndAddLinksToNetworkSub /* for tests */, getPublicDidUrl, makeGloballyVisible }

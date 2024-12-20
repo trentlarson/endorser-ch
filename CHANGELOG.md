@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Order by descending created-date when retrieving invites.
 ### Fixed
+- Revealed too much when user's DID was in any of a list of results inside ".data"
 - Bad check for previously-submitted partner links
 
 

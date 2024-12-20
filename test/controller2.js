@@ -395,7 +395,6 @@ describe('2 - Role Claims on Date', async () => {
       }))
 
   it('restore registration limits', async () => {
-    console.log('restoring', prevMaxRegs);
     await dbService.registrationUpdateMaxRegsForTests(creds[0].did, prevMaxRegs);
   })
 })

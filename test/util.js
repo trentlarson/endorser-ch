@@ -44,9 +44,9 @@ const allDidsAreHiddenFor = (exceptDid) => (result) => allDidsAreHidden(result, 
 /**
  @return true if any DID is hidden
  **/
-function anyDidIsHidden(result) {
+const anyDidMatches = (text) => (result) => {
   if (Object.prototype.toString.call(result) === "[object String]") {
-    return result === HIDDEN_TEXT
+    return result === text
   } else if (result instanceof Object) {
     var values
     if (Array.isArray(result)) {
@@ -56,11 +56,13 @@ function anyDidIsHidden(result) {
       // (Hmmmm... this is inconsistent with other methods where the keys aren't checked.)
       values = R.keys(result).concat(R.values(result))
     }
-    return R.reduce((a,b) => a || b, false, R.map(anyDidIsHidden, values))
+    return R.reduce((a,b) => a || b, false, R.map(anyDidMatches(text), values))
   } else {
     return false
   }
 }
+
+const anyDidIsHidden = anyDidMatches(HIDDEN_TEXT)
 
 /**
 // Here's the DID Document for ETHR_CRED_DATA #0:
@@ -276,6 +278,7 @@ module.exports = {
   allDidsAreHidden: allDidsAreHidden,
 
   anyDidIsHidden: anyDidIsHidden,
+  anyDidMatches: anyDidMatches,
 
 }
 

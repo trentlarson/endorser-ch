@@ -12,8 +12,8 @@ import {
   HIDDEN_TEXT,
   globalId,
   localFromGlobalEndorserIdentifier,
-} from '../dist/api/services/util';
-import testUtil, {INITIAL_DESCRIPTION} from './util'
+} from '../src/api/services/util';
+import testUtil, { anyDidIsHidden, anyDidMatches, INITIAL_DESCRIPTION } from './util'
 
 const expect = chai.expect
 
