@@ -388,8 +388,8 @@ class ServiceController {
   getConfirmerIds(req, res) {
     const claimEntryIds = req.body.claimEntryIds
     ClaimService.retrieveConfirmersForClaimsEntryIds(claimEntryIds)
-        .then(results => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, results, []))
-        .then(results => { res.json({ data: results }).end() })
+        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, { data: results }, []))
+        .then(resultData => { res.json(resultData).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 }
