@@ -8,9 +8,9 @@ import {DIDResolutionResult} from 'did-resolver';
  * @param did : string
  * @returns {Promise<DIDResolutionResult>}
  *
- * Similar code resides in image-api
+ * Similar code resides in crowd-funder-for-time-pwa and image-api
  */
-export const didEthLocalResolver = async(did) => {
+export const didEthLocalResolver = async (did) => {
   const didRegex = /^did:ethr:(0x[0-9a-fA-F]{40})$/;
   const match = did.match(didRegex);
 
@@ -43,4 +43,3 @@ export const didEthLocalResolver = async(did) => {
 
   throw new Error(`Unsupported DID format: ${did}`);
 }
-
