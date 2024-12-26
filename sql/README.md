@@ -296,9 +296,11 @@ CREATE TABLE plan_claim (
 );
 CREATE INDEX plan_issuerDid ON plan_claim(issuerDid);
 CREATE INDEX plan_fullIri ON plan_claim(handleId);
+CREATE INDEX plan_internalId ON plan_claim(internalId);
 CREATE INDEX plan_endTime ON plan_claim(endTime);
-CREATE INDEX plan_fulfillsPlan on plan_claim (fulfillsPlanHandleId);
 CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
+CREATE INDEX plan_fulfillsPlan on plan_claim (fulfillsPlanHandleId);
+CREATE INDEX plan_index_locLat_locLon ON plan_claim(locLat, locLon);
 
 -- cache table, for quick retrieval of claims with type Project
 CREATE TABLE project_claim (

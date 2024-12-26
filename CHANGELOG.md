@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Added
+- planCountsByBBox endpoint for counts of plans in a region
 ### Changed
 - Order by descending created-date when retrieving invites.
 ### Fixed

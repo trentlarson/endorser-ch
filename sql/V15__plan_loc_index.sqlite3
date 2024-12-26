@@ -1,0 +1,4 @@
+
+-- see README.md in this directory for explanations
+
+CREATE INDEX IF NOT EXISTS plan_index_locLat_locLon ON plan_claim(locLat, locLon);

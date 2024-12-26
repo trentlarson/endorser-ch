@@ -2185,6 +2185,87 @@ class EndorserDatabase {
     })
   }
 
+  planCountsByBBox(minLat, maxLat, westLon, eastLon) {
+    if (minLat === maxLat) {
+      return Promise.resolve({ data: [], error: "Note that the minimum and maximum latitude must be different." })
+    }
+    if (westLon === eastLon) {
+      return Promise.resolve({ data: [], error: "Note that the minimum and maximum longitude must be different." })
+    }
+    if (minLat === -90 && maxLat === 90) {
+      // they're zoomed out maximum latitudes, so we'll change the box to include all longitudes
+      westLon = -180
+      eastLon = 180
+    } else if (westLon > eastLon) {
+      // their viewport crosses the prime meridian
+      // let's take whichever takes up the most room of the screen
+      const westLonDiff = 180 - westLon // distance to the right edge of the screen
+      const eastLonDiff = eastLon - -180 // distance to the left edge of the screen
+      if (westLonDiff > eastLonDiff) {
+        // there's more on the western side, so we'll change the easternmost to be 0
+        eastLon = 180
+        if (westLon == 180) {
+          // this should never happen, but let's be safe
+          westLon = -180
+        }
+      } else {
+        // there's more on the eastern side, so we'll change the westernmost to be -180
+        westLon = -180
+        if (eastLon == -180) {
+          // this should never happen, but let's be safe
+          eastLon = 180
+        }
+      }
+    }
+    // we'll add a little bit to the denominator
+    // to avoid a potential one right on the border
+    // and to deal with rounding errors (eg. when we've got .99999...)
+    // either of which would push an index to 4, out of bounds
+    const latDenominator = maxLat - minLat + 0.000001
+    const lonDenominator = eastLon - westLon + 0.000001
+
+    const sql = `
+      SELECT
+        indexLat,
+        indexLon,
+        COUNT(indexLat) AS recordCount,
+        MIN(locLat) AS minFoundLat,
+        MAX(locLat) AS maxFoundLat,
+        MIN(locLon) AS minFoundLon,
+        MAX(locLon) AS maxFoundLon
+      FROM (
+        SELECT
+          FLOOR(4.0 * (locLat - ?) / ?) AS indexLat,
+          FLOOR(4.0 * (locLon - ?) / ?) AS indexLon,
+          locLat,
+          locLon
+        FROM plan_claim
+        WHERE
+          locLat BETWEEN ? AND ?
+          AND locLon BETWEEN ? AND ?
+      )
+      GROUP BY indexLat, indexLon
+    `
+    const params = [minLat, latDenominator, westLon, lonDenominator, minLat, maxLat, westLon, eastLon]
+    const data = []
+    return new Promise(
+      (resolve, reject) => {
+        db.each(sql, params, function(err, row) {
+        if (err) {
+          reject(err)
+        }
+        data.push(row)
+      },
+      (err, num) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data: data })
+        }
+      })
+    })
+  }
+
   planFulfilledBy(handleId) {
     return new Promise((resolve, reject) => {
       db.get(

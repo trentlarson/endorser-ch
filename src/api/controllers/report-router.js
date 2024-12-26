@@ -276,6 +276,17 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getPlanCountsByBBox(req, res, next) {
+    const minLocLat = Number.parseFloat(req.query.minLocLat)
+    const maxLocLat = Number.parseFloat(req.query.maxLocLat)
+    const westLocLon = Number.parseFloat(req.query.westLocLon)
+    const eastLocLon = Number.parseFloat(req.query.eastLocLon)
+    dbService.planCountsByBBox(minLocLat, maxLocLat, westLocLon, eastLocLon)
+      .then(results => { res.json(results).end() })
+      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+
+  }
+
   getPlansByIssuerPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -460,6 +471,17 @@ export default express
  */
 
 /**
+ * @typedef LocationCount
+ * @property {number} indexLat - index of the latitude bucket, from lowest latitude to highest latitude (currently 0 to 3)
+ * @property {number} indexLon - index of the longitude bucket, from west (lowest) to east (highest) (currently 0 to 3)
+ * @property {number} recordCount - number of records found in this bucket
+ * @property {number} minFoundLat - lowest latitude found in this bucket
+ * @property {number} maxFoundLat - highest latitude found in this bucket
+ * @property {number} minFoundLon - westernmost longitude found in this bucket
+ * @property {number} maxFoundLon - easternmost longitude found in this bucket
+ */
+
+/**
  * @typedef Offer
  * @property {string} jwtId
  * @property {string} handleId
@@ -501,6 +523,12 @@ export default express
  * @property {string} resultDescription
  * @property {string} resultIdentifier
  * @property {string} url
+ */
+
+/**
+ * @typedef PlanArrayMaybeMoreBody
+ * @property {array.Plan} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
@@ -775,6 +803,22 @@ export default express
   .get('/offerTotals', dbController.getOfferTotals)
 
 /**
+ * Cut the bbox into sections, then return an array location + plan-counts for how many are located in that section with that location
+ * Currently, this cuts the bbox into 16 sections, 4 on each side.
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/planCountsByBBox
+ * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
+ * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
+ * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @returns {array.LocationCount} 200 - 'data' property with matching array of entries, each with a count of plans in that location
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+   .get('/planCountsByBBox', dbController.getPlanCountsByBBox)
+
+/**
  * Get all plans for the query inputs, paginated, reverse-chronologically
  *
  * Beware: this array may include a "publicUrls" key within it.
@@ -827,6 +871,13 @@ export default express
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/plansByBBox', dbController.getPlansByLocationPaged)
+
+/**
+ * @deprecated
+ * @see /plansByBBox
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationPaged)

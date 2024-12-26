@@ -13,7 +13,7 @@ import {
   globalId,
   localFromGlobalEndorserIdentifier,
 } from '../src/api/services/util';
-import testUtil, { anyDidIsHidden, anyDidMatches, INITIAL_DESCRIPTION } from './util'
+import testUtil from './util'
 
 const expect = chai.expect
 
@@ -72,6 +72,8 @@ planNewBy2JwtObj.claim.agent.identifier = creds[2].did
 planNewBy2JwtObj.claim.description = '#2 Has A Plan'
 planNewBy2JwtObj.claim.name = planNewBy2JwtObj.claim.name + " - by #2"
 planNewBy2JwtObj.iss = creds[2].did
+planNewBy2JwtObj.claim.location.geo.latitude += 0.1
+planNewBy2JwtObj.claim.location.geo.longitude += 0.1
 const planNewBy2JwtProm = credentials[2].createVerification(planNewBy2JwtObj)
 
 
@@ -226,12 +228,14 @@ describe('6 - Plans', () => {
   }).timeout(3000)
 
   it('fail to retrieve plan without matching a location', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
     return request(Server)
-      .get('/api/v2/report/plansByLocation?'
-        + 'minLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude + 1)
-        + '&maxLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude + 2)
-        + '&westLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 1)
-        + '&eastLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 2)
+      .get('/api/v2/report/plansByLocation'
+        + '?minLocLat' + '=' + (lat + 1)
+        + '&maxLocLat' + '=' + (lat + 2)
+        + '&westLocLon' + '=' + (lon + 1)
+        + '&eastLocLon' + '=' + (lon + 2)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
@@ -243,12 +247,14 @@ describe('6 - Plans', () => {
   })
 
   it('retrieve one plan with matching a location', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
     return request(Server)
-      .get('/api/v2/report/plansByLocation?'
-        + 'minLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude - 1)
-        + '&maxLocLat' + '=' + (testUtil.claimPlanAction.location.geo.latitude + 1)
-        + '&westLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude - 1)
-        + '&eastLocLon' + '=' + (testUtil.claimPlanAction.location.geo.longitude + 1)
+      .get('/api/v2/report/plansByLocation'
+        + '?minLocLat' + '=' + (lat - 1)
+        + '&maxLocLat' + '=' + (lat + 1)
+        + '&westLocLon' + '=' + (lon - 1)
+        + '&eastLocLon' + '=' + (lon + 1)
       )
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
@@ -350,6 +356,24 @@ describe('6 - Plans', () => {
       })
   }).timeout(3000)
 
+  it('retrieve no plan counts inside bounding box', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
+    return request(Server)
+      .get('/api/v2/report/planCountsByBBox'
+        + '?minLocLat' + '=' + (lat - 0.1)
+        + '&maxLocLat' + '=' + (lat + 1)
+        + '&westLocLon' + '=' + (lon - 0.1)
+        + '&eastLocLon' + '=' + (lon + 1)
+      )
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.data?.length).that.equals(1)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
   it('v2 insert of plan by second person, by same ID', async () => {
     // Now can create this JWT with the ID that was assigned.
     const planObj = R.clone(testUtil.jwtTemplate)
@@ -379,7 +403,7 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
-        expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
+        expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -394,7 +418,7 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
-        expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
+        expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -409,7 +433,7 @@ describe('6 - Plans', () => {
         expect(r.body.agentDid).that.equals(creds[1].did)
         expect(r.body.issuerDid).that.equals(creds[1].did)
         expect(r.body.handleId).that.equals(firstPlanIdExternal)
-        expect(r.body.description).that.equals(INITIAL_DESCRIPTION)
+        expect(r.body.description).that.equals(testUtil.INITIAL_DESCRIPTION)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -613,6 +637,43 @@ describe('6 - Plans', () => {
         return Promise.reject(err)
       })
   }).timeout(3000)
+
+  it('retrieve some plan counts inside bounding box', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
+    return request(Server)
+      .get('/api/v2/report/planCountsByBBox'
+        + '?minLocLat' + '=' + (lat - 0.1)
+        + '&maxLocLat' + '=' + (lat + 1)
+        + '&westLocLon' + '=' + (lon - 0.1)
+        + '&eastLocLon' + '=' + (lon + 1)
+      )
+      .then(r => {
+        expect(r.headers['content-type'], /json/)
+        expect(r.body.data?.length).that.equals(2)
+
+        // min coordinates are from planWithoutIdBy1JwtObj
+        // max coordinates are from planNewBy2JwtObj
+        expect(r.body.data[0].indexLat).that.equals(0)
+        expect(r.body.data[0].indexLon).that.equals(0)
+        expect(r.body.data[0].minFoundLat).that.equals(lat)
+        expect(r.body.data[0].maxFoundLat).that.equals(lat + 0.1)
+        expect(r.body.data[0].minFoundLon).that.equals(lon)
+        expect(r.body.data[0].maxFoundLon).that.equals(lon + 0.1)
+        expect(r.body.data[0].recordCount).that.equals(2)
+
+        // the single coordinate is from firstPlanIdSecondClaimInternal
+        expect(r.body.data[1].indexLat).that.equals(3)
+        expect(r.body.data[1].indexLon).that.equals(0)
+        expect(r.body.data[1].minFoundLat).that.equals(lat + 1)
+        expect(r.body.data[1].maxFoundLat).that.equals(lat + 1)
+        expect(r.body.data[1].minFoundLon).that.equals(lon)
+        expect(r.body.data[1].maxFoundLon).that.equals(lon)
+        expect(r.body.data[1].recordCount).that.equals(1)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  })
 
   it('fail to make a plan with mismatched lastClaimId & identifier', async () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
