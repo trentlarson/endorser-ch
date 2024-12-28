@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS invite_one (
   expiresAt DATETIME NOT NULL,
   inviteIdentifier TEXT NOT NULL UNIQUE, -- necessary for rate-limiting
   issuerDid TEXT NOT NULL,
-  jwt TEXT, -- they may choose not to share their JWT with the server
+  jwt TEXT, -- they should not share their unencrypted JWT with the server
   keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0, -- default is to make issuer visible when redeemed
   notes TEXT, -- they may choose not to share their notes with the server
   redeemedBy TEXT

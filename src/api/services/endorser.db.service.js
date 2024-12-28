@@ -2260,7 +2260,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else {
-          resolve({ data: data })
+          resolve(data)
         }
       })
     })

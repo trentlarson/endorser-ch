@@ -282,7 +282,7 @@ class DbController {
     const westLocLon = Number.parseFloat(req.query.westLocLon)
     const eastLocLon = Number.parseFloat(req.query.eastLocLon)
     dbService.planCountsByBBox(minLocLat, maxLocLat, westLocLon, eastLocLon)
-      .then(results => { res.json(results).end() })
+      .then(results => { res.json({ data: { cells: results } }).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
 
   }
@@ -479,6 +479,11 @@ export default express
  * @property {number} maxFoundLat - highest latitude found in this bucket
  * @property {number} minFoundLon - westernmost longitude found in this bucket
  * @property {number} maxFoundLon - easternmost longitude found in this bucket
+ */
+
+/**
+ * @typedef GridCounts
+ * @property {array.LocationCount} cells - counts of records in each cell of the grid
  */
 
 /**
@@ -804,7 +809,7 @@ export default express
 
 /**
  * Cut the bbox into sections, then return an array location + plan-counts for how many are located in that section with that location
- * Currently, this cuts the bbox into 16 sections, 4 on each side.
+ * Currently, this cuts the bbox into sections (16 total by default, 4 on each side).
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/planCountsByBBox
@@ -812,7 +817,7 @@ export default express
  * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
  * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
  * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
- * @returns {array.LocationCount} 200 - 'data' property with matching array of entries, each with a count of plans in that location
+ * @returns {array.GridCounts} 200 - 'data' property with 'cells' property with matching array of entries, each with a count of plans in that cell, defaulting to 4 cells on a side
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

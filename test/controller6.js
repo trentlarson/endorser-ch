@@ -368,7 +368,7 @@ describe('6 - Plans', () => {
       )
       .then(r => {
         expect(r.headers['content-type'], /json/)
-        expect(r.body.data?.length).that.equals(1)
+        expect(r.body.data.cells.length).that.equals(1)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -650,26 +650,26 @@ describe('6 - Plans', () => {
       )
       .then(r => {
         expect(r.headers['content-type'], /json/)
-        expect(r.body.data?.length).that.equals(2)
+        expect(r.body.data.cells.length).that.equals(2)
 
         // min coordinates are from planWithoutIdBy1JwtObj
         // max coordinates are from planNewBy2JwtObj
-        expect(r.body.data[0].indexLat).that.equals(0)
-        expect(r.body.data[0].indexLon).that.equals(0)
-        expect(r.body.data[0].minFoundLat).that.equals(lat)
-        expect(r.body.data[0].maxFoundLat).that.equals(lat + 0.1)
-        expect(r.body.data[0].minFoundLon).that.equals(lon)
-        expect(r.body.data[0].maxFoundLon).that.equals(lon + 0.1)
-        expect(r.body.data[0].recordCount).that.equals(2)
+        expect(r.body.data.cells[0].indexLat).that.equals(0)
+        expect(r.body.data.cells[0].indexLon).that.equals(0)
+        expect(r.body.data.cells[0].minFoundLat).that.equals(lat)
+        expect(r.body.data.cells[0].maxFoundLat).that.equals(lat + 0.1)
+        expect(r.body.data.cells[0].minFoundLon).that.equals(lon)
+        expect(r.body.data.cells[0].maxFoundLon).that.equals(lon + 0.1)
+        expect(r.body.data.cells[0].recordCount).that.equals(2)
 
         // the single coordinate is from firstPlanIdSecondClaimInternal
-        expect(r.body.data[1].indexLat).that.equals(3)
-        expect(r.body.data[1].indexLon).that.equals(0)
-        expect(r.body.data[1].minFoundLat).that.equals(lat + 1)
-        expect(r.body.data[1].maxFoundLat).that.equals(lat + 1)
-        expect(r.body.data[1].minFoundLon).that.equals(lon)
-        expect(r.body.data[1].maxFoundLon).that.equals(lon)
-        expect(r.body.data[1].recordCount).that.equals(1)
+        expect(r.body.data.cells[1].indexLat).that.equals(3)
+        expect(r.body.data.cells[1].indexLon).that.equals(0)
+        expect(r.body.data.cells[1].minFoundLat).that.equals(lat + 1)
+        expect(r.body.data.cells[1].maxFoundLat).that.equals(lat + 1)
+        expect(r.body.data.cells[1].minFoundLon).that.equals(lon)
+        expect(r.body.data.cells[1].maxFoundLon).that.equals(lon)
+        expect(r.body.data.cells[1].recordCount).that.equals(1)
       }).catch((err) => {
         return Promise.reject(err)
       })
