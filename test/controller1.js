@@ -11,7 +11,7 @@ import { DateTime } from 'luxon'
 import R from 'ramda'
 
 import Server from '../dist'
-import util, { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, nonceHashChain } from '../dist/api/services/util';
+import util, { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, latWidthToTileWidth, nonceHashChain } from '../dist/api/services/util';
 import { hideDidsAndAddLinksToNetworkSub } from '../dist/api/services/util-higher';
 import testUtil from './util'
 import canonicalize from "canonicalize";
@@ -618,6 +618,37 @@ describe('1 - Util', () => {
      */
     expect(nonceHashChain("", [{nonce:nonce1, claimStr:JSON.stringify(someObj1), issuedAt:time1, issuerDid:addr0}, {nonce:nonce2, claimStr:JSON.stringify(someObj2), issuedAt:time2, issuerDid:addr0}, {nonce:nonce3, claimStr:JSON.stringify(someObj3), issuedAt:time3, issuerDid:addr6}]))
     .to.equal("Wunf2muBF6Vd6ycyXshGE00ubWdchgJbL8s_JpPbUCo")
+  })
+
+  it('should calculate the right tile sizes for zoom levels', () => {
+    expect(latWidthToTileWidth(0.000000)).to.equal(0.000020)
+    expect(latWidthToTileWidth(0.000160)).to.equal(0.000040)
+    expect(latWidthToTileWidth(0.000200)).to.equal(0.000040)
+    expect(latWidthToTileWidth(0.000320)).to.equal(0.000080)
+    expect(latWidthToTileWidth(0.000639)).to.equal(0.000080)
+    expect(latWidthToTileWidth(0.000640)).to.equal(0.000160)
+    expect(latWidthToTileWidth(0.000641)).to.equal(0.000160)
+    expect(latWidthToTileWidth(0.001280)).to.equal(0.000320)
+    expect(latWidthToTileWidth(0.002559)).to.equal(0.000320)
+    expect(latWidthToTileWidth(0.002560)).to.equal(0.000640)
+    expect(latWidthToTileWidth(0.005120)).to.equal(0.001280)
+    expect(latWidthToTileWidth(0.010239)).to.equal(0.001280)
+    expect(latWidthToTileWidth(0.010240)).to.equal(0.002560)
+    expect(latWidthToTileWidth(0.020480)).to.equal(0.005120)
+    expect(latWidthToTileWidth(0.040960)).to.equal(0.010240)
+    expect(latWidthToTileWidth(0.081920)).to.equal(0.020480)
+    expect(latWidthToTileWidth(0.163840)).to.equal(0.040960)
+    expect(latWidthToTileWidth(0.327680)).to.equal(0.081920)
+    expect(latWidthToTileWidth(0.655360)).to.equal(0.163840)
+    expect(latWidthToTileWidth(1.310720)).to.equal(0.327680)
+    expect(latWidthToTileWidth(2.621440)).to.equal(0.655360)
+    expect(latWidthToTileWidth(5.242879)).to.equal(0.655360)
+    expect(latWidthToTileWidth(5.242880)).to.equal(1.310720)
+    expect(latWidthToTileWidth(10.485760)).to.equal(2.621440)
+    expect(latWidthToTileWidth(20.971520)).to.equal(5.242880)
+    expect(latWidthToTileWidth(41.943040)).to.equal(10.485760)
+    expect(latWidthToTileWidth(83.886080)).to.equal(20.971520)
+    expect(latWidthToTileWidth(167.77216)).to.equal(41.943040)
   })
 
 })

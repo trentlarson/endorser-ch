@@ -368,7 +368,7 @@ describe('6 - Plans', () => {
       )
       .then(r => {
         expect(r.headers['content-type'], /json/)
-        expect(r.body.data.cells.length).that.equals(1)
+        expect(r.body.data.tiles.length).that.equals(1)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -650,29 +650,110 @@ describe('6 - Plans', () => {
       )
       .then(r => {
         expect(r.headers['content-type'], /json/)
-        expect(r.body.data.cells.length).that.equals(2)
+        expect(r.body.data.tiles.length).that.equals(3)
+        const minLat = r.body.data.minLat
+        const minLon = r.body.data.minLon
+        const tileWidth = r.body.data.tileWidth
 
-        // min coordinates are from planWithoutIdBy1JwtObj
-        // max coordinates are from planNewBy2JwtObj
-        expect(r.body.data.cells[0].indexLat).that.equals(0)
-        expect(r.body.data.cells[0].indexLon).that.equals(0)
-        expect(r.body.data.cells[0].minFoundLat).that.equals(lat)
-        expect(r.body.data.cells[0].maxFoundLat).that.equals(lat + 0.1)
-        expect(r.body.data.cells[0].minFoundLon).that.equals(lon)
-        expect(r.body.data.cells[0].maxFoundLon).that.equals(lon + 0.1)
-        expect(r.body.data.cells[0].recordCount).that.equals(2)
+        // the single coordinate is from planWithoutIdBy1JwtObj
+        expect(r.body.data.tiles[0].minLat).that.equals(minLat)
+        expect(r.body.data.tiles[0].minLon).that.equals(minLon)
+        expect(r.body.data.tiles[0].minFoundLat).that.equals(lat)
+        expect(r.body.data.tiles[0].maxFoundLat).that.equals(lat)
+        expect(r.body.data.tiles[0].minFoundLon).that.equals(lon)
+        expect(r.body.data.tiles[0].maxFoundLon).that.equals(lon)
+        expect(r.body.data.tiles[0].recordCount).that.equals(1)
+
+        // the single coordinate is from planNewBy2JwtObj
+        expect(r.body.data.tiles[1].minLat).that.equals(minLat + 1 * tileWidth)
+        expect(r.body.data.tiles[1].minLon).that.equals(minLon + 1 * tileWidth)
+        expect(r.body.data.tiles[1].minFoundLat).that.equals(lat + 0.1)
+        expect(r.body.data.tiles[1].maxFoundLat).that.equals(lat + 0.1)
+        expect(r.body.data.tiles[1].minFoundLon).that.equals(lon + 0.1)
+        expect(r.body.data.tiles[1].maxFoundLon).that.equals(lon + 0.1)
+        expect(r.body.data.tiles[1].recordCount).that.equals(1)
 
         // the single coordinate is from firstPlanIdSecondClaimInternal
-        expect(r.body.data.cells[1].indexLat).that.equals(3)
-        expect(r.body.data.cells[1].indexLon).that.equals(0)
-        expect(r.body.data.cells[1].minFoundLat).that.equals(lat + 1)
-        expect(r.body.data.cells[1].maxFoundLat).that.equals(lat + 1)
-        expect(r.body.data.cells[1].minFoundLon).that.equals(lon)
-        expect(r.body.data.cells[1].maxFoundLon).that.equals(lon)
-        expect(r.body.data.cells[1].recordCount).that.equals(1)
+        expect(r.body.data.tiles[2].minLat).that.equals(minLat + 7 * tileWidth)
+        expect(r.body.data.tiles[2].minLon).that.equals(minLon)
+        expect(r.body.data.tiles[2].minFoundLat).that.equals(lat + 1)
+        expect(r.body.data.tiles[2].maxFoundLat).that.equals(lat + 1)
+        expect(r.body.data.tiles[2].minFoundLon).that.equals(lon)
+        expect(r.body.data.tiles[2].maxFoundLon).that.equals(lon)
+        expect(r.body.data.tiles[2].recordCount).that.equals(1)
       }).catch((err) => {
         return Promise.reject(err)
       })
+  })
+
+  it('retrieve some plan counts inside a bigger bounding box', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
+    return request(Server)
+    .get('/api/v2/report/planCountsByBBox'
+      + '?minLocLat' + '=' + (lat - 0.1)
+      + '&maxLocLat' + '=' + (lat + 5)
+      + '&westLocLon' + '=' + (lon - 0.1)
+      + '&eastLocLon' + '=' + (lon + 5)
+    )
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data.tiles.length).that.equals(2)
+      const minLat = r.body.data.minLat
+      const minLon = r.body.data.minLon
+      const tileWidth = r.body.data.tileWidth
+
+      // the min coordinates are from planWithoutIdBy1JwtObj
+      // the max coordinates are from planNewBy2JwtObj
+      expect(r.body.data.tiles[0].minLat).that.equals(minLat)
+      expect(r.body.data.tiles[0].minLon).that.equals(minLon)
+      expect(r.body.data.tiles[0].minFoundLat).that.equals(lat)
+      expect(r.body.data.tiles[0].maxFoundLat).that.equals(lat + 0.1)
+      expect(r.body.data.tiles[0].minFoundLon).that.equals(lon)
+      expect(r.body.data.tiles[0].maxFoundLon).that.equals(lon + 0.1)
+      expect(r.body.data.tiles[0].recordCount).that.equals(2)
+
+      // the single coordinate is from firstPlanIdSecondClaimInternal
+      expect(r.body.data.tiles[1].minLat).that.equals(minLat + 1 * tileWidth)
+      expect(r.body.data.tiles[1].minLon).that.equals(minLon)
+      expect(r.body.data.tiles[1].minFoundLat).that.equals(lat + 1)
+      expect(r.body.data.tiles[1].maxFoundLat).that.equals(lat + 1)
+      expect(r.body.data.tiles[1].minFoundLon).that.equals(lon)
+      expect(r.body.data.tiles[1].maxFoundLon).that.equals(lon)
+      expect(r.body.data.tiles[1].recordCount).that.equals(1)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  })
+
+  it('retrieve some plan counts inside an even bigger bounding box', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
+    return request(Server)
+    .get('/api/v2/report/planCountsByBBox'
+      + '?minLocLat' + '=' + (lat - 0.1)
+      + '&maxLocLat' + '=' + (lat + 10)
+      + '&westLocLon' + '=' + (lon - 0.1)
+      + '&eastLocLon' + '=' + (lon + 10)
+    )
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.body.data.tiles.length).that.equals(1)
+      const minLat = r.body.data.minLat
+      const minLon = r.body.data.minLon
+
+      // the min coordinates are from planWithoutIdBy1JwtObj
+      // the max coordinates are from firstPlanIdSecondClaimInternal
+      expect(r.body.data.tiles[0].minLat).that.equals(minLat)
+      expect(r.body.data.tiles[0].minLon).that.equals(minLon)
+      expect(r.body.data.tiles[0].minFoundLat).that.equals(lat)
+      expect(r.body.data.tiles[0].maxFoundLat).that.equals(lat + 1)
+      expect(r.body.data.tiles[0].minFoundLon).that.equals(lon)
+      expect(r.body.data.tiles[0].maxFoundLon).that.equals(lon + 0.1)
+      expect(r.body.data.tiles[0].recordCount).that.equals(3)
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
   })
 
   it('fail to make a plan with mismatched lastClaimId & identifier', async () => {

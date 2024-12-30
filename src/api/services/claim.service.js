@@ -11,7 +11,7 @@ import {
   calcBbox,
   ERROR_CODES,
   findAllLastClaimIdsAndHandleIds,
-  globalFromInternalIdentifier,
+  globalFromLocalEndorserIdentifier,
   isGlobalEndorserHandleId,
   isGlobalUri,
   nonceHashChain,
@@ -1865,7 +1865,7 @@ class ClaimService {
       handleId =
         isGlobalUri(payloadClaim.identifier)
           ? payloadClaim.identifier
-          : globalFromInternalIdentifier(payloadClaim.identifier)
+          : globalFromLocalEndorserIdentifier(payloadClaim.identifier)
 
       const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
       if (prevEntry) {
@@ -1939,7 +1939,7 @@ class ClaimService {
     } else {
       // There is no lastClaimId and no identifier.
       // Make the handleId from the jwtId.
-      handleId = globalFromInternalIdentifier(jwtId)
+      handleId = globalFromLocalEndorserIdentifier(jwtId)
       isFirstClaimForHandleId = true
     }
 

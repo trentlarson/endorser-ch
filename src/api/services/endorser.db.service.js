@@ -2185,7 +2185,9 @@ class EndorserDatabase {
     })
   }
 
-  planCountsByBBox(minLat, maxLat, westLon, eastLon) {
+  // FYI here's a cool post about ratios: https://gis.stackexchange.com/questions/7430/what-ratio-of-longitude-and-latitude-values-should-be-used-in-a-bounding-box
+
+  planCountsByBBox(minLat, westLon, maxLat, eastLon, numTiles) {
     if (minLat === maxLat) {
       return Promise.resolve({ data: [], error: "Note that the minimum and maximum latitude must be different." })
     }
@@ -2218,25 +2220,25 @@ class EndorserDatabase {
       }
     }
     // we'll add a little bit to the denominator
-    // to avoid a potential one right on the border
+    // to avoid a boundary right on the border
     // and to deal with rounding errors (eg. when we've got .99999...)
     // either of which would push an index to 4, out of bounds
-    const latDenominator = maxLat - minLat + 0.000001
-    const lonDenominator = eastLon - westLon + 0.000001
+    const boxLatWidth = maxLat - minLat + 0.000001
+    const boxLonHeight = eastLon - westLon + 0.000001
 
     const sql = `
       SELECT
         indexLat,
         indexLon,
-        COUNT(indexLat) AS recordCount,
         MIN(locLat) AS minFoundLat,
         MAX(locLat) AS maxFoundLat,
         MIN(locLon) AS minFoundLon,
-        MAX(locLon) AS maxFoundLon
+        MAX(locLon) AS maxFoundLon,
+        COUNT(indexLat) AS recordCount
       FROM (
         SELECT
-          FLOOR(4.0 * (locLat - ?) / ?) AS indexLat,
-          FLOOR(4.0 * (locLon - ?) / ?) AS indexLon,
+          FLOOR(? * (locLat - ?) / ?) AS indexLat,
+          FLOOR(? * (locLon - ?) / ?) AS indexLon,
           locLat,
           locLon
         FROM plan_claim
@@ -2246,7 +2248,7 @@ class EndorserDatabase {
       )
       GROUP BY indexLat, indexLon
     `
-    const params = [minLat, latDenominator, westLon, lonDenominator, minLat, maxLat, westLon, eastLon]
+    const params = [numTiles, minLat, boxLatWidth, numTiles, westLon, boxLonHeight, minLat, maxLat, westLon, eastLon]
     const data = []
     return new Promise(
       (resolve, reject) => {

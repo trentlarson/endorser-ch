@@ -8,7 +8,7 @@ import {
 
 import ClaimService from '../services/claim.service'
 import { dbService } from '../services/endorser.db.service';
-import { globalId } from "../services/util";
+import { globalId, latLonFromTile, latWidthToTileWidth } from "../services/util";
 
 // Why does it not work to put this in the class?
 // When it's in the class, "this" is undefined so "this.getGiveTotalsMaybeGifted" fails when called.
@@ -281,10 +281,27 @@ class DbController {
     const maxLocLat = Number.parseFloat(req.query.maxLocLat)
     const westLocLon = Number.parseFloat(req.query.westLocLon)
     const eastLocLon = Number.parseFloat(req.query.eastLocLon)
-    dbService.planCountsByBBox(minLocLat, maxLocLat, westLocLon, eastLocLon)
-      .then(results => { res.json({ data: { cells: results } }).end() })
+    const tileWidth = latWidthToTileWidth(maxLocLat - minLocLat)
+    // find the latitude that is a multiple of tileWidth and is closest to but below the minLocLat
+    const minLatTile = Math.floor(minLocLat / tileWidth) * tileWidth
+    // find the longitude that is a multiple of tileWidth and is closest to but west of the westLocLon
+    const westLonTile = Math.floor(westLocLon / tileWidth) * tileWidth
+    // find how many tiles wide the bounding box is
+    const numTilesWide = Math.ceil((eastLocLon - westLonTile) / tileWidth)
+    // calculate the maximum latitude with that many tiles
+    const maxLatTiled = minLatTile + numTilesWide * tileWidth
+    // calculate the maximum longitude with that many tiles
+    const eastLonTiled = westLonTile + numTilesWide * tileWidth
+    dbService.planCountsByBBox(minLocLat, westLocLon, maxLatTiled, eastLonTiled, numTilesWide)
+      .then(results => ({ data: {
+        tiles: results.map(latLonFromTile(minLocLat, westLocLon, tileWidth)),
+        minLat: minLocLat,
+        minLon: westLocLon,
+        tileWidth: tileWidth,
+        numTilesWide: numTilesWide
+      } }) )
+      .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
-
   }
 
   getPlansByIssuerPaged(req, res, next) {
@@ -472,18 +489,22 @@ export default express
 
 /**
  * @typedef LocationCount
- * @property {number} indexLat - index of the latitude bucket, from lowest latitude to highest latitude (currently 0 to 3)
- * @property {number} indexLon - index of the longitude bucket, from west (lowest) to east (highest) (currently 0 to 3)
+ * @property {number} minLat - minimum latitude of this bucket
+ * @property {number} minLon - minimum longitude of this bucket
+ * @property {number} minFoundLat - lowest latitude of matches found in this bucket
+ * @property {number} minFoundLon - westernmost longitude of matches found in this bucket
+ * @property {number} maxFoundLat - highest latitude of matches found in this bucket
+ * @property {number} maxFoundLon - easternmost longitude of matches found in this bucket
  * @property {number} recordCount - number of records found in this bucket
- * @property {number} minFoundLat - lowest latitude found in this bucket
- * @property {number} maxFoundLat - highest latitude found in this bucket
- * @property {number} minFoundLon - westernmost longitude found in this bucket
- * @property {number} maxFoundLon - easternmost longitude found in this bucket
  */
 
 /**
  * @typedef GridCounts
- * @property {array.LocationCount} cells - counts of records in each cell of the grid
+ * @property {array.LocationCount} tiles - counts of records in each tile of the grid
+ * @property {number} minLat - minimum latitude of the searched area (which may be outside the bounding box)
+ * @property {number} minLon - minimum longitude of the searched area (which may be outside the bounding box)
+ * @property {number} tileWidth - width of each tile
+ * @property {number} numTilesWide - number of tiles wide for the searched area
  */
 
 /**
@@ -817,7 +838,7 @@ export default express
  * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
  * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
  * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
- * @returns {array.GridCounts} 200 - 'data' property with 'cells' property with matching array of entries, each with a count of plans in that cell, defaulting to 4 cells on a side
+ * @returns {array.GridCounts} 200 - 'data' property with 'tiles' property with matching array of entries, each with a count of plans in that tile
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

@@ -376,6 +376,12 @@ This will help visualize the network from the test data:
 [Here is a sample CSV for contacts](https://raw.githubusercontent.com/trentlarson/endorser-ch/master/test/sample-contacts.csv), with data taken from the tests.
 
 
+#### Run a single test
+
+```shell
+test/test.sh "" test/controller1
+```
+
 #### Debug the tests
 
 ... though I just saw this in the docs and I don't really know what it means.

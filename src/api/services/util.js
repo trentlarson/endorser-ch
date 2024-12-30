@@ -333,4 +333,51 @@ function findAllLastClaimIdsAndHandleIds(clause) {
   return clauseIdsAndHandleIds
 }
 
-module.exports = { allDidsInside, allEmbeddedRecordErrorsInside, basicClaimDescription, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES, GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds, globalFromInternalIdentifier: globalFromLocalEndorserIdentifier, globalId, hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT, inputContainsDid, localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId, isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted }
+// Find the width of appropriate tiles for a given bounding box:
+// given a box in longitude and latitude terms,
+// determine a good width and height for tiles
+// such there are no less than 4 tiles and no more than 8 tiles on a side
+//
+// Note that we only take one side, realizing that there is a different
+// ratio for the height at different longitudes. So there may be a more
+// accurate approach but this is the best I can do based on current research.
+//
+function latWidthToTileWidth(boxLatWidth) {
+  // find a power of 4 that yields 4-8 tiles on the side
+  // use 0.0001 as the minimum, approx 11 metere (at the equator)
+  const boxLatWidthMultiplied = Math.floor(boxLatWidth * 100000)
+  const boxMinPower = Math.log(boxLatWidthMultiplied) / Math.log(2)
+  const boxMinPowerLower = boxMinPower - 2
+  const boxMinPowerRounded = Math.max(Math.floor(boxMinPowerLower), 1)
+  // we'll use 4^boxMinAsPowerRounded as the size of one tile
+  const latTileSize = Math.pow(2, boxMinPowerRounded) / 100000
+
+  return latTileSize
+}
+
+/**
+ *
+ * @param boxMinLat minimum latitude chosen for the tile for this bounding box
+ * @param boxMinLon minimum longitude chosen for the tile for this bounding box
+ * @param tileWidth width of each tile
+ * @param tile result of DB query: { indexLat, indexLon, minFoundLat, minFoundLon, maxFoundLat, maxFoundLon, recordCount }
+ * @returns tile with minLat, minLon instead of indexLat, indexLon
+ */
+function latLonFromTile(boxMinLat, boxMinLon, tileWidth) {
+  return (tile) => ({
+    minLat: boxMinLat + tile.indexLat * tileWidth,
+    minLon: boxMinLon + tile.indexLon * tileWidth,
+    ...tile
+  })
+}
+
+module.exports = {
+  allDidsInside, allEmbeddedRecordErrorsInside, basicClaimDescription,
+  buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES,
+  GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds,
+  globalFromLocalEndorserIdentifier, globalId,
+  hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT,
+  inputContainsDid, latLonFromTile, latWidthToTileWidth,
+  localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId,
+  isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted
+}
