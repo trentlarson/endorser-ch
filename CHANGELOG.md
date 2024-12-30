@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [4.1.4] - 2024.12.30
 ### Added
 - planCountsByBBox endpoint for counts of plans in a region
 ### Changed
@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bad check for previously-submitted partner links
 
 
-## [4.1.3] - 2024.11.05
+## [4.1.3] - 2024.11.05 - be51bc505650eaa5b1b43d47b609d5d880ac72d3
 ### Fixed
 - Some swagger docs
 
