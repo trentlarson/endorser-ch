@@ -830,7 +830,7 @@ export default express
 
 /**
  * Cut the bbox into sections, then return an array location + plan-counts for how many are located in that section with that location
- * Currently, this cuts the bbox into sections (16 total by default, 4 on each side).
+ * Currently, this cuts the bbox into sections, anywhere from 4-8 tiles on side.
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/planCountsByBBox
@@ -888,7 +888,7 @@ export default express
  * Beware: this array may include a "publicUrls" key within it.
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/plansByLocation
+ * @route GET /api/v2/report/plansByBBox
  * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
  * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
  * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
@@ -903,7 +903,7 @@ export default express
 
 /**
  * @deprecated
- * @see /plansByBBox
+ * @see /api/v2/report/plansByBBox
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationPaged)
