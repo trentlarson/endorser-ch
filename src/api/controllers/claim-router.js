@@ -53,7 +53,7 @@ export default express
  * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 -
  * {
- * &nbsp; success:
+ * &nbsp; on success:
  * &nbsp; {
  * &nbsp;&nbsp;&nbsp; claimId: string, // ID for this claim
  * &nbsp;&nbsp;&nbsp; clientMessage: string,
@@ -63,7 +63,7 @@ export default express
  * &nbsp;&nbsp;&nbsp; actionId || orgRoleId || registrationId || tenureId || voteId: number,
  * &nbsp;&nbsp;&nbsp; confirmations: { confirmId: number }
  * &nbsp; },
- * &nbsp; error: { code: string, message: string }
+ * &nbsp; on error: { code: string, message: string }
  * }
  * @returns {Error} 400 - client error
  */

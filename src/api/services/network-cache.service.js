@@ -62,7 +62,17 @@ async function getAllDidsRequesterCanSee(requesterDid) {
   return R.uniq(result2)
 }
 
-
+// for each did, return that DID if it's visible to requester, otherwise return the list of DIDs who can see that DID (maybe empty)
+// [ didOrList: string | string[], ... ]
+async function getAllDidsBetweenRequesterAndObjects(requesterDid, dids) {
+  const didsRequesterCanSee = await getAllDidsRequesterCanSee(requesterDid)
+  const didsWhoCanSeeObjects = await Promise.all(dids.map(object =>
+    didsRequesterCanSee.includes(object)
+    ? object
+    : whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object)
+  ))
+  return didsWhoCanSeeObjects
+}
 
 
 /**
@@ -150,7 +160,7 @@ async function addCanSee(subject, object, url, jwt) {
       l.error('Failed to set SeesNetworkCache for key', subject, 'and value', newList)
     }
   }
-  l.trace("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
+  // l.trace("Now", subject, "sees", getDidsRequesterCanSeeExplicitly(subject))
 
   let seenByDids = await getDidsWhoCanSeeExplicitly(object)
   if (!seenByDids) {
@@ -163,7 +173,7 @@ async function addCanSee(subject, object, url, jwt) {
       l.error('Failed to set WhoCanSeeNetworkCache for key', object, 'and value', newList)
     }
   }
-  l.trace("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
+  // l.trace("Now", object, "is seen by", getDidsWhoCanSeeExplicitly(object))
 
   return true
 }
@@ -246,4 +256,4 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }
+module.exports = { addCanSee, canSeeExplicitly, getAllDidsBetweenRequesterAndObjects, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }

@@ -1,10 +1,11 @@
 
 
-echo "Run tests without full peer JWT validation."
+echo "Run tests without full Peer DID JWT validation."
 
 export NODE_ENV=test-local
 
 rm -f ../endorser-ch-$NODE_ENV.sqlite3
+rm -f ../endorser-partner-$NODE_ENV.sqlite3
 
 DBUSER=sa DBPASS=sasa npm run flyway migrate
 

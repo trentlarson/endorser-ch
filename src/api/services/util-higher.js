@@ -1,7 +1,7 @@
 import R from 'ramda'
 import l from '../../common/logger'
 import { addCanSee, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, whoDoesRequesterSeeWhoCanSeeObject } from './network-cache.service'
-import {HIDDEN_TEXT, inputContainsDid, isDid} from './util'
+import { HIDDEN_TEXT, inputContainsDid, isDid } from './util'
 
 /**
  * Call hideDidsAndAddLinksToNetwork but where input is expected to have a

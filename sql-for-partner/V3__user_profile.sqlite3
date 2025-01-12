@@ -1,0 +1,16 @@
+
+-- see README.md in this directory for explanations
+
+CREATE TABLE user_profile (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  updatedAt DATETIME NOT NULL,
+  issuerDid TEXT NOT NULL,
+  description TEXT NOT NULL,
+  locLat DOUBLE,
+  locLon DOUBLE,
+  locLat2 DOUBLE,
+  locLon2 DOUBLE
+);
+CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
+CREATE INDEX profile_locLat_locLon ON user_profile(locLat, locLon);
+CREATE INDEX profile_locLat2_locLon2 ON user_profile(locLat2, locLon2);

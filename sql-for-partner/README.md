@@ -1,4 +1,3 @@
-
 DB Schema Documentation for Endorser
 
 This file exists to explain data because sometimes the comments inside the
@@ -10,6 +9,8 @@ columns follow camelCase (with capital letters after the first word).
 (We apologize for the inconsistency! Maybe we'll fix it in the future.)
 
 ```sql
+
+-- partners are other systems with whom this system collaborates
 CREATE TABLE partner_link (
     handleId TEXT NOT NULL, -- currently handleId because we don't support updates to events
     linkCode VARCHAR(32) NOT NULL, -- eg. 'NOSTR-EVENT-TRUSTROOTS', 'ATTEST.SH'
@@ -20,4 +21,19 @@ CREATE TABLE partner_link (
     pubKeyImage TEXT, -- content that is signed
     pubKeySigHex TEXT, -- signature of pubKeyPayload
 );
+
+-- a profile is a user's free-form description of their interests
+CREATE TABLE user_profile (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  issuerDid TEXT NOT NULL,
+  updatedAt DATETIME NOT NULL,
+  description TEXT NOT NULL,
+  locLat DOUBLE NOT NULL,
+  locLon DOUBLE NOT NULL,
+  locLat2 DOUBLE NOT NULL,
+  locLon2 DOUBLE NOT NULL
+);
+CREATE INDEX profile_issuerDid ON profile(issuerDid);
+CREATE INDEX profile_lat_lon ON profile(locLat, locLon);
+CREATE INDEX profile_lat2_lon2 ON profile(locLat2, locLon2);
 ```

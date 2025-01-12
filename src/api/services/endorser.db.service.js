@@ -1,4 +1,3 @@
-
 const crypto = require('crypto')
 const R = require('ramda')
 const sqlite3 = require('sqlite3').verbose()
@@ -65,6 +64,9 @@ function constructWhereConditions(params, allowedColumns, claimContents, content
   }
 
   if (claimContents && contentColumns && contentColumns.length > 0) {
+    if (contentColumns.length > 2) {
+      throw new Error("Three columns is a lot of columns to search. Maybe it's time to create a virtual table using FTS (ideally FTS5) and use MATCH queries.");
+    }
     // allow multiple words
     const terms = claimContents.split(" ")
     for (const term of terms) {
@@ -76,10 +78,9 @@ function constructWhereConditions(params, allowedColumns, claimContents, content
         whereClause += " ("
         for (const column of contentColumns) {
           if (column !== contentColumns[0]) {
-            // anything after the first will be OR'd together
-            whereClause += " OR"
+            whereClause += " OR "
           }
-          whereClause += " INSTR(lower(" + column + "), lower(?))"
+          whereClause += "INSTR(lower(" + column + "), lower(?))"
           paramArray.push(trimmed)
         }
         whereClause += ")"
@@ -1430,7 +1431,7 @@ class EndorserDatabase {
       params,
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHash', 'noncedHashAllChain'],
       claimContents,
-      ['claim', 'noncedHash'],
+      ['claim'],
       [],
       excludeConfirmations
     )
@@ -2102,57 +2103,6 @@ class EndorserDatabase {
 
 
 
-  /****************************************************************
-   * Partner
-   **/
-
-  partnerLinkInsert(entry) {
-    return new Promise((resolve, reject) => {
-      const stmt =
-        "INSERT INTO partner_link"
-        + " (handleId, linkCode, externalId, createdAt, data, pubKeyHex, pubKeyImage, pubKeySigHex)"
-        + " VALUES (?, ?, ?, dateTime(), ?, ?, ?, ?)"
-      partnerDb.run(
-        stmt,
-        [
-          entry.handleId, entry.linkCode, entry.externalId, entry.data,
-          entry.pubKeyHex, entry.pubKeyImage, entry.pubKeySigHex],
-        function(err) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this.lastID)
-          }
-        }
-      )
-    })
-  }
-
-  partnerLinkForCode(handleId, linkCode) {
-    return new Promise((resolve, reject) => {
-      partnerDb.get(
-        "SELECT * FROM partner_link WHERE handleId = ? and linkCode = ?",
-        [handleId, linkCode],
-        function (err, row) {
-          if (err) {
-            reject(err)
-          } else {
-            if (row) {
-              row.createdAt = isoAndZonify(row.createdAt)
-            }
-            resolve(row)
-          }
-        })
-    })
-  }
-
-
-
-
-
-
-
-
 
   /****************************************************************
    * Plan
@@ -2187,6 +2137,7 @@ class EndorserDatabase {
 
   // FYI here's a cool post about ratios: https://gis.stackexchange.com/questions/7430/what-ratio-of-longitude-and-latitude-values-should-be-used-in-a-bounding-box
 
+  // similar to profileCountsByBBox
   planCountsByBBox(minLat, westLon, maxLat, eastLon, numTiles) {
     if (minLat === maxLat) {
       return Promise.resolve({ data: [], error: "Note that the minimum and maximum latitude must be different." })
@@ -3052,6 +3003,314 @@ class EndorserDatabase {
           if (err) { reject(err) } else { resolve(data) }
         }
       )
+    })
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /****************************************************************
+   ****************************************************************
+   * Partner Database
+   ****************************************************************
+   ****************************************************************
+   **/
+
+
+
+
+  /****************************************************************
+   * Partner System
+   **/
+
+  partnerLinkInsert(entry) {
+    return new Promise((resolve, reject) => {
+      const stmt =
+        "INSERT INTO partner_link"
+        + " (handleId, linkCode, externalId, createdAt, data, pubKeyHex, pubKeyImage, pubKeySigHex)"
+        + " VALUES (?, ?, ?, dateTime(), ?, ?, ?, ?)"
+      partnerDb.run(
+        stmt,
+        [
+          entry.handleId, entry.linkCode, entry.externalId, entry.data,
+          entry.pubKeyHex, entry.pubKeyImage, entry.pubKeySigHex],
+        function(err) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this.lastID)
+          }
+        }
+      )
+    })
+  }
+
+  partnerLinkForCode(handleId, linkCode) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT * FROM partner_link WHERE handleId = ? and linkCode = ?",
+        [handleId, linkCode],
+        function (err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.createdAt = isoAndZonify(row.createdAt)
+            }
+            resolve(row)
+          }
+        })
+    })
+  }
+
+
+  /****************************************************************
+   * User Profile
+   **/
+
+  profileInsert(entry) {
+    return new Promise((resolve, reject) => {
+      const stmt = (
+        "INSERT INTO user_profile"
+        + " (issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2)"
+        + " VALUES (?, datetime(), ?, ?, ?, ?, ?)"
+      )
+      partnerDb.run(
+        stmt,
+        [entry.issuerDid, entry.description, entry.locLat, entry.locLon, entry.locLat2, entry.locLon2],
+        function(err) {
+          if (err) { reject(err) } else { resolve(this.lastID) }
+        }
+      )
+    })
+  }
+
+  profileById(id) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT * FROM user_profile WHERE id = ?",
+        [id],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.updatedAt = isoAndZonify(row.updatedAt)
+            }
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  profileByIssuerDid(issuerDid) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT * FROM user_profile WHERE issuerDid = ?",
+        [issuerDid],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.updatedAt = isoAndZonify(row.updatedAt)
+            }
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  // similar to planCountsByBBox
+  profileCountsByBBox(minLat, westLon, maxLat, eastLon, numTiles, useLoc2 = false) {
+    if (minLat === maxLat) {
+      return Promise.resolve({ data: [], error: "Note that the minimum and maximum latitude must be different." })
+    }
+    if (westLon === eastLon) {
+      return Promise.resolve({ data: [], error: "Note that the minimum and maximum longitude must be different." })
+    }
+    if (minLat === -90 && maxLat === 90) {
+      // they're zoomed out maximum latitudes, so we'll change the box to include all longitudes
+      westLon = -180
+      eastLon = 180
+    } else if (westLon > eastLon) {
+      // their viewport crosses the prime meridian
+      // let's take whichever takes up the most room of the screen
+      const westLonDiff = 180 - westLon // distance to the right edge of the screen
+      const eastLonDiff = eastLon - -180 // distance to the left edge of the screen
+      if (westLonDiff > eastLonDiff) {
+        // there's more on the western side, so we'll change the easternmost to be 0
+        eastLon = 180
+        if (westLon == 180) {
+          // this should never happen, but let's be safe
+          westLon = -180
+        }
+      } else {
+        // there's more on the eastern side, so we'll change the westernmost to be -180
+        westLon = -180
+        if (eastLon == -180) {
+          // this should never happen, but let's be safe
+          eastLon = 180
+        }
+      }
+    }
+    // we'll add a little bit to the denominator
+    // to avoid a boundary right on the border
+    // and to deal with rounding errors (eg. when we've got .99999...)
+    // either of which would push an index to 4, out of bounds
+    const boxLatWidth = maxLat - minLat + 0.000001
+    const boxLonHeight = eastLon - westLon + 0.000001
+
+    const suffix = useLoc2 ? "2" : ""
+    const sql = `
+      SELECT
+        indexLat,
+        indexLon,
+        MIN(locLat${suffix}) AS minFoundLat,
+        MAX(locLat${suffix}) AS maxFoundLat,
+        MIN(locLon${suffix}) AS minFoundLon,
+        MAX(locLon${suffix}) AS maxFoundLon,
+        COUNT(indexLat) AS recordCount
+      FROM (
+        SELECT
+          FLOOR(? * (locLat${suffix} - ?) / ?) AS indexLat,
+          FLOOR(? * (locLon${suffix} - ?) / ?) AS indexLon,
+          locLat${suffix},
+          locLon${suffix}
+        FROM plan_claim
+        WHERE
+          locLat${suffix} BETWEEN ? AND ?
+          AND locLon${suffix} BETWEEN ? AND ?
+      )
+      GROUP BY indexLat, indexLon
+    `
+    const params = [numTiles, minLat, boxLatWidth, numTiles, westLon, boxLonHeight, minLat, maxLat, westLon, eastLon]
+    const data = []
+    return new Promise(
+      (resolve, reject) => {
+        db.each(sql, params, function(err, row) {
+        if (err) {
+          reject(err)
+        }
+        data.push(row)
+      },
+      (err, num) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(data)
+        }
+      })
+    })
+  }
+
+  profilesByLocation(minLat, minLon, maxLat, maxLon, beforeId, afterId, claimContents) {
+    return new Promise((resolve, reject) => {
+      let whereClause = ""
+      const params = []
+
+      // Only add location conditions if all coordinates are defined
+      if (minLat != null && minLon != null && maxLat != null && maxLon != null) {
+        whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?))"
+        params.push(minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon)
+      }
+
+      if (beforeId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "id < ?"
+        params.push(beforeId)
+      }
+      if (afterId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "id > ?"
+        params.push(afterId)
+      }
+      
+      // Add text search if claimContents is provided
+      if (claimContents) {
+        // Split into words for multi-word search
+        const terms = claimContents.split(" ")
+        for (const term of terms) {
+          const trimmed = term.trim()
+          if (trimmed.length > 0) {
+            whereClause = (whereClause ? `${whereClause} AND ` : "") + "INSTR(lower(description), lower(?))"
+            params.push(trimmed)
+          }
+        }
+      }
+
+      // If no conditions were added, return all profiles
+      const finalWhereClause = whereClause ? `WHERE ${whereClause}` : ""
+      const sql = `SELECT * FROM user_profile ${finalWhereClause} ORDER BY id DESC LIMIT ${DEFAULT_LIMIT}`
+
+      partnerDb.all(sql, params, function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          const hitLimit = rows.length === DEFAULT_LIMIT
+          resolve({
+            data: rows,
+            hitLimit
+          })
+        }
+      })
+    })
+  }
+
+  // profileUpdate(entry) {
+  //   return new Promise((resolve, reject) => {
+  //     const stmt = (
+  //       "UPDATE user_profile SET"
+  //       + " updatedAt = datetime(),"
+  //       + " description = ?,"
+  //       + " locLat = ?,"
+  //       + " locLon = ?,"
+  //       + " locLat2 = ?,"
+  //       + " locLon2 = ?"
+  //       + " WHERE issuerDid = ?"
+  //     )
+  //     partnerDb.run(
+  //       stmt,
+  //       [entry.description, entry.locLat, entry.locLon, entry.locLat2, entry.locLon2, entry.issuerDid],
+  //       function(err) {
+  //         if (!err && this.changes === 1) {
+  //           resolve()
+  //         } else if (!err && this.changes === 0) {
+  //           // If no row was updated, we should insert instead
+  //           resolve(false)
+  //         } else {
+  //           reject(err)
+  //         }
+  //       }
+  //     )
+  //   })
+  // }
+
+  profileDelete(issuerDid) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM user_profile WHERE issuerDid = ?"
+      partnerDb.run(stmt, [issuerDid], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
     })
   }
 
