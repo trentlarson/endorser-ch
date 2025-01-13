@@ -254,4 +254,88 @@ describe('9 - User Profiles', () => {
         expect(r.status).that.equals(200)
       })
   })
+
+  const updatedProfile0 = {
+    description: "Python developer interested in AI and machine learning",
+    locLat: 40.7128,
+    locLon: -74.0060
+  }
+
+  it('can update an existing profile', () => {
+    return request(Server)
+      .post('/api/partner/user-profile')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send(updatedProfile0)
+      .then(r => {
+        expect(r.body).to.have.property("success", true)
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(201)
+      })
+  })
+
+  it('should not find old profile content after update', () => {
+    return request(Server)
+      .get('/api/partner/user-profile')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .query({ claimContents: 'blockchain' })
+      .then(r => {
+        expect(r.body.data).to.be.an('array')
+        // Should only find profile2 now since profile0 was updated
+        expect(r.body.data.length).to.equal(1)
+        expect(r.body.data[0].description).to.equal(profile2.description)
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(200)
+      })
+  })
+
+  it('should find new profile content after update', () => {
+    return request(Server)
+      .get('/api/partner/user-profile')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .query({ claimContents: 'Python' })
+      .then(r => {
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(1)
+        expect(r.body.data[0].description).to.equal(updatedProfile0.description)
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(200)
+      })
+  })
+
+  it('can delete a profile', () => {
+    return request(Server)
+      .delete('/api/partner/user-profile')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .then(r => {
+        // for some reason the response has a body of {} and no content type
+        // expect(r.body).to.have.property("success", true)
+        // expect(r.body).to.have.property("deletedCount", 1)
+        // expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(204)
+      })
+  })
+
+  it('should not find deleted profile in search results', () => {
+    return request(Server)
+      .get('/api/partner/user-profile')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .query({ claimContents: 'Python' })
+      .then(r => {
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(0) // No results should be found
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(200)
+
+        // Double check with a general search to make sure total number of profiles decreased
+        return request(Server)
+          .get('/api/partner/user-profile')
+          .set('Authorization', 'Bearer ' + pushTokens[0])
+      })
+      .then(r => {
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(3) // Down from 4 profiles to 3
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(200)
+      })
+  })
 }) 

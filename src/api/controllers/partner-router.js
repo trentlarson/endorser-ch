@@ -13,7 +13,7 @@ export default express
 .Router()
 .all('*', function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   next();
 })
 
@@ -70,6 +70,7 @@ export default express
  * @returns 201 - success
  * @returns {Error} 400 - client error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .post(
   '/user-profile',
   async (req, res) => {
@@ -129,6 +130,7 @@ export default express
  * @returns {Object} 200 - success response with profiles
  * @returns {Error} 400 - client error
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
   '/user-profile',
   async (req, res) => {
@@ -195,6 +197,28 @@ export default express
         hitLimit: rawResult.hitLimit
       }
       res.json(fullResult).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Delete a user's profile
+ *
+ * @group partner utils - Partner Utils
+ * @route DELETE /api/partner/user-profile
+ * @returns 200 - success response with number of deleted profiles
+ * @returns {Error} 500 - server error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.delete(
+  '/user-profile',
+  async (req, res) => {
+    try {
+      const result = await dbService.profileDelete(res.locals.tokenIssuer)
+      console.log("result going to success", result)
+      res.status(204).json({ success: true, numDeleted: result }).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
     }
