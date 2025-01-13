@@ -77,6 +77,9 @@ export default express
     const { description, locLat, locLon, locLat2, locLon2 } = req.body
     
     // Validate inputs
+    if (!res.locals.tokenIssuer) {
+      return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+    }
     if (!description || typeof description !== 'string') {
       return res.status(400).json({ error: "Query parameter 'description' must be a non-empty string" }).end()
     }
@@ -116,6 +119,39 @@ export default express
   }
 )
 
+
+/**
+ * Get profiles by location or text search
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/user-profile/:issuerDid
+ * @param {string} issuerDid.path.required - the issuer DID to get the profile for
+ * @returns {Object} 200 - success response with profile
+ * @returns {Error} 403 - unauthorized
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/user-profile/:issuerDid',
+  async (req, res) => {
+    const { issuerDid } = req.params
+    if (!res.locals.tokenIssuer) {
+      return res.status(403).json({ error: "Request must include a valid Authorization JWT" }).end()
+    }
+    if (issuerDid !== res.locals.tokenIssuer) {
+      return res.status(403).json({ error: "Not authorized to view this profile" }).end()
+    }
+    try {
+      const result = await dbService.profileByIssuerDid(issuerDid)
+      if (!result) {
+        return res.status(404).json({ error: "Profile not found" }).end()
+      }
+      res.status(200).json(result).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
 /**
  * Get profiles by location or text search
  * @group partner utils - Partner Utils
@@ -141,6 +177,9 @@ export default express
     const numMaxLat = maxLat ? Number(maxLat) : null
     const numMaxLon = maxLon ? Number(maxLon) : null
 
+    if (!res.locals.tokenIssuer) {
+      return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+    }
     if (minLat && (isNaN(numMinLat) || numMinLat < -90 || numMinLat > 90)) {
       return res.status(400).json({ error: "Query parameter 'minLat' must be a number between -90 and 90" }).end()
     }
@@ -196,7 +235,7 @@ export default express
         data: resultsScrubbed,
         hitLimit: rawResult.hitLimit
       }
-      res.json(fullResult).end()
+      res.status(200).json(fullResult).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
     }
@@ -216,8 +255,10 @@ export default express
   '/user-profile',
   async (req, res) => {
     try {
+      if (!res.locals.tokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
       const result = await dbService.profileDelete(res.locals.tokenIssuer)
-      console.log("result going to success", result)
       res.status(204).json({ success: true, numDeleted: result }).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()

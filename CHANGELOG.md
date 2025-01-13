@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [4.2.0]
 ### Added
 - User profile endpoints
+### Changed in DB or environment
+- Automated partner SQL script 3
 
 
 ## [4.1.4] - 2024.12.31 - 1452cd7adb724d67cb0b16c62a8ead9942b65b91

@@ -302,6 +302,37 @@ describe('9 - User Profiles', () => {
       })
   })
 
+  it('can retrieve own profile by DID', () => {
+    return request(Server)
+      .get('/api/partner/user-profile/' + creds[0].did)
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .then(r => {
+        expect(r.body).to.be.an('object')
+        expect(r.body.description).to.equal(updatedProfile0.description)
+        expect(r.body.issuerDid).to.equal(creds[0].did)
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(200)
+      })
+  })
+
+  it('cannot retrieve another user\'s profile by DID without authorization', () => {
+    return request(Server)
+      .get('/api/partner/user-profile/' + creds[0].did)
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(403)
+      })
+  })
+
+  it('returns 404 when retrieving non-existent profile by DID', () => {
+    return request(Server)
+      .get('/api/partner/user-profile/' + creds[14].did) // Using creds[14] which hasn't created a profile
+      .set('Authorization', 'Bearer ' + pushTokens[14])
+      .then(r => {
+        expect(r.status).that.equals(404)
+      })
+  })
+
   it('can delete a profile', () => {
     return request(Server)
       .delete('/api/partner/user-profile')
@@ -338,4 +369,5 @@ describe('9 - User Profiles', () => {
         expect(r.status).that.equals(200)
       })
   })
+
 }) 
