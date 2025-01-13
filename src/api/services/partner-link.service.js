@@ -37,17 +37,14 @@ useWebSocketImplementation(WebSocket)
 
 export async function sendAndStoreLink(
   issuer,
-  jwtId,
+  jwtInfo,
   linkCode,
   inputJson,
   pubKeyHex,
   pubKeyImage,
   pubKeySigHex,
 ) {
-  // When we separate this into another service, this will have to be an API call.
-  // See the image-api server for an example of how to leverage JWTs to get
-  // permission to access data from the other service.
-  const jwtInfo = await dbService.jwtById(jwtId)
+  const jwtId = jwtInfo.id
 
   const linkInfo = await dbService.partnerLinkForCode(jwtInfo.handleId, linkCode)
 

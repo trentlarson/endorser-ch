@@ -210,6 +210,9 @@ describe('8 - Asynchronous Invitations', () => {
           throw new Error(JSON.stringify(r.body.error))
         }
         expect(r.body.data).to.be.an('array').of.length(EXPECTED_LIMIT)
+        // console.log("inviteIdentifier", inviteIdentifier)
+        // console.log("r.body.data ids", r.body.data.map(d => d.inviteIdentifier))
+        // Why does this next line intermittently fail?
         expect(r.body.data[0]).to.have.property("inviteIdentifier", inviteIdentifier)
         expect(r.body.data[0]).to.have.property("notes")
         expect(r.body.data[0]).to.have.property("expiresAt")

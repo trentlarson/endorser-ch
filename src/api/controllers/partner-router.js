@@ -4,6 +4,7 @@
 
 import * as R from 'ramda'
 import * as express from 'express'
+import ClaimService from '../services/claim.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService } from "../services/endorser.db.service";
 import { getAllDidsBetweenRequesterAndObjects } from "../services/network-cache.service";
@@ -35,11 +36,16 @@ export default express
 .post(
   '/link',
   async (req, res) => {
-    // this will check if the issuer actually created the JWT, so no need to check registration limits
+
+    // When we separate this into another service, this will have to be an API call.
+    // See the image-api server for an example of how to leverage JWTs to get
+    // permission to access data from the other service.
+    const jwtInfo = await dbService.jwtById(req.body.jwtId)
+
     const result =
       await sendAndStoreLink(
         res.locals.tokenIssuer,
-        req.body.jwtId,
+        jwtInfo,
         req.body.linkCode,
         req.body.inputJson,
         req.body.pubKeyHex || req.body.nostrPubKeyHex, // the latter was only used for a short time
@@ -75,12 +81,22 @@ export default express
   '/user-profile',
   async (req, res) => {
     const { description, locLat, locLon, locLat2, locLon2 } = req.body
-    
+
+    // When we separate this into another service, this will have to be an API call.
+    // See the image-api server for an example of how to leverage JWTs to get
+    // permission to access data from the other service.
+    try {
+      await ClaimService.getRateLimits(res.locals.tokenIssuer)
+    } catch (e) {
+      // must not have an account
+      return res.status(400).json({ error: "Must be registered to submit a profile" }).end()
+    }
+
     // Validate inputs
     if (!res.locals.tokenIssuer) {
       return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
     }
-    if (!description || typeof description !== 'string') {
+    if (description && typeof description !== 'string') {
       return res.status(400).json({ error: "Query parameter 'description' must be a non-empty string" }).end()
     }
     if (locLat && (typeof locLat !== 'number' || locLat < -90 || locLat > 90)) {

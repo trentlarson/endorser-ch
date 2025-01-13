@@ -41,6 +41,17 @@ describe('9 - User Profiles', () => {
     locLon: -122.4194
   }
 
+  it('cannot create a profile if not registered', () => {
+    return request(Server)
+      .post('/api/partner/user-profile')
+      .set('Authorization', 'Bearer ' + pushTokens[15])
+      .send(profile0)
+      .then(r => {
+        expect(r.status).that.equals(400)
+      })
+      .catch(err => Promise.reject(err))
+  })
+
   it('can create a profile with only description', () => {
     return request(Server)
       .post('/api/partner/user-profile')
