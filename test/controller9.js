@@ -4,6 +4,7 @@ import request from "supertest";
 import { Credentials } from "uport-credentials";
 
 import Server from "../dist";
+import { HIDDEN_TEXT } from '../src/api/services/util';
 import testUtil from "./util";
 
 const expect = chai.expect
@@ -38,7 +39,9 @@ describe('9 - User Profiles', () => {
   const profile3 = {
     description: "Remote software developer",
     locLat: 37.7749,
-    locLon: -122.4194
+    locLon: -122.4194,
+    locLat2: 41,
+    locLon2: -73.5
   }
 
   it('cannot create a profile if not registered', () => {
@@ -47,14 +50,14 @@ describe('9 - User Profiles', () => {
       .set('Authorization', 'Bearer ' + pushTokens[15])
       .send(profile0)
       .then(r => {
-        expect(r.status).that.equals(400)
+        expect(r.status).that.equals(404)
       })
       .catch(err => Promise.reject(err))
   })
 
   it('can create a profile with only description', () => {
     return request(Server)
-      .post('/api/partner/user-profile')
+      .post('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .send(profile0)
       .then(r => {
@@ -70,7 +73,7 @@ describe('9 - User Profiles', () => {
 
   it('can create a profile with location', () => {
     return request(Server)
-      .post('/api/partner/user-profile')
+      .post('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .send(profile1)
       .then(r => {
@@ -86,7 +89,7 @@ describe('9 - User Profiles', () => {
 
   it('can create another profile with nearby location', () => {
     return request(Server)
-      .post('/api/partner/user-profile')
+      .post('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .send(profile2)
       .then(r => {
@@ -102,7 +105,7 @@ describe('9 - User Profiles', () => {
 
   it('can create a profile with distant location', () => {
     return request(Server)
-      .post('/api/partner/user-profile')
+      .post('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[3])
       .send(profile3)
       .then(r => {
@@ -118,7 +121,7 @@ describe('9 - User Profiles', () => {
 
   it('can search profiles by description text', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({ claimContents: 'blockchain' })
       .then(r => {
@@ -135,7 +138,7 @@ describe('9 - User Profiles', () => {
 
   it('can search profiles by location bounding box that matches multiple profiles', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
         minLat: 40.7120,
@@ -157,7 +160,7 @@ describe('9 - User Profiles', () => {
 
   it('can search profiles by location bounding box that matches one profile', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
         minLat: 40.7125,
@@ -177,9 +180,33 @@ describe('9 - User Profiles', () => {
       .catch(err => Promise.reject(err))
   })
 
+  it('can search profiles by location bounding box that matches loc2 locations', () => {
+    const lat1 = profile1.locLat
+    const lon1 = profile1.locLon
+    return request(Server)
+      .get('/api/partner/userProfile')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .query({
+        minLat: lat1,
+        minLon: lon1,
+        maxLat: lat1 + 1.0,
+        maxLon: lon1 + 1.0,
+      })
+      .then(r => {
+        if (r.body.error) {
+          throw new Error(JSON.stringify(r.body.error))
+        }
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(2)
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(200)
+      })
+      .catch(err => Promise.reject(err))
+  })
+
   it('returns empty array for location bounding box with no matches', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
         minLat: 41.0000,
@@ -201,7 +228,7 @@ describe('9 - User Profiles', () => {
 
   it('can combine location and text search', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
         minLat: 40.7120,
@@ -224,7 +251,7 @@ describe('9 - User Profiles', () => {
 
   it('should verify did:none:HIDDEN replacement in profile response', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[15])
       .then(r => {
         expect(r.body.data).to.be.an('array').of.length(4)
@@ -241,7 +268,7 @@ describe('9 - User Profiles', () => {
 
   it('should verify issuerDidVisibleToDids array in profile response', () => {
     return request(Server)
-      .get('/api/partner/user-profile?claimContents=remote')
+      .get('/api/partner/userProfile?claimContents=remote')
       .set('Authorization', 'Bearer ' + pushTokens[15])
       .then(r => {
         expect(r.body.data).to.be.an('array')
@@ -255,7 +282,7 @@ describe('9 - User Profiles', () => {
 
   it('should verify original DID is visible to authorized users', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
         expect(r.body.data).to.be.an('array')
@@ -274,7 +301,7 @@ describe('9 - User Profiles', () => {
 
   it('can update an existing profile', () => {
     return request(Server)
-      .post('/api/partner/user-profile')
+      .post('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .send(updatedProfile0)
       .then(r => {
@@ -286,7 +313,7 @@ describe('9 - User Profiles', () => {
 
   it('should not find old profile content after update', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({ claimContents: 'blockchain' })
       .then(r => {
@@ -301,7 +328,7 @@ describe('9 - User Profiles', () => {
 
   it('should find new profile content after update', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({ claimContents: 'Python' })
       .then(r => {
@@ -315,29 +342,52 @@ describe('9 - User Profiles', () => {
 
   it('can retrieve own profile by DID', () => {
     return request(Server)
-      .get('/api/partner/user-profile/' + creds[0].did)
+      .get('/api/partner/userProfileForIssuer/' + creds[0].did)
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
-        expect(r.body).to.be.an('object')
-        expect(r.body.description).to.equal(updatedProfile0.description)
-        expect(r.body.issuerDid).to.equal(creds[0].did)
+        expect(r.body.data).to.be.an('object')
+        expect(r.body.data.description).to.equal(updatedProfile0.description)
+        expect(r.body.data.issuerDid).to.equal(creds[0].did)
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(200)
       })
   })
 
-  it('cannot retrieve another user\'s profile by DID without authorization', () => {
+  it('can retrieve another user profile by DID if visible', () => {
     return request(Server)
-      .get('/api/partner/user-profile/' + creds[0].did)
+      .get('/api/partner/userProfileForIssuer/' + creds[0].did)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
+        expect(r.body.data.issuerDid).to.equal(creds[0].did)
+        expect(r.body.data.description).to.equal(updatedProfile0.description)
+        expect(r.body.data.issuerDid).to.equal(creds[0].did)
+        expect(r.status).that.equals(200)
+      })
+  })
+
+  it('can not retrieve any even if someone is between requester and profile', () => {
+    return request(Server)
+      .get('/api/partner/userProfileForIssuer/' + creds[1].did)
+      .set('Authorization', 'Bearer ' + pushTokens[5])
+      .then(r => {
+        expect(r.body.data).to.be.undefined
+        expect(r.status).that.equals(403)
+      })
+  })
+
+  it('can not retrieve any if profile is not anywhere close', () => {
+    return request(Server)
+      .get('/api/partner/userProfileForIssuer/' + creds[3].did)
+      .set('Authorization', 'Bearer ' + pushTokens[14])
+      .then(r => {
+        expect(r.body.data).to.be.undefined
         expect(r.status).that.equals(403)
       })
   })
 
   it('returns 404 when retrieving non-existent profile by DID', () => {
     return request(Server)
-      .get('/api/partner/user-profile/' + creds[14].did) // Using creds[14] which hasn't created a profile
+      .get('/api/partner/userProfileForIssuer/' + creds[14].did) // Using creds[14] which hasn't created a profile
       .set('Authorization', 'Bearer ' + pushTokens[14])
       .then(r => {
         expect(r.status).that.equals(404)
@@ -346,7 +396,7 @@ describe('9 - User Profiles', () => {
 
   it('can delete a profile', () => {
     return request(Server)
-      .delete('/api/partner/user-profile')
+      .delete('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
         // for some reason the response has a body of {} and no content type
@@ -359,7 +409,7 @@ describe('9 - User Profiles', () => {
 
   it('should not find deleted profile in search results', () => {
     return request(Server)
-      .get('/api/partner/user-profile')
+      .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({ claimContents: 'Python' })
       .then(r => {
@@ -370,7 +420,7 @@ describe('9 - User Profiles', () => {
 
         // Double check with a general search to make sure total number of profiles decreased
         return request(Server)
-          .get('/api/partner/user-profile')
+          .get('/api/partner/userProfile')
           .set('Authorization', 'Bearer ' + pushTokens[0])
       })
       .then(r => {
@@ -379,6 +429,176 @@ describe('9 - User Profiles', () => {
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(200)
       })
+  })
+
+  it('can retrieve profile by ID if owner', () => {
+    return request(Server)
+      .get('/api/partner/userProfileForIssuer/' + creds[1].did)
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        const profileId = r.body.data.id
+        return request(Server)
+          .get('/api/partner/userProfile/' + profileId)
+          .set('Authorization', 'Bearer ' + pushTokens[1])
+          .then(r => {
+            expect(r.body.data).to.be.an('object')
+            expect(r.body.data.description).to.equal(profile1.description)
+            expect(r.body.data.issuerDid).to.equal(creds[1].did)
+            expect(r.headers['content-type']).to.match(/json/)
+            expect(r.status).that.equals(200)
+          })
+      })
+  })
+
+  it('can retrieve profile by ID if visible through network', () => {
+    return request(Server)
+      .get('/api/partner/userProfileForIssuer/' + creds[1].did)
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        const profileId = r.body.data.id
+        return request(Server)
+          .get('/api/partner/userProfile/' + profileId)
+          .set('Authorization', 'Bearer ' + pushTokens[2])
+          .then(r => {
+            expect(r.body.data).to.be.an('object')
+            expect(r.body.data.description).to.equal(profile1.description)
+            expect(r.body.data.issuerDid).to.equal(creds[1].did)
+            expect(r.status).that.equals(200)
+          })
+      })
+  })
+
+  it('can retrieve profile by ID if visible through more extended network', () => {
+    return request(Server)
+      .get('/api/partner/userProfileForIssuer/' + creds[3].did)
+      .set('Authorization', 'Bearer ' + pushTokens[3])
+      .then(r => {
+        const profileId = r.body.data.id
+        return request(Server)
+          .get('/api/partner/userProfile/' + profileId)
+          .set('Authorization', 'Bearer ' + pushTokens[2])
+          .then(r => {
+            expect(r.body.data).to.be.an('object')
+            expect(r.body.data.description).to.equal(profile3.description)
+            expect(r.body.data.issuerDid).to.equal(HIDDEN_TEXT)
+            expect(r.body.data.issuerDidVisibleToDids).to.be.an('array')
+            expect(r.body.data.issuerDidVisibleToDids).to.include(creds[0].did)
+            expect(r.status).that.equals(200)
+          })
+      })
+  })
+
+  it('cannot retrieve profile by ID if not visible', () => {
+    return request(Server)
+      .get('/api/partner/userProfileForIssuer/' + creds[3].did)
+      .set('Authorization', 'Bearer ' + pushTokens[3])
+      .then(r => {
+        const profileId = r.body.data.id
+        return request(Server)
+          .get('/api/partner/userProfile/' + profileId)
+          .set('Authorization', 'Bearer ' + pushTokens[14])
+          .then(r => {
+            expect(r.body.data.description).to.equal(profile3.description)
+            expect(r.body.data.issuerDid).to.equal(HIDDEN_TEXT)
+            expect(r.body.data.issuerDidVisibleToDids).to.be.an('array').that.is.empty
+            expect(r.status).that.equals(200)
+          })
+      })
+  })
+
+  it('returns 404 when retrieving non-existent profile by ID', () => {
+    return request(Server)
+      .get('/api/partner/userProfile/999999')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(404)
+      })
+  })
+
+  describe('Profile Location Grid Tests', () => {
+    it('retrieve profile counts inside bounding box containing multiple profiles', () => {
+      // Use the location from profile1 as center point
+      const lat = profile1.locLat
+      const lon = profile1.locLon
+      return request(Server)
+        .get('/api/partner/userProfileCountsByBBox'
+          + '?minLocLat=' + (lat - 0.1)
+          + '&maxLocLat=' + (lat + 0.1)
+          + '&minLocLon=' + (lon - 0.1)
+          + '&maxLocLon=' + (lon + 0.1)
+        )
+        .then(r => {
+          expect(r.headers['content-type']).to.match(/json/)
+          expect(r.body.data.tiles).to.be.an('array')
+          expect(r.body.data).to.have.property('minLat')
+          expect(r.body.data).to.have.property('minLon')
+          expect(r.body.data).to.have.property('tileWidth')
+          expect(r.body.data).to.have.property('numTilesWide')
+
+          // Should find at least one tile with 2 profiles (profile1 and profile2 are nearby)
+          const tileWithMultipleProfiles = r.body.data.tiles.find(tile => tile.recordCount >= 2)
+          expect(tileWithMultipleProfiles).to.exist
+          expect(tileWithMultipleProfiles.minFoundLat).to.be.closeTo(lat, 0.1)
+          expect(tileWithMultipleProfiles.minFoundLon).to.be.closeTo(lon, 0.1)
+          expect(r.status).that.equals(200)
+        })
+    })
+
+    it('retrieve profile counts inside bounding box containing one profile', () => {
+      // Use the location from profile3 which is in San Francisco
+      const lat = profile3.locLat
+      const lon = profile3.locLon
+      return request(Server)
+        .get('/api/partner/userProfileCountsByBBox'
+          + '?minLocLat=' + (lat - 0.01)
+          + '&maxLocLat=' + (lat + 0.01)
+          + '&minLocLon=' + (lon - 0.01)
+          + '&maxLocLon=' + (lon + 0.01)
+        )
+        .then(r => {
+          expect(r.headers['content-type']).to.match(/json/)
+          expect(r.body.data.tiles).to.be.an('array')
+          // Should find exactly one profile in one tile
+          const tileWithProfile = r.body.data.tiles.find(tile => tile.recordCount === 1)
+          expect(tileWithProfile).to.exist
+          expect(tileWithProfile.minFoundLat).to.be.closeTo(lat, 0.1)
+          expect(tileWithProfile.minFoundLon).to.be.closeTo(lon, 0.1)
+          expect(tileWithProfile.maxFoundLat).to.be.closeTo(lat, 0.1)
+          expect(tileWithProfile.maxFoundLon).to.be.closeTo(lon, 0.1)
+          expect(r.status).that.equals(200)
+        })
+    })
+
+    it('retrieve profile counts inside empty bounding box', () => {
+      return request(Server)
+        .get('/api/partner/userProfileCountsByBBox'
+          + '?minLocLat=0'
+          + '&maxLocLat=1'
+          + '&minLocLon=0'
+          + '&maxLocLon=1'
+        )
+        .then(r => {
+          expect(r.headers['content-type']).to.match(/json/)
+          expect(r.body.data.tiles).to.be.an('array')
+          // Should find no profiles in any tiles
+          const totalProfiles = r.body.data.tiles.reduce((sum, tile) => sum + tile.recordCount, 0)
+          expect(totalProfiles).to.equal(0)
+          expect(r.status).that.equals(200)
+        })
+    })
+
+    it('handles invalid bounding box parameters', () => {
+      return request(Server)
+        .get('/api/partner/userProfileCountsByBBox'
+          + '?minLocLat=invalid'
+          + '&maxLocLat=91'  // Invalid latitude
+          + '&minLocLon=-181' // Invalid longitude
+          + '&maxLocLon=180'
+        )
+        .then(r => {
+          expect(r.status).to.equal(400)
+        })
+    })
   })
 
 }) 

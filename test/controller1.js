@@ -366,12 +366,12 @@ describe('1 - Util', () => {
 
   it('should return the right bbox', () =>
      expect(calcBbox("40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787"))
-     .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
+     .to.be.deep.equal({ minLon:-111.884787 , minLat:40.883944, maxLon:-111.884515, maxLat:40.884088 })
     )
 
   it('should return the same bbox even in different order', () =>
      expect(calcBbox("40.884088,-111.884515 40.883944,-111.884515 40.883944,-111.884787 40.884088,-111.884787 40.884088,-111.884515"))
-     .to.be.deep.equal({ westLon:-111.884787 , minLat:40.883944, eastLon:-111.884515, maxLat:40.884088 })
+     .to.be.deep.equal({ minLon:-111.884787 , minLat:40.883944, maxLon:-111.884515, maxLat:40.884088 })
     )
 
   it('should test for hidden DIDs', () => {

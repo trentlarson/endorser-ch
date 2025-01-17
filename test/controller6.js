@@ -733,8 +733,8 @@ describe('6 - Plans', () => {
     .get('/api/v2/report/planCountsByBBox'
       + '?minLocLat' + '=' + (lat - 0.1)
       + '&maxLocLat' + '=' + (lat + 10)
-      + '&westLocLon' + '=' + (lon - 0.1)
-      + '&eastLocLon' + '=' + (lon + 10)
+      + '&minLocLon' + '=' + (lon - 0.1)
+      + '&maxLocLon' + '=' + (lon + 10)
     )
     .then(r => {
       expect(r.headers['content-type'], /json/)

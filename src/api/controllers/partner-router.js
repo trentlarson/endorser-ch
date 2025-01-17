@@ -8,7 +8,7 @@ import ClaimService from '../services/claim.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService } from "../services/endorser.db.service";
 import { getAllDidsBetweenRequesterAndObjects } from "../services/network-cache.service";
-import { HIDDEN_TEXT } from '../services/util';
+import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth} from '../services/util';
 
 export default express
 .Router()
@@ -21,6 +21,26 @@ export default express
 /**
  * See /server/common/server.js for other Swagger settings & pieces of generated docs.
  **/
+
+/**
+ * @typedef LocationCount
+ * @property {number} minLat - minimum latitude of this bucket
+ * @property {number} minLon - minimum longitude of this bucket
+ * @property {number} minFoundLat - lowest latitude of matches found in this bucket
+ * @property {number} minFoundLon - westernmost longitude of matches found in this bucket
+ * @property {number} maxFoundLat - highest latitude of matches found in this bucket
+ * @property {number} maxFoundLon - easternmost longitude of matches found in this bucket
+ * @property {number} recordCount - number of records found in this bucket
+ */
+
+/**
+ * @typedef GridCounts
+ * @property {array.LocationCount} tiles - counts of records in each tile of the grid
+ * @property {number} minLat - minimum latitude of the searched area (which may be outside the bounding box)
+ * @property {number} minLon - minimum longitude of the searched area (which may be outside the bounding box)
+ * @property {number} tileWidth - width of each tile
+ * @property {number} numTilesWide - number of tiles wide for the searched area
+ */
 
 /**
  * Add a link to some partner service
@@ -78,7 +98,7 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .post(
-  '/user-profile',
+  '/userProfile',
   async (req, res) => {
     const { description, locLat, locLon, locLat2, locLon2 } = req.body
 
@@ -137,9 +157,10 @@ export default express
 
 
 /**
- * Get profiles by location or text search
+ * Get a user's profile
+ *
  * @group partner utils - Partner Utils
- * @route GET /api/partner/user-profile/:issuerDid
+ * @route GET /api/partner/userProfileForIssuer/{issuerDid}
  * @param {string} issuerDid.path.required - the issuer DID to get the profile for
  * @returns {Object} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
@@ -147,21 +168,74 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
-  '/user-profile/:issuerDid',
+  '/userProfileForIssuer/:issuerDid',
   async (req, res) => {
     const { issuerDid } = req.params
-    if (!res.locals.tokenIssuer) {
-      return res.status(403).json({ error: "Request must include a valid Authorization JWT" }).end()
-    }
-    if (issuerDid !== res.locals.tokenIssuer) {
-      return res.status(403).json({ error: "Not authorized to view this profile" }).end()
-    }
     try {
-      const result = await dbService.profileByIssuerDid(issuerDid)
+      let result = await dbService.profileByIssuerDid(issuerDid)
+
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
       }
-      res.status(200).json(result).end()
+      if (issuerDid !== res.locals.tokenIssuer) {
+        // check if they can see the profile, or if they're linked to someone who can
+        const didsSeenByRequesterWhoSeeObject =
+          await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, [issuerDid])
+        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
+          // the issuerDid is visible to the requester, so continue with full content
+        } else {
+          // someone the issuer can see can see the profile,
+          // but giving up all between would expose their full network
+          return res.status(403).json({ error: "Profile not visible" }).end()
+        }
+      }
+      res.status(200).json({ data: result }).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get a user's profile by ID
+ *
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/userProfile/{id}
+ * @param {string} id.path.required - the profile ID to retrieve
+ * @returns {Object} 200 - success response with profile
+ * @returns {Error} 403 - unauthorized
+ * @returns {Error} 404 - not found
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfile/:id',
+  async (req, res) => {
+    const { id } = req.params
+    try {
+      let result = await dbService.profileById(id)
+
+      if (!result) {
+        return res.status(404).json({ error: "Profile not found" }).end()
+      }
+
+      if (result.issuerDid !== res.locals.tokenIssuer) {
+        // check if they can see the profile, or if they're linked to someone who can
+        const didsSeenByRequesterWhoSeeObject =
+          await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, [result.issuerDid])
+        if (didsSeenByRequesterWhoSeeObject[0] === result.issuerDid) {
+          // the issuerDid is visible to the requester, so continue with full content
+        } else {
+          // maybe someone the issuer can see can see the profile,
+          // and the profile ID doesn't give up any ID info so share
+          result = {
+            ...result,
+            issuerDid: HIDDEN_TEXT,
+            issuerDidVisibleToDids: didsSeenByRequesterWhoSeeObject[0],
+          }
+        }
+      }
+      res.status(200).json({ data: result }).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
     }
@@ -170,8 +244,9 @@ export default express
 
 /**
  * Get profiles by location or text search
+ *
  * @group partner utils - Partner Utils
- * @route GET /api/partner/user-profile
+ * @route GET /api/partner/userProfile
  * @param {number} minLat.query.optional - minimum latitude coordinate
  * @param {number} minLon.query.optional - minimum longitude coordinate
  * @param {number} maxLat.query.optional - maximum latitude coordinate
@@ -184,7 +259,7 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
-  '/user-profile',
+  '/userProfile',
   async (req, res) => {
     const { minLat, minLon, maxLat, maxLon, claimContents, beforeId, afterId } = req.query
 
@@ -222,7 +297,8 @@ export default express
 
       const resultList = rawResult.data
       // Hide DIDs and add network links
-      // If we separate partner functions to a different service, we'll have to create an endpoint for this.
+      // This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
+      // When we separate partner functions to a different service, we'll have to create an endpoint for this.
       const didsSeenByRequesterWhoSeeObject =
         await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, resultList.map(profile => profile.issuerDid))
       // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
@@ -262,13 +338,13 @@ export default express
  * Delete a user's profile
  *
  * @group partner utils - Partner Utils
- * @route DELETE /api/partner/user-profile
+ * @route DELETE /api/partner/userProfile
  * @returns 200 - success response with number of deleted profiles
  * @returns {Error} 500 - server error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .delete(
-  '/user-profile',
+  '/userProfile',
   async (req, res) => {
     try {
       if (!res.locals.tokenIssuer) {
@@ -278,6 +354,118 @@ export default express
       res.status(204).json({ success: true, numDeleted: result }).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Cut the bbox into sections, then return an array location + plan-counts for how many are located in that section with that location
+ * Currently, this cuts the bbox into sections, anywhere from 4-8 tiles on side.
+ *
+ * Note that the report API has a similar endpoint /api/v2/report/planCountsByBBox
+ * The front-end is simpler if the parameters and results are similar.
+ *
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/userProfileCountsByBBox
+ * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
+ * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
+ * @param {string} minLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} maxLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @returns {array.GridCounts} 200 - 'data' property with 'tiles' property with matching array of entries, each with a count of plans in that tile
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfileCountsByBBox',
+  async (req, res) => {
+    try {
+
+      const minLocLat = Number.parseFloat(req.query.minLocLat)
+      const maxLocLat = Number.parseFloat(req.query.maxLocLat)
+      let minLocLon = Number.parseFloat(req.query.minLocLon)
+      let maxLocLon = Number.parseFloat(req.query.maxLocLon)
+      // allowing this old usage, replaced as of 4.2.0
+      if (isNaN(minLocLon)) {
+        minLocLon = Number.parseFloat(req.query.westLocLon)
+      }
+      if (isNaN(maxLocLon)) {
+        maxLocLon = Number.parseFloat(req.query.eastLocLon)
+      }
+
+      if (isNaN(minLocLat) || isNaN(maxLocLat) || isNaN(minLocLon) || isNaN(maxLocLon)) {
+        return res.status(400).json({ error: "Query parameters 'minLocLat', 'maxLocLat', 'minLocLon', and 'maxLocLon' must be numbers" }).end()
+      }
+
+      const tileWidth = latWidthToTileWidth(maxLocLat - minLocLat)
+      // find the latitude that is a multiple of tileWidth and is closest to but below the minLocLat
+      const minLatTile = Math.floor(minLocLat / tileWidth) * tileWidth
+      // find the longitude that is a multiple of tileWidth and is closest to but west of the westLocLon
+      const minLonTile = Math.floor(minLocLon / tileWidth) * tileWidth
+      // find how many tiles wide the bounding box is
+      const numTilesWide = Math.ceil((maxLocLon - minLonTile) / tileWidth)
+      // calculate the maximum latitude with that many tiles
+      const maxLatTiled = minLatTile + numTilesWide * tileWidth
+      // calculate the maximum longitude with that many tiles
+      const maxLonTiled = minLonTile + numTilesWide * tileWidth
+      const results1 = await dbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide)
+      const results2 = await dbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide, true)
+
+      // return an array of tiles
+      // which only contains the first case of each set of index values
+      // where tiles match if they have the same indexLat, indexLon, minFoundLat, minFoundLon, maxFoundLat, maxFoundLon
+      // and which has a recordCount which is the sum of the recordCounts of the matching tiles
+
+      const tiles = results1.concat(results2)
+
+      // find the first and last index of each tile
+
+      // use this function that uniquely identifies a tile
+      const tilesMatch = (tile1, tile2) =>
+        tile1.indexLat === tile2.indexLat &&
+        tile1.indexLon === tile2.indexLon &&
+        tile1.minFoundLat === tile2.minFoundLat &&
+        tile1.minFoundLon === tile2.minFoundLon &&
+        tile1.maxFoundLat === tile2.maxFoundLat &&
+        tile1.maxFoundLon === tile2.maxFoundLon
+      const uniqueTiles = tiles.filter((tile, index, self) =>
+        index === self.findIndex(t => tilesMatch(t, tile))
+      )
+      const firstTileIndex = uniqueTiles.map((tile, index, self) =>
+        tiles.findIndex(t => tilesMatch(t, tile))
+      )
+      const lastTileIndex = uniqueTiles.map((tile, index, self) =>
+        tiles.findLastIndex(t => tilesMatch(t, tile))
+      )
+      // now get the recordCount from the first one
+      const tilesWithBothCounts = uniqueTiles.map((tile, index) => {
+        let tileCount = tile.recordCount
+        if (lastTileIndex[index] !== firstTileIndex[index]) {
+          // there is more that came from lat2 & lon2 in some profile
+          tileCount += tiles[lastTileIndex[index]].recordCount
+        }
+        const newTile = {
+          ...tile,
+          recordCount: tileCount
+        }
+        return newTile
+      })
+
+      const result = {
+        data: {
+          tiles: tilesWithBothCounts.map(latLonFromTile(minLocLat, minLocLon, tileWidth)),
+          minLat: minLocLat,
+          minLon: minLocLon,
+          tileWidth: tileWidth,
+          numTilesWide: numTilesWide
+        }
+      }
+      res.status(200).json(result).end()
+    } catch (err) {
+      let errorObj = err
+      if ("" + err !== "[object Object]") {
+        errorObj = "" + err // sometimes this gives more info
+      }
+      res.status(500).json({ error: errorObj }).end()
     }
   }
 )

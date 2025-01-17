@@ -2137,7 +2137,7 @@ class EndorserDatabase {
 
   // FYI here's a cool post about ratios: https://gis.stackexchange.com/questions/7430/what-ratio-of-longitude-and-latitude-values-should-be-used-in-a-bounding-box
 
-  // similar to profileCountsByBBox
+  // similar to Partner DB profileCountsByBBox
   planCountsByBBox(minLat, westLon, maxLat, eastLon, numTiles) {
     if (minLat === maxLat) {
       return Promise.resolve({ data: [], error: "Note that the minimum and maximum latitude must be different." })
@@ -2374,17 +2374,17 @@ class EndorserDatabase {
    *
    * @param minLat lowest degrees latitude
    * @param maxLat highest degrees latitude
-   * @param westLon lowest degrees longitude
-   * @param eastLon highest degrees longitude
+   * @param minLon lowest degrees longitude
+   * @param maxLon highest degrees longitude
    * @param afterIdInput
    * @param beforeIdInput
    * @returns {Promise<unknown>}
    */
-  plansByLocationPaged(minLat, maxLat, westLon, eastLon, afterIdInput, beforeIdInput, claimContents) {
+  plansByLocationPaged(minLat, maxLat, minLon, maxLon, afterIdInput, beforeIdInput, claimContents) {
     return new Promise((resolve, reject) => {
       let sql = "SELECT rowid, * FROM plan_claim"
 
-      const params = [minLat, maxLat, westLon, eastLon]
+      const params = [minLat, maxLat, minLon, maxLon]
       sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
 
       const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'], [])
@@ -2793,6 +2793,11 @@ class EndorserDatabase {
         row.id = row.rowid
         delete row.rowid
 
+        // convert the west/east to min/max, changed in v 4.2.0
+        // but keep these others until we validate they're migrated
+        row.minLon = row.westLon
+        row.maxLon = row.eastLon
+
         data.push(row)
       }, function(err, num) {
         if (err) {
@@ -2812,7 +2817,10 @@ class EndorserDatabase {
           {
             id: row.rowid, jwtId: row.jwtId, claimContext: row.claimContext, claimType: row.claimType,
             issuerDid: row.issuerDid, partyDid: row.partyDid, polygon: row.polygon,
-            westlon: row.westlon, minlat: row.minlat, eastlon: row.eastlon, maxlat: row.maxlat
+            minlat: row.minlat, minlon: row.westlon, maxlat: row.maxlat, maxlon: row.eastlon,
+            // convert the west/east to min/max, changed in v 4.2.0
+            // but keep these others until we validate they're migrated
+            westlon: row.westlon, eastlon: row.eastlon
           }
         )
       }, function(err, num) {
@@ -2834,6 +2842,11 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else {
+            // convert the west/east to min/max, changed in v 4.2.0
+            // but keep these others until we validate they're migrated
+            row.minLon = row.westLon
+            row.maxLon = row.eastLon
+
             resolve(row)
           }
         })
@@ -3138,7 +3151,7 @@ class EndorserDatabase {
     })
   }
 
-  // similar to planCountsByBBox
+  // similar to Endorser DB planCountsByBBox
   profileCountsByBBox(minLat, westLon, maxLat, eastLon, numTiles, useLoc2 = false) {
     if (minLat === maxLat) {
       return Promise.resolve({ data: [], error: "Note that the minimum and maximum latitude must be different." })
@@ -3194,7 +3207,7 @@ class EndorserDatabase {
           FLOOR(? * (locLon${suffix} - ?) / ?) AS indexLon,
           locLat${suffix},
           locLon${suffix}
-        FROM plan_claim
+        FROM user_profile
         WHERE
           locLat${suffix} BETWEEN ? AND ?
           AND locLon${suffix} BETWEEN ? AND ?
@@ -3205,20 +3218,25 @@ class EndorserDatabase {
     const data = []
     return new Promise(
       (resolve, reject) => {
-        db.each(sql, params, function(err, row) {
-        if (err) {
-          reject(err)
-        }
-        data.push(row)
-      },
-      (err, num) => {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(data)
-        }
-      })
-    })
+        partnerDb.each(
+          sql,
+          params,
+          function(err, row) {
+            if (err) {
+              reject(err)
+            }
+            data.push(row)
+          },
+          (err, num) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(data)
+            }
+          }
+        )
+      }
+    )
   }
 
   profilesByLocation(minLat, minLon, maxLat, maxLon, beforeId, afterId, claimContents) {

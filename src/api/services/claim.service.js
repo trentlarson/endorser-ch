@@ -1320,10 +1320,13 @@ class ClaimService {
             issuerDid: payloadIssuerDid,
             partyDid: partyDid,
             polygon: claim.spatialUnit.geo.polygon,
-            westLon: bbox.westLon,
             minLat: bbox.minLat,
-            eastLon: bbox.eastLon,
-            maxLat: bbox.maxLat
+            maxLat: bbox.maxLat,
+            minLon: bbox.minLat,
+            maxLon: bbox.maxLat,
+            // for backwards compatibility for now (changed in v 4.2.0)
+            eastLon: bbox.maxLon,
+            westLon: bbox.minLon,
           }
 
       const tenureId = await dbService.tenureInsert(entry)

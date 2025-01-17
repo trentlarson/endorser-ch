@@ -279,24 +279,32 @@ class DbController {
   getPlanCountsByBBox(req, res, next) {
     const minLocLat = Number.parseFloat(req.query.minLocLat)
     const maxLocLat = Number.parseFloat(req.query.maxLocLat)
-    const westLocLon = Number.parseFloat(req.query.westLocLon)
-    const eastLocLon = Number.parseFloat(req.query.eastLocLon)
+    let minLocLon = Number.parseFloat(req.query.minLocLon)
+    let maxLocLon = Number.parseFloat(req.query.maxLocLon)
+    // allowing this old usage, replaced as of 4.2.0
+    if (isNaN(minLocLon)) {
+      minLocLon = Number.parseFloat(req.query.westLocLon)
+    }
+    if (isNaN(maxLocLon)) {
+      maxLocLon = Number.parseFloat(req.query.eastLocLon)
+    }
+
     const tileWidth = latWidthToTileWidth(maxLocLat - minLocLat)
     // find the latitude that is a multiple of tileWidth and is closest to but below the minLocLat
     const minLatTile = Math.floor(minLocLat / tileWidth) * tileWidth
     // find the longitude that is a multiple of tileWidth and is closest to but west of the westLocLon
-    const westLonTile = Math.floor(westLocLon / tileWidth) * tileWidth
+    const minLonTile = Math.floor(minLocLon / tileWidth) * tileWidth
     // find how many tiles wide the bounding box is
-    const numTilesWide = Math.ceil((eastLocLon - westLonTile) / tileWidth)
+    const numTilesWide = Math.ceil((maxLocLon - minLonTile) / tileWidth)
     // calculate the maximum latitude with that many tiles
     const maxLatTiled = minLatTile + numTilesWide * tileWidth
     // calculate the maximum longitude with that many tiles
-    const eastLonTiled = westLonTile + numTilesWide * tileWidth
-    dbService.planCountsByBBox(minLocLat, westLocLon, maxLatTiled, eastLonTiled, numTilesWide)
+    const maxLonTiled = minLonTile + numTilesWide * tileWidth
+    dbService.planCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide)
       .then(results => ({ data: {
-        tiles: results.map(latLonFromTile(minLocLat, westLocLon, tileWidth)),
+        tiles: results.map(latLonFromTile(minLocLat, minLocLon, tileWidth)),
         minLat: minLocLat,
-        minLon: westLocLon,
+        minLon: minLocLon,
         tileWidth: tileWidth,
         numTilesWide: numTilesWide
       } }) )
@@ -319,10 +327,17 @@ class DbController {
   getPlansByLocationPaged(req, res, next) {
     const minLocLat = Number.parseFloat(req.query.minLocLat)
     const maxLocLat = Number.parseFloat(req.query.maxLocLat)
-    const westLocLon = Number.parseFloat(req.query.westLocLon)
-    const eastLocLon = Number.parseFloat(req.query.eastLocLon)
+    let minLocLon = Number.parseFloat(req.query.minLocLon)
+    let maxLocLon = Number.parseFloat(req.query.maxLocLon)
+    // allowing this old usage, replaced as of 4.2.0
+    if (isNaN(minLocLon)) {
+      minLocLon = Number.parseFloat(req.query.westLocLon)
+    }
+    if (isNaN(maxLocLon)) {
+      maxLocLon = Number.parseFloat(req.query.eastLocLon)
+    }
     dbService.plansByLocationPaged(
-      minLocLat, maxLocLat, westLocLon, eastLocLon,
+      minLocLat, maxLocLat, minLocLon, maxLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
       .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
@@ -385,10 +400,17 @@ class DbController {
   getProjectsByLocationPaged(req, res, next) {
     const minLocLat = Number.parseFloat(req.query.minLocLat)
     const maxLocLat = Number.parseFloat(req.query.maxLocLat)
-    const westLocLon = Number.parseFloat(req.query.westLocLon)
-    const eastLocLon = Number.parseFloat(req.query.eastLocLon)
+    let minLocLon = Number.parseFloat(req.query.minLocLon)
+    let maxLocLon = Number.parseFloat(req.query.maxLocLon)
+    // allowing this old usage, replaced as of 4.2.0
+    if (isNaN(minLocLon)) {
+      minLocLon = Number.parseFloat(req.query.westLocLon)
+    }
+    if (isNaN(maxLocLon)) {
+      maxLocLon = Number.parseFloat(req.query.eastLocLon)
+    }
     dbService.projectsByLocationPaged(
-      minLocLat, maxLocLat, westLocLon, eastLocLon,
+      minLocLat, maxLocLat, minLocLon, maxLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
       .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
@@ -832,12 +854,15 @@ export default express
  * Cut the bbox into sections, then return an array location + plan-counts for how many are located in that section with that location
  * Currently, this cuts the bbox into sections, anywhere from 4-8 tiles on side.
  *
+ * Note that the partner API has a similar endpoint /api/partner/userProfileCountsByBBox
+ * The front-end is simpler if the parameters and results are similar.
+ *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/planCountsByBBox
  * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
  * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
- * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
- * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @param {string} minLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} maxLon.query.required - maximum longitude in degrees of bounding box being searched
  * @returns {array.GridCounts} 200 - 'data' property with 'tiles' property with matching array of entries, each with a count of plans in that tile
  * @returns {Error} 400 - client error
  */
@@ -891,8 +916,8 @@ export default express
  * @route GET /api/v2/report/plansByBBox
  * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
  * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
- * @param {string} westLon.query.required - minimum longitude in degrees of bounding box being searched
- * @param {string} eastLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @param {string} minLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} maxLon.query.required - maximum longitude in degrees of bounding box being searched
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
