@@ -2,7 +2,7 @@
 -- see README.md in this directory for explanations
 
 CREATE TABLE user_profile (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rowid INTEGER PRIMARY KEY AUTOINCREMENT,
   updatedAt DATETIME NOT NULL,
   issuerDid TEXT NOT NULL,
   description TEXT NOT NULL,

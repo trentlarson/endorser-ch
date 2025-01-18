@@ -22,6 +22,7 @@ export default express
  * See /server/common/server.js for other Swagger settings & pieces of generated docs.
  **/
 
+// similar code is in report-router.js
 /**
  * @typedef LocationCount
  * @property {number} minLat - minimum latitude of this bucket
@@ -33,6 +34,7 @@ export default express
  * @property {number} recordCount - number of records found in this bucket
  */
 
+// similar code is in report-router.js
 /**
  * @typedef GridCounts
  * @property {array.LocationCount} tiles - counts of records in each tile of the grid
@@ -40,6 +42,19 @@ export default express
  * @property {number} minLon - minimum longitude of the searched area (which may be outside the bounding box)
  * @property {number} tileWidth - width of each tile
  * @property {number} numTilesWide - number of tiles wide for the searched area
+ */
+
+/**
+ * @typedef UserProfile
+ * @property {string} issuerDid - the DID of the user
+ * @property {string} issuerDidVisibleToDids - if issuerDid is a HIDDEN value, this has DIDs who can see the issuer DID
+ * @property {string} description - free-form description of interests
+ * @property {number} locLat - latitude coordinate
+ * @property {number} locLon - longitude coordinate
+ * @property {number} locLat2 - latitude coordinate
+ * @property {number} locLon2 - longitude coordinate
+ * @property {string} rowid - the profile ID
+ * @property {string} createdAt - date the profile was created
  */
 
 /**
@@ -162,7 +177,7 @@ export default express
  * @group partner utils - Partner Utils
  * @route GET /api/partner/userProfileForIssuer/{issuerDid}
  * @param {string} issuerDid.path.required - the issuer DID to get the profile for
- * @returns {Object} 200 - success response with profile
+ * @returns {UserProfile} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
  * @returns {Error} 400 - client error
  */
@@ -201,19 +216,19 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route GET /api/partner/userProfile/{id}
- * @param {string} id.path.required - the profile ID to retrieve
- * @returns {Object} 200 - success response with profile
+ * @param {string} rowid.path.required - the profile ID to retrieve
+ * @returns {UserProfile} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
  * @returns {Error} 404 - not found
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
-  '/userProfile/:id',
+  '/userProfile/:rowid',
   async (req, res) => {
-    const { id } = req.params
+    const { rowid } = req.params
     try {
-      let result = await dbService.profileById(id)
+      let result = await dbService.profileById(rowid)
 
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
@@ -252,9 +267,9 @@ export default express
  * @param {number} maxLat.query.optional - maximum latitude coordinate
  * @param {number} maxLon.query.optional - maximum longitude coordinate
  * @param {string} claimContents.query.optional - text to search in description
- * @param {string} beforeId.query.optional - return profiles with id less than this
- * @param {string} afterId.query.optional - return profiles with id greater than this
- * @returns {Object} 200 - success response with profiles
+ * @param {string} beforeId.query.optional - return profiles with rowid less than this
+ * @param {string} afterId.query.optional - return profiles with rowid greater than this
+ * @returns {array.UserProfile} 200 - success response with profiles
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

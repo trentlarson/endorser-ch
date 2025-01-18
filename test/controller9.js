@@ -257,7 +257,7 @@ describe('9 - User Profiles', () => {
         expect(r.body.data).to.be.an('array').of.length(4)
         const hiddenProfile = r.body.data.find(p => p.description === profile0.description)
         expect(hiddenProfile).to.exist
-        expect(hiddenProfile.id).to.equal(1)
+        expect(hiddenProfile.rowid).to.equal(1)
         expect(hiddenProfile.issuerDid).to.equal('did:none:HIDDEN')
         expect(hiddenProfile).to.have.property('issuerDidVisibleToDids')
         expect(hiddenProfile.issuerDidVisibleToDids).to.be.an('array')
@@ -436,7 +436,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[1].did)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
-        const profileId = r.body.data.id
+        const profileId = r.body.data.rowid
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -455,7 +455,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[1].did)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
-        const profileId = r.body.data.id
+        const profileId = r.body.data.rowid
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -473,7 +473,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[3].did)
       .set('Authorization', 'Bearer ' + pushTokens[3])
       .then(r => {
-        const profileId = r.body.data.id
+        const profileId = r.body.data.rowid
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -493,7 +493,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[3].did)
       .set('Authorization', 'Bearer ' + pushTokens[3])
       .then(r => {
-        const profileId = r.body.data.id
+        const profileId = r.body.data.rowid
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[14])

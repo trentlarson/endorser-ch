@@ -1445,7 +1445,7 @@ class EndorserDatabase {
   jwtsByParamsPaged(params, afterIdInput, beforeIdInput) {
     return tableEntriesByParamsPaged(
       'jwt',
-      'id',
+      'id', // this is the JWT ID
       ['id', 'issuedAt', 'issuer', 'subject', 'claimType', 'handleId', 'claimCanonHash', 'noncedHashAllChain'],
       ['claim'],
       ['issuedAt'],
@@ -2334,9 +2334,9 @@ class EndorserDatabase {
       'plan_claim',
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
-       'name', 'description', 'endTime', 'startTime',
-       'locLat', 'locLon',
-       'resultDescription', 'resultIdentifier'],
+        'name', 'description', 'endTime', 'startTime',
+        'locLat', 'locLon',
+        'resultDescription', 'resultIdentifier'],
       ['description', 'name'],
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
@@ -2356,9 +2356,9 @@ class EndorserDatabase {
       'plan_claim',
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
-       'name', 'description', 'endTime', 'startTime',
-       'locLat', 'locLon',
-       'resultDescription', 'resultIdentifier'],
+        'name', 'description', 'endTime', 'startTime',
+        'locLat', 'locLon',
+        'resultDescription', 'resultIdentifier'],
       ['description'],
       ['endTime', 'startTime'],
       ['fulfillsLinkConfirmed'],
@@ -2517,9 +2517,9 @@ class EndorserDatabase {
       'project_claim',
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
-       'name', 'description', 'endTime', 'startTime',
-       'locLat', 'locLon',
-       'resultDescription', 'resultIdentifier'],
+        'name', 'description', 'endTime', 'startTime',
+        'locLat', 'locLon',
+        'resultDescription', 'resultIdentifier'],
       ['description', 'name'],
       ['endTime', 'startTime'],
       [],
@@ -2539,9 +2539,9 @@ class EndorserDatabase {
       'project_claim',
       'rowid',
       ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
-       'name', 'description', 'endTime', 'startTime',
-       'locLat', 'locLon',
-       'resultDescription', 'resultIdentifier'],
+        'name', 'description', 'endTime', 'startTime',
+        'locLat', 'locLon',
+        'resultDescription', 'resultIdentifier'],
       ['description', 'name'],
       ['endTime', 'startTime'],
       [],
@@ -3113,11 +3113,11 @@ class EndorserDatabase {
     })
   }
 
-  profileById(id) {
+  profileById(rowid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT * FROM user_profile WHERE id = ?",
-        [id],
+        "SELECT * FROM user_profile WHERE rowid = ?",
+        [rowid],
         function(err, row) {
           if (err) {
             reject(err)
@@ -3251,11 +3251,11 @@ class EndorserDatabase {
       }
 
       if (beforeId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "id < ?"
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
         params.push(beforeId)
       }
       if (afterId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "id > ?"
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
         params.push(afterId)
       }
       
@@ -3274,7 +3274,7 @@ class EndorserDatabase {
 
       // If no conditions were added, return all profiles
       const finalWhereClause = whereClause ? `WHERE ${whereClause}` : ""
-      const sql = `SELECT * FROM user_profile ${finalWhereClause} ORDER BY id DESC LIMIT ${DEFAULT_LIMIT}`
+      const sql = `SELECT * FROM user_profile ${finalWhereClause} ORDER BY rowid DESC LIMIT ${DEFAULT_LIMIT}`
 
       partnerDb.all(sql, params, function(err, rows) {
         if (err) {

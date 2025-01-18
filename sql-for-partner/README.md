@@ -24,14 +24,14 @@ CREATE TABLE partner_link (
 
 -- a profile is a user's free-form description of their interests
 CREATE TABLE user_profile (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  issuerDid TEXT NOT NULL,
-  updatedAt DATETIME NOT NULL,
-  description TEXT NOT NULL,
-  locLat DOUBLE NOT NULL,
-  locLon DOUBLE NOT NULL,
-  locLat2 DOUBLE NOT NULL,
-  locLon2 DOUBLE NOT NULL
+    rowid INTEGER PRIMARY KEY AUTOINCREMENT, -- works like the built-in rowid, explicitly
+    issuerDid TEXT NOT NULL,
+    updatedAt DATETIME NOT NULL,
+    description TEXT NOT NULL,
+    locLat DOUBLE NOT NULL,
+    locLon DOUBLE NOT NULL,
+    locLat2 DOUBLE NOT NULL,
+    locLon2 DOUBLE NOT NULL
 );
 CREATE INDEX profile_issuerDid ON profile(issuerDid);
 CREATE INDEX profile_lat_lon ON profile(locLat, locLon);

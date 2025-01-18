@@ -509,6 +509,7 @@ export default express
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
+// similar code is in partner-router.js
 /**
  * @typedef LocationCount
  * @property {number} minLat - minimum latitude of this bucket
@@ -520,6 +521,7 @@ export default express
  * @property {number} recordCount - number of records found in this bucket
  */
 
+// similar code is in partner-router.js
 /**
  * @typedef GridCounts
  * @property {array.LocationCount} tiles - counts of records in each tile of the grid
