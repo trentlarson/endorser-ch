@@ -303,6 +303,16 @@ function isObject(item) {
   return (item && typeof item === 'object' && !Array.isArray(item));
 }
 
+// convert SQLite date to ISO-formatted string
+function isoAndZonify(dateTime) {
+  return dateTime == null ? dateTime : dateTime.replace(" ", "T") + "Z"
+}
+
+// convert SQLite number to boolean
+function booleanify(number) {
+  return number === 1
+}
+
 // return an array that contains details of all claimId references in the clause,
 // where each element is an object of { lastClaimId || handleId, suppliedType?, clause }
 function findAllLastClaimIdsAndHandleIds(clause) {
@@ -373,11 +383,11 @@ function latLonFromTile(boxMinLat, boxMinLon, tileWidth) {
 
 module.exports = {
   allDidsInside, allEmbeddedRecordErrorsInside, basicClaimDescription,
-  buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES,
+  booleanify, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES,
   GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds,
   globalFromLocalEndorserIdentifier, globalId,
   hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT,
-  inputContainsDid, latLonFromTile, latWidthToTileWidth,
+  inputContainsDid, isoAndZonify, latLonFromTile, latWidthToTileWidth,
   localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId,
   isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted
 }

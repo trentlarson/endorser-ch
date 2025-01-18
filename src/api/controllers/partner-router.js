@@ -6,7 +6,8 @@ import * as R from 'ramda'
 import * as express from 'express'
 import ClaimService from '../services/claim.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
-import { dbService } from "../services/endorser.db.service";
+import { endorserDbService } from "../services/endorser.db.service";
+import { dbService } from "../services/partner.db.service";
 import { getAllDidsBetweenRequesterAndObjects } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth} from '../services/util';
 
@@ -75,7 +76,7 @@ export default express
     // When we separate this into another service, this will have to be an API call.
     // See the image-api server for an example of how to leverage JWTs to get
     // permission to access data from the other service.
-    const jwtInfo = await dbService.jwtById(req.body.jwtId)
+    const jwtInfo = await endorserDbService.jwtById(req.body.jwtId)
 
     const result =
       await sendAndStoreLink(
