@@ -651,13 +651,13 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data.tiles.length).that.equals(3)
-        const minLat = r.body.data.minLat
-        const minLon = r.body.data.minLon
+        const minGridLat = r.body.data.minGridLat
+        const minGridLon = r.body.data.minGridLon
         const tileWidth = r.body.data.tileWidth
 
         // the single coordinate is from planWithoutIdBy1JwtObj
-        expect(r.body.data.tiles[0].minLat).that.equals(minLat)
-        expect(r.body.data.tiles[0].minLon).that.equals(minLon)
+        expect(r.body.data.tiles[0].indexLat).that.equals(minGridLat)
+        expect(r.body.data.tiles[0].indexLon).that.equals(minGridLon)
         expect(r.body.data.tiles[0].minFoundLat).that.equals(lat)
         expect(r.body.data.tiles[0].maxFoundLat).that.equals(lat)
         expect(r.body.data.tiles[0].minFoundLon).that.equals(lon)
@@ -665,8 +665,8 @@ describe('6 - Plans', () => {
         expect(r.body.data.tiles[0].recordCount).that.equals(1)
 
         // the single coordinate is from planNewBy2JwtObj
-        expect(r.body.data.tiles[1].minLat).that.equals(minLat + 1 * tileWidth)
-        expect(r.body.data.tiles[1].minLon).that.equals(minLon + 1 * tileWidth)
+        expect(r.body.data.tiles[1].indexLat).that.equals(minGridLat + 1 * tileWidth)
+        expect(r.body.data.tiles[1].indexLon).that.equals(minGridLon + 1 * tileWidth)
         expect(r.body.data.tiles[1].minFoundLat).that.equals(lat + 0.1)
         expect(r.body.data.tiles[1].maxFoundLat).that.equals(lat + 0.1)
         expect(r.body.data.tiles[1].minFoundLon).that.equals(lon + 0.1)
@@ -674,8 +674,8 @@ describe('6 - Plans', () => {
         expect(r.body.data.tiles[1].recordCount).that.equals(1)
 
         // the single coordinate is from firstPlanIdSecondClaimInternal
-        expect(r.body.data.tiles[2].minLat).that.equals(minLat + 7 * tileWidth)
-        expect(r.body.data.tiles[2].minLon).that.equals(minLon)
+        expect(r.body.data.tiles[2].indexLat).that.equals(minGridLat + 7 * tileWidth)
+        expect(r.body.data.tiles[2].indexLon).that.equals(minGridLon)
         expect(r.body.data.tiles[2].minFoundLat).that.equals(lat + 1)
         expect(r.body.data.tiles[2].maxFoundLat).that.equals(lat + 1)
         expect(r.body.data.tiles[2].minFoundLon).that.equals(lon)
@@ -699,14 +699,14 @@ describe('6 - Plans', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data.tiles.length).that.equals(2)
-      const minLat = r.body.data.minLat
-      const minLon = r.body.data.minLon
+      const minGridLat = r.body.data.minGridLat
+      const minGridLon = r.body.data.minGridLon
       const tileWidth = r.body.data.tileWidth
 
       // the min coordinates are from planWithoutIdBy1JwtObj
       // the max coordinates are from planNewBy2JwtObj
-      expect(r.body.data.tiles[0].minLat).that.equals(minLat)
-      expect(r.body.data.tiles[0].minLon).that.equals(minLon)
+      expect(r.body.data.tiles[0].indexLat).that.equals(minGridLat)
+      expect(r.body.data.tiles[0].indexLon).that.equals(minGridLon)
       expect(r.body.data.tiles[0].minFoundLat).that.equals(lat)
       expect(r.body.data.tiles[0].maxFoundLat).that.equals(lat + 0.1)
       expect(r.body.data.tiles[0].minFoundLon).that.equals(lon)
@@ -714,8 +714,8 @@ describe('6 - Plans', () => {
       expect(r.body.data.tiles[0].recordCount).that.equals(2)
 
       // the single coordinate is from firstPlanIdSecondClaimInternal
-      expect(r.body.data.tiles[1].minLat).that.equals(minLat + 1 * tileWidth)
-      expect(r.body.data.tiles[1].minLon).that.equals(minLon)
+      expect(r.body.data.tiles[1].indexLat).that.equals(minGridLat + 1 * tileWidth)
+      expect(r.body.data.tiles[1].indexLon).that.equals(minGridLon)
       expect(r.body.data.tiles[1].minFoundLat).that.equals(lat + 1)
       expect(r.body.data.tiles[1].maxFoundLat).that.equals(lat + 1)
       expect(r.body.data.tiles[1].minFoundLon).that.equals(lon)
@@ -739,13 +739,13 @@ describe('6 - Plans', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data.tiles.length).that.equals(1)
-      const minLat = r.body.data.minLat
-      const minLon = r.body.data.minLon
+      const minGridLat = r.body.data.minGridLat
+      const minGridLon = r.body.data.minGridLon
 
       // the min coordinates are from planWithoutIdBy1JwtObj
       // the max coordinates are from firstPlanIdSecondClaimInternal
-      expect(r.body.data.tiles[0].minLat).that.equals(minLat)
-      expect(r.body.data.tiles[0].minLon).that.equals(minLon)
+      expect(r.body.data.tiles[0].indexLat).that.equals(minGridLat)
+      expect(r.body.data.tiles[0].indexLon).that.equals(minGridLon)
       expect(r.body.data.tiles[0].minFoundLat).that.equals(lat)
       expect(r.body.data.tiles[0].maxFoundLat).that.equals(lat + 1)
       expect(r.body.data.tiles[0].minFoundLon).that.equals(lon)
@@ -875,10 +875,10 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
               'Something went wrong, but nothing critical. Here is the error:',
               r.body.success.embeddedRecordError
           )
@@ -1196,7 +1196,7 @@ describe('6 - Check offer totals', () => {
     .set('Authorization', 'Bearer ' + pushTokens[1])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.headers['content-type'], /json/)
@@ -1213,7 +1213,7 @@ describe('6 - Check offer totals', () => {
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.headers['content-type'], /json/)
@@ -1247,7 +1247,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1343,7 +1343,7 @@ describe('6 - Check offer totals', () => {
     .set('Authorization', 'Bearer ' + pushTokens[1])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.headers['content-type'], /json/)
@@ -1360,7 +1360,7 @@ describe('6 - Check offer totals', () => {
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.headers['content-type'], /json/)
@@ -1392,7 +1392,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1424,7 +1424,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1487,7 +1487,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1554,7 +1554,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1600,7 +1600,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1665,7 +1665,7 @@ describe('6 - Check offer totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -1696,7 +1696,7 @@ describe('6 - Check offer totals', () => {
     .set('Authorization', 'Bearer ' + pushTokens[1])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.headers['content-type'], /json/)
@@ -1734,10 +1734,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -1867,10 +1867,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2015,10 +2015,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2108,10 +2108,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
               'Something went wrong, but nothing critical. Here is the error:',
               r.body.success.embeddedRecordError
           )
@@ -2179,10 +2179,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2231,10 +2231,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2301,10 +2301,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2342,7 +2342,7 @@ describe('6 - Check give totals', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.body.data).to.be.an('object')
@@ -2371,10 +2371,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2428,10 +2428,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2535,10 +2535,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2610,10 +2610,10 @@ describe('6 - Check give totals', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -2721,10 +2721,10 @@ describe('6 - Check give totals', () => {
     .send({jwtEncoded: claimJwtEnc})
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       } else if (r.body.success.embeddedRecordError) {
-        console.log(
+        console.error(
           'Something went wrong, but nothing critical. Here is the error:',
           r.body.success.embeddedRecordError
         )
@@ -2759,10 +2759,10 @@ describe('6 - Check give totals', () => {
     .send({jwtEncoded: claimJwtEnc})
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       } else if (r.body.success.embeddedRecordError) {
-        console.log(
+        console.error(
           'Something went wrong, but nothing critical. Here is the error:',
           r.body.success.embeddedRecordError
         )
@@ -2929,10 +2929,10 @@ describe('6 - Check give totals', () => {
     .send({jwtEncoded: claimJwtEnc})
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       } else if (r.body.success.embeddedRecordError) {
-        console.log(
+        console.error(
           'Something went wrong, but nothing critical. Here is the error:',
           r.body.success.embeddedRecordError
         )
@@ -3034,7 +3034,7 @@ describe('6 - Check give totals', () => {
     .send({jwtEncoded: claimJwtEnc})
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.headers['content-type'], /json/)
@@ -3104,7 +3104,7 @@ describe('6 - Check plans as providers to gives', () => {
     .send({jwtEncoded: claimJwtEnc})
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.body.success.handleId).to.be.a('string')
@@ -3122,7 +3122,7 @@ describe('6 - Check plans as providers to gives', () => {
     .set('Authorization', 'Bearer ' + pushTokens[5])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.body.data).to.deep.equal([{ identifier: firstPlanIdExternal, linkConfirmed: false }])
@@ -3139,7 +3139,7 @@ describe('6 - Check plans as providers to gives', () => {
     .set('Authorization', 'Bearer ' + pushTokens[5])
     .then(r => {
       if (r.body.error) {
-        console.log('Something went wrong. Here is the response body: ', r.body)
+        console.error('Something went wrong. Here is the response body: ', r.body)
         return Promise.reject(r.body.error)
       }
       expect(r.body.data[0].agentDid).to.equal(null)

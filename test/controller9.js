@@ -105,18 +105,38 @@ describe('9 - User Profiles', () => {
 
   it('can create a profile with distant location', () => {
     return request(Server)
-      .post('/api/partner/userProfile')
-      .set('Authorization', 'Bearer ' + pushTokens[3])
-      .send(profile3)
-      .then(r => {
-        if (r.body.error) {
-          throw new Error(JSON.stringify(r.body.error))
-        }
-        expect(r.body).to.have.property("success", true)
-        expect(r.headers['content-type']).to.match(/json/)
-        expect(r.status).that.equals(201)
-      })
-      .catch(err => Promise.reject(err))
+    .post('/api/partner/userProfile')
+    .set('Authorization', 'Bearer ' + pushTokens[3])
+    .send(profile3)
+    .then(r => {
+      if (r.body.error) {
+        throw new Error(JSON.stringify(r.body.error))
+      }
+      expect(r.body).to.have.property("success", true)
+      expect(r.headers['content-type']).to.match(/json/)
+      expect(r.status).that.equals(201)
+    })
+    .catch(err => {
+      return Promise.reject(err)
+    })
+  })
+
+  it('can create a profile yeehahhhhhh boooooooy', () => {
+    return request(Server)
+    .post('/api/partner/userProfile')
+    .set('Authorization', 'Bearer ' + pushTokens[3])
+    .send(profile3)
+    .then(r => {
+      if (r.body.error) {
+        throw new Error(JSON.stringify(r.body.error))
+      }
+      expect(r.body).to.have.property("success", true)
+      expect(r.headers['content-type']).to.match(/json/)
+      expect(r.status).that.equals(201)
+    })
+    .catch(err => {
+      return Promise.reject(err)
+    })
   })
 
   it('can search profiles by description text', () => {
@@ -141,10 +161,10 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
-        minLat: 40.7120,
-        minLon: -74.0080,
-        maxLat: 40.7140,
-        maxLon: -74.0050
+        minLocLat: 40.7120,
+        minLocLon: -74.0080,
+        maxLocLat: 40.7140,
+        maxLocLon: -74.0050
       })
       .then(r => {
         if (r.body.error) {
@@ -163,10 +183,10 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
-        minLat: 40.7125,
-        minLon: -74.0065,
-        maxLat: 40.7130,
-        maxLon: -74.0055
+        minLocLat: 40.7125,
+        minLocLon: -74.0065,
+        maxLocLat: 40.7130,
+        maxLocLon: -74.0055
       })
       .then(r => {
         if (r.body.error) {
@@ -187,10 +207,10 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
-        minLat: lat1,
-        minLon: lon1,
-        maxLat: lat1 + 1.0,
-        maxLon: lon1 + 1.0,
+        minLocLat: lat1,
+        minLocLon: lon1,
+        maxLocLat: lat1 + 1.0,
+        maxLocLon: lon1 + 1.0,
       })
       .then(r => {
         if (r.body.error) {
@@ -209,10 +229,10 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
-        minLat: 41.0000,
-        minLon: -75.0000,
-        maxLat: 42.0000,
-        maxLon: -74.0000
+        minLocLat: 41.0000,
+        minLocLon: -75.0000,
+        maxLocLat: 42.0000,
+        maxLocLon: -74.0000
       })
       .then(r => {
         if (r.body.error) {
@@ -231,10 +251,10 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .query({
-        minLat: 40.7120,
-        minLon: -74.0080,
-        maxLat: 40.7140,
-        maxLon: -74.0050,
+        minLocLat: 40.7120,
+        minLocLon: -74.0080,
+        maxLocLat: 40.7140,
+        maxLocLon: -74.0050,
         claimContents: 'blockchain'
       })
       .then(r => {
@@ -530,8 +550,8 @@ describe('9 - User Profiles', () => {
         .then(r => {
           expect(r.headers['content-type']).to.match(/json/)
           expect(r.body.data.tiles).to.be.an('array')
-          expect(r.body.data).to.have.property('minLat')
-          expect(r.body.data).to.have.property('minLon')
+          expect(r.body.data).to.have.property('minGridLat')
+          expect(r.body.data).to.have.property('minGridLon')
           expect(r.body.data).to.have.property('tileWidth')
           expect(r.body.data).to.have.property('numTilesWide')
 

@@ -289,6 +289,10 @@ class DbController {
       maxLocLon = Number.parseFloat(req.query.eastLocLon)
     }
 
+    if (isNaN(minLocLat) || isNaN(maxLocLat) || isNaN(minLocLon) || isNaN(maxLocLon)) {
+      return res.status(400).json({ error: "Query parameters 'minLocLat', 'maxLocLat', 'minLocLon', and 'maxLocLon' must be numbers" }).end()
+    }
+
     const tileWidth = latWidthToTileWidth(maxLocLat - minLocLat)
     // find the latitude that is a multiple of tileWidth and is closest to but below the minLocLat
     const minLatTile = Math.floor(minLocLat / tileWidth) * tileWidth
@@ -303,8 +307,8 @@ class DbController {
     dbService.planCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide)
       .then(results => ({ data: {
         tiles: results.map(latLonFromTile(minLocLat, minLocLon, tileWidth)),
-        minLat: minLocLat,
-        minLon: minLocLon,
+        minGridLat: minLocLat,
+        minGridLon: minLocLon,
         tileWidth: tileWidth,
         numTilesWide: numTilesWide
       } }) )
@@ -512,8 +516,8 @@ export default express
 // similar code is in partner-router.js
 /**
  * @typedef LocationCount
- * @property {number} minLat - minimum latitude of this bucket
- * @property {number} minLon - minimum longitude of this bucket
+ * @property {number} minTileLat - minimum latitude of this bucket
+ * @property {number} minTileLon - minimum longitude of this bucket
  * @property {number} minFoundLat - lowest latitude of matches found in this bucket
  * @property {number} minFoundLon - westernmost longitude of matches found in this bucket
  * @property {number} maxFoundLat - highest latitude of matches found in this bucket
@@ -525,8 +529,8 @@ export default express
 /**
  * @typedef GridCounts
  * @property {array.LocationCount} tiles - counts of records in each tile of the grid
- * @property {number} minLat - minimum latitude of the searched area (which may be outside the bounding box)
- * @property {number} minLon - minimum longitude of the searched area (which may be outside the bounding box)
+ * @property {number} minGridLat - minimum latitude of the searched area (which may be outside the bounding box)
+ * @property {number} minGridLon - minimum longitude of the searched area (which may be outside the bounding box)
  * @property {number} tileWidth - width of each tile
  * @property {number} numTilesWide - number of tiles wide for the searched area
  */
@@ -861,10 +865,10 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/planCountsByBBox
- * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
- * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
- * @param {string} minLon.query.required - minimum longitude in degrees of bounding box being searched
- * @param {string} maxLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @param {string} minLocLat.query.required - minimum latitude in degrees of bounding box being searched
+ * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
+ * @param {string} minLocLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} maxLocLon.query.required - maximum longitude in degrees of bounding box being searched
  * @returns {array.GridCounts} 200 - 'data' property with 'tiles' property with matching array of entries, each with a count of plans in that tile
  * @returns {Error} 400 - client error
  */
@@ -916,10 +920,10 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plansByBBox
- * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
- * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
- * @param {string} minLon.query.required - minimum longitude in degrees of bounding box being searched
- * @param {string} maxLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @param {string} minLocLat.query.required - minimum latitude in degrees of bounding box being searched
+ * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
+ * @param {string} minLocLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} maxLocLon.query.required - maximum longitude in degrees of bounding box being searched
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more

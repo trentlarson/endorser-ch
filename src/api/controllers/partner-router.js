@@ -26,21 +26,21 @@ export default express
 // similar code is in report-router.js
 /**
  * @typedef LocationCount
- * @property {number} minLat - minimum latitude of this bucket
- * @property {number} minLon - minimum longitude of this bucket
- * @property {number} minFoundLat - lowest latitude of matches found in this bucket
- * @property {number} minFoundLon - westernmost longitude of matches found in this bucket
- * @property {number} maxFoundLat - highest latitude of matches found in this bucket
- * @property {number} maxFoundLon - easternmost longitude of matches found in this bucket
- * @property {number} recordCount - number of records found in this bucket
+ * @property {number} indexLat - minimum latitude of this tile
+ * @property {number} indexLon - minimum longitude of this tile
+ * @property {number} minFoundLat - lowest latitude of matches found in this tile
+ * @property {number} minFoundLon - westernmost longitude of matches found in this tile
+ * @property {number} maxFoundLat - highest latitude of matches found in this tile
+ * @property {number} maxFoundLon - easternmost longitude of matches found in this tile
+ * @property {number} recordCount - number of records found in this tile
  */
 
 // similar code is in report-router.js
 /**
  * @typedef GridCounts
  * @property {array.LocationCount} tiles - counts of records in each tile of the grid
- * @property {number} minLat - minimum latitude of the searched area (which may be outside the bounding box)
- * @property {number} minLon - minimum longitude of the searched area (which may be outside the bounding box)
+ * @property {number} minGridLat - minimum latitude of the searched area (which may be outside the bounding box)
+ * @property {number} minGridLon - minimum longitude of the searched area (which may be outside the bounding box)
  * @property {number} tileWidth - width of each tile
  * @property {number} numTilesWide - number of tiles wide for the searched area
  */
@@ -263,10 +263,10 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route GET /api/partner/userProfile
- * @param {number} minLat.query.optional - minimum latitude coordinate
- * @param {number} minLon.query.optional - minimum longitude coordinate
- * @param {number} maxLat.query.optional - maximum latitude coordinate
- * @param {number} maxLon.query.optional - maximum longitude coordinate
+ * @param {number} minLocLat.query.optional - minimum latitude coordinate
+ * @param {number} minLocLon.query.optional - minimum longitude coordinate
+ * @param {number} maxLocLat.query.optional - maximum latitude coordinate
+ * @param {number} maxLocLon.query.optional - maximum longitude coordinate
  * @param {string} claimContents.query.optional - text to search in description
  * @param {string} beforeId.query.optional - return profiles with rowid less than this
  * @param {string} afterId.query.optional - return profiles with rowid greater than this
@@ -276,31 +276,36 @@ export default express
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
   '/userProfile',
-  async (req, res) => {
-    const { minLat, minLon, maxLat, maxLon, claimContents, beforeId, afterId } = req.query
-
-    const numMinLat = minLat ? Number(minLat) : null
-    const numMinLon = minLon ? Number(minLon) : null
-    const numMaxLat = maxLat ? Number(maxLat) : null
-    const numMaxLon = maxLon ? Number(maxLon) : null
-
-    if (!res.locals.tokenIssuer) {
-      return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
-    }
-    if (minLat && (isNaN(numMinLat) || numMinLat < -90 || numMinLat > 90)) {
-      return res.status(400).json({ error: "Query parameter 'minLat' must be a number between -90 and 90" }).end()
-    }
-    if (minLon && (isNaN(numMinLon) || numMinLon < -180 || numMinLon > 180)) {
-      return res.status(400).json({ error: "Query parameter 'minLon' must be a number between -180 and 180" }).end()
-    }
-    if (maxLat && (isNaN(numMaxLat) || numMaxLat < -90 || numMaxLat > 90)) {
-      return res.status(400).json({ error: "Query parameter 'maxLat' must be a number between -90 and 90" }).end()
-    }
-    if (maxLon && (isNaN(numMaxLon) || numMaxLon < -180 || numMaxLon > 180)) {
-      return res.status(400).json({ error: "Query parameter 'maxLon' must be a number between -180 and 180" }).end()
-    }
-
+  async (req, res, next) => {
     try {
+      const { minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId } = req.query
+
+      const numMinLat = minLocLat ? Number(minLocLat) : null
+      const numMinLon = minLocLon ? Number(minLocLon) : null
+      const numMaxLat = maxLocLat ? Number(maxLocLat) : null
+      const numMaxLon = maxLocLon ? Number(maxLocLon) : null
+
+      if (!res.locals.tokenIssuer) {
+        res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+        return
+      }
+      if (minLocLat && (isNaN(numMinLat) || numMinLat < -90 || numMinLat > 90)) {
+        res.status(400).json({ error: "Query parameter 'minLocLat' must be a number between -90 and 90" }).end()
+        return
+      }
+      if (minLocLon && (isNaN(numMinLon) || numMinLon < -180 || numMinLon > 180)) {
+        res.status(400).json({ error: "Query parameter 'minLocLon' must be a number between -180 and 180" }).end()
+        return
+      }
+      if (maxLocLat && (isNaN(numMaxLat) || numMaxLat < -90 || numMaxLat > 90)) {
+        res.status(400).json({ error: "Query parameter 'maxLocLat' must be a number between -90 and 90" }).end()
+        return
+      }
+      if (maxLocLon && (isNaN(numMaxLon) || numMaxLon < -180 || numMaxLon > 180)) {
+        res.status(400).json({ error: "Query parameter 'maxLocLon' must be a number between -180 and 180" }).end()
+        return
+      }
+
       const rawResult = await dbService.profilesByLocation(
         numMinLat,
         numMinLon,
@@ -310,7 +315,6 @@ export default express
         afterId,
         claimContents
       )
-
       const resultList = rawResult.data
       // Hide DIDs and add network links
       // This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
@@ -383,10 +387,10 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route GET /api/partner/userProfileCountsByBBox
- * @param {string} minLat.query.required - minimum latitude in degrees of bounding box being searched
- * @param {string} maxLat.query.required - maximum latitude in degrees of bounding box being searched
- * @param {string} minLon.query.required - minimum longitude in degrees of bounding box being searched
- * @param {string} maxLon.query.required - maximum longitude in degrees of bounding box being searched
+ * @param {string} minLocLat.query.required - minimum latitude in degrees of bounding box being searched
+ * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
+ * @param {string} minLocLon.query.required - minimum longitude in degrees of bounding box being searched
+ * @param {string} maxLocLon.query.required - maximum longitude in degrees of bounding box being searched
  * @returns {array.GridCounts} 200 - 'data' property with 'tiles' property with matching array of entries, each with a count of plans in that tile
  * @returns {Error} 400 - client error
  */
@@ -414,15 +418,14 @@ export default express
 
       const tileWidth = latWidthToTileWidth(maxLocLat - minLocLat)
       // find the latitude that is a multiple of tileWidth and is closest to but below the minLocLat
-      const minLatTile = Math.floor(minLocLat / tileWidth) * tileWidth
+      const minTileLat = Math.floor(minLocLat / tileWidth) * tileWidth
       // find the longitude that is a multiple of tileWidth and is closest to but west of the westLocLon
-      const minLonTile = Math.floor(minLocLon / tileWidth) * tileWidth
+      const minTileLon = Math.floor(minLocLon / tileWidth) * tileWidth
       // find how many tiles wide the bounding box is
-      const numTilesWide = Math.ceil((maxLocLon - minLonTile) / tileWidth)
-      // calculate the maximum latitude with that many tiles
-      const maxLatTiled = minLatTile + numTilesWide * tileWidth
-      // calculate the maximum longitude with that many tiles
-      const maxLonTiled = minLonTile + numTilesWide * tileWidth
+      const numTilesWide = Math.ceil((maxLocLon - minTileLon) / tileWidth)
+      // calculate the maximum latitude & longitude with that many tiles
+      const maxLatTiled = minTileLat + numTilesWide * tileWidth
+      const maxLonTiled = minTileLon + numTilesWide * tileWidth
       const results1 = await dbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide)
       const results2 = await dbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide, true)
 
@@ -469,8 +472,8 @@ export default express
       const result = {
         data: {
           tiles: tilesWithBothCounts.map(latLonFromTile(minLocLat, minLocLon, tileWidth)),
-          minLat: minLocLat,
-          minLon: minLocLon,
+          minGridLat: minTileLat,
+          minGridLon: minTileLon,
           tileWidth: tileWidth,
           numTilesWide: numTilesWide
         }

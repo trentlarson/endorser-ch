@@ -272,6 +272,8 @@ tar: Error exit delayed from previous errors.
 ```
 ... may require removal of node_modules and reinstall.
 
+- A timeout with tests can happen due to bad javascript, such as reference to a non-existent variable.
+If you wrap the whole endpoint in a try/catch, the error result may show the error message.
 
 
 

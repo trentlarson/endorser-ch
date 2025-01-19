@@ -598,10 +598,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -623,7 +623,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -652,10 +652,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -676,7 +676,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({ claimEntryIds: [ firstGiveRecordJwtId ] })
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -697,7 +697,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -718,7 +718,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -748,10 +748,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -773,7 +773,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -804,10 +804,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -829,7 +829,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -866,10 +866,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
               'Something went wrong, but nothing critical. Here is the error:',
               r.body.success.embeddedRecordError
           )
@@ -889,7 +889,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -915,7 +915,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)
@@ -945,10 +945,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -978,10 +978,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .send({jwtEncoded: claimJwtEnc})
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         } else if (r.body.success.embeddedRecordError) {
-          console.log(
+          console.error(
             'Something went wrong, but nothing critical. Here is the error:',
             r.body.success.embeddedRecordError
           )
@@ -1012,10 +1012,10 @@ describe('7 - Get Confirming IDs for Claims', () => {
         .send({jwtEncoded: claimJwtEnc})
         .then(r => {
           if (r.body.error) {
-            console.log('Something went wrong. Here is the response body: ', r.body)
+            console.error('Something went wrong. Here is the response body: ', r.body)
             return Promise.reject(r.body.error)
           } else if (r.body.success.embeddedRecordError) {
-            console.log(
+            console.error(
                 'Something went wrong, but nothing critical. Here is the error:',
                 r.body.success.embeddedRecordError
             )
@@ -1037,7 +1037,7 @@ describe('7 - Get Confirming IDs for Claims', () => {
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         if (r.body.error) {
-          console.log('Something went wrong. Here is the response body: ', r.body)
+          console.error('Something went wrong. Here is the response body: ', r.body)
           return Promise.reject(r.body.error)
         }
         expect(r.headers['content-type'], /json/)

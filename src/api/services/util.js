@@ -375,9 +375,9 @@ function latWidthToTileWidth(boxLatWidth) {
  */
 function latLonFromTile(boxMinLat, boxMinLon, tileWidth) {
   return (tile) => ({
-    minLat: boxMinLat + tile.indexLat * tileWidth,
-    minLon: boxMinLon + tile.indexLon * tileWidth,
-    ...tile
+    ...tile,
+    indexLat: boxMinLat + tile.indexLat * tileWidth,
+    indexLon: boxMinLon + tile.indexLon * tileWidth,
   })
 }
 
