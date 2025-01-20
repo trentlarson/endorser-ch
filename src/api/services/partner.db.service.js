@@ -57,18 +57,33 @@ class PartnerDatabase {
    * User Profile
    **/
 
-  profileInsert(entry) {
+  profileInsertOrUpdate(entry) {
     return new Promise((resolve, reject) => {
-      const stmt = (
-        "INSERT INTO user_profile"
-        + " (issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2)"
-        + " VALUES (?, datetime(), ?, ?, ?, ?, ?)"
-      )
+      // SQLite-specific
+      const stmt = `
+        INSERT INTO user_profile
+          (issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2)
+        VALUES (?, datetime(), ?, ?, ?, ?, ?)
+        ON CONFLICT(issuerDid) DO UPDATE SET
+          updatedAt = datetime(),
+          description = excluded.description,
+          locLat = excluded.locLat,
+          locLon = excluded.locLon,
+          locLat2 = excluded.locLat2,
+          locLon2 = excluded.locLon2
+        WHERE issuerDid = ?`
       partnerDb.run(
         stmt,
-        [entry.issuerDid, entry.description, entry.locLat, entry.locLon, entry.locLat2, entry.locLon2],
+        [entry.issuerDid, entry.description, entry.locLat, entry.locLon, entry.locLat2, entry.locLon2, entry.issuerDid],
         function(err) {
-          if (err) { reject(err) } else { resolve(this.lastID) }
+          if (!err && this.changes === 1) {
+            resolve()
+          } else if (!err && this.changes === 0) {
+            // If no row was updated, we should insert instead
+            resolve(false)
+          } else {
+            reject(err)
+          }
         }
       )
     })
@@ -96,19 +111,77 @@ class PartnerDatabase {
   profileByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT * FROM user_profile WHERE issuerDid = ?",
+        "SELECT rowid, * FROM user_profile WHERE issuerDid = ?",
         [issuerDid],
         function(err, row) {
           if (err) {
             reject(err)
           } else {
             if (row) {
+              row.rowId = row.rowid
               row.updatedAt = util.isoAndZonify(row.updatedAt)
             }
             resolve(row)
           }
         }
       )
+    })
+  }
+
+  profilesByLocationAndContentsPaged(minLat, minLon, maxLat, maxLon, beforeRowId, afterRowId, claimContents) {
+    return new Promise((resolve, reject) => {
+      let whereClause = ""
+      const params = []
+
+      // Only add location conditions if all coordinates are defined
+      if (minLat != null && minLon != null && maxLat != null && maxLon != null) {
+        whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?))"
+        params.push(minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon)
+      }
+
+      if (beforeRowId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
+        params.push(beforeRowId)
+      }
+      if (afterRowId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
+        params.push(afterRowId)
+      }
+
+      // Add text search if claimContents is provided
+      if (claimContents) {
+        // Split into words for multi-word search
+        const terms = claimContents.split(" ")
+        for (const term of terms) {
+          const trimmed = term.trim()
+          if (trimmed.length > 0) {
+            whereClause = (whereClause ? `${whereClause} AND ` : "") + "INSTR(lower(description), lower(?))"
+            params.push(trimmed)
+          }
+        }
+      }
+
+      // If no conditions were added, return all profiles
+      const finalWhereClause = whereClause ? `WHERE ${whereClause}` : ""
+      // without the "rowid as rowid" we just get an "id" column (weird)
+      const sql = `SELECT rowid as rowid, * FROM user_profile ${finalWhereClause} ORDER BY rowid DESC LIMIT ${DEFAULT_LIMIT}`
+
+      partnerDb.all(sql, params, function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          const hitLimit = rows.length === DEFAULT_LIMIT
+          rows = rows.map(row => {
+            row.rowId = row.rowid
+            row.updatedAt = util.isoAndZonify(row.updatedAt)
+            return row
+          })
+          resolve({
+            data: rows,
+            hitLimit
+          })
+        }
+      })
     })
   }
 
@@ -199,86 +272,6 @@ class PartnerDatabase {
       }
     )
   }
-
-  profilesByLocation(minLat, minLon, maxLat, maxLon, beforeId, afterId, claimContents) {
-    return new Promise((resolve, reject) => {
-      let whereClause = ""
-      const params = []
-
-      // Only add location conditions if all coordinates are defined
-      if (minLat != null && minLon != null && maxLat != null && maxLon != null) {
-        whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?))"
-        params.push(minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon)
-      }
-
-      if (beforeId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
-        params.push(beforeId)
-      }
-      if (afterId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
-        params.push(afterId)
-      }
-
-      // Add text search if claimContents is provided
-      if (claimContents) {
-        // Split into words for multi-word search
-        const terms = claimContents.split(" ")
-        for (const term of terms) {
-          const trimmed = term.trim()
-          if (trimmed.length > 0) {
-            whereClause = (whereClause ? `${whereClause} AND ` : "") + "INSTR(lower(description), lower(?))"
-            params.push(trimmed)
-          }
-        }
-      }
-
-      // If no conditions were added, return all profiles
-      const finalWhereClause = whereClause ? `WHERE ${whereClause}` : ""
-      const sql = `SELECT * FROM user_profile ${finalWhereClause} ORDER BY rowid DESC LIMIT ${DEFAULT_LIMIT}`
-
-      partnerDb.all(sql, params, function(err, rows) {
-        if (err) {
-          reject(err)
-        } else {
-          const hitLimit = rows.length === DEFAULT_LIMIT
-          resolve({
-            data: rows,
-            hitLimit
-          })
-        }
-      })
-    })
-  }
-
-  // profileUpdate(entry) {
-  //   return new Promise((resolve, reject) => {
-  //     const stmt = (
-  //       "UPDATE user_profile SET"
-  //       + " updatedAt = datetime(),"
-  //       + " description = ?,"
-  //       + " locLat = ?,"
-  //       + " locLon = ?,"
-  //       + " locLat2 = ?,"
-  //       + " locLon2 = ?"
-  //       + " WHERE issuerDid = ?"
-  //     )
-  //     partnerDb.run(
-  //       stmt,
-  //       [entry.description, entry.locLat, entry.locLon, entry.locLat2, entry.locLon2, entry.issuerDid],
-  //       function(err) {
-  //         if (!err && this.changes === 1) {
-  //           resolve()
-  //         } else if (!err && this.changes === 0) {
-  //           // If no row was updated, we should insert instead
-  //           resolve(false)
-  //         } else {
-  //           reject(err)
-  //         }
-  //       }
-  //     )
-  //   })
-  // }
 
   profileDelete(issuerDid) {
     return new Promise((resolve, reject) => {

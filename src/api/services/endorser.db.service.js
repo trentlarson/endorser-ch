@@ -186,6 +186,9 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns,
                 : booleanColumns.includes(field)
                   ? util.booleanify(row[field])
                   : row[field]
+            if (field === 'rowid') {
+              row.rowId = row.rowid
+            }
           }
           data.push(result)
         }
@@ -239,12 +242,12 @@ class EndorserDatabase {
 
   actionClaimById(id) {
     return new Promise((resolve, reject) => {
-      db.get("SELECT * FROM action_claim WHERE rowid = ?", [id], function(err, row) {
+      db.get("SELECT rowid, * FROM action_claim WHERE rowid = ?", [id], function(err, row) {
         if (err) {
           reject(err)
         } else if (row) {
           row.eventStartTime = util.isoAndZonify(row.eventStartTime)
-          resolve({id:row.rowid, agentDid:row.agentDid, jwtId:row.jwtId, eventId:row.eventRowId,
+          resolve({id:row.rowid, rowId:row.rowid, agentDid:row.agentDid, jwtId:row.jwtId, eventId:row.eventRowId,
                    eventOrgName:row.eventOrgName, eventName:row.eventName, eventStartTime:row.eventStartTime})
         } else {
           resolve(null)
@@ -259,7 +262,15 @@ class EndorserDatabase {
         "SELECT rowid, * FROM action_claim WHERE agentDid = ? AND eventRowId = ?",
         [agentDid, eventId],
         function(err, row) {
-          if (err) { reject(err) } else { resolve(row) }
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.rowId = row.rowid
+              row.eventStartTime = util.isoAndZonify(row.eventStartTime)
+            }
+            resolve(row)
+          }
         })
     })
   }
@@ -278,6 +289,7 @@ class EndorserDatabase {
       db.each(sql, where.params, function(err, row) {
 
         row.id = row.rowid
+        row.rowId = row.rowid
         delete row.rowid
         row.eventId = row.eventRowId
         delete row.eventRowId
@@ -302,9 +314,9 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var data = []
       db.each("SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventRowId = ?", [eventId], function(err, row) {
-        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
+        let confirmation = row.confirmDid ? {id:row.cid, rowId:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
         let both =
-            {action:{id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
+            {action:{id:row.aid, rowId:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId}, confirmation:confirmation}
         data.push(both)
       }, function(err, num) {
         if (err) {
@@ -330,9 +342,9 @@ class EndorserDatabase {
         "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventOrgName = ? AND a.eventName = ? AND a.eventStartTime = datetime(?)",
         [orgName, name, startTime],
         function(err, row) {
-          let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
+          let confirmation = row.confirmDid ? {id:row.cid, rowId:row.cid, issuer:row.confirmDid, actionRowId:row.actionRowId} : null
           let both = {
-            action: {id:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId},
+            action: {id:row.aid, rowId:row.aid, agentDid:row.actionAgentDid, eventRowId:row.eventRowId},
             confirmation: confirmation,
           }
         data.push(both)
@@ -356,9 +368,9 @@ class EndorserDatabase {
       let sql = "SELECT a.rowid AS aid, a.agentDid AS actionAgentDid, a.eventRowId, a.eventOrgName, a.eventName, a.eventStartTime, c.rowid AS cid, c.issuer AS confirmDid, c.actionRowId FROM action_claim a LEFT JOIN confirmation c ON c.actionRowId = a.rowid WHERE a.eventStartTime >= datetime(?)"
       db.each(sql, [dateTimeStr], function(err, row) {
         row.eventStartTime = util.isoAndZonify(row.eventStartTime)
-        let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, actionId:row.actionRowId} : null
+        let confirmation = row.confirmDid ? {id:row.cid, rowId:row.cid, issuer:row.confirmDid, actionId:row.actionRowId} : null
         let both = {
-          action: {id:row.aid, agentDid:row.actionAgentDid, eventId:row.eventRowId, eventOrgName:row.eventOrgName,
+          action: {id:row.aid, rowId:row.aid, agentDid:row.actionAgentDid, eventId:row.eventRowId, eventOrgName:row.eventOrgName,
                    eventName:row.eventName, eventStartTime:row.eventStartTime},
           confirmation: confirmation,
         }
@@ -418,7 +430,7 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else if (row) {
-            resolve({id:row.rowid, jwtId:row.jwtId, issuer:row.issuer, actionId:row.actionRowId})
+            resolve({id:row.rowid, rowId:row.rowid, jwtId:row.jwtId, issuer:row.issuer, actionId:row.actionRowId})
           } else {
             resolve(null)
           }
@@ -435,7 +447,7 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else if (row) {
-            resolve({id:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer})
+            resolve({id:row.rowid, rowId:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer})
           } else {
             resolve(null)
           }
@@ -453,7 +465,7 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else if (row) {
-            resolve({id:row.rowid, jwtId:row.jwtId})
+            resolve({id:row.rowid, rowId:row.rowid, jwtId:row.jwtId})
           } else {
             resolve(null)
           }
@@ -471,7 +483,7 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else if (row) {
-            resolve({id:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer, orgRoleId:row.orgRoleRowId})
+            resolve({id:row.rowid, rowId:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer, orgRoleId:row.orgRoleRowId})
           } else {
             resolve(null)
           }
@@ -488,7 +500,7 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else if (row) {
-            resolve({id:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer, tenureId:row.tenureRowId})
+            resolve({id:row.rowid, rowId:row.rowid, jwtId:row.jwtId, issuerDid:row.issuer, tenureId:row.tenureRowId})
           } else {
             resolve(null)
           }
@@ -606,7 +618,7 @@ class EndorserDatabase {
           reject(err)
         } else if (row) {
           row.startTime = util.isoAndZonify(row.startTime)
-          resolve({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
+          resolve({id:row.rowid, rowId:row.rowId, orgName:row.orgName, name:row.name, startTime:row.startTime})
         } else {
           resolve(null)
         }
@@ -624,7 +636,7 @@ class EndorserDatabase {
       let sql = "SELECT rowid, orgName, name, startTime FROM event" + where.clause + " ORDER BY startTime DESC LIMIT 50"
       db.each(sql, where.params, function(err, row) {
         row.startTime = util.isoAndZonify(row.startTime)
-        data.push({id:row.rowid, orgName:row.orgName, name:row.name, startTime:row.startTime})
+        data.push({id:row.rowid, rowId:row.rowId, orgName:row.orgName, name:row.name, startTime:row.startTime})
       }, function(err, num) {
         if (err) {
           reject(err)
@@ -671,6 +683,7 @@ class EndorserDatabase {
               reject(err)
             } else {
               if (row) {
+                // this doesn't explicitly invoke rowid so it's unused, so we won't add rowId (to avoid more dependency on it)
                 row.issuedAt = util.isoAndZonify(row.issuedAt)
                 row.updatedAt = util.isoAndZonify(row.updatedAt)
               }
@@ -757,6 +770,7 @@ class EndorserDatabase {
           if (err) {
             rowErr = err
           } else {
+            // this doesn't explicitly invoke rowid so it's unused, so we won't add rowId (to avoid more dependency on it)
             row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
             row.issuedAt = util.isoAndZonify(row.issuedAt)
             row.validThrough = util.isoAndZonify(row.validThrough)
@@ -1767,6 +1781,7 @@ class EndorserDatabase {
               reject(err)
             } else {
               if (row) {
+                // this doesn't explicitly invoke rowid so it's unused, so we won't add rowId (to avoid more dependency on it)
                 row.issuedAt = util.isoAndZonify(row.issuedAt)
                 row.updatedAt = util.isoAndZonify(row.updatedAt)
                 row.endTime = util.isoAndZonify(row.endTime)
@@ -1816,6 +1831,7 @@ class EndorserDatabase {
           if (err) {
             rowErr = err
           } else {
+            // this doesn't explicitly invoke rowid so it's unused, so we won't add rowId (to avoid more dependency on it)
             row.issuedAt = util.isoAndZonify(row.issuedAt)
             row.updatedAt = util.isoAndZonify(row.updatedAt)
             row.issuedAt = util.isoAndZonify(row.issuedAt)
@@ -1877,6 +1893,7 @@ class EndorserDatabase {
           if (err) {
             rowErr = err
           } else {
+            // this doesn't explicitly invoke rowid so it's unused, so we won't add rowId (to avoid more dependency on it)
             row.issuedAt = util.isoAndZonify(row.issuedAt)
             row.updatedAt = util.isoAndZonify(row.updatedAt)
             row.issuedAt = util.isoAndZonify(row.issuedAt)
@@ -2037,8 +2054,10 @@ class EndorserDatabase {
             reject(err)
           } else {
             if (row) {
+              row.rowId = row.rowid
               row.startDate = util.isoAndZonify(row.startDate)
               row.endDate = util.isoAndZonify(row.endDate)
+              row.rowId = row.rowid
             }
             resolve(row)
           }
@@ -2069,7 +2088,7 @@ class EndorserDatabase {
           let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, orgRoleRowId:row.orgRoleRowId} : null
           let both = {
             orgRole: {
-              id: row.rid, memberDid: row.memberDid, orgName: row.orgName, roleName: row.roleName,
+              id: row.rid, rowId: row.rid, memberDid: row.memberDid, orgName: row.orgName, roleName: row.roleName,
               startDate: util.isoAndZonify(row.startDate), endDate: util.isoAndZonify(row.endDate)
             },
             confirmation: confirmation,
@@ -2118,6 +2137,147 @@ class EndorserDatabase {
           reject(err)
         } else {
           resolve(this.lastID)
+        }
+      })
+    })
+  }
+  planInfoByClaimId(claimId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM plan_claim WHERE handleId = (select handleId from jwt where id = ?)",
+        [claimId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.endTime = util.isoAndZonify(row.endTime)
+              row.startTime = util.isoAndZonify(row.startTime)
+              row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+            }
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  planInfoByHandleId(handleId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT * FROM plan_claim WHERE handleId = ?",
+        [handleId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.endTime = util.isoAndZonify(row.endTime)
+              row.startTime = util.isoAndZonify(row.startTime)
+              row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+            }
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   See tableEntriesByParamsPaged
+   Returns Promise of { data: [], hitLimit: true|false }
+   **/
+  plansByParamsPaged(params, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'plan_claim',
+      'rowid',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
+        'name', 'description', 'endTime', 'startTime',
+        'locLat', 'locLon',
+        'resultDescription', 'resultIdentifier'],
+      ['description', 'name'],
+      ['endTime', 'startTime'],
+      ['fulfillsLinkConfirmed'],
+      ['fulfillsPlanHandleId', 'image', 'url'],
+      params,
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
+  /**
+   See tableEntriesByParamsPaged, with search for issuerDid
+   Returns Promise of { data: [], hitLimit: true|false }
+   **/
+  plansByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
+    return tableEntriesByParamsPaged(
+      'plan_claim',
+      'rowid',
+      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
+        'name', 'description', 'endTime', 'startTime',
+        'locLat', 'locLon',
+        'resultDescription', 'resultIdentifier'],
+      ['description'],
+      ['endTime', 'startTime'],
+      ['fulfillsLinkConfirmed'],
+      ['fulfillsPlanHandleId', 'image', 'url'],
+      { issuerDid },
+      afterIdInput,
+      beforeIdInput
+    )
+  }
+
+  /**
+   * Working with WGS 84 coordinates & kilometers
+   *
+   * @param minLat lowest degrees latitude
+   * @param maxLat highest degrees latitude
+   * @param minLon lowest degrees longitude
+   * @param maxLon highest degrees longitude
+   * @param afterIdInput
+   * @param beforeIdInput
+   * @returns {Promise<unknown>}
+   */
+  plansByLocationAndContentsPaged(minLat, maxLat, minLon, maxLon, afterIdInput, beforeIdInput, claimContents) {
+    return new Promise((resolve, reject) => {
+      let sql = "SELECT rowid, * FROM plan_claim"
+
+      const params = [minLat, maxLat, minLon, maxLon]
+      sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+
+      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'], [])
+      if (contentWhere.clause.length > 0) {
+        sql += " AND " + contentWhere.clause
+        params.push(...contentWhere.params)
+      }
+
+      if (afterIdInput) {
+        params.push(afterIdInput)
+        sql += " AND rowid > ?"
+      }
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND rowid < ?"
+      }
+
+      sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
+
+      const data = []
+      db.each(sql, params, function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          row.rowId = row.rowid
+          row.endTime = util.isoAndZonify(row.endTime)
+          row.startTime = util.isoAndZonify(row.startTime)
+          row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+          data.push(row)
+        }
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
         }
       })
     })
@@ -2256,147 +2416,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else {
-          row.endTime = util.isoAndZonify(row.endTime)
-          row.startTime = util.isoAndZonify(row.startTime)
-          row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
-          data.push(row)
-        }
-      }, function(err, num) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
-        }
-      })
-    })
-  }
-
-  planInfoByClaimId(claimId) {
-    return new Promise((resolve, reject) => {
-      db.get(
-        "SELECT * FROM plan_claim WHERE handleId = (select handleId from jwt where id = ?)",
-        [claimId],
-        function(err, row) {
-          if (err) {
-            reject(err)
-          } else {
-            if (row) {
-              row.endTime = util.isoAndZonify(row.endTime)
-              row.startTime = util.isoAndZonify(row.startTime)
-              row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
-            }
-            resolve(row)
-          }
-        }
-      )
-    })
-  }
-
-  planInfoByHandleId(handleId) {
-    return new Promise((resolve, reject) => {
-      db.get(
-        "SELECT * FROM plan_claim WHERE handleId = ?",
-        [handleId],
-        function(err, row) {
-          if (err) {
-            reject(err)
-          } else {
-            if (row) {
-              row.endTime = util.isoAndZonify(row.endTime)
-              row.startTime = util.isoAndZonify(row.startTime)
-              row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
-            }
-            resolve(row)
-          }
-        }
-      )
-    })
-  }
-
-  /**
-     See tableEntriesByParamsPaged
-     Returns Promise of { data: [], hitLimit: true|false }
-  **/
-  plansByParamsPaged(params, afterIdInput, beforeIdInput) {
-    return tableEntriesByParamsPaged(
-      'plan_claim',
-      'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
-        'name', 'description', 'endTime', 'startTime',
-        'locLat', 'locLon',
-        'resultDescription', 'resultIdentifier'],
-      ['description', 'name'],
-      ['endTime', 'startTime'],
-      ['fulfillsLinkConfirmed'],
-      ['fulfillsPlanHandleId', 'image', 'url'],
-      params,
-      afterIdInput,
-      beforeIdInput
-    )
-  }
-
-  /**
-     See tableEntriesByParamsPaged, with search for issuerDid
-     Returns Promise of { data: [], hitLimit: true|false }
-  **/
-  plansByIssuerPaged(issuerDid, afterIdInput, beforeIdInput) {
-    return tableEntriesByParamsPaged(
-      'plan_claim',
-      'rowid',
-      ['rowid', 'jwtId', 'issuerDid', 'agentDid', 'handleId',
-        'name', 'description', 'endTime', 'startTime',
-        'locLat', 'locLon',
-        'resultDescription', 'resultIdentifier'],
-      ['description'],
-      ['endTime', 'startTime'],
-      ['fulfillsLinkConfirmed'],
-      ['fulfillsPlanHandleId', 'image', 'url'],
-      { issuerDid },
-      afterIdInput,
-      beforeIdInput
-    )
-  }
-
-  /**
-   * Working with WGS 84 coordinates & kilometers
-   *
-   * @param minLat lowest degrees latitude
-   * @param maxLat highest degrees latitude
-   * @param minLon lowest degrees longitude
-   * @param maxLon highest degrees longitude
-   * @param afterIdInput
-   * @param beforeIdInput
-   * @returns {Promise<unknown>}
-   */
-  plansByLocationPaged(minLat, maxLat, minLon, maxLon, afterIdInput, beforeIdInput, claimContents) {
-    return new Promise((resolve, reject) => {
-      let sql = "SELECT rowid, * FROM plan_claim"
-
-      const params = [minLat, maxLat, minLon, maxLon]
-      sql += " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
-
-      const contentWhere = constructWhereConditions({}, [], claimContents, ['name', 'description'], [])
-      if (contentWhere.clause.length > 0) {
-        sql += " AND " + contentWhere.clause
-        params.push(...contentWhere.params)
-      }
-
-      if (afterIdInput) {
-        params.push(afterIdInput)
-        sql += " AND rowid > ?"
-      }
-      if (beforeIdInput) {
-        params.push(beforeIdInput)
-        sql += " AND rowid < ?"
-      }
-
-      sql += " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
-
-      const data = []
-      db.each(sql, params, function(err, row) {
-        if (err) {
-          reject(err)
-        } else {
+          // this doesn't explicitly invoke rowid so it's unused, so we won't add rowId (to avoid more dependency on it)
           row.endTime = util.isoAndZonify(row.endTime)
           row.startTime = util.isoAndZonify(row.startTime)
           row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
@@ -2580,6 +2600,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else {
+          row.rowId = row.rowid
           row.endTime = util.isoAndZonify(row.endTime)
           row.startTime = util.isoAndZonify(row.startTime)
           data.push(row)
@@ -2658,7 +2679,7 @@ class EndorserDatabase {
           reject(err)
         } else if (row) {
           resolve({
-            id:row.rowid, did:row.did, agent:row.agent, epoch:row.epoch, jwtId:row.jwtId,
+            id:row.rowid, rowId:row.rowId, did:row.did, agent:row.agent, epoch:row.epoch, jwtId:row.jwtId,
             maxRegs: row.maxRegs, maxClaims: row.maxClaims
           })
         } else {
@@ -2761,7 +2782,7 @@ class EndorserDatabase {
         if (err) {
           reject(err)
         } else if (row) {
-          resolve({id:row.rowid, jwtId:row.jwtId, partyDid:row.partyDid, polygon:row.polygon})
+          resolve({id:row.rowid, rowId:row.rowId, jwtId:row.jwtId, partyDid:row.partyDid, polygon:row.polygon})
         } else {
           resolve(null)
         }
@@ -2779,6 +2800,7 @@ class EndorserDatabase {
       db.each(sql, [], function(err, row) {
 
         row.id = row.rowid
+        row.rowId = row.rowid
         delete row.rowid
 
         // convert the west/east to min/max, changed in v 4.2.0
@@ -2803,7 +2825,8 @@ class EndorserDatabase {
       db.each("SELECT rowid, * FROM tenure_claim WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat ORDER BY rowid DESC LIMIT 50", [lon, lon, lat, lat], function(err, row) {
         data.push(
           {
-            id: row.rowid, jwtId: row.jwtId, claimContext: row.claimContext, claimType: row.claimType,
+            id: row.rowid, rowId: row.rowid, jwtId: row.jwtId,
+            claimContext: row.claimContext, claimType: row.claimType,
             issuerDid: row.issuerDid, partyDid: row.partyDid, polygon: row.polygon,
             minlat: row.minlat, minlon: row.westlon, maxlat: row.maxlat, maxlon: row.eastlon,
             // convert the west/east to min/max, changed in v 4.2.0
@@ -2830,6 +2853,7 @@ class EndorserDatabase {
           if (err) {
             reject(err)
           } else {
+            row.rowId = row.rowid
             // convert the west/east to min/max, changed in v 4.2.0
             // but keep these others until we validate they're migrated
             row.minLon = row.westLon
@@ -2871,8 +2895,8 @@ class EndorserDatabase {
         "SELECT t.rowid as tid, t.partyDid as tenurePartyDid, t.polygon, c.rowid AS cid, c.issuer as confirmDid, c.tenureRowId from tenure_claim t LEFT JOIN confirmation c on c.tenureRowId = t.rowid WHERE westlon <= ? AND ? <= eastlon AND minlat <= ? AND ? <= maxlat",
         [lon, lon, lat, lat],
         function(err, row) {
-          let confirmation = row.confirmDid ? {id:row.cid, issuer:row.confirmDid, tenureRowId:row.tenureRowId} : null
-          let both = {tenure:{id:row.tid, partyDid:row.tenurePartyDid, polygon:row.polygon}, confirmation:confirmation}
+          let confirmation = row.confirmDid ? {id:row.cid, rowId:row.cid, issuer:row.confirmDid, tenureRowId:row.tenureRowId} : null
+          let both = {tenure:{id:row.tid, rowId:row.tid, partyDid:row.tenurePartyDid, polygon:row.polygon}, confirmation:confirmation}
           data.push(both)
         }, function(err, num) {
           if (err) { reject(err) } else { resolve(data) }

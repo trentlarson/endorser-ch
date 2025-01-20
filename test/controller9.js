@@ -46,11 +46,11 @@ describe('9 - User Profiles', () => {
 
   it('cannot create a profile if not registered', () => {
     return request(Server)
-      .post('/api/partner/user-profile')
+      .post('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[15])
       .send(profile0)
       .then(r => {
-        expect(r.status).that.equals(404)
+        expect(r.status).that.equals(400)
       })
       .catch(err => Promise.reject(err))
   })
@@ -121,7 +121,7 @@ describe('9 - User Profiles', () => {
     })
   })
 
-  it('can create a profile yeehahhhhhh boooooooy', () => {
+  it('can create a profile again (but not a duplicate)', () => {
     return request(Server)
     .post('/api/partner/userProfile')
     .set('Authorization', 'Bearer ' + pushTokens[3])
@@ -172,6 +172,7 @@ describe('9 - User Profiles', () => {
         }
         expect(r.body.data).to.be.an('array')
         expect(r.body.data.length).to.equal(2)
+        expect(r.body.data[0])
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(200)
       })
@@ -277,7 +278,7 @@ describe('9 - User Profiles', () => {
         expect(r.body.data).to.be.an('array').of.length(4)
         const hiddenProfile = r.body.data.find(p => p.description === profile0.description)
         expect(hiddenProfile).to.exist
-        expect(hiddenProfile.rowid).to.equal(1)
+        expect(hiddenProfile.rowId).to.equal(1)
         expect(hiddenProfile.issuerDid).to.equal('did:none:HIDDEN')
         expect(hiddenProfile).to.have.property('issuerDidVisibleToDids')
         expect(hiddenProfile.issuerDidVisibleToDids).to.be.an('array')
@@ -456,7 +457,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[1].did)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
-        const profileId = r.body.data.rowid
+        const profileId = r.body.data.rowId
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[1])
@@ -475,7 +476,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[1].did)
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
-        const profileId = r.body.data.rowid
+        const profileId = r.body.data.rowId
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -493,7 +494,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[3].did)
       .set('Authorization', 'Bearer ' + pushTokens[3])
       .then(r => {
-        const profileId = r.body.data.rowid
+        const profileId = r.body.data.rowId
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[2])
@@ -513,7 +514,7 @@ describe('9 - User Profiles', () => {
       .get('/api/partner/userProfileForIssuer/' + creds[3].did)
       .set('Authorization', 'Bearer ' + pushTokens[3])
       .then(r => {
-        const profileId = r.body.data.rowid
+        const profileId = r.body.data.rowId
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
           .set('Authorization', 'Bearer ' + pushTokens[14])

@@ -24,8 +24,8 @@ CREATE TABLE partner_link (
 
 -- a profile is a user's free-form description of their interests
 CREATE TABLE user_profile (
-    rowid INTEGER PRIMARY KEY AUTOINCREMENT, -- works like the built-in rowid, explicitly
-    issuerDid TEXT NOT NULL,
+    rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+    issuerDid TEXT UNIQUE NOT NULL,
     updatedAt DATETIME NOT NULL,
     description TEXT NOT NULL,
     locLat DOUBLE NOT NULL,

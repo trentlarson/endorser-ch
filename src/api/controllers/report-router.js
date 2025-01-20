@@ -328,7 +328,7 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
-  getPlansByLocationPaged(req, res, next) {
+  getPlansByLocationAndContentsPaged(req, res, next) {
     const minLocLat = Number.parseFloat(req.query.minLocLat)
     const maxLocLat = Number.parseFloat(req.query.maxLocLat)
     let minLocLon = Number.parseFloat(req.query.minLocLon)
@@ -340,7 +340,7 @@ class DbController {
     if (isNaN(maxLocLon)) {
       maxLocLon = Number.parseFloat(req.query.eastLocLon)
     }
-    dbService.plansByLocationPaged(
+    dbService.plansByLocationAndContentsPaged(
       minLocLat, maxLocLat, minLocLon, maxLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
@@ -930,14 +930,14 @@ export default express
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/plansByBBox', dbController.getPlansByLocationPaged)
+  .get('/plansByBBox', dbController.getPlansByLocationAndContentsPaged)
 
 /**
  * @deprecated
  * @see /api/v2/report/plansByBBox
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/plansByLocation', dbController.getPlansByLocationPaged)
+  .get('/plansByLocation', dbController.getPlansByLocationAndContentsPaged)
 
 /**
  * Get plan fulfilled by given plan

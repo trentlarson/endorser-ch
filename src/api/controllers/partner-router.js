@@ -54,7 +54,7 @@ export default express
  * @property {number} locLon - longitude coordinate
  * @property {number} locLat2 - latitude coordinate
  * @property {number} locLon2 - longitude coordinate
- * @property {string} rowid - the profile ID
+ * @property {string} rowId - the profile ID
  * @property {string} createdAt - date the profile was created
  */
 
@@ -158,11 +158,7 @@ export default express
         locLon2
       }
 
-      // delete so that we can use the "id" field for pagination
-      // so that users can see updated profiles at the top of their list
-      await dbService.profileDelete(entry.issuerDid)
-      
-      await dbService.profileInsert(entry)
+      await dbService.profileInsertOrUpdate(entry)
 
       res.status(201).json({ success: true }).end()
     } catch (err) {
@@ -217,7 +213,7 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route GET /api/partner/userProfile/{id}
- * @param {string} rowid.path.required - the profile ID to retrieve
+ * @param {string} rowId.path.required - the profile ID to retrieve
  * @returns {UserProfile} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
  * @returns {Error} 404 - not found
@@ -225,11 +221,11 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
-  '/userProfile/:rowid',
+  '/userProfile/:rowId',
   async (req, res) => {
-    const { rowid } = req.params
+    const { rowId } = req.params
     try {
-      let result = await dbService.profileById(rowid)
+      let result = await dbService.profileById(rowId)
 
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
@@ -268,8 +264,8 @@ export default express
  * @param {number} maxLocLat.query.optional - maximum latitude coordinate
  * @param {number} maxLocLon.query.optional - maximum longitude coordinate
  * @param {string} claimContents.query.optional - text to search in description
- * @param {string} beforeId.query.optional - return profiles with rowid less than this
- * @param {string} afterId.query.optional - return profiles with rowid greater than this
+ * @param {string} beforeId.query.optional - return profiles with rowId less than this
+ * @param {string} afterId.query.optional - return profiles with rowId greater than this
  * @returns {array.UserProfile} 200 - success response with profiles
  * @returns {Error} 400 - client error
  */
@@ -306,7 +302,7 @@ export default express
         return
       }
 
-      const rawResult = await dbService.profilesByLocation(
+      const rawResult = await dbService.profilesByLocationAndContentsPaged(
         numMinLat,
         numMinLon,
         numMaxLat,
