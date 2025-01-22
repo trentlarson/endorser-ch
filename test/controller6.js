@@ -286,6 +286,7 @@ describe('6 - Plans', () => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
         expect(r.body.data[0].handleId).to.be.a('string')
+        expect(r.body.data[0].rowId).to.be.a('number')
       }).catch((err) => {
         return Promise.reject(err)
       })

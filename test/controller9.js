@@ -4,10 +4,57 @@ import request from "supertest";
 import { Credentials } from "uport-credentials";
 
 import Server from "../dist";
-import { HIDDEN_TEXT } from '../src/api/services/util';
+import { HIDDEN_TEXT, mergeTileCounts } from '../src/api/services/util';
 import testUtil from "./util";
 
 const expect = chai.expect
+
+describe('mergeTileCounts', () => {
+  it('handles array of unique tiles', () => {
+    const tiles = [
+      { indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 5 },
+      { indexLat: 2, indexLon: 1, minFoundLat: 2.1, minFoundLon: 1.1, maxFoundLat: 2.2, maxFoundLon: 1.2, recordCount: 3 },
+      { indexLat: 1, indexLon: 2, minFoundLat: 1.1, minFoundLon: 2.1, maxFoundLat: 1.2, maxFoundLon: 2.2, recordCount: 2 }
+    ]
+
+    const result = mergeTileCounts(tiles)
+    expect(result).to.have.lengthOf(3)
+    expect(result).to.deep.equal(tiles)
+  })
+
+  it('combines duplicate tiles by adding their counts', () => {
+    const tiles = [
+      { indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 5 },
+      { indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 3 },
+      { indexLat: 2, indexLon: 1, minFoundLat: 2.1, minFoundLon: 1.1, maxFoundLat: 2.2, maxFoundLon: 1.2, recordCount: 2 }
+    ]
+
+    const result = mergeTileCounts(tiles)
+    expect(result).to.have.lengthOf(2)
+    expect(result[0]).to.deep.equal({
+      indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 8
+    })
+    expect(result[1]).to.deep.equal(tiles[2])
+  })
+
+  it('handles multiple sets of duplicates', () => {
+    const tiles = [
+      { indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 5 },
+      { indexLat: 2, indexLon: 2, minFoundLat: 2.1, minFoundLon: 2.1, maxFoundLat: 2.2, maxFoundLon: 2.2, recordCount: 3 },
+      { indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 2 },
+      { indexLat: 2, indexLon: 2, minFoundLat: 2.1, minFoundLon: 2.1, maxFoundLat: 2.2, maxFoundLon: 2.2, recordCount: 4 }
+    ]
+
+    const result = mergeTileCounts(tiles)
+    expect(result).to.have.lengthOf(2)
+    expect(result).to.deep.include({
+      indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 7
+    })
+    expect(result).to.deep.include({
+      indexLat: 2, indexLon: 2, minFoundLat: 2.1, minFoundLon: 2.1, maxFoundLat: 2.2, maxFoundLon: 2.2, recordCount: 7
+    })
+  })
+})
 
 const creds = testUtil.ethrCredData
 const credentials = R.map((c) => new Credentials(c), creds)

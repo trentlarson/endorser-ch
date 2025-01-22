@@ -187,7 +187,8 @@ function tableEntriesByParamsPaged(table, idColumn, searchableColumns,
                   ? util.booleanify(row[field])
                   : row[field]
             if (field === 'rowid') {
-              row.rowId = row.rowid
+              result.rowId = row.rowid
+              // someday we can delete the "rowid" (all lowercase)
             }
           }
           data.push(result)

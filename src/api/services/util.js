@@ -381,6 +381,45 @@ function latLonFromTile(boxMinLat, boxMinLon, tileWidth) {
   })
 }
 
+/**
+ * @param tiles array of tiles, where each tile has properties:
+ *   indexLat, indexLon, minFoundLat, minFoundLon, maxFoundLat, maxFoundLon, recordCount
+ * @returns array of unique tiles with summed recordCounts for matching tiles
+ *   where unique tiles are defined by indexLat, indexLon, minFoundLat, minFoundLon, maxFoundLat, maxFoundLon
+ */
+function mergeTileCounts(tiles) {
+  // use this function that uniquely identifies a tile
+  const tilesMatch = (tile1, tile2) =>
+    tile1.indexLat === tile2.indexLat &&
+    tile1.indexLon === tile2.indexLon &&
+    tile1.minFoundLat === tile2.minFoundLat &&
+    tile1.minFoundLon === tile2.minFoundLon &&
+    tile1.maxFoundLat === tile2.maxFoundLat &&
+    tile1.maxFoundLon === tile2.maxFoundLon
+
+  const uniqueTiles = tiles.filter((tile, index, self) =>
+    index === self.findIndex(t => tilesMatch(t, tile))
+  )
+  const firstTileIndex = uniqueTiles.map((tile, index, self) =>
+    tiles.findIndex(t => tilesMatch(t, tile))
+  )
+  const lastTileIndex = uniqueTiles.map((tile, index, self) =>
+    tiles.findLastIndex(t => tilesMatch(t, tile))
+  )
+  // now get the recordCount from the first one
+  return uniqueTiles.map((tile, index) => {
+    let tileCount = tile.recordCount
+    if (lastTileIndex[index] !== firstTileIndex[index]) {
+      // there is more that came from lat2 & lon2 in some profile
+      tileCount += tiles[lastTileIndex[index]].recordCount
+    }
+    return {
+      ...tile,
+      recordCount: tileCount
+    }
+  })
+}
+
 module.exports = {
   allDidsInside, allEmbeddedRecordErrorsInside, basicClaimDescription,
   booleanify, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES,
@@ -389,5 +428,5 @@ module.exports = {
   hashedClaimWithHashedDids, hashPreviousAndNext, HIDDEN_TEXT,
   inputContainsDid, isoAndZonify, latLonFromTile, latWidthToTileWidth,
   localFromGlobalEndorserIdentifier, isDid, isGlobalEndorserHandleId,
-  isGlobalUri, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted
+  isGlobalUri, mergeTileCounts, nonceHashChain, UPORT_PUSH_TOKEN_HEADER, withKeysSorted
 }
