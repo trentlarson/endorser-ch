@@ -65,22 +65,23 @@ export default express
  * @param {String} orgName.query.optional
  * @param {String} name.query.optional
  * @param {String} startTime.query.optional
- * @returns {array.object} 200 - many events (up to 50)
+ * @returns {array.EventSummary} 200 - many events (up to 50)
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/', controller.getByQuery)
 
 /**
- * @typedef ActionClaim
- * @property {number} actionId.required
- * @property {string} actionDid.required
+ * @typedef ActionSummary
+ * @property {number} rowId.required
+ * @property {string} agentDid.required
+ * @property {number} eventRowId.required
  */
 
 /**
  * @typedef Confirmation
  * @property {number} id.required
- * @property {string} did.required
+ * @property {string} issuer.required
  * @property {number} actionRowId.required
  */
 
@@ -97,8 +98,15 @@ export default express
  */
 
 /**
- * @typedef ActionClaimsConfirmations
- * @property {ActionClaim} action.required
+ * @typedef EventSummary
+ * @property {string} orgName.required
+ * @property {string} name.required
+ * @property {string} startTime.required
+ */
+
+/**
+ * @typedef ActionSummaryAndConfirmations
+ * @property {ActionSummary} action.required
  * @property {array.Confirmation} confirmation.required
  */
 
@@ -110,7 +118,7 @@ export default express
  * @group storage of events - Event storage
  * @route GET /api/event/actionClaimsAndConfirmations
  * @param {EventInput} event.query.required - the event data
- * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
+ * @returns {array.ActionSummaryAndConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -135,7 +143,7 @@ export default express
  * @group storage of events - Event storage
  * @route GET /api/event/{id}/actionClaimsAndConfirmations
  * @param {number} id.path.required - the ID of the event record to retrieve
- * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
+ * @returns {array.ActionSummaryAndConfirmations} 200 - action claims with the confirmations that go along
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

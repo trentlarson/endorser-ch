@@ -40,7 +40,7 @@ const planRouter = express
  * @group storage of projects - Project storage
  * @route GET /api/plan/{id}
  * @param {string} id.path.required - the ID of the PlanAcation record to retrieve
- * @returns {object} plan data if it exists (or 404)
+ * @returns {PlanSummary} PlanSummary data if it exists (or 404)
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/:id', planController.getPlanInfoByClaimIdOrHandleId)

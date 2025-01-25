@@ -468,7 +468,7 @@ export default express
  */
 
 /**
- * @typedef Give
+ * @typedef GiveSummary
  * @property {string} jwtId
  * @property {string} handleId
  * @property {datetime} issuedAt
@@ -489,13 +489,13 @@ export default express
  */
 
 /**
- * @typedef GiveArrayMaybeMoreBody
- * @property {array.Give} data (as many as allowed by our limit)
+ * @typedef GiveSummaryArrayMaybeMoreBody
+ * @property {array.GiveSummary} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
- * @typedef Jwt
+ * @typedef JwtSummary
  * @property {string} id
  * @property {datetime} issuedAt
  * @property {string} issuer
@@ -508,8 +508,8 @@ export default express
  */
 
 /**
- * @typedef JwtArrayMaybeMoreBody
- * @property {array.Jwt} data (as many as allowed by our limit)
+ * @typedef JwtSummaryArrayMaybeMoreBody
+ * @property {array.JwtSummary} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
@@ -536,7 +536,7 @@ export default express
  */
 
 /**
- * @typedef Offer
+ * @typedef OfferSummary
  * @property {string} jwtId
  * @property {string} handleId
  * @property {datetime} issuedAt
@@ -545,21 +545,21 @@ export default express
  * @property {string} recipientPlanId - plan handle ID if this is for a plan
  * @property {string} unit
  * @property {number} amount
- * @property {number} amountGiven - amount of Gives to this Offer
- * @property {number} amountGivenConfirmed - amount of Gives confirmed by recipient
+ * @property {number} amountGiven - total of GiveSummary amounts to this OfferSummary
+ * @property {number} amountGivenConfirmed - total of GiveSummary amounts confirmed by recipient
  * @property {string} objectDescription
  * @property {datetime} validThrough
  * @property {object} fullClaim
  */
 
 /**
- * @typedef OfferArrayMaybeMoreBody
- * @property {array.Offer} data (as many as allowed by our limit)
+ * @typedef OfferSummaryArrayMaybeMoreBody
+ * @property {array.OfferSummary} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
- * @typedef Plan
+ * @typedef PlanSummary
  * @property {string} jwtId
  * @property {string} agentDid
  * @property {string} description
@@ -580,21 +580,21 @@ export default express
  */
 
 /**
- * @typedef PlanArrayMaybeMoreBody
- * @property {array.Plan} data (as many as allowed by our limit)
+ * @typedef PlanSummaryArrayMaybeMoreBody
+ * @property {array.PlanSummary} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
- * @typedef PlanWithFulfilledLinkConfirmation
- * @property {Plan} data (as many as allowed by our limit)
+ * @typedef PlanSummaryWithFulfilledLinkConfirmation
+ * @property {PlanSummary} data (as many as allowed by our limit)
  * @property {boolean} childFullfillsLinkConfirmed true when the link between plans has been confirmed by both
  */
 
 /**
  * @typedef ProviderLink
- * @Property {string} identifier DID or handleId
- * @Property {boolean} linkConfirmed
+ * @Property {string} providerId identifier DID or handleId
+ * @Property {boolean} linkConfirmed true if the link has been confirmed
  */
 
 /**
@@ -609,7 +609,7 @@ export default express
  * @param {string} claimType.query.optional
  * @param {string} issuedAt.query.optional
  * @param {string} subject.query.optional
- * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with matching array of Jwt entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {JwtSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of JwtSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -623,7 +623,7 @@ export default express
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
- * @returns {JwtArrayMaybeMoreBody} 200 - 'data' property with array of Jwt claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {JwtSummaryArrayMaybeMoreBody} 200 - 'data' property with array of JwtSummary claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -695,7 +695,7 @@ export default express
  * @param {string} recipientId.query.optional - recipient
  * @param {string} fulfillsHandleId.query.optional - for ones that fulfill a particular item (eg. an offer)
  * @param {string} fulfillsType.query.optional - for ones that fulfill a particular type
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
+ * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of GiveSummary entries, reverse chronologically;
  *  'hitLimit' boolean property if there may be more;
  *  but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - client client error
@@ -711,7 +711,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - JSON.stringified array with handle IDs of the plans which have received gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
+ * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of GiveSummary entries, reverse chronologically;
  *   'hitLimit' boolean property if there may be more;
  *   but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - client error
@@ -727,7 +727,7 @@ export default express
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveFulfilledByGive
  * @param {string} giveHandleId.query.required - the handleId of the plan which is fulfilled by this plan
- * @returns {GiveWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
+ * @returns {GiveSummaryWithFulfilledLinkConfirmation} 200 - 'data' property with PlanSummary entry and flag indicating whether the fulfill relationship is confirmed
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -735,12 +735,12 @@ export default express
 //  .get('/giveFulfilledByGive', dbController.getGiveFulfilledBy)
 
 /**
- * Get Give fulfillers for a particular Give
+ * Get GiveSummary fulfillers for a particular GiveSummary
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveFulfillersToGive
  * @param {string} handleId.query.required - the handleId of the give entry
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
+ * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
@@ -748,12 +748,12 @@ export default express
   .get('/giveFulfillersToGive', dbController.getGiveFulfillersToGive)
 
 /**
- * Get Give fulfillers for a particular Offer
+ * Get GiveSummary fulfillers for a particular OfferSummary
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/givefulfillersToOffer
  * @param {string} handleId.query.required - the handleId of the give entry
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
+ * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
@@ -768,7 +768,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} providerId.query.optional - handle ID of the provider which may have helped with gives
- * @returns {GiveArrayMaybeMoreBody} 200 - 'data' property with matching array of Give entries, reverse chronologically;
+ * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of GiveSummary entries, reverse chronologically;
  * 'hitLimit' boolean property if there may be more;
  * but note that the `providers` property of each entry is not populated
  * @returns {Error} 400 - client error
@@ -807,7 +807,7 @@ export default express
  * @param {string} recipientPlanId.query.optional - plan which is recipient of offer
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
  * @param {string} validThrough.query.optional - date up to which offers are valid
- * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {OfferSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of OfferSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -821,7 +821,7 @@ export default express
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received offers
- * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {OfferSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of OfferSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -834,7 +834,7 @@ export default express
  * @route GET /api/v2/report/offersToPlansOwnedByMe
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {OfferArrayMaybeMoreBody} 200 - 'data' property with matching array of Offer entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {OfferSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of OfferSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -892,7 +892,7 @@ export default express
  * @param {string} endTime.query.optional
  * @param {string} startTime.query.optional
  * @param {string} resultIdentifier.query.optional
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -907,7 +907,7 @@ export default express
  * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -926,7 +926,7 @@ export default express
  * @param {string} maxLocLon.query.required - maximum longitude in degrees of bounding box being searched
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -947,7 +947,7 @@ export default express
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/planFulfilledByPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
- * @returns {PlanWithFulfilledLinkConfirmation} 200 - 'data' property with Plan entry and flag indicating whether the fulfill relationship is confirmed
+ * @returns {PlanSummaryWithFulfilledLinkConfirmation} 200 - 'data' property with PlanSummary entry and flag indicating whether the fulfill relationship is confirmed
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -963,7 +963,7 @@ export default express
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanArrayMaybeMoreBody} 200 - 'data' property with matching array of Plan entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
