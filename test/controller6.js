@@ -1229,13 +1229,14 @@ describe('6 - Check offer totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.fulfills = {
+      '@type': 'PlanAction',
+      lastClaimId: firstPlanIdSecondClaimInternal,
+    }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
     }
-    credObj.claim.itemOffered = {
-      description: 'Groom the horses',
-      isPartOf: { '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal }
-    }
+    credObj.claim.itemOffered = { description: 'Groom the horses' }
     credObj.claim.offeredBy = { identifier: creds[2].did }
     validThroughDate = new Date()
     credObj.claim.validThrough = validThroughDate.toISOString()
@@ -1376,13 +1377,13 @@ describe('6 - Check offer totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.fulfills = {
+      '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal
+    }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
     }
-    credObj.claim.itemOffered = {
-      description: 'Take dogs for a walk',
-      isPartOf: { '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal }
-    }
+    credObj.claim.itemOffered = { description: 'Take dogs for a walk' }
     credObj.claim.offeredBy = { identifier: creds[2].did }
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1408,13 +1409,13 @@ describe('6 - Check offer totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.fulfills = {
+      '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal
+    }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
     }
-    credObj.claim.itemOffered = {
-      description: 'Feed cats',
-      isPartOf: { '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal }
-    }
+    credObj.claim.itemOffered = { description: 'Feed cats' }
     credObj.claim.offeredBy = { identifier: creds[3].did }
     credObj.sub = creds[3].did
     credObj.iss = creds[3].did
@@ -1471,13 +1472,13 @@ describe('6 - Check offer totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.fulfills = {
+      '@type': 'PlanAction', lastClaimId: secondPlanIdInternal
+    }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
     }
-    credObj.claim.itemOffered = {
-      description: 'Fleece sheep',
-      isPartOf: { '@type': 'PlanAction', lastClaimId: secondPlanIdInternal }
-    }
+    credObj.claim.itemOffered = { description: 'Fleece sheep' }
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
@@ -1538,13 +1539,13 @@ describe('6 - Check offer totals', () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
+    credObj.claim.fulfills = {
+      '@type': 'PlanAction', lastClaimId: secondPlanIdInternal
+    }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 20, unitCode: 'USD'
     }
-    credObj.claim.itemOffered = {
-      description: 'Help with church performance night',
-      isPartOf: { '@type': 'PlanAction', lastClaimId: secondPlanIdInternal }
-    }
+    credObj.claim.itemOffered = { description: 'Help with church performance night' }
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
