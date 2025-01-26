@@ -262,7 +262,8 @@ class ClaimService {
     return R.uniq(allConfirmers)
   }
 
-  // @param {Object} clause - a clause that may have an entry already in the claimIdDataList & DB
+  // @param {Object} clause - a clause with "lastClaimId", "identifier", and/or "type"
+  //   which may have an entry already in the claimIdDataList & DB
   // @return Object of:
   //   clauseClaim - clause from DB if there's no onlyIfType or the type matches
   //   clauseHandleId
@@ -557,7 +558,7 @@ class ClaimService {
       const origClaimStr = canonicalize(origClaim)
       const origClaimCanonHashBase64 =
           crypto.createHash('sha256').update(origClaimStr).digest('base64url')
-
+      
       // note that this insert is repeated in each case, so might be consolidatable
       const result =
           await dbService.confirmationInsert(issuerDid, jwtId, origClaimJwtId, origClaimStr, origClaimCanonHashBase64, null, null, null)
@@ -566,11 +567,12 @@ class ClaimService {
 
       // confirm contribution link if not yet confirmed
       // (note that there is similar update-link-confirmed code in multiple places)
-      if (origClaim.itemOffered?.isPartOf) {
+      const origClaimFulfills = origClaim.fulfills || origClaim.itemOffered?.isPartOf
+      if (origClaimFulfills) {
         const origOfferRecord = await dbService.offerInfoByHandleId(origClaimHandleId)
         if (origOfferRecord?.fulfillsHandleId
             && !origClaim.fulfillsLinkConfirmed) {
-          const fulfillsInfo = this.retrieveClauseClaimAndIssuer(origClaim.itemOffered.isPartOf, claimIdDataList)
+          const fulfillsInfo = this.retrieveClauseClaimAndIssuer(origClaimFulfills, claimIdDataList)
           const fulfillsLinkConfirmed =
               this.issuerSameAsPersonInLinkedJwt(issuerDid, fulfillsInfo.clauseClaim)
           if (fulfillsLinkConfirmed) {
@@ -587,11 +589,11 @@ class ClaimService {
 
 
     } else if (isContextSchemaOrg(origClaim['@context'])
-        && origClaim['@type'] === 'Organization'
-        && origClaim.member
-        && origClaim.member['@type'] === 'OrganizationRole'
-        && origClaim.member.member
-        && origClaim.member.member.identifier) {
+               && origClaim['@type'] === 'Organization'
+               && origClaim.member
+               && origClaim.member['@type'] === 'OrganizationRole'
+               && origClaim.member.member
+               && origClaim.member.member.identifier) {
 
       const orgRoleClaim =
           await dbService.orgRoleClaimByOrgAndDates(
@@ -804,7 +806,7 @@ class ClaimService {
       fulfillsPlanLastClaimId = fulfillsLastClaimId
       fulfillsPlanHandleId = fulfillsHandleId
     }
-    // look for Plan in parentage, ie fulfilled item's object.isPartOf
+    // look for Plan in parentage, ie fulfilled item's "object.fullfills"
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
       const fulfillsPlanInfo =
         await this.retrieveClauseClaimAndIssuer(claimFulfills?.object?.isPartOf, claimIdDataList, 'PlanAction')
@@ -812,7 +814,7 @@ class ClaimService {
       fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
     }
 
-    // look for Plan in parentage, ie fulfilled item's itemOffered.isPartOf
+    // look for Plan in parentage, ie fulfilled Offer item's "fullfills" (or deprecated "itemOffered.isPartOf")
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
       // not found yet, so check itemOffered.isPartOf
       const fulfillsPlanInfo =
@@ -1060,22 +1062,27 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Offer') {
 
-      const isPartOfInfo =
-          await this.retrieveClauseClaimAndIssuer(claim.itemOffered?.isPartOf, claimIdDataList, null, payloadIssuerDid)
-      const fulfillsHandleId = isPartOfInfo?.clauseHandleId
-      const fulfillsLastClaimId = isPartOfInfo?.clauseLastClaimId
+      // First check for direct "fulfills" property (recommended approach)
+      // If no direct fulfills, check itemOffered.isPartOf (deprecated approach)
+      const fulfillsData = claim.fulfills || claim.itemOffered?.isPartOf
+      const fulfillsInfo =
+          await this.retrieveClauseClaimAndIssuer(fulfillsData, claimIdDataList, null, payloadIssuerDid)
+      
+      const fulfillsHandleId = fulfillsInfo?.clauseHandleId
+      const fulfillsLastClaimId = fulfillsInfo?.clauseLastClaimId
 
       let fulfillsPlanHandleId, fulfillsPlanLastClaimId
-      if (isPartOfInfo?.clauseClaim?.['@type'] === 'PlanAction') {
-        fulfillsPlanHandleId = isPartOfInfo.clauseHandleId
-        fulfillsPlanLastClaimId = isPartOfInfo.clauseLastClaimId
+      // Check if what we're fulfilling is a PlanAction
+      if (fulfillsInfo?.clauseClaim?.['@type'] === 'PlanAction') {
+        fulfillsPlanHandleId = fulfillsInfo.clauseHandleId
+        fulfillsPlanLastClaimId = fulfillsInfo.clauseLastClaimId
       }
 
       const fulfillsLinkConfirmed =
           this.issuerSameAsPersonInLinkedJwt(
               payloadIssuerDid,
-              isPartOfInfo?.clauseClaim,
-              isPartOfInfo?.clauseIssuerDid
+              fulfillsInfo?.clauseClaim,
+              fulfillsInfo?.clauseIssuerDid
           )
 
       // We'll put the given times into the DB but only if they're valid dates.
@@ -1536,16 +1543,16 @@ class ClaimService {
   }
 
   /**
-   return null or undefined if checks pass, or an error object if they don't
+    @return null or undefined if checks pass, or an error object if they don't
 
-   @param authIssuerDid is the ID of the user whose request is processing -- owner of the Authorization JWT, eg. a new user if relaying an invite
+    @param authIssuerDid is the ID of the user whose request is processing -- owner of the Authorization JWT, eg. a new user if relaying an invite
 
-   @param claimIssuerDid is the user who issued the payload
+    @param claimIssuerDid is the user who issued the payload
 
-   @param isInitialInvitePost indicates that this is an invite registration claim
+    @param isInitialInvitePost indicates that this is an invite registration claim
     which hasn't yet been receemed but may in the future, so some checks should be
     done against the payloadClaim and not looked up from the DB.
-   **/
+  **/
   async checkClaimLimits(authIssuerDid, claimIssuerDid, payloadClaim, isInitialInvitePost) {
     const registration = await dbService.registrationByDid(claimIssuerDid)
     if (!registration) {

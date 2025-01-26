@@ -203,11 +203,11 @@ CREATE TABLE offer_claim (
 
     recipientDid TEXT, -- global ID of recipient (if any)
 
-    fulfillsHandleId TEXT, -- full ID of itemOffered.isPartOf (if any)
-    -- true if recipient (itemOffered.isPartOf) issuer has confirmed the link
+    fulfillsHandleId TEXT, -- full ID of project to which this offer applies (if any)
+    -- true if recipient (fulfillsHandleId) issuer has confirmed the link
     fulfillsLinkConfirmed INTEGER DEFAULT 0,
 
-    -- full ID of PlanAction (if itemOffered.isPartOf is one of that type)
+    -- full ID of PlanAction (if fulfillsHandleId is one of that type)
     -- This is set if there's a last claim ID.
     fulfillsPlanHandleId TEXT,
 
