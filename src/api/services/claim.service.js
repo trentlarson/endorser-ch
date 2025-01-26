@@ -814,11 +814,12 @@ class ClaimService {
       fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
     }
 
-    // look for Plan in parentage, ie fulfilled Offer item's "fullfills" (or deprecated "itemOffered.isPartOf")
+    // look for Plan in parentage, ie fulfilled Offer item's "fullfills"
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
-      // not found yet, so check itemOffered.isPartOf
+      // not found yet, so check 'fulfills' (or deprecated 'itemOffered.isPartOf')
+      const fulfillsData = claimFulfills?.fulfills || claimFulfills?.itemOffered?.isPartOf
       const fulfillsPlanInfo =
-          await this.retrieveClauseClaimAndIssuer(claimFulfills?.itemOffered?.isPartOf, claimIdDataList, 'PlanAction')
+          await this.retrieveClauseClaimAndIssuer(fulfillsData, claimIdDataList, 'PlanAction')
       fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
       fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
     }

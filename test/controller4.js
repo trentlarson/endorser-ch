@@ -24,10 +24,10 @@ const SOME_PROJECT_ID = 'external:some-fake-project'
 const claimOffer = {
   ... testUtil.claimOffer,
   //identifier: "...", // set in loop
+  fulfills: {"@type": "PlanAction", identifier: SOME_PROJECT_ID },
   issuedAt: '2022-02-15 19:28:00Z',
   includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR' },
   offeredBy: { identifier: creds[0].did },
-  itemOffered: { isPartOf: { "@type": "PlanAction", identifier: SOME_PROJECT_ID } },
   recipient: { identifier: creds[1].did },
 }
 
@@ -59,7 +59,7 @@ const manyClaims =
 const SOME_PLAN_ID = 'elsewhere:Amish-Group-5/Barn-Raising'
 const NUM_OFFERS_WITH_PLANS = 51
 for (let i = 0; i < NUM_OFFERS_WITH_PLANS; i++) {
-  manyClaims[i].claim.itemOffered.isPartOf.identifier = SOME_PLAN_ID
+  manyClaims[i].claim.fulfills.identifier = SOME_PLAN_ID
 }
 
 
