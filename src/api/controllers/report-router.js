@@ -718,7 +718,7 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/givesToPlans', dbController.getGivesToPlansPaged)
-  // This endpoint can be removed when Time Safari code is updated.
+  // For new deployments and for endorser.ch after all users have updated their client apps: remove this endpoint.
   .get('/givesForPlans', dbController.getGivesToPlansPaged)
 
 /**

@@ -41,13 +41,14 @@ const isContextSchemaOrg =
 // ... and we only use the following for scripts.
 // Verify: select max(issuedAt) from jwt where claimContext='http://endorser.ch'
 // Latest was in 2020
+//
 //const isContextSchemaForConfirmation =
 //    (context) =>
 //    isContextSchemaOrg(context) || context === 'http://endorser.ch'
 //
-// Here is what to use for new deployments, and for endorser.ch after all users
-// have updated their apps.
+// For new deployments and for endorser.ch after all users have updated their client apps: replace the one above with this.
 //const isContextSchemaOrg = (context) => context === 'https://schema.org'
+//
 // Claims inside AgreeAction may not have context if they're also in schema.org
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
@@ -1064,7 +1065,7 @@ class ClaimService {
                && claim['@type'] === 'Offer') {
 
       // First check for direct "fulfills" property (recommended approach)
-      // If no direct fulfills, check itemOffered.isPartOf (deprecated approach)
+      // or for itemOffered.isPartOf (deprecated approach)
       const fulfillsData = claim.fulfills || claim.itemOffered?.isPartOf
       const fulfillsInfo =
           await this.retrieveClauseClaimAndIssuer(fulfillsData, claimIdDataList, null, payloadIssuerDid)
@@ -1108,7 +1109,8 @@ class ClaimService {
         fulfillsPlanLastClaimId,
         amount: claim.includesObject?.amountOfThisGood,
         unit: claim.includesObject?.unitCode,
-        objectDescription: claim.itemOffered?.description,
+        // use the new 'includesObject' field if it exists, otherwise use the old 'itemOffered' field
+        objectDescription: claim.includesObject?.description || claim.itemOffered?.description,
         validThrough: validTimeStr,
         fullClaim: canonicalize(claim),
       }
