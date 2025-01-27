@@ -221,11 +221,11 @@ module.exports = {
   claimOffer: {
     "@context": "https://schema.org",
     "@type": "Offer",
+    //fulofills: { '@type': 'PlanAction', identifier: "..." }
     //identifier: "...",
-    //includesObject: { '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR' },
-    itemOffered: {
+    includesObject: {
+    //  '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
       description: "Help groom the runs before powder days!",
-      //isPartOf: { '@type': 'PlanAction', identifier: "..." }
     },
     //offeredBy: { identifier: null }, // offering agent's DID string
     //recipient: { identifier: null }, // individual recipient DID string

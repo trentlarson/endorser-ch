@@ -550,7 +550,7 @@ describe('6 - Plans', () => {
     planObj.claim = R.clone(testUtil.claimOffer)
     planObj.claim.offeredBy = { identifier: creds[1].did }
     planObj.claim.lastClaimId = firstPlanIdSecondClaimInternal
-    planObj.claim.itemOffered = { description: ENTITY_NEW_DESC }
+    planObj.claim.includesObject = { description: ENTITY_NEW_DESC }
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
     return request(Server)
@@ -1234,9 +1234,9 @@ describe('6 - Check offer totals', () => {
       lastClaimId: firstPlanIdSecondClaimInternal,
     }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR',
+      description: 'Groom the horses'
     }
-    credObj.claim.itemOffered = { description: 'Groom the horses' }
     credObj.claim.offeredBy = { identifier: creds[2].did }
     validThroughDate = new Date()
     credObj.claim.validThrough = validThroughDate.toISOString()
@@ -1381,9 +1381,9 @@ describe('6 - Check offer totals', () => {
       '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal
     }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR'
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR',
+      description: 'Take dogs for a walk'
     }
-    credObj.claim.itemOffered = { description: 'Take dogs for a walk' }
     credObj.claim.offeredBy = { identifier: creds[2].did }
     credObj.sub = creds[2].did
     credObj.iss = creds[2].did
@@ -1413,9 +1413,9 @@ describe('6 - Check offer totals', () => {
       '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal
     }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR',
+      description: 'Feed cats'
     }
-    credObj.claim.itemOffered = { description: 'Feed cats' }
     credObj.claim.offeredBy = { identifier: creds[3].did }
     credObj.sub = creds[3].did
     credObj.iss = creds[3].did
@@ -1476,9 +1476,9 @@ describe('6 - Check offer totals', () => {
       '@type': 'PlanAction', lastClaimId: secondPlanIdInternal
     }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR'
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR',
+      description: 'Fleece sheep'
     }
-    credObj.claim.itemOffered = { description: 'Fleece sheep' }
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
@@ -1543,9 +1543,9 @@ describe('6 - Check offer totals', () => {
       '@type': 'PlanAction', lastClaimId: secondPlanIdInternal
     }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 20, unitCode: 'USD'
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 20, unitCode: 'USD',
+      description: 'Help with church performance night'
     }
-    credObj.claim.itemOffered = { description: 'Help with church performance night' }
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
@@ -1588,10 +1588,8 @@ describe('6 - Check offer totals', () => {
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.claim.recipient = { identifier: creds[2].did }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
-    }
-    credObj.claim.itemOffered = {
-      description: 'First grade materials',
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR',
+      description: 'First grade materials'
     }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
@@ -1655,7 +1653,7 @@ describe('6 - Check offer totals', () => {
     credObj.claim = R.clone(testUtil.claimOffer)
     credObj.claim.offeredBy = { identifier: creds[5].did }
     credObj.claim.recipient = { identifier: creds[2].did }
-    credObj.claim.itemOffered = {
+    credObj.claim.includesObject = {
       description: 'First grade reading help',
     }
     credObj.sub = creds[5].did
@@ -2995,10 +2993,8 @@ describe('6 - Check give totals', () => {
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.claim.recipient = { identifier: creds[3].did }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR'
-    }
-    credObj.claim.itemOffered = {
-      description: 'First grade materials to user 3',
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 3, unitCode: 'HUR',
+      description: 'First grade materials to user 3'
     }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
@@ -3022,10 +3018,8 @@ describe('6 - Check give totals', () => {
     credObj.claim.offeredBy = { identifier: creds[4].did }
     credObj.claim.recipient = { identifier: creds[5].did }
     credObj.claim.includesObject = {
-      '@type': 'TypeAndQuantityNode', amountOfThisGood: 60, unitCode: 'USD'
-    }
-    credObj.claim.itemOffered = {
-      description: 'First grade materials to user 5',
+      '@type': 'TypeAndQuantityNode', amountOfThisGood: 60, unitCode: 'USD',
+      description: 'First grade materials to user 5'
     }
     credObj.sub = creds[4].did
     credObj.iss = creds[4].did
@@ -3054,7 +3048,7 @@ describe('6 - Check give totals', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data).to.be.an('array').of.length(1)
-      expect(r.body.data[0].fullClaim.itemOffered.description).to.equal('First grade materials to user 5')
+      expect(r.body.data[0].fullClaim.includesObject.description).to.equal('First grade materials to user 5')
       expect(r.body.data[0].unit).to.equal('USD')
       expect(r.body.data[0].amount).to.equal(60)
       expect(r.body.data[0].amountGiven).to.equal(7)
