@@ -6,8 +6,8 @@ import * as R from 'ramda'
 import * as express from 'express'
 import ClaimService from '../services/claim.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
-import { endorserDbService } from "../services/endorser.db.service";
-import { dbService } from "../services/partner.db.service";
+import { dbService as endorserDbService } from "../services/endorser.db.service";
+import { dbService as partnerDbService } from "../services/partner.db.service";
 import { getAllDidsBetweenRequesterAndObjects } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
@@ -73,28 +73,32 @@ export default express
   '/link',
   async (req, res) => {
 
-    // When we separate this into another service, this will have to be an API call.
-    // See the image-api server for an example of how to leverage JWTs to get
-    // permission to access data from the other service.
-    const jwtInfo = await endorserDbService.jwtById(req.body.jwtId)
+    try {
+      // When we separate this into another service, this will have to be an API call.
+      // See the image-api server for an example of how to leverage JWTs to get
+      // permission to access data from the other service.
+      const jwtInfo = await endorserDbService.jwtById(req.body.jwtId)
 
-    const result =
-      await sendAndStoreLink(
-        res.locals.tokenIssuer,
-        jwtInfo,
-        req.body.linkCode,
-        req.body.inputJson,
-        req.body.pubKeyHex || req.body.nostrPubKeyHex, // the latter was only used for a short time
-        req.body.pubKeyImage,
-        req.body.pubKeySigHex,
-      )
-    if (result.clientError) {
-      res.status(400).json({ error: result.clientError }).end()
-    } else if (result.error) {
-      // this is a server error, not a client error; we assume something went to the logs inside the method call
-      res.status(500).json({ error: result }).end()
-    } else {
-      res.status(201).json({ success: result }).end()
+      const result =
+        await sendAndStoreLink(
+          res.locals.tokenIssuer,
+          jwtInfo,
+          req.body.linkCode,
+          req.body.inputJson,
+          req.body.pubKeyHex || req.body.nostrPubKeyHex, // the latter was only used for a short time
+          req.body.pubKeyImage,
+          req.body.pubKeySigHex,
+        )
+      if (result.clientError) {
+        res.status(400).json({ error: result.clientError }).end()
+      } else if (result.error) {
+        // this is a server error, not a client error; we assume something went to the logs inside the method call
+        res.status(500).json({ error: result }).end()
+      } else {
+        res.status(201).json({ success: result }).end()
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
     }
   }
 )
@@ -158,7 +162,7 @@ export default express
         locLon2
       }
 
-      await dbService.profileInsertOrUpdate(entry)
+      await partnerDbService.profileInsertOrUpdate(entry)
 
       res.status(201).json({ success: true }).end()
     } catch (err) {
@@ -184,7 +188,7 @@ export default express
   async (req, res) => {
     const { issuerDid } = req.params
     try {
-      let result = await dbService.profileByIssuerDid(issuerDid)
+      let result = await partnerDbService.profileByIssuerDid(issuerDid)
 
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
@@ -225,7 +229,7 @@ export default express
   async (req, res) => {
     const { rowId } = req.params
     try {
-      let result = await dbService.profileById(rowId)
+      let result = await partnerDbService.profileById(rowId)
 
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
@@ -302,7 +306,7 @@ export default express
         return
       }
 
-      const rawResult = await dbService.profilesByLocationAndContentsPaged(
+      const rawResult = await partnerDbService.profilesByLocationAndContentsPaged(
         numMinLat,
         numMinLon,
         numMaxLat,
@@ -366,7 +370,7 @@ export default express
       if (!res.locals.tokenIssuer) {
         return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
       }
-      const result = await dbService.profileDelete(res.locals.tokenIssuer)
+      const result = await partnerDbService.profileDelete(res.locals.tokenIssuer)
       res.status(204).json({ success: true, numDeleted: result }).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
@@ -422,8 +426,8 @@ export default express
       // calculate the maximum latitude & longitude with that many tiles
       const maxLatTiled = minTileLat + numTilesWide * tileWidth
       const maxLonTiled = minTileLon + numTilesWide * tileWidth
-      const results1 = await dbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide)
-      const results2 = await dbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide, true)
+      const results1 = await partnerDbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide)
+      const results2 = await partnerDbService.profileCountsByBBox(minLocLat, minLocLon, maxLatTiled, maxLonTiled, numTilesWide, true)
 
       // return an array of tiles
       // which only contains the first case of each set of index values

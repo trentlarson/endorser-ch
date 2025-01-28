@@ -19,7 +19,7 @@ import { schnorr } from "@noble/curves/secp256k1" // used for nostr, imported by
 import WebSocket from "ws"
 
 import l from "../../common/logger"
-import { dbService } from "./endorser.db.service"
+import { dbService } from "./partner.db.service"
 import { basicClaimDescription } from "./util"
 
 const NOSTR_PRIVATE_KEY_NSEC = process.env.NOSTR_PRIVATE_KEY_NSEC
@@ -122,7 +122,7 @@ export async function sendAndStoreLink(
       // ["title", JSON.parse(inputJson)],
     ]
     const kind = 30402 // creator says to use the classifieds for his map
-    return createAndSendNostr(
+    const result = await createAndSendNostr(
       jwtInfo,
       linkCode,
       kind,
@@ -132,108 +132,109 @@ export async function sendAndStoreLink(
       pubKeyImage,
       pubKeySigHex,
     )
+    return result
   } else {
     return { clientError: { message: "Unknown link code '" + linkCode + "'" } }
   }
+}
 
-  // We have validated that the sender with the Authorization header is the sender,
-  // and we are also sending a public key so we need to verify that they own it.
-  function validateNostrSignature(eventImage, pubKeyHex, sigHex) {
-    // I actually tried to use the nostr-tools/pure verifyEvent but it didn't recognize "kind" as a number. :-S
-    const hash = crypto.createHash("sha256").update(new TextEncoder().encode(eventImage)).digest("hex")
-    const sigCheck = schnorr.verify(sigHex, hash, pubKeyHex)
-    return sigCheck
+// We have validated that the sender with the Authorization header is the sender,
+// and we are also sending a public key so we need to verify that they own it.
+function validateNostrSignature(eventImage, pubKeyHex, sigHex) {
+  // I actually tried to use the nostr-tools/pure verifyEvent but it didn't recognize "kind" as a number. :-S
+  const hash = crypto.createHash("sha256").update(new TextEncoder().encode(eventImage)).digest("hex")
+  const sigCheck = schnorr.verify(sigHex, hash, pubKeyHex)
+  return sigCheck
+}
+
+async function createAndSendNostr(
+  jwtInfo,
+  linkCode,
+  kind,
+  inputJson,
+  moreTags,
+  pubKeyHex,
+  pubKeyImage,
+  pubKeySigHex,
+) {
+  if (!NOSTR_PRIVATE_KEY_NSEC) {
+    return {
+      clientError: {
+        message: "This server is not set up to relay to nostr.",
+      },
+    }
   }
+  if (!pubKeyHex) {
+    return { clientError: { message: "No nostr public key was provided." } }
+  }
+  const claim = JSON.parse(jwtInfo.claim)
+  const input = JSON.parse(inputJson)
+  const content = input || basicClaimDescription(claim)
+  const createdSecs = Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)
+  const event = {
+    content,
+    created_at: createdSecs,
+    kind: kind,
+    tags: [
+      ["d", pubKeyHex + ":" + jwtInfo.id],
+      ["p", pubKeyHex],
+      ...moreTags,
+    ],
+  }
+  if (claim.endTime || claim.validThrough) {
+    const expirationTime = Math.floor(
+      new Date(claim.endTime || claim.validThrough).getTime() / 1000,
+    )
+    event.tags.push(["expiration", `${expirationTime}`])
+  } else if (process.env.NODE_ENV !== "prod") {
+    // add an expiration in non-prod environments
+    event.tags.push(["expiration", `${createdSecs + 60 * 60 * 24 * 2}`])
+  }
+  let relay
+  try {
+    const privateKeyBytes = decode(NOSTR_PRIVATE_KEY_NSEC).data
+    // this adds: pubkey, id, sig
+    const signedEvent = await finalizeEvent(event, privateKeyBytes)
 
-  async function createAndSendNostr(
-    jwtInfo,
-    linkCode,
-    kind,
-    inputJson,
-    moreTags,
-    pubKeyHex,
-    pubKeyImage,
-    pubKeySigHex,
-  ) {
-    if (!NOSTR_PRIVATE_KEY_NSEC) {
-      return {
-        clientError: {
-          message: "This server is not set up to relay to nostr.",
-        },
+    //console.log("Signed event:", signedEvent)
+
+    // Pool of relays
+    const pool = new SimplePool()
+    const closer = pool.subscribeMany(
+      DEFAULT_RELAYS,
+      [ { ids: [signedEvent.id] } ],
+      {
+        // this will only be called once the first time the event is received
+        onevent(event) { l.info("Event recognized by relay pool:", event) },
+        oneose() { closer.close() }
       }
-    }
-    if (!pubKeyHex) {
-      return { clientError: { message: "No nostr public key was provided." } }
-    }
-    const claim = JSON.parse(jwtInfo.claim)
-    const input = JSON.parse(inputJson)
-    const content = input || basicClaimDescription(claim)
-    const createdSecs = Math.floor(new Date(jwtInfo.issuedAt).getTime() / 1000)
-    const event = {
-      content,
-      created_at: createdSecs,
-      kind: kind,
-      tags: [
-        ["d", pubKeyHex + ":" + jwtInfo.id],
-        ["p", pubKeyHex],
-        ...moreTags,
-      ],
-    }
-    if (claim.endTime || claim.validThrough) {
-      const expirationTime = Math.floor(
-        new Date(claim.endTime || claim.validThrough).getTime() / 1000,
-      )
-      event.tags.push(["expiration", `${expirationTime}`])
-    } else if (process.env.NODE_ENV !== "prod") {
-      // add an expiration in non-prod environments
-      event.tags.push(["expiration", `${createdSecs + 60 * 60 * 24 * 2}`])
-    }
-    let relay
-    try {
-      const privateKeyBytes = decode(NOSTR_PRIVATE_KEY_NSEC).data
-      // this adds: pubkey, id, sig
-      const signedEvent = await finalizeEvent(event, privateKeyBytes)
+    )
+    await Promise.any(pool.publish(DEFAULT_RELAYS, signedEvent))
 
-      //console.log("Signed event:", signedEvent)
+    // // One relay
+    // relay = await Relay.connect(DEFAULT_RELAY)
+    // relay.subscribe(
+    //   [{ ids: [signedEvent.id] }], /* ... kinds: [kind], authors: [getPublicKey(privateKeyBytes)] */
+    //   {
+    //     onevent(event) { l.info("Event recognized by one relay:", event) },
+    //     oneose() { relay.close() }
+    //   }
+    // );
+    // await relay.publish(signedEvent)
 
-      // Pool of relays
-      const pool = new SimplePool()
-      const closer = pool.subscribeMany(
-        DEFAULT_RELAYS,
-        [ { ids: [signedEvent.id] } ],
-        {
-          // this will only be called once the first time the event is received
-          onevent(event) { l.info("Event recognized by relay pool:", event) },
-          oneose() { closer.close() }
-        }
-      )
-      await Promise.any(pool.publish(DEFAULT_RELAYS, signedEvent))
-
-      // // One relay
-      // relay = await Relay.connect(DEFAULT_RELAY)
-      // relay.subscribe(
-      //   [{ ids: [signedEvent.id] }], /* ... kinds: [kind], authors: [getPublicKey(privateKeyBytes)] */
-      //   {
-      //     onevent(event) { l.info("Event recognized by one relay:", event) },
-      //     oneose() { relay.close() }
-      //   }
-      // );
-      // await relay.publish(signedEvent)
-
-      const partnerLinkData = JSON.stringify({ content, pubKeyHex })
-      await dbService.partnerLinkInsert({
-        handleId: jwtInfo.handleId,
-        linkCode,
-        externalId: signedEvent.id,
-        data: partnerLinkData,
-        pubKeyHex,
-        pubKeyImage,
-        pubKeySigHex,
-      })
-      return { signedEvent }
-    } catch (e) {
-      l.error("Error creating " + linkCode + " event for JWT " + jwtId + ": " + e)
-      return { error: "Error creating " + linkCode + " event for JWT " + jwtId + ": " + e }
-    }
+    const partnerLinkData = JSON.stringify({ content, pubKeyHex })
+    await dbService.partnerLinkInsert({
+      handleId: jwtInfo.handleId,
+      linkCode,
+      externalId: signedEvent.id,
+      data: partnerLinkData,
+      pubKeyHex,
+      pubKeyImage,
+      pubKeySigHex,
+    })
+    return { signedEvent }
+  } catch (e) {
+    l.error("Error creating " + linkCode + " event for JWT " + jwtId + ": " + e)
+    return { error: "Error creating " + linkCode + " event for JWT " + jwtId + ": " + e }
   }
 }
