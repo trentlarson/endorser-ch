@@ -195,6 +195,9 @@ export default express
       }
       if (issuerDid !== res.locals.tokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
+        // (When we separate this into another service, this will have to be an API call.
+        // See the image-api server for an example of how to leverage JWTs to get
+        // permission to access data from the other service.)
         const didsSeenByRequesterWhoSeeObject =
           await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, [issuerDid])
         if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
@@ -237,6 +240,9 @@ export default express
 
       if (result.issuerDid !== res.locals.tokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
+        // (When we separate this into another service, this will have to be an API call.
+        // See the image-api server for an example of how to leverage JWTs to get
+        // permission to access data from the other service.)
         const didsSeenByRequesterWhoSeeObject =
           await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, [result.issuerDid])
         if (didsSeenByRequesterWhoSeeObject[0] === result.issuerDid) {
@@ -318,7 +324,9 @@ export default express
       const resultList = rawResult.data
       // Hide DIDs and add network links
       // This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
-      // When we separate partner functions to a different service, we'll have to create an endpoint for this.
+      // (When we separate this into another service, this will have to be an API call.
+      // See the image-api server for an example of how to leverage JWTs to get
+      // permission to access data from the other service.)
       const didsSeenByRequesterWhoSeeObject =
         await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, resultList.map(profile => profile.issuerDid))
       // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
@@ -454,6 +462,323 @@ export default express
         errorObj = "" + err // sometimes this gives more info
       }
       res.status(500).json({ error: errorObj }).end()
+    }
+  }
+)
+
+/**
+ * Create a new group onboarding room
+ * 
+ * @group partner utils - Partner Utils
+ * @route POST /api/partner/groupOnboard
+ * @param {string} name.body.required - name of the room
+ * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
+ * @returns {object} 201 - Created with room ID
+ * @returns {Error} 400 - client error
+ */
+.post(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      // (When we separate this into another service, this will have to be an API call.
+      // See the image-api server for an example of how to leverage JWTs to get
+      // permission to access data from the other service.)
+      await ClaimService.getRateLimits(res.locals.tokenIssuer)
+    } catch (e) {
+      return res.status(400).json({ error: "You must have registration permissions to create a group." }).end()
+    }
+
+    const { name, expiresAt } = req.body
+    
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: "The group name must be a non-empty string." }).end()
+    }
+
+    const expireDate = new Date(expiresAt)
+    if (isNaN(expireDate.getTime())) {
+      return res.status(400).json({ error: "The expiration date is invalid." }).end()
+    }
+
+    const maxExpireTime = new Date()
+    maxExpireTime.setHours(maxExpireTime.getHours() + 24)
+    if (expireDate > maxExpireTime) {
+      return res.status(400).json({ error: "The expiration time cannot be more than 24 hours in the future." }).end()
+    }
+
+    try {
+      const result = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expireDate)
+      res.status(201).json({ id: result }).end()
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        if (err.message.includes('issuerDid')) {
+          return res.status(400).json({ error: "You already have an active group." }).end()
+        } else {
+          return res.status(400).json({ error: "That group name is already taken." }).end()
+        }
+      }
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Delete a group onboarding room
+ * 
+ * @group partner utils - Partner Utils
+ * @route DELETE /api/partner/groupOnboard/{id}
+ * @param {number} id.path.required - room ID
+ * @returns 204 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboard/:id',
+  async (req, res) => {
+    try {
+      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(req.params.id, res.locals.tokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: "That group was not found for you." }).end()
+      }
+      res.status(204).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get all group onboarding rooms
+ * 
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/groupOnboard
+ * @returns {array} 200 - List of rooms
+ */
+.get(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      const rooms = await partnerDbService.groupOnboardGetAll()
+      res.status(200).json({ data: rooms }).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update a group onboarding room
+ * 
+ * @group partner utils - Partner Utils
+ * @route PUT /api/partner/groupOnboard/{id}
+ * @param {number} id.path.required - room ID
+ * @param {string} name.body.required - new room name
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboard/:id',
+  async (req, res) => {
+    try {
+      const { name } = req.body
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: "The name must be a non-empty string" }).end()
+      }
+
+      const changes = await partnerDbService.groupOnboardUpdate(req.params.id, res.locals.tokenIssuer, name)
+      if (changes === 0) {
+        return res.status(404).json({ error: "That group was not found for you." }).end()
+      }
+      res.status(200).json({ success: true }).end()
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: "That group name is already taken." }).end()
+      }
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Join a group onboarding room
+ * 
+ * @group partner utils - Partner Utils
+ * @route POST /api/partner/groupOnboardMember
+ * @param {number} groupOnboard.body.required - group ID to join
+ * @param {string} content.body.required - member content
+ * @returns {object} 201 - Created
+ * @returns {Error} 400 - client error
+ */
+.post(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      const { groupOnboard, content } = req.body
+
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: "Content must be a non-empty string" }).end()
+      }
+
+      // Verify group exists
+      const group = await partnerDbService.groupOnboardGetByRowId(groupOnboard)
+      if (!group) {
+        return res.status(404).json({ error: "Group not found" }).end()
+      }
+
+      try {
+        await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupOnboard, content)
+        res.status(201).json({ success: true }).end()
+      } catch (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          return res.status(400).json({ error: "You are already a member of this group" }).end()
+        }
+        throw err
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Leave a group
+ * 
+ * @group partner utils - Partner Utils
+ * @route DELETE /api/partner/groupOnboardMember/{groupId}
+ * @param {number} groupId.path.required - group ID to leave
+ * @returns 204 - Success
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.tokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: "Membership not found" }).end()
+      }
+      res.status(204).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership
+ * 
+ * @group partner utils - Partner Utils
+ * @route PUT /api/partner/groupOnboardMember/{groupId}
+ * @param {number} groupId.path.required - group ID
+ * @param {string} content.body.optional - new content
+ * @param {boolean} admitted.body.optional - admission status (organizer only)
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember/:memberId',
+  async (req, res) => {
+    try {
+      const { content, admitted } = req.body
+      const groupId = req.params.groupId
+
+      // get group to check if requester is organizer, just for "admitted" flag
+      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (!group) {
+        return res.status(404).json({ error: "Group not found" }).end()
+      }
+
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetById(memberId)
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" }).end()
+      }
+      
+      const isMember = member.issuerDid === res.locals.tokenIssuer
+      const isOrganizer = group.issuerDid === res.locals.tokenIssuer
+
+      if (!isMember && !isOrganizer) {
+        return res.status(403).json({ error: "You are not authorized to update this member." }).end()
+      }
+
+      const result = {}
+      if (content && isMember) {
+        const updated = await partnerDbService.groupOnboardMemberUpdateContent(memberId, content)
+        if (updated === 0) {
+          return res.status(404).json({ error: "That member ID could not be updated with content." }).end()
+        }
+        if (admitted !== undefined) {
+          result.message = "Only the organizer can update member admission status."
+        }
+      }
+
+      if (isOrganizer && admitted !== undefined) {
+        const updated = await partnerDbService.groupOnboardMemberUpdateAdmitted(memberId, admitted)
+        if (updated === 0) {
+          return res.status(404).json({ error: "That member ID could not be updated with admission status." }).end()
+        }
+        if (content) {
+          result.message = "Only the member can update their content."
+        }
+      }
+
+      result.success = true
+      res.status(200).json(result).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get group members
+ * 
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/groupOnboardMembers/{groupId}
+ * @param {number} groupId.path.required - group ID
+ * @returns {array} 200 - List of members
+ * @returns {Error} 403 - Unauthorized
+ */
+.get(
+  '/groupOnboardMembers/:groupId',
+  async (req, res) => {
+    try {
+      const groupId = req.params.groupId
+
+      // get group to check if requester is organizer, since they have full visibility
+      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (!group) {
+        return res.status(404).json({ error: "Group not found" }).end()
+      }
+
+      const members = await partnerDbService.groupOnboardMembersByGroup(groupId)
+      
+      const isOrganizer = group.issuerDid === res.locals.tokenIssuer
+      
+      if (isOrganizer) {
+        // Organizer sees everything
+        return res.status(200).json({ data: members }).end()
+      }
+
+      // Find requesting user's membership
+      const requesterMember = members.find(m => m.issuerDid === res.locals.tokenIssuer)
+      if (!requesterMember || !requesterMember.admitted) {
+        return res.status(403).json({ error: "Not authorized to view members" }).end()
+      }
+
+      // Return only admitted members
+      const admittedMembers = members
+        .filter(m => m.admitted)
+        .map(m => ({
+          issuerDid: m.issuerDid,
+          content: m.content
+        }))
+
+      res.status(200).json({ data: admittedMembers }).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
     }
   }
 )

@@ -10,6 +10,25 @@ columns follow camelCase (with capital letters after the first word).
 
 ```sql
 
+CREATE TABLE group_onboard (
+  rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+  issuerDid TEXT UNIQUE NOT NULL,
+  name TEXT UNIQUE NOT NULL,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  expiresAt DATETIME NOT NULL
+); 
+CREATE INDEX group_onboard_issuerDid ON group_onboard(issuerDid);
+
+CREATE TABLE group_onboard_members (
+  issuerDid TEXT NOT NULL,
+  groupOnboard INTEGER NOT NULL,
+  admitted BOOLEAN DEFAULT FALSE,
+  content TEXT NOT NULL,
+  FOREIGN KEY (groupOnboard) REFERENCES group_onboard(rowid)
+); 
+CREATE INDEX group_onboard_members_issuerDid ON group_onboard_members(issuerDid);
+CREATE INDEX group_onboard_members_groupOnboard ON group_onboard_members(groupOnboard);
+
 -- partners are other systems with whom this system collaborates
 CREATE TABLE partner_link (
     handleId TEXT NOT NULL, -- currently handleId because we don't support updates to events

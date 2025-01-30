@@ -53,6 +53,193 @@ class PartnerDatabase {
   }
 
 
+
+
+
+
+  /****************************************************************
+   * Group Onboarding
+   **/
+
+  groupOnboardInsert(issuerDid, name, expiresAt) {
+    return new Promise((resolve, reject) => {
+      const stmt = "INSERT INTO group_onboard (issuerDid, name, expiresAt) VALUES (?, ?, ?)"
+      partnerDb.run(stmt, [issuerDid, name, expiresAt], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  groupOnboardGetByIssuerDid(issuerDid) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get("SELECT * FROM group_onboard WHERE issuerDid = ?", [issuerDid], function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(row)
+        }
+      })
+    })
+  }
+
+  groupOnboardGetByRowId(rowId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get("SELECT * FROM group_onboard WHERE rowid = ?", [rowId], function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(row)
+        }
+      })
+    })
+  }
+
+  groupOnboardGetAll() {
+    return new Promise((resolve, reject) => {
+      partnerDb.all("SELECT rowid as rowId, name, expiresAt FROM group_onboard", function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
+        }
+      })
+    })
+  }
+
+  groupOnboardDelete(issuerDid) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM group_onboard WHERE issuerDid = ?"
+      partnerDb.run(stmt, [issuerDid], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardDeleteByRowAndIssuer(rowId, issuerDid) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM group_onboard WHERE rowid = ? AND issuerDid = ?"
+      partnerDb.run(stmt, [rowId, issuerDid], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardUpdate(id, issuerDid, name) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE group_onboard SET name = ? WHERE issuerDid = ? AND rowid = ?"
+      partnerDb.run(stmt, [name, issuerDid, id], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardMemberInsert(issuerDid, groupOnboard, content) {
+    return new Promise((resolve, reject) => {
+      const stmt = "INSERT INTO group_onboard_member (issuerDid, groupOnboard, content) VALUES (?, ?, ?)"
+      partnerDb.run(stmt, [issuerDid, groupOnboard, content], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  groupOnboardMemberDelete(issuerDid) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM group_onboard_member WHERE issuerDid = ?"
+      partnerDb.run(stmt, [issuerDid], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardMemberUpdateContent(groupOnboardMemberId, content) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE group_onboard_member SET content = ? WHERE rowid = ?"
+      partnerDb.run(stmt, [content, groupOnboardMemberId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardMemberUpdateAdmitted(groupOnboard, memberDid, admitted) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE group_onboard_member SET admitted = ? WHERE issuerDid = ? AND groupOnboard = ?"
+      partnerDb.run(stmt, [admitted ? 1 : 0, memberDid, groupOnboard], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardMemberGetById(groupOnboardMemberId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT * FROM group_onboard_member WHERE rowid = ?",
+        [groupOnboardMemberId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  groupOnboardMembersByGroup(groupOnboard) {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        "SELECT m.*, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupOnboard = g.rowid WHERE m.groupOnboard = ?",
+        [groupOnboard],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows)
+          }
+        }
+      )
+    })
+  }
+
+
+
+
+
+
+
+
   /****************************************************************
    * User Profile
    **/
