@@ -10,10 +10,10 @@ CREATE INDEX group_onboard_issuerDid ON group_onboard(issuerDid);
 CREATE TABLE group_onboard_member (
   rowid INTEGER PRIMARY KEY AUTOINCREMENT,
   issuerDid TEXT UNIQUE NOT NULL,
-  groupOnboard INTEGER NOT NULL,
+  groupId INTEGER NOT NULL,
   admitted BOOLEAN DEFAULT FALSE,
   content TEXT NOT NULL,
-  FOREIGN KEY (groupOnboard) REFERENCES group_onboard(rowid)
+  FOREIGN KEY (groupId) REFERENCES group_onboard(rowid)
 ); 
 CREATE INDEX group_onboard_member_issuerDid ON group_onboard_member(issuerDid);
-CREATE INDEX group_onboard_member_groupOnboard ON group_onboard_member(groupOnboard);
+CREATE INDEX group_onboard_member_groupId ON group_onboard_member(groupId);

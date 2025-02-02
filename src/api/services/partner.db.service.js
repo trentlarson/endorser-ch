@@ -149,10 +149,14 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardMemberInsert(issuerDid, groupOnboard, content) {
+  /****************************************************************
+   * Group Onboarding Members
+   **/
+
+  groupOnboardMemberInsert(issuerDid, groupId, content) {
     return new Promise((resolve, reject) => {
-      const stmt = "INSERT INTO group_onboard_member (issuerDid, groupOnboard, content) VALUES (?, ?, ?)"
-      partnerDb.run(stmt, [issuerDid, groupOnboard, content], function(err) {
+      const stmt = "INSERT INTO group_onboard_member (issuerDid, groupId, content) VALUES (?, ?, ?)"
+      partnerDb.run(stmt, [issuerDid, groupId, content], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -175,10 +179,10 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardMemberUpdateContent(groupOnboardMemberId, content) {
+  groupOnboardMemberUpdateContent(memberId, content) {
     return new Promise((resolve, reject) => {
       const stmt = "UPDATE group_onboard_member SET content = ? WHERE rowid = ?"
-      partnerDb.run(stmt, [content, groupOnboardMemberId], function(err) {
+      partnerDb.run(stmt, [content, memberId], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -188,10 +192,10 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardMemberUpdateAdmitted(groupOnboard, memberDid, admitted) {
+  groupOnboardMemberUpdateAdmitted(memberId, admitted) {
     return new Promise((resolve, reject) => {
-      const stmt = "UPDATE group_onboard_member SET admitted = ? WHERE issuerDid = ? AND groupOnboard = ?"
-      partnerDb.run(stmt, [admitted ? 1 : 0, memberDid, groupOnboard], function(err) {
+      const stmt = "UPDATE group_onboard_member SET admitted = ? WHERE rowid = ?"
+      partnerDb.run(stmt, [admitted ? 1 : 0, memberId], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -201,11 +205,11 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardMemberGetById(groupOnboardMemberId) {
+  groupOnboardMemberGetByRowId(memberId) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
         "SELECT * FROM group_onboard_member WHERE rowid = ?",
-        [groupOnboardMemberId],
+        [memberId],
         function(err, row) {
           if (err) {
             reject(err)
@@ -217,11 +221,27 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardMembersByGroup(groupOnboard) {
+  groupOnboardMemberGetByIssuerDid(issuerDid) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT * FROM group_onboard_member WHERE issuerDid = ?",
+        [issuerDid],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  groupOnboardMembersGetByGroup(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        "SELECT m.*, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupOnboard = g.rowid WHERE m.groupOnboard = ?",
-        [groupOnboard],
+        "SELECT m.*, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ?",
+        [groupId],
         function(err, rows) {
           if (err) {
             reject(err)

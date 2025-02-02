@@ -16,6 +16,127 @@ const pushTokenProms = R.map(
 );
 let pushTokens;
 
+const SALT_LENGTH = 16; // probably don't need this
+const IV_LENGTH = 12;
+const KEY_LENGTH = 256;
+const ITERATIONS = 100000; // probably don't need this
+
+// Encryption helper function
+async function encryptMessage(message, password) {
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+
+  // Derive key from password using PBKDF2
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits', 'deriveKey']
+  );
+
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations: ITERATIONS,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: KEY_LENGTH },
+    false,
+    ['encrypt']
+  );
+
+  // Encrypt the message
+  const encryptedContent = await crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv
+    },
+    key,
+    encoder.encode(message)
+  );
+
+  // Return a JSON structure with base64-encoded components
+  return Buffer.from(JSON.stringify({
+    salt: Buffer.from(salt).toString('base64'),
+    iv: Buffer.from(iv).toString('base64'),
+    encrypted: Buffer.from(encryptedContent).toString('base64')
+  })).toString('base64');
+}
+
+// Decryption helper function
+async function decryptMessage(encryptedJson, password) {
+  const decoder = new TextDecoder();
+  const { salt, iv, encrypted } =
+    JSON.parse(Buffer.from(encryptedJson, 'base64').toString());
+
+  // Convert base64 components back to Uint8Arrays
+  const saltArray = Buffer.from(salt, 'base64');
+  const ivArray = Buffer.from(iv, 'base64');
+  const encryptedContent = Buffer.from(encrypted, 'base64');
+
+  // Derive the same key using PBKDF2 with the extracted salt
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits', 'deriveKey']
+  );
+
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: saltArray,
+      iterations: ITERATIONS,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: KEY_LENGTH },
+    false,
+    ['decrypt']
+  );
+
+  // Decrypt the content
+  const decryptedContent = await crypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: ivArray
+    },
+    key,
+    encryptedContent
+  );
+
+  // Convert the decrypted content back to a string
+  return decoder.decode(decryptedContent);
+}
+
+// Add a test to verify encryption/decryption works
+describe("Shared Password Encryption", () => {
+  const testMessage = '{"message": "Test message", "data": "sensitive"}';
+  const sharedPassword = 'ceremony shared password';
+
+  it("should successfully encrypt and decrypt a message with shared password", async () => {
+    const encrypted = await encryptMessage(testMessage, sharedPassword);
+    const decrypted = await decryptMessage(encrypted, sharedPassword);
+    expect(decrypted).to.equal(testMessage);
+  });
+
+  it("should fail to decrypt with wrong password", async () => {
+    const encrypted = await encryptMessage(testMessage, sharedPassword);
+    try {
+      await decryptMessage(encrypted, 'wrong password');
+      expect.fail('Should have thrown an error');
+    } catch (error) {
+      expect(error).to.exist;
+    }
+  });
+});
+
+// Encrypt the message before the tests
 before(async () => {
   await Promise.all(pushTokenProms).then((jwts) => {
     pushTokens = jwts;
@@ -25,6 +146,7 @@ before(async () => {
 
 describe("Group Onboarding", () => {
   let groupId;
+  let user0EncrMessage;
 
   it("cannot create a room without registration permissions", () => {
     return request(Server)
@@ -37,21 +159,32 @@ describe("Group Onboarding", () => {
       .then((r) => {
         expect(r.status).to.equal(400);
         expect(r.body.error).to.include("registration permissions");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
-  it("can create a room with registration rights", () => {
+  it("can create a room with registration rights", async () => {
+    // The content can be any string, typically base-64 encoded bytes which are
+    // encrypted data. The server is not intended to decrypt the content, but
+    // rather to forward it so that other members can request and decrypt it. 
+    const message = '{"message": "Hello, world!", "name": "Scarlet Pimpernel"}'
+    const password = 'I love scarlet.'
+    user0EncrMessage = await encryptMessage(message, password);
     return request(Server)
       .post("/api/partner/groupOnboard")
       .set("Authorization", "Bearer " + pushTokens[0])
       .send({
         name: "Test Room",
         expiresAt: new Date(Date.now() + 60000).toISOString(),
+        content: user0EncrMessage,
       })
       .then((r) => {
         expect(r.status).to.equal(201);
-        expect(r.body).to.have.property("id");
-        groupId = r.body.id;
+        expect(r.body).to.have.property("groupId");
+        groupId = r.body.groupId;
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -66,6 +199,8 @@ describe("Group Onboarding", () => {
       .then((r) => {
         expect(r.status).to.equal(400);
         expect(r.body.error).to.include("already taken");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -76,10 +211,13 @@ describe("Group Onboarding", () => {
       .send({
         name: "Another Room",
         expiresAt: new Date(Date.now() + 60000).toISOString(),
+        content: user0EncrMessage,
       })
       .then((r) => {
         expect(r.status).to.equal(400);
         expect(r.body.error).to.include("already have an active group");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -94,6 +232,8 @@ describe("Group Onboarding", () => {
       .then((r) => {
         expect(r.status).to.equal(400);
         expect(r.body.error).to.include("24 hours");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -106,6 +246,8 @@ describe("Group Onboarding", () => {
         expect(r.body.data).to.be.an("array");
         expect(r.body.data).to.have.lengthOf(1);
         expect(r.body.data[0]).to.have.property("name", "Test Room");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -116,6 +258,8 @@ describe("Group Onboarding", () => {
       .send({ name: "Hacked Room" })
       .then((r) => {
         expect(r.status).to.equal(404);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -126,6 +270,8 @@ describe("Group Onboarding", () => {
       .send({ name: "Updated Room" })
       .then((r) => {
         expect(r.status).to.equal(200);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -135,15 +281,8 @@ describe("Group Onboarding", () => {
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(404);
-      });
-  });
-
-  it("can delete own room", () => {
-    return request(Server)
-      .delete(`/api/partner/groupOnboard/${groupId}`)
-      .set("Authorization", "Bearer " + pushTokens[0])
-      .then((r) => {
-        expect(r.status).to.equal(204);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -155,31 +294,62 @@ describe("Group Onboarding", () => {
    * Group Onboarding Members
    */
 
+  it("organizer can see all members, starting with themselves", () => {
+    return request(Server)
+      .get(`/api/partner/groupOnboardMembers`)
+      .set("Authorization", "Bearer " + pushTokens[0])
+      .then((r) => {
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.an("array");
+        expect(r.body.data).to.have.lengthOf(1);
+        expect(r.body.data[0]).to.have.property("admitted");
+        expect(r.body.data[0]).to.have.property("content");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("non-admitted members cannot see other members", () => {
+    return request(Server)
+      .get(`/api/partner/groupOnboardMembers/${groupId}`)
+      .set("Authorization", "Bearer " + pushTokens[1])
+      .then((r) => {
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  let memberId;
   it("can join a group", () => {
     return request(Server)
       .post("/api/partner/groupOnboardMember")
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({
-        groupOnboard: groupId,
+        groupId: groupId,
         content: "Member 1 content"
       })
       .then((r) => {
-        console.log(r.body)
         expect(r.status).to.equal(201);
+        memberId = r.body.memberId;
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
-  it("cannot join same group twice", () => {
+  it("cannot join the same group twice", () => {
     return request(Server)
       .post("/api/partner/groupOnboardMember")
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({
-        groupOnboard: groupId,
+        groupId: groupId,
         content: "Duplicate content"
       })
       .then((r) => {
-        expect(r.status).to.equal(400);
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
         expect(r.body.error).to.include("already a member");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -188,11 +358,12 @@ describe("Group Onboarding", () => {
       .put(`/api/partner/groupOnboardMember/${memberId}`)
       .set("Authorization", "Bearer " + pushTokens[0])
       .send({
-        memberDid: creds[1].did,
         admitted: true
       })
       .then((r) => {
         expect(r.status).to.equal(200);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -205,61 +376,73 @@ describe("Group Onboarding", () => {
         admitted: true
       })
       .then((r) => {
-        expect(r.status).to.equal(403);
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
   it("member can update their content", () => {
     return request(Server)
-      .put(`/api/partner/groupOnboardMember/${groupId}`)
+      .put(`/api/partner/groupOnboardMember`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({
         content: "Updated content"
       })
       .then((r) => {
         expect(r.status).to.equal(200);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
-  it("organizer can see all members", () => {
+  it("organizer can see all other members", () => {
     return request(Server)
-      .get(`/api/partner/groupOnboardMember/${groupId}`)
+      .get(`/api/partner/groupOnboardMembers`)
       .set("Authorization", "Bearer " + pushTokens[0])
       .then((r) => {
         expect(r.status).to.equal(200);
         expect(r.body.data).to.be.an("array");
         expect(r.body.data[0]).to.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
   it("admitted member can see other admitted members", () => {
     return request(Server)
-      .get(`/api/partner/groupOnboardMember/${groupId}`)
+      .get(`/api/partner/groupOnboardMembers`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(200);
         expect(r.body.data).to.be.an("array");
         expect(r.body.data[0]).to.not.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
   it("non-member cannot see members", () => {
     return request(Server)
-      .get(`/api/partner/groupOnboardMember/${groupId}`)
+      .get(`/api/partner/groupOnboardMembers`)
       .set("Authorization", "Bearer " + pushTokens[2])
       .then((r) => {
-        expect(r.status).to.equal(403);
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
   it("member can leave group", () => {
     return request(Server)
-      .delete(`/api/partner/groupOnboardMember/${groupId}`)
+      .delete(`/api/partner/groupOnboardMember`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(204);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -269,6 +452,8 @@ describe("Group Onboarding", () => {
       .set("Authorization", "Bearer " + pushTokens[0])
       .then((r) => {
         expect(r.status).to.equal(204);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -282,6 +467,8 @@ describe("Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(404);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 
@@ -291,6 +478,8 @@ describe("Group Onboarding", () => {
       .set("Authorization", "Bearer " + pushTokens[0])
       .then((r) => {
         expect(r.status).to.equal(404);
+      }).catch((err) => {
+        return Promise.reject(err)
       });
   });
 

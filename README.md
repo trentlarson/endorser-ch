@@ -635,11 +635,12 @@ fs.writeFileSync('metrics-count.csv', 'month,count\n')
 R.map(key => fs.appendFileSync('metrics-count.csv', key + ',' + monthClaims[key] + '\n'), keys)
 
 // write counts for months & selected types to CSV
-let selectedTypes = ['AgreeAction', 'GiveAction', 'Offer', 'PlanAction']
+// Note: these types were not used until late 2020. (... mostly JoinAction & Confirmation)
+let selectedTypes = ['GiveAction', 'Offer', 'PlanAction', 'AgreeAction']
 //let selectedTypes = ['RegisterAction']
 let now = new Date()
 let nonEdits = R.filter(record => record.handleId.substring(27) === record.id, all)
-let monthClaims = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, nonEdits))
+let monthClaimsTypes = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, nonEdits))
 fs.writeFileSync('metrics-claims-by-month-filtered.csv', 'date,' + selectedTypes.join(',') + ',total' + '\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
@@ -649,7 +650,7 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
     let row = ''
     let total = 0
     for (const type of selectedTypes) {
-      const thisCount = monthClaims[monthStr + ',' + type] || 0
+      const thisCount = monthClaimsTypes[monthStr + ',' + type] || 0
       row += ',' + thisCount
       total += thisCount
     }
@@ -677,6 +678,11 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
     fs.appendFileSync('metrics-given-hours.csv', monthStr + ',' + monthSum + '\n')
   }
 }
+
+// Now you can fill out the spreadsheet graphs.
+// To edit the data ranges in LibreOffice, right-click a graph, choose "Edit", then hit "Data Rannges" icon at top.
+
+
 
 
 //// The following are only available if you retrieved private data.

@@ -11,6 +11,58 @@ import { dbService as partnerDbService } from "../services/partner.db.service";
 import { getAllDidsBetweenRequesterAndObjects } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
+/**
+ * Update membership details for given member
+ *
+ * @param {number} memberId - member ID
+ * @param {object} member - member record
+ * @param {string} content - new content
+ * @param {boolean} admitted - admission status (organizer only)
+ * @param {object} res - the Response object
+ * @returns {object} - success response
+ */
+async function updateGroupMember(memberId, member, bodyData, res) {
+  if (!member) {
+    return res.status(404).json({ error: "Member not found" }).end()
+  }
+
+  const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" }).end()
+  }
+
+  const isMember = res.locals.tokenIssuer === member.issuerDid
+  const isOrganizer = res.locals.tokenIssuer === group.issuerDid
+
+  if (!isMember && !isOrganizer) {
+    return res.status(403).json({ error: "You are not authorized to update this member." }).end()
+  }
+
+  const result = {}
+  if (isMember && bodyData.content) {
+    const updated = await partnerDbService.groupOnboardMemberUpdateContent(memberId, member, bodyData.content)
+    if (updated === 0) {
+      return res.status(404).json({ error: "That member ID could not be updated with content." }).end()
+    }
+    if (bodyData.admitted !== undefined) {
+      result.message = "Only the organizer can update member admission status."
+    }
+  }
+
+  if (isOrganizer && bodyData.admitted !== undefined) {
+    const updated = await partnerDbService.groupOnboardMemberUpdateAdmitted(memberId, bodyData.admitted)
+    if (updated === 0) {
+      return res.status(404).json({ error: "That member ID could not be updated with admission status." }).end()
+    }
+    if (bodyData.content) {
+      result.message = "Only the member can update their content."
+    }
+  }
+
+  result.success = true
+  return res.status(200).json(result).end()
+}
+
 export default express
 .Router()
 .all('*', function (req, res, next) {
@@ -95,7 +147,7 @@ export default express
         // this is a server error, not a client error; we assume something went to the logs inside the method call
         res.status(500).json({ error: result }).end()
       } else {
-        res.status(201).json({ success: result }).end()
+        res.status(201).json({ success: true, signedEvent: result.signedEvent }).end()
       }
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
@@ -473,6 +525,7 @@ export default express
  * @route POST /api/partner/groupOnboard
  * @param {string} name.body.required - name of the room
  * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
+ * @param {string} content.body.required - personal content for the room creator
  * @returns {object} 201 - Created with room ID
  * @returns {Error} 400 - client error
  */
@@ -488,7 +541,7 @@ export default express
       return res.status(400).json({ error: "You must have registration permissions to create a group." }).end()
     }
 
-    const { name, expiresAt } = req.body
+    const { name, expiresAt, content } = req.body
     
     // Validate inputs
     if (!name || typeof name !== 'string') {
@@ -507,8 +560,9 @@ export default express
     }
 
     try {
-      const result = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expireDate)
-      res.status(201).json({ id: result }).end()
+      const groupId = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expireDate)
+      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content)
+      res.status(201).json({ success: true, groupId: groupId, memberId: memberId }).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         if (err.message.includes('issuerDid')) {
@@ -517,31 +571,6 @@ export default express
           return res.status(400).json({ error: "That group name is already taken." }).end()
         }
       }
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Delete a group onboarding room
- * 
- * @group partner utils - Partner Utils
- * @route DELETE /api/partner/groupOnboard/{id}
- * @param {number} id.path.required - room ID
- * @returns 204 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.delete(
-  '/groupOnboard/:id',
-  async (req, res) => {
-    try {
-      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(req.params.id, res.locals.tokenIssuer)
-      if (deleted === 0) {
-        return res.status(404).json({ error: "That group was not found for you." }).end()
-      }
-      res.status(204).end()
-    } catch (err) {
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -570,15 +599,15 @@ export default express
  * Update a group onboarding room
  * 
  * @group partner utils - Partner Utils
- * @route PUT /api/partner/groupOnboard/{id}
- * @param {number} id.path.required - room ID
+ * @route PUT /api/partner/groupOnboard/{groupId}
+ * @param {number} groupId.path.required - room ID
  * @param {string} name.body.required - new room name
  * @returns 200 - Success
  * @returns {Error} 403 - Unauthorized
  * @returns {Error} 404 - Not found
  */
 .put(
-  '/groupOnboard/:id',
+  '/groupOnboard/:groupId',
   async (req, res) => {
     try {
       const { name } = req.body
@@ -586,7 +615,7 @@ export default express
         return res.status(400).json({ error: "The name must be a non-empty string" }).end()
       }
 
-      const changes = await partnerDbService.groupOnboardUpdate(req.params.id, res.locals.tokenIssuer, name)
+      const changes = await partnerDbService.groupOnboardUpdate(req.params.groupId, res.locals.tokenIssuer, name)
       if (changes === 0) {
         return res.status(404).json({ error: "That group was not found for you." }).end()
       }
@@ -601,11 +630,36 @@ export default express
 )
 
 /**
+ * Delete a group onboarding room
+ *
+ * @group partner utils - Partner Utils
+ * @route DELETE /api/partner/groupOnboard/{groupId}
+ * @param {number} groupId.path.required - room ID
+ * @returns 204 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboard/:groupId',
+  async (req, res) => {
+    try {
+      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(req.params.groupId, res.locals.tokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: "That group was not found for you." }).end()
+      }
+      res.status(204).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
  * Join a group onboarding room
  * 
  * @group partner utils - Partner Utils
  * @route POST /api/partner/groupOnboardMember
- * @param {number} groupOnboard.body.required - group ID to join
+ * @param {number} groupId.body.required - group ID to join
  * @param {string} content.body.required - member content
  * @returns {object} 201 - Created
  * @returns {Error} 400 - client error
@@ -614,27 +668,131 @@ export default express
   '/groupOnboardMember',
   async (req, res) => {
     try {
-      const { groupOnboard, content } = req.body
+      const { groupId, content } = req.body
 
       if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: "Content must be a non-empty string" }).end()
+        return res.status(400).json({ error: "The content must be a non-empty string." }).end()
       }
 
       // Verify group exists
-      const group = await partnerDbService.groupOnboardGetByRowId(groupOnboard)
+      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
       if (!group) {
-        return res.status(404).json({ error: "Group not found" }).end()
+        return res.status(404).json({ error: "That group was not found." }).end()
       }
 
       try {
-        await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupOnboard, content)
-        res.status(201).json({ success: true }).end()
+        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content)
+        res.status(201).json({ success: true, memberId: memberId }).end()
       } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
-          return res.status(400).json({ error: "You are already a member of this group" }).end()
+          return res.status(400).json({ error: "You are already a member of this group." }).end()
         }
         throw err
       }
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get group members
+ * 
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/groupOnboardMembers/{groupId}
+ * @returns {array} 200 - List of members
+ * @returns {Error} 403 - Unauthorized
+ */
+.get(
+  '/groupOnboardMembers',
+  async (req, res) => {
+    try {
+      // get group member is in
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+      if (!member) {
+        return res.status(404).json({ error: "You are not found in any group." }).end()
+      }
+
+      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+      if (!group) {
+        return res.status(404).json({ error: "That is not a valid group." }).end()
+      }
+
+      const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
+
+      const isOrganizer = group.issuerDid === res.locals.tokenIssuer
+
+      if (isOrganizer) {
+        // Organizer sees everything
+        return res.status(200).json({ data: members }).end()
+      }
+
+      // Find requesting user's membership
+      const requesterMember = members.find(m => m.issuerDid === res.locals.tokenIssuer)
+      if (!requesterMember || !requesterMember.admitted) {
+        return res.status(403).json({ error: "You are not authorized to view members." }).end()
+      }
+
+      // Return only admitted members
+      const admittedMembers = members
+        .filter(m => m.admitted)
+        .map(m => ({
+          issuerDid: m.issuerDid,
+          content: m.content
+        }))
+
+      res.status(200).json({ data: admittedMembers }).end()
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership for token issuer
+ *
+ * @group partner utils - Partner Utils
+ * @route PUT /api/partner/groupOnboardMember/{groupId}
+ * @param {number} memberId.path.required - group ID
+ * @param {string} content.body.optional - new content
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+      await updateGroupMember(member.rowid, member, req.body, res)
+    } catch (err) {
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership for given member (by the organizer)
+ * 
+ * @group partner utils - Partner Utils
+ * @route PUT /api/partner/groupOnboardMember/{groupId}
+ * @param {number} memberId.path.required - group ID
+ * @param {string} content.body.optional - new content
+ * @param {boolean} admitted.body.optional - admission status (organizer only)
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember/:memberId',
+  async (req, res) => {
+    try {
+      const memberId = req.params.memberId
+
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
+      await updateGroupMember(memberId, member, req.body, res)
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
     }
@@ -659,124 +817,6 @@ export default express
         return res.status(404).json({ error: "Membership not found" }).end()
       }
       res.status(204).end()
-    } catch (err) {
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update group membership
- * 
- * @group partner utils - Partner Utils
- * @route PUT /api/partner/groupOnboardMember/{groupId}
- * @param {number} groupId.path.required - group ID
- * @param {string} content.body.optional - new content
- * @param {boolean} admitted.body.optional - admission status (organizer only)
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.put(
-  '/groupOnboardMember/:memberId',
-  async (req, res) => {
-    try {
-      const { content, admitted } = req.body
-      const groupId = req.params.groupId
-
-      // get group to check if requester is organizer, just for "admitted" flag
-      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
-      if (!group) {
-        return res.status(404).json({ error: "Group not found" }).end()
-      }
-
-      // get member record
-      const member = await partnerDbService.groupOnboardMemberGetById(memberId)
-      if (!member) {
-        return res.status(404).json({ error: "Member not found" }).end()
-      }
-      
-      const isMember = member.issuerDid === res.locals.tokenIssuer
-      const isOrganizer = group.issuerDid === res.locals.tokenIssuer
-
-      if (!isMember && !isOrganizer) {
-        return res.status(403).json({ error: "You are not authorized to update this member." }).end()
-      }
-
-      const result = {}
-      if (content && isMember) {
-        const updated = await partnerDbService.groupOnboardMemberUpdateContent(memberId, content)
-        if (updated === 0) {
-          return res.status(404).json({ error: "That member ID could not be updated with content." }).end()
-        }
-        if (admitted !== undefined) {
-          result.message = "Only the organizer can update member admission status."
-        }
-      }
-
-      if (isOrganizer && admitted !== undefined) {
-        const updated = await partnerDbService.groupOnboardMemberUpdateAdmitted(memberId, admitted)
-        if (updated === 0) {
-          return res.status(404).json({ error: "That member ID could not be updated with admission status." }).end()
-        }
-        if (content) {
-          result.message = "Only the member can update their content."
-        }
-      }
-
-      result.success = true
-      res.status(200).json(result).end()
-    } catch (err) {
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get group members
- * 
- * @group partner utils - Partner Utils
- * @route GET /api/partner/groupOnboardMembers/{groupId}
- * @param {number} groupId.path.required - group ID
- * @returns {array} 200 - List of members
- * @returns {Error} 403 - Unauthorized
- */
-.get(
-  '/groupOnboardMembers/:groupId',
-  async (req, res) => {
-    try {
-      const groupId = req.params.groupId
-
-      // get group to check if requester is organizer, since they have full visibility
-      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
-      if (!group) {
-        return res.status(404).json({ error: "Group not found" }).end()
-      }
-
-      const members = await partnerDbService.groupOnboardMembersByGroup(groupId)
-      
-      const isOrganizer = group.issuerDid === res.locals.tokenIssuer
-      
-      if (isOrganizer) {
-        // Organizer sees everything
-        return res.status(200).json({ data: members }).end()
-      }
-
-      // Find requesting user's membership
-      const requesterMember = members.find(m => m.issuerDid === res.locals.tokenIssuer)
-      if (!requesterMember || !requesterMember.admitted) {
-        return res.status(403).json({ error: "Not authorized to view members" }).end()
-      }
-
-      // Return only admitted members
-      const admittedMembers = members
-        .filter(m => m.admitted)
-        .map(m => ({
-          issuerDid: m.issuerDid,
-          content: m.content
-        }))
-
-      res.status(200).json({ data: admittedMembers }).end()
     } catch (err) {
       res.status(500).json({ error: err.message }).end()
     }

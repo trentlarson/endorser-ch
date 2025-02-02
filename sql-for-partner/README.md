@@ -21,13 +21,13 @@ CREATE INDEX group_onboard_issuerDid ON group_onboard(issuerDid);
 
 CREATE TABLE group_onboard_members (
   issuerDid TEXT NOT NULL,
-  groupOnboard INTEGER NOT NULL,
+  groupId INTEGER NOT NULL,
   admitted BOOLEAN DEFAULT FALSE,
   content TEXT NOT NULL,
-  FOREIGN KEY (groupOnboard) REFERENCES group_onboard(rowid)
+  FOREIGN KEY (groupId) REFERENCES group_onboard(rowid)
 ); 
 CREATE INDEX group_onboard_members_issuerDid ON group_onboard_members(issuerDid);
-CREATE INDEX group_onboard_members_groupOnboard ON group_onboard_members(groupOnboard);
+CREATE INDEX group_onboard_members_groupId ON group_onboard_members(groupId);
 
 -- partners are other systems with whom this system collaborates
 CREATE TABLE partner_link (
