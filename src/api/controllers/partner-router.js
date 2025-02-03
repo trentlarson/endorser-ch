@@ -935,6 +935,12 @@ export default express
   '/groupOnboardMember',
   async (req, res) => {
     try {
+      // first check that they are not the organizer of a meeting
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      if (group) {
+        return res.status(403).json({ error: { message: "You are the organizer of a group. You can only leave the group by deleting it." } }).end()
+      }
+
       const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.tokenIssuer)
       if (deleted === 0) {
         return res.status(404).json({ error: "That membership was not found." }).end()
