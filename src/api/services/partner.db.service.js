@@ -151,10 +151,10 @@ class PartnerDatabase {
    * Group Onboarding Members
    **/
 
-  groupOnboardMemberInsert(issuerDid, groupId, content) {
+  groupOnboardMemberInsert(issuerDid, groupId, content, admitted = false) {
     return new Promise((resolve, reject) => {
-      const stmt = "INSERT INTO group_onboard_member (issuerDid, groupId, content) VALUES (?, ?, ?)"
-      partnerDb.run(stmt, [issuerDid, groupId, content], function(err) {
+      const stmt = "INSERT INTO group_onboard_member (issuerDid, groupId, content, admitted) VALUES (?, ?, ?, ?)"
+      partnerDb.run(stmt, [issuerDid, groupId, content, admitted ? 1 : 0], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -225,6 +225,9 @@ class PartnerDatabase {
           if (err) {
             reject(err)
           } else {
+            if (row) {
+              row.admitted = util.booleanify(row.admitted)
+            }
             resolve(row)
           }
         }
@@ -241,6 +244,9 @@ class PartnerDatabase {
           if (err) {
             reject(err)
           } else {
+            if (row) {
+              row.admitted = util.booleanify(row.admitted)
+            }
             resolve(row)
           }
         }
@@ -248,15 +254,25 @@ class PartnerDatabase {
     })
   }
 
+  /**
+   * Get all members of a group, ordered by rowid AKA memberId
+   *
+   * @param {string} groupId
+   * @returns {Promise<Array<{memberId: string, content: string, admitted: boolean}>>}
+   */
   groupOnboardMembersGetByGroup(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        "SELECT m.rowid as memberId, m.*, m.groupId, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ?",
+        // the first in the list is the organizer
+        "SELECT m.rowid as memberId, m.*, m.groupId, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ? ORDER BY m.rowid",
         [groupId],
         function(err, rows) {
           if (err) {
             reject(err)
           } else {
+            rows.forEach(row => {
+              row.admitted = util.booleanify(row.admitted)
+            })
             resolve(rows)
           }
         }

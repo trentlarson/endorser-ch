@@ -176,13 +176,13 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
+  const MESSAGE = '{"message": "Hello, world!", "name": "Scarlet Pimpernel"}'
+  const PASSWORD = 'I love scarlet.'
   it("can create a room with registration rights", async () => {
     // The content can be any string, typically base-64 encoded bytes which are
     // encrypted data. The server is not intended to decrypt the content, but
     // rather to forward it so that other members can request and decrypt it. 
-    const message = '{"message": "Hello, world!", "name": "Scarlet Pimpernel"}'
-    const password = 'I love scarlet.'
-    user0EncrMessage = await encryptMessage(message, password);
+    user0EncrMessage = await encryptMessage(MESSAGE, PASSWORD);
     return request(Server)
       .post("/api/partner/groupOnboard")
       .set("Authorization", "Bearer " + pushTokens[0])
@@ -323,12 +323,14 @@ describe("P2 - Group Onboarding", () => {
     return request(Server)
       .get(`/api/partner/groupOnboardMembers`)
       .set("Authorization", "Bearer " + pushTokens[0])
-      .then((r) => {
+      .then(async (r) => {
         expect(r.status).to.equal(200);
         expect(r.body.data).to.be.an("array");
         expect(r.body.data).to.have.lengthOf(1);
         expect(r.body.data[0]).to.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
+        const decrypted = await decryptMessage(r.body.data[0].content, PASSWORD);
+        expect(decrypted).to.equal(MESSAGE);
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -345,6 +347,19 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
+  it("can see that they're not in a group", () => {
+    return request(Server)
+      .get("/api/partner/groupOnboardMember")
+      .set("Authorization", "Bearer " + pushTokens[1])
+      .then((r) => {
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.undefined;
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+
   let memberId;
   it("can join a group", () => {
     return request(Server)
@@ -357,6 +372,21 @@ describe("P2 - Group Onboarding", () => {
       .then((r) => {
         expect(r.status).to.equal(201);
         memberId = r.body.success.memberId;
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("can see that they're in a group", () => {
+    return request(Server)
+      .get("/api/partner/groupOnboardMember")
+      .set("Authorization", "Bearer " + pushTokens[1])
+      .then((r) => {
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.an("object");
+        expect(r.body.data).to.have.property("groupId").that.equals(groupId);
+        expect(r.body.data).to.have.property("content").that.equals("Member 1 content");
+        expect(r.body.data).to.have.property("admitted").that.equals(false);
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -391,6 +421,21 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
+  it("can see that they're in a group and admitted", () => {
+    return request(Server)
+      .get("/api/partner/groupOnboardMember")
+      .set("Authorization", "Bearer " + pushTokens[1])
+      .then((r) => {
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.an("object");
+        expect(r.body.data).to.have.property("groupId").that.equals(groupId);
+        expect(r.body.data).to.have.property("admitted").that.equals(true);
+        expect(r.body.data).to.have.property("content").that.equals("Member 1 content");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
   it("non-organizer cannot admit members", () => {
     return request(Server)
       .put(`/api/partner/groupOnboardMember/${groupId}`)
@@ -411,7 +456,7 @@ describe("P2 - Group Onboarding", () => {
       .put(`/api/partner/groupOnboardMember`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({
-        content: "Updated content"
+        content: "Member 1 updated content"
       })
       .then((r) => {
         expect(r.status).to.equal(200);
@@ -426,7 +471,7 @@ describe("P2 - Group Onboarding", () => {
       .set("Authorization", "Bearer " + pushTokens[0])
       .then((r) => {
         expect(r.status).to.equal(200);
-        expect(r.body.data).to.be.an("array");
+        expect(r.body.data).to.be.an("array").with.lengthOf(2);
         expect(r.body.data[0]).to.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
       }).catch((err) => {
@@ -438,11 +483,14 @@ describe("P2 - Group Onboarding", () => {
     return request(Server)
       .get(`/api/partner/groupOnboardMembers`)
       .set("Authorization", "Bearer " + pushTokens[1])
-      .then((r) => {
+      .then(async (r) => {
         expect(r.status).to.equal(200);
-        expect(r.body.data).to.be.an("array");
+        expect(r.body.data).to.be.an("array").with.lengthOf(2);
         expect(r.body.data[0]).to.not.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
+        expect(r.body.data[1]).to.have.property("content").that.equals("Member 1 updated content");
+        const decrypted0 = await decryptMessage(r.body.data[0].content, PASSWORD);
+        expect(decrypted0).to.equal(MESSAGE);
       }).catch((err) => {
         return Promise.reject(err)
       });

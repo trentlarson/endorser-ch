@@ -40,7 +40,7 @@ async function updateGroupMember(memberId, member, bodyData, res) {
 
   const result = {}
   if (isMember && bodyData.content) {
-    const updated = await partnerDbService.groupOnboardMemberUpdateContent(memberId, member, bodyData.content)
+    const updated = await partnerDbService.groupOnboardMemberUpdateContent(memberId, bodyData.content)
     if (updated === 0) {
       return res.status(404).json({ error: "That member ID could not be updated with content." }).end()
     }
@@ -568,7 +568,7 @@ export default express
 
     try {
       const groupId = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expiresAt)
-      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content)
+      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content, true)
       res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
@@ -600,6 +600,28 @@ export default express
       res.status(200).json({ data: room }).end()
     } catch (err) {
       console.error('Error getting group onboarding room', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/** 
+ * Get a group onboarding room by ID
+ * 
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/groupOnboard/{groupId}
+ * @param {number} groupId.path.required - group ID
+ * @returns {object} 200 - the room with "groupId", "name", "expiresAt"
+ */
+.get(
+  '/groupOnboard/:groupId',
+  async (req, res) => {
+    try {
+      const groupId = req.params.groupId
+      const room = await partnerDbService.groupOnboardGetByRowId(groupId)
+      res.status(200).json({ data: room }).end()
+    } catch (err) {
+      console.error('Error getting group onboarding room by ID', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -640,7 +662,7 @@ export default express
   '/groupOnboard',
   async (req, res) => {
     try {
-      let { name, expiresAt } = req.body
+      let { name, expiresAt, content } = req.body
 
       const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
       if (!room) {
@@ -656,7 +678,24 @@ export default express
       if (changes === 0) {
         return res.status(404).json({ error: { message: "That group was not found to change." } }).end()
       }
-      res.status(200).json({ success: true }).end()
+      const result = { success: true }
+      // update the member content
+      if (content) {
+        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+        if (member) {
+          const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
+          if (memberChanges === 0) {
+            result.message = "Could not update your member content."
+            console.error('User ' + res.locals.tokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
+          }
+        } else {
+          result.message = "You were not found as a member of that group."
+          console.error('User ' + res.locals.tokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
+        }
+      } else {
+        result.message = "Be sure to provide new 'content' if you change the group password."
+      }
+      res.status(200).json(result).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         return res.status(400).json({ error: { message: "That group name is already taken." } }).end()
@@ -746,7 +785,28 @@ export default express
 )
 
 /**
- * Get group members
+ * Get current user's group membership
+ * 
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/groupOnboardMember
+ * @returns {object} 200 - Member record with groupId, content, and admitted status, or undefined if not in a group
+ * @returns {Error} 500 - server error
+ */
+.get(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+      res.status(200).json({ data: member }).end()
+    } catch (err) {
+      console.error('Error getting group membership', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get group members for the group the member is in
  * 
  * @group partner utils - Partner Utils
  * @route GET /api/partner/groupOnboardMembers/{groupId}
@@ -779,15 +839,25 @@ export default express
 
       // Find requesting user's membership
       const requesterMember = members.find(m => m.issuerDid === res.locals.tokenIssuer)
-      if (!requesterMember || !requesterMember.admitted) {
-        return res.status(403).json({ error: { message: "You are not authorized to view members." } }).end()
+      if (!requesterMember) {
+        return res.status(403).json({ error: { message: "You have not joined this group." } }).end()
+      }
+      if (!requesterMember.admitted) {
+        const organizer = members[0]
+        const result = [
+          {
+            memberId: organizer.memberId,
+            content: organizer.content
+          }
+        ]
+        return res.status(200).json({ data: result }).end()
       }
 
       // Return only admitted members
       const admittedMembers = members
         .filter(m => m.admitted)
         .map(m => ({
-          issuerDid: m.issuerDid,
+          memberId: m.memberId,
           content: m.content
         }))
 
