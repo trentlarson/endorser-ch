@@ -63,7 +63,7 @@ class PartnerDatabase {
 
   groupOnboardInsert(issuerDid, name, expiresAt) {
     return new Promise((resolve, reject) => {
-      const stmt = "INSERT INTO group_onboard (issuerDid, name, expiresAt) VALUES (?, ?, ?)"
+      const stmt = "INSERT INTO group_onboard (issuerDid, name, expiresAt) VALUES (?, ?, datetime(?))"
       partnerDb.run(stmt, [issuerDid, name, expiresAt], function(err) {
         if (err) {
           reject(err)
@@ -80,6 +80,10 @@ class PartnerDatabase {
         if (err) {
           reject(err)
         } else {
+          if (row) {
+            row.createdAt = util.isoAndZonify(row.createdAt)
+            row.expiresAt = util.isoAndZonify(row.expiresAt)
+          }
           resolve(row)
         }
       })
@@ -92,6 +96,10 @@ class PartnerDatabase {
         if (err) {
           reject(err)
         } else {
+          if (row) {
+            row.createdAt = util.isoAndZonify(row.createdAt)
+            row.expiresAt = util.isoAndZonify(row.expiresAt)
+          }
           resolve(row)
         }
       })
@@ -104,6 +112,9 @@ class PartnerDatabase {
         if (err) {
           reject(err)
         } else {
+          rows.forEach(row => {
+            row.expiresAt = util.isoAndZonify(row.expiresAt)
+          })
           resolve(rows)
         }
       })
@@ -125,7 +136,7 @@ class PartnerDatabase {
 
   groupOnboardUpdate(id, issuerDid, name, expiresAt) {
     return new Promise((resolve, reject) => {
-      const stmt = "UPDATE group_onboard SET name = ?, expiresAt = ? WHERE issuerDid = ? AND rowid = ?"
+      const stmt = "UPDATE group_onboard SET name = ?, expiresAt = datetime(?) WHERE issuerDid = ? AND rowid = ?"
       partnerDb.run(stmt, [name, expiresAt, issuerDid, id], function(err) {
         if (err) {
           reject(err)
@@ -240,7 +251,7 @@ class PartnerDatabase {
   groupOnboardMembersGetByGroup(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        "SELECT m.rowid as memberId, m.*, g.rowid as groupId, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ?",
+        "SELECT m.rowid as memberId, m.*, m.groupId, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ?",
         [groupId],
         function(err, rows) {
           if (err) {

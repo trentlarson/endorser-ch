@@ -193,8 +193,8 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(201);
-        expect(r.body).to.have.property("groupId");
-        groupId = r.body.groupId;
+        expect(r.body.success).to.have.property("groupId");
+        groupId = r.body.success.groupId;
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -356,13 +356,13 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(201);
-        memberId = r.body.memberId;
+        memberId = r.body.success.memberId;
       }).catch((err) => {
         return Promise.reject(err)
       });
   });
 
-  it("cannot join the same group twice", () => {
+  it("cannot join the same group with different member info", () => {
     return request(Server)
       .post("/api/partner/groupOnboardMember")
       .set("Authorization", "Bearer " + pushTokens[1])
@@ -371,8 +371,7 @@ describe("P2 - Group Onboarding", () => {
         content: "Duplicate content"
       })
       .then((r) => {
-        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
-        expect(r.body.error.message).to.include("already a member");
+        expect(r.body.success.memberId).to.equal(memberId);
       }).catch((err) => {
         return Promise.reject(err)
       });

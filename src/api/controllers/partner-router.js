@@ -147,7 +147,7 @@ export default express
         // this is a server error, not a client error; we assume something went to the logs inside the method call
         res.status(500).json({ error: result }).end()
       } else {
-        res.status(201).json({ success: true, signedEvent: result.signedEvent }).end()
+        res.status(201).json({ success: { signedEvent: result.signedEvent } }).end()
       }
     } catch (err) {
       console.error('Error adding partner link', err)
@@ -436,7 +436,7 @@ export default express
         return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
       }
       const result = await partnerDbService.profileDelete(res.locals.tokenIssuer)
-      res.status(204).json({ success: true, numDeleted: result }).end()
+      res.status(204).json({ success: { numDeleted: result } }).end()
     } catch (err) {
       console.error('Error deleting user profile', err)
       res.status(500).json({ error: err.message }).end()
@@ -567,9 +567,9 @@ export default express
     }
 
     try {
-      const groupId = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expireDate)
+      const groupId = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expiresAt)
       const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content)
-      res.status(201).json({ success: true, groupId: groupId, memberId: memberId }).end()
+      res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         if (err.message.includes('issuerDid')) {
@@ -595,6 +595,7 @@ export default express
   '/groupOnboard',
   async (req, res) => {
     try {
+      // maybe undefined
       const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
       res.status(200).json({ data: room }).end()
     } catch (err) {
@@ -724,10 +725,16 @@ export default express
 
       try {
         const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content)
-        res.status(201).json({ success: true, memberId: memberId }).end()
+        res.status(201).json({ success: { memberId: memberId } }).end()
       } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
-          return res.status(400).json({ error: { message: "You are already a member of this group." } }).end()
+          // retrieve the member record and succeed
+          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+          if (member) {
+            return res.status(200).json({ success: { memberId: member.memberId } }).end()
+          } else {
+            return res.status(400).json({ error: err.message }).end()
+          }
         }
         throw err
       }
@@ -809,7 +816,7 @@ export default express
     try {
       // get member record
       const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
-      await updateGroupMember(member.rowid, member, req.body, res)
+      await updateGroupMember(member.memberId, member, req.body, res)
     } catch (err) {
       console.error('Error updating group membership for token issuer', err)
       res.status(500).json({ error: err.message }).end()
