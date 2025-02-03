@@ -360,7 +360,7 @@ describe("P2 - Group Onboarding", () => {
   });
 
 
-  let memberId;
+  let memberIdOne;
   it("can join a group", () => {
     return request(Server)
       .post("/api/partner/groupOnboardMember")
@@ -371,7 +371,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(201);
-        memberId = r.body.success.memberId;
+        memberIdOne = r.body.success.memberId;
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -401,7 +401,7 @@ describe("P2 - Group Onboarding", () => {
         content: "Duplicate content"
       })
       .then((r) => {
-        expect(r.body.success.memberId).to.equal(memberId);
+        expect(r.body.success.memberId).to.equal(memberIdOne);
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -409,7 +409,7 @@ describe("P2 - Group Onboarding", () => {
 
   it("organizer can admit a member", () => {
     return request(Server)
-      .put(`/api/partner/groupOnboardMember/${memberId}`)
+      .put(`/api/partner/groupOnboardMember/${memberIdOne}`)
       .set("Authorization", "Bearer " + pushTokens[0])
       .send({
         admitted: true

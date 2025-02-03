@@ -25,6 +25,9 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   if (!member) {
     return res.status(404).json({ error: "Member not found" }).end()
   }
+  if (memberId !== member.memberId) {
+    return res.status(404).json({ error: "Cannot update using a different member ID '" + memberId + "' than the member's memberId '" + member.memberId + "'" }).end()
+  }
 
   const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
   if (!group) {
@@ -50,6 +53,10 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   }
 
   if (isOrganizer && bodyData.admitted !== undefined) {
+    if (memberId === res.locals.tokenIssuer) {
+      // organizer cannot revoke their own admission
+      return res.status(403).json({ error: "As organizer, you cannot revoke your own admission." }).end()
+    }
     const updated = await partnerDbService.groupOnboardMemberUpdateAdmitted(memberId, bodyData.admitted)
     if (updated === 0) {
       return res.status(404).json({ error: "That member ID could not be updated with admission status." }).end()
@@ -275,7 +282,7 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route GET /api/partner/userProfile/{id}
- * @param {string} rowId.path.required - the profile ID to retrieve
+ * @param {number} rowId.path.required - the profile ID to retrieve
  * @returns {UserProfile} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
  * @returns {Error} 404 - not found
@@ -286,8 +293,9 @@ export default express
   '/userProfile/:rowId',
   async (req, res) => {
     const { rowId } = req.params
+    const rowIdInt = parseInt(rowId)
     try {
-      let result = await partnerDbService.profileById(rowId)
+      let result = await partnerDbService.profileById(rowIdInt)
 
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
@@ -617,7 +625,7 @@ export default express
   '/groupOnboard/:groupId',
   async (req, res) => {
     try {
-      const groupId = req.params.groupId
+      const groupId = parseInt(req.params.groupId)
       const room = await partnerDbService.groupOnboardGetByRowId(groupId)
       res.status(200).json({ data: room }).end()
     } catch (err) {
@@ -910,7 +918,7 @@ export default express
   '/groupOnboardMember/:memberId',
   async (req, res) => {
     try {
-      const memberId = req.params.memberId
+      const memberId = parseInt(req.params.memberId)
 
       // get member record
       const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
