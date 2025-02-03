@@ -76,7 +76,7 @@ class PartnerDatabase {
 
   groupOnboardGetByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
-      partnerDb.get("SELECT * FROM group_onboard WHERE issuerDid = ?", [issuerDid], function(err, row) {
+      partnerDb.get("SELECT rowid as groupId, * FROM group_onboard WHERE issuerDid = ?", [issuerDid], function(err, row) {
         if (err) {
           reject(err)
         } else {
@@ -88,7 +88,7 @@ class PartnerDatabase {
 
   groupOnboardGetByRowId(rowId) {
     return new Promise((resolve, reject) => {
-      partnerDb.get("SELECT * FROM group_onboard WHERE rowid = ?", [rowId], function(err, row) {
+      partnerDb.get("SELECT rowid as groupId, * FROM group_onboard WHERE rowid = ?", [rowId], function(err, row) {
         if (err) {
           reject(err)
         } else {
@@ -100,24 +100,11 @@ class PartnerDatabase {
 
   groupOnboardGetAll() {
     return new Promise((resolve, reject) => {
-      partnerDb.all("SELECT rowid as rowId, name, expiresAt FROM group_onboard", function(err, rows) {
+      partnerDb.all("SELECT rowid as groupId, name, expiresAt FROM group_onboard", function(err, rows) {
         if (err) {
           reject(err)
         } else {
           resolve(rows)
-        }
-      })
-    })
-  }
-
-  groupOnboardDelete(issuerDid) {
-    return new Promise((resolve, reject) => {
-      const stmt = "DELETE FROM group_onboard WHERE issuerDid = ?"
-      partnerDb.run(stmt, [issuerDid], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(this.changes)
         }
       })
     })
@@ -136,10 +123,10 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardUpdate(id, issuerDid, name) {
+  groupOnboardUpdate(id, issuerDid, name, expiresAt) {
     return new Promise((resolve, reject) => {
-      const stmt = "UPDATE group_onboard SET name = ? WHERE issuerDid = ? AND rowid = ?"
-      partnerDb.run(stmt, [name, issuerDid, id], function(err) {
+      const stmt = "UPDATE group_onboard SET name = ?, expiresAt = ? WHERE issuerDid = ? AND rowid = ?"
+      partnerDb.run(stmt, [name, expiresAt, issuerDid, id], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -179,6 +166,19 @@ class PartnerDatabase {
     })
   }
 
+  groupOnboardMemberDeleteByGroupId(groupId) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM group_onboard_member WHERE groupId = ?"
+      partnerDb.run(stmt, [groupId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
   groupOnboardMemberUpdateContent(memberId, content) {
     return new Promise((resolve, reject) => {
       const stmt = "UPDATE group_onboard_member SET content = ? WHERE rowid = ?"
@@ -208,7 +208,7 @@ class PartnerDatabase {
   groupOnboardMemberGetByRowId(memberId) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT * FROM group_onboard_member WHERE rowid = ?",
+        "SELECT rowid as memberId, * FROM group_onboard_member WHERE rowid = ?",
         [memberId],
         function(err, row) {
           if (err) {
@@ -224,7 +224,7 @@ class PartnerDatabase {
   groupOnboardMemberGetByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT * FROM group_onboard_member WHERE issuerDid = ?",
+        "SELECT rowid as memberId, * FROM group_onboard_member WHERE issuerDid = ?",
         [issuerDid],
         function(err, row) {
           if (err) {
@@ -240,7 +240,7 @@ class PartnerDatabase {
   groupOnboardMembersGetByGroup(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        "SELECT m.*, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ?",
+        "SELECT m.rowid as memberId, m.*, g.rowid as groupId, g.issuerDid as organizerDid FROM group_onboard_member m JOIN group_onboard g ON m.groupId = g.rowid WHERE m.groupId = ?",
         [groupId],
         function(err, rows) {
           if (err) {

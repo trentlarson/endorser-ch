@@ -150,6 +150,7 @@ export default express
         res.status(201).json({ success: true, signedEvent: result.signedEvent }).end()
       }
     } catch (err) {
+      console.error('Error adding partner link', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -218,6 +219,7 @@ export default express
 
       res.status(201).json({ success: true }).end()
     } catch (err) {
+      console.error('Error adding user profile', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -262,6 +264,7 @@ export default express
       }
       res.status(200).json({ data: result }).end()
     } catch (err) {
+      console.error('Error getting user profile for issuer', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -311,6 +314,7 @@ export default express
       }
       res.status(200).json({ data: result }).end()
     } catch (err) {
+      console.error('Error getting user profile by ID', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -409,6 +413,7 @@ export default express
       }
       res.status(200).json(fullResult).end()
     } catch (err) {
+      console.error('Error getting user profile', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -433,6 +438,7 @@ export default express
       const result = await partnerDbService.profileDelete(res.locals.tokenIssuer)
       res.status(204).json({ success: true, numDeleted: result }).end()
     } catch (err) {
+      console.error('Error deleting user profile', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -513,6 +519,7 @@ export default express
       if ("" + err !== "[object Object]") {
         errorObj = "" + err // sometimes this gives more info
       }
+      console.error('Error getting user profile counts by bbox', err)
       res.status(500).json({ error: errorObj }).end()
     }
   }
@@ -538,25 +545,25 @@ export default express
       // permission to access data from the other service.)
       await ClaimService.getRateLimits(res.locals.tokenIssuer)
     } catch (e) {
-      return res.status(400).json({ error: "You must have registration permissions to create a group." }).end()
+      return res.status(400).json({ error: { message: "You must have registration permissions to create a group." } }).end()
     }
 
     const { name, expiresAt, content } = req.body
     
     // Validate inputs
     if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: "The group name must be a non-empty string." }).end()
+      return res.status(400).json({ error: { message: "The group name must be non-empty text." } }).end()
     }
 
     const expireDate = new Date(expiresAt)
     if (isNaN(expireDate.getTime())) {
-      return res.status(400).json({ error: "The expiration date is invalid." }).end()
+      return res.status(400).json({ error: { message: "The expiration date is invalid." } }).end()
     }
 
     const maxExpireTime = new Date()
     maxExpireTime.setHours(maxExpireTime.getHours() + 24)
     if (expireDate > maxExpireTime) {
-      return res.status(400).json({ error: "The expiration time cannot be more than 24 hours in the future." }).end()
+      return res.status(400).json({ error: { message: "The expiration time cannot be more than 24 hours in the future." } }).end()
     }
 
     try {
@@ -566,11 +573,32 @@ export default express
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         if (err.message.includes('issuerDid')) {
-          return res.status(400).json({ error: "You already have an active group." }).end()
+          return res.status(400).json({ error: { message: "You already have an active group." } }).end()
         } else {
-          return res.status(400).json({ error: "That group name is already taken." }).end()
+          return res.status(400).json({ error: { message: "That group name is already taken." } }).end()
         }
       }
+      console.error('Error creating group onboarding room', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get any groups set up by this person
+ * 
+ * @group partner utils - Partner Utils
+ * @route GET /api/partner/groupOnboard
+ * @returns {object} 200 - the room they created with "groupId", "name", "expiresAt"
+ */
+.get(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      res.status(200).json({ data: room }).end()
+    } catch (err) {
+      console.error('Error getting group onboarding room', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -578,18 +606,19 @@ export default express
 
 /**
  * Get all group onboarding rooms
- * 
+ *
  * @group partner utils - Partner Utils
- * @route GET /api/partner/groupOnboard
- * @returns {array} 200 - List of rooms
+ * @route GET /api/partner/groupsOnboarding
+ * @returns {array} 200 - List of rooms with "groupId", "name", "expiresAt"
  */
 .get(
-  '/groupOnboard',
+  '/groupsOnboarding',
   async (req, res) => {
     try {
       const rooms = await partnerDbService.groupOnboardGetAll()
       res.status(200).json({ data: rooms }).end()
     } catch (err) {
+      console.error('Error getting all group onboarding rooms', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -599,31 +628,39 @@ export default express
  * Update a group onboarding room
  * 
  * @group partner utils - Partner Utils
- * @route PUT /api/partner/groupOnboard/{groupId}
- * @param {number} groupId.path.required - room ID
- * @param {string} name.body.required - new room name
+ * @route PUT /api/partner/groupOnboard
+ * @param {string} name.body.optional - new room name
+ * @param {string} expiresAt.body.optional - new room expiration date
  * @returns 200 - Success
  * @returns {Error} 403 - Unauthorized
  * @returns {Error} 404 - Not found
  */
 .put(
-  '/groupOnboard/:groupId',
+  '/groupOnboard',
   async (req, res) => {
     try {
-      const { name } = req.body
-      if (!name || typeof name !== 'string') {
-        return res.status(400).json({ error: "The name must be a non-empty string" }).end()
+      let { name, expiresAt } = req.body
+
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      if (!room) {
+        return res.status(404).json({ error: { message: "That group was not found for you." } }).end()
       }
 
-      const changes = await partnerDbService.groupOnboardUpdate(req.params.groupId, res.locals.tokenIssuer, name)
+      const changes = await partnerDbService.groupOnboardUpdate(
+        room.groupId,
+        res.locals.tokenIssuer,
+        name || room.name,
+        expiresAt || room.expiresAt,
+      )
       if (changes === 0) {
-        return res.status(404).json({ error: "That group was not found for you." }).end()
+        return res.status(404).json({ error: { message: "That group was not found to change." } }).end()
       }
       res.status(200).json({ success: true }).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(400).json({ error: "That group name is already taken." }).end()
+        return res.status(400).json({ error: { message: "That group name is already taken." } }).end()
       }
+      console.error('Error updating group onboarding room', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -634,21 +671,26 @@ export default express
  *
  * @group partner utils - Partner Utils
  * @route DELETE /api/partner/groupOnboard/{groupId}
- * @param {number} groupId.path.required - room ID
  * @returns 204 - Success
  * @returns {Error} 403 - Unauthorized
  * @returns {Error} 404 - Not found
  */
 .delete(
-  '/groupOnboard/:groupId',
+  '/groupOnboard',
   async (req, res) => {
     try {
-      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(req.params.groupId, res.locals.tokenIssuer)
-      if (deleted === 0) {
-        return res.status(404).json({ error: "That group was not found for you." }).end()
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      if (!room) {
+        return res.status(404).json({ error: { message: "No group was found for you." } }).end()
       }
-      res.status(204).end()
+      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.tokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: { message: "That group couldn't be deleted." } }).end()
+      }
+      await partnerDbService.groupOnboardMemberDeleteByGroupId(room.groupId)
+      res.status(204).json({ success: true }).end()
     } catch (err) {
+      console.error('Error deleting group onboarding room', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -671,13 +713,13 @@ export default express
       const { groupId, content } = req.body
 
       if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: "The content must be a non-empty string." }).end()
+        return res.status(400).json({ error: { message: "The content must be non-empty text." } }).end()
       }
 
       // Verify group exists
       const group = await partnerDbService.groupOnboardGetByRowId(groupId)
       if (!group) {
-        return res.status(404).json({ error: "That group was not found." }).end()
+        return res.status(404).json({ error: { message: "That group was not found." } }).end()
       }
 
       try {
@@ -685,11 +727,12 @@ export default express
         res.status(201).json({ success: true, memberId: memberId }).end()
       } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
-          return res.status(400).json({ error: "You are already a member of this group." }).end()
+          return res.status(400).json({ error: { message: "You are already a member of this group." } }).end()
         }
         throw err
       }
     } catch (err) {
+      console.error('Error joining group onboarding room', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -700,7 +743,7 @@ export default express
  * 
  * @group partner utils - Partner Utils
  * @route GET /api/partner/groupOnboardMembers/{groupId}
- * @returns {array} 200 - List of members
+ * @returns {array} 200 - List of members with "issuerDid", "content", "admitted"
  * @returns {Error} 403 - Unauthorized
  */
 .get(
@@ -710,12 +753,12 @@ export default express
       // get group member is in
       const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
       if (!member) {
-        return res.status(404).json({ error: "You are not found in any group." }).end()
+        return res.status(404).json({ error: { message: "You are not found in any group." } }).end()
       }
 
       const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
       if (!group) {
-        return res.status(404).json({ error: "That is not a valid group." }).end()
+        return res.status(404).json({ error: { message: "That is not a valid group." } }).end()
       }
 
       const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
@@ -730,7 +773,7 @@ export default express
       // Find requesting user's membership
       const requesterMember = members.find(m => m.issuerDid === res.locals.tokenIssuer)
       if (!requesterMember || !requesterMember.admitted) {
-        return res.status(403).json({ error: "You are not authorized to view members." }).end()
+        return res.status(403).json({ error: { message: "You are not authorized to view members." } }).end()
       }
 
       // Return only admitted members
@@ -743,6 +786,7 @@ export default express
 
       res.status(200).json({ data: admittedMembers }).end()
     } catch (err) {
+      console.error('Error getting group members', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -767,6 +811,7 @@ export default express
       const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
       await updateGroupMember(member.rowid, member, req.body, res)
     } catch (err) {
+      console.error('Error updating group membership for token issuer', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -794,6 +839,7 @@ export default express
       const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
       await updateGroupMember(memberId, member, req.body, res)
     } catch (err) {
+      console.error('Error updating group membership for given member', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -814,10 +860,11 @@ export default express
     try {
       const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.tokenIssuer)
       if (deleted === 0) {
-        return res.status(404).json({ error: "Membership not found" }).end()
+        return res.status(404).json({ error: "That membership was not found." }).end()
       }
       res.status(204).end()
     } catch (err) {
+      console.error('Error leaving group', err)
       res.status(500).json({ error: err.message }).end()
     }
   }

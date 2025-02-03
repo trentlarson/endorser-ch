@@ -201,7 +201,7 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
-  it('registered user #0 can retrieve all their invite records', () => {
+  it('registered user #0 can retrieve all their invite records (randomly fails... why?)', () => {
     return request(Server)
       .get('/api/userUtil/invite')
       .set('Authorization', 'Bearer ' + pushTokens[0])

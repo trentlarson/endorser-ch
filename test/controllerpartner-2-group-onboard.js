@@ -115,7 +115,7 @@ async function decryptMessage(encryptedJson, password) {
 }
 
 // Add a test to verify encryption/decryption works
-describe("Shared Password Encryption", () => {
+describe("P2 - Shared Password Encryption", () => {
   const testMessage = '{"message": "Test message", "data": "sensitive"}';
   const sharedPassword = 'ceremony shared password';
 
@@ -144,7 +144,7 @@ before(async () => {
   return Promise.resolve();
 });
 
-describe("Group Onboarding", () => {
+describe("P2 - Group Onboarding", () => {
   let groupId;
   let user0EncrMessage;
 
@@ -158,7 +158,19 @@ describe("Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error).to.include("registration permissions");
+        expect(r.body.error.message).to.include("registration permissions");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("can see no room of their own", () => {
+    return request(Server)
+      .get("/api/partner/groupOnboard")
+      .set("Authorization", "Bearer " + pushTokens[0])
+      .then((r) => {
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.undefined;
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -198,7 +210,7 @@ describe("Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error).to.include("already taken");
+        expect(r.body.error.message).to.include("already taken");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -215,7 +227,7 @@ describe("Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error).to.include("already have an active group");
+        expect(r.body.error.message).to.include("already have an active group");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -231,7 +243,20 @@ describe("Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error).to.include("24 hours");
+        expect(r.body.error.message).to.include("24 hours");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("can see their own room", () => {
+    return request(Server)
+      .get("/api/partner/groupOnboard")
+      .set("Authorization", "Bearer " + pushTokens[0])
+      .then((r) => {
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.an("object");
+        expect(r.body.data).to.have.property("name", "Test Room");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -239,7 +264,7 @@ describe("Group Onboarding", () => {
 
   it("can list all rooms", () => {
     return request(Server)
-      .get("/api/partner/groupOnboard")
+      .get("/api/partner/groupsOnboarding")
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(200);
@@ -253,7 +278,7 @@ describe("Group Onboarding", () => {
 
   it("cannot update another user's room", () => {
     return request(Server)
-      .put(`/api/partner/groupOnboard/${groupId}`)
+      .put(`/api/partner/groupOnboard`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({ name: "Hacked Room" })
       .then((r) => {
@@ -265,7 +290,7 @@ describe("Group Onboarding", () => {
 
   it("can update own room name", () => {
     return request(Server)
-      .put(`/api/partner/groupOnboard/${groupId}`)
+      .put(`/api/partner/groupOnboard`)
       .set("Authorization", "Bearer " + pushTokens[0])
       .send({ name: "Updated Room" })
       .then((r) => {
@@ -277,7 +302,7 @@ describe("Group Onboarding", () => {
 
   it("cannot delete another user's room", () => {
     return request(Server)
-      .delete(`/api/partner/groupOnboard/${groupId}`)
+      .delete(`/api/partner/groupOnboard`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(404);
@@ -347,7 +372,7 @@ describe("Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
-        expect(r.body.error).to.include("already a member");
+        expect(r.body.error.message).to.include("already a member");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -448,7 +473,7 @@ describe("Group Onboarding", () => {
 
   it("can delete own room", () => {
     return request(Server)
-      .delete(`/api/partner/groupOnboard/${groupId}`)
+      .delete(`/api/partner/groupOnboard`)
       .set("Authorization", "Bearer " + pushTokens[0])
       .then((r) => {
         expect(r.status).to.equal(204);
