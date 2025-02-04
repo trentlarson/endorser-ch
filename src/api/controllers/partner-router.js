@@ -794,6 +794,7 @@ export default express
         if (err.message.includes('UNIQUE constraint failed')) {
           // retrieve the member record and continue
           // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
+          // (Then again, one wonders if this whole idempotent quality here is a good idea or not.)
           const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
           if (member) {
             // check that the group is the same
@@ -870,8 +871,14 @@ export default express
       const isOrganizer = group.issuerDid === res.locals.tokenIssuer
 
       if (isOrganizer) {
-        // Organizer sees everything
-        return res.status(200).json({ data: members }).end()
+        // Return everyone with acceptable properties
+        const allMembers = members
+          .map(m => ({
+            admitted: m.admitted,
+            memberId: m.memberId,
+            content: m.content,
+          }))
+        return res.status(200).json({ data: allMembers }).end()
       }
 
       // Find requesting user's membership
