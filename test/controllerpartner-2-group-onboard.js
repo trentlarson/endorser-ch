@@ -392,15 +392,16 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  it("cannot join the same group with different member info", () => {
+  it("can join the same group but gets the same member info", () => {
     return request(Server)
       .post("/api/partner/groupOnboardMember")
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({
         groupId: groupId,
-        content: "Duplicate content"
+        content: "Member 1 updated content"
       })
       .then((r) => {
+        expect(r.status).to.equal(200);
         expect(r.body.success.memberId).to.equal(memberIdOne);
       }).catch((err) => {
         return Promise.reject(err)
@@ -430,7 +431,7 @@ describe("P2 - Group Onboarding", () => {
         expect(r.body.data).to.be.an("object");
         expect(r.body.data).to.have.property("groupId").that.equals(groupId);
         expect(r.body.data).to.have.property("admitted").that.equals(true);
-        expect(r.body.data).to.have.property("content").that.equals("Member 1 content");
+        expect(r.body.data).to.have.property("content").that.equals("Member 1 updated content");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -456,7 +457,7 @@ describe("P2 - Group Onboarding", () => {
       .put(`/api/partner/groupOnboardMember`)
       .set("Authorization", "Bearer " + pushTokens[1])
       .send({
-        content: "Member 1 updated content"
+        content: "Member 1 updated content again"
       })
       .then((r) => {
         expect(r.status).to.equal(200);
@@ -488,7 +489,7 @@ describe("P2 - Group Onboarding", () => {
         expect(r.body.data).to.be.an("array").with.lengthOf(2);
         expect(r.body.data[0]).to.not.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
-        expect(r.body.data[1]).to.have.property("content").that.equals("Member 1 updated content");
+        expect(r.body.data[1]).to.have.property("content").that.equals("Member 1 updated content again");
         const decrypted0 = await decryptMessage(r.body.data[0].content, PASSWORD);
         expect(decrypted0).to.equal(MESSAGE);
       }).catch((err) => {

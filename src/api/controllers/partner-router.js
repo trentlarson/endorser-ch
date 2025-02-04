@@ -533,6 +533,14 @@ export default express
   }
 )
 
+
+
+
+
+/******************************************************
+ * Group Onboarding
+ ******************************************************/
+
 /**
  * Create a new group onboarding room
  * 
@@ -744,6 +752,15 @@ export default express
   }
 )
 
+
+
+
+
+
+/******************************************************
+ * Group Onboarding Members
+ ******************************************************/
+
 /**
  * Join a group onboarding room
  * 
@@ -775,11 +792,23 @@ export default express
         res.status(201).json({ success: { memberId: memberId } }).end()
       } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
-          // retrieve the member record and succeed
+          // retrieve the member record and continue
+          // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
           const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
           if (member) {
-            return res.status(200).json({ success: { memberId: member.memberId } }).end()
+            // check that the group is the same
+            if (member.groupId !== groupId) {
+              return res.status(400).json({ error: { message: "You already exist in a different group." } }).end()
+            }
+            // update their content if they sent something new
+            const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
+            if (memberChanges === 0) {
+              return res.status(400).json({ error: { message: "You already exist in this group but your content could not be updated." } }).end()
+            } else {
+              return res.status(200).json({ success: { memberId: member.memberId } }).end()
+            }
           } else {
+            // may be a client error but I'm really not sure
             return res.status(400).json({ error: err.message }).end()
           }
         }
