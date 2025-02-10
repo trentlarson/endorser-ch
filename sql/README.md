@@ -134,10 +134,15 @@ CREATE TABLE IF NOT EXISTS invite_one (
   id INTEGER PRIMARY KEY AUTOINCREMENT, -- unused in logic
   createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expiresAt DATETIME NOT NULL,
-  inviteIdentifier TEXT NOT NULL UNIQUE, -- necessary for rate-limiting
+  inviteIdentifier TEXT NOT NULL UNIQUE, -- to avoid replays
   issuerDid TEXT NOT NULL,
   jwt TEXT, -- they should not share their unencrypted JWT with the server
-  keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0, -- default is to make issuer visible when redeemed
+
+  -- Ths may still not be implemented.
+  -- Default is to make issuer visible when redeemed.
+  -- Only makes sense if the shortcut URL is used; a Register JWT sent directly to the receiver wouldn't be intercepted by this.
+  keepIssuerHidden BOOLEAN NOT NULL DEFAULT 0,
+
   notes TEXT, -- they may choose not to share their notes with the server
   redeemedBy TEXT
 );
