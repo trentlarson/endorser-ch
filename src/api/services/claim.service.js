@@ -1576,7 +1576,7 @@ class ClaimService {
 
         let invite = await dbService.getInviteOneByInvitationId(payloadClaim.identifier)
 
-        // it may be a new issuer-created invite or it may be one that is being redeeme
+        // it may be a new issuer-created invite or it may be one that is being redeemed
         if (isInitialInvitePost) {
           // it's a new invite
           if (invite) {

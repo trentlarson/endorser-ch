@@ -675,7 +675,7 @@ export default express
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
- * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
+ * @returns {object} 200 - 'data' property with keys being units and values being: amount & amountConfirmed
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -777,7 +777,7 @@ export default express
   .get('/givesProvidedBy', dbController.getGivesProvidedBy)
 
 /**
- * Get totals of gives
+ * Get totals of gives (like /giftedTotals but potentially with trades as well)
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveTotals
@@ -789,7 +789,7 @@ export default express
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
- * @returns {object} 200 - 'data' property with keys being units and values being the number amounts of total gives for them
+ * @returns {object} 200 - 'data' property with keys being units and values being: amount & amountConfirmed
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

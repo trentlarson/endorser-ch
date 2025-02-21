@@ -1806,7 +1806,7 @@ describe('6 - Check give totals', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
-        expect(r.body.data).to.deep.equal({ "HUR": 2 })
+        expect(r.body.data).to.deep.equal({ "HUR": { amount: 2, amountConfirmed: 0 } })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2040,7 +2040,7 @@ describe('6 - Check give totals', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body).to.be.an('object')
-        expect(r.body.data).to.deep.equal({ "HUR": 3 })
+        expect(r.body.data).to.deep.equal({ "HUR": { amount: 3, amountConfirmed: 0 } })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2346,7 +2346,7 @@ describe('6 - Check give totals', () => {
           return Promise.reject(r.body.error)
         }
         expect(r.body.data).to.be.an('object')
-        expect(r.body.data).to.deep.equal({ "HUR": 4 })
+        expect(r.body.data).to.deep.equal({ "HUR": { amount: 4, amountConfirmed: 4 } })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2634,7 +2634,7 @@ describe('6 - Check give totals', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
-        expect(r.body.data).to.deep.equal({ "HUR": 2 })
+        expect(r.body.data).to.deep.equal({ "HUR": { amount: 2, amountConfirmed: 2 } })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)
@@ -2648,7 +2648,7 @@ describe('6 - Check give totals', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data).to.be.an('object')
-      expect(r.body.data).to.deep.equal({ "USD": 3 })
+      expect(r.body.data).to.deep.equal({ "USD": { amount: 3, amountConfirmed: 3 } })
       expect(r.status).that.equals(200)
     }).catch((err) => {
       return Promise.reject(err)
@@ -2676,7 +2676,7 @@ describe('6 - Check give totals', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data).to.be.an('object')
-      expect(r.body.data).to.deep.equal({ "USD": 3 })
+      expect(r.body.data).to.deep.equal({ "USD": { amount: 3, amountConfirmed: 3 } })
       expect(r.status).that.equals(200)
     }).catch((err) => {
       return Promise.reject(err)
@@ -2782,7 +2782,7 @@ describe('6 - Check give totals', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data).to.be.an('object')
-      expect(r.body.data).to.deep.equal({ "HUR": 1, "USD": 5 })
+      expect(r.body.data).to.deep.equal({ "HUR": { amount: 1, amountConfirmed: 0 }, "USD": { amount: 5, amountConfirmed: 3 } })
       expect(r.status).that.equals(200)
     }).catch((err) => {
       return Promise.reject(err)
@@ -2796,7 +2796,7 @@ describe('6 - Check give totals', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data).to.be.an('object')
-      expect(r.body.data).to.deep.equal({ "HUR": 1, "USD": 2 })
+      expect(r.body.data).to.deep.equal({ "HUR": { amount: 1, amountConfirmed: 0 }, "USD": { amount: 2, amountConfirmed: 0 } })
       expect(r.status).that.equals(200)
     }).catch((err) => {
       return Promise.reject(err)
@@ -2810,7 +2810,7 @@ describe('6 - Check give totals', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.body.data).to.be.an('object')
-      expect(r.body.data).to.deep.equal({ "USD": 3 })
+      expect(r.body.data).to.deep.equal({ "USD": { amount: 3, amountConfirmed: 3 } })
       expect(r.status).that.equals(200)
     }).catch((err) => {
       return Promise.reject(err)
@@ -2896,7 +2896,7 @@ describe('6 - Check give totals', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('object')
-        expect(r.body.data).to.deep.equal({ "HUR": 2, "USD": 3 })
+        expect(r.body.data).to.deep.equal({ "HUR": { amount: 2, amountConfirmed: 0 }, "USD": { amount: 3, amountConfirmed: 0 } })
         expect(r.status).that.equals(200)
       }).catch((err) => {
         return Promise.reject(err)

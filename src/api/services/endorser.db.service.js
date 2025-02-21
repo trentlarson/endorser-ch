@@ -916,13 +916,13 @@ class EndorserDatabase {
       let data = {}
       let rowErr
       const sql =
-            "SELECT unit, sum(amount) as total FROM give_claim" + whereClause
+            "SELECT unit, sum(amount) as totalAmount, sum(amountConfirmed) as totalAmountConfirmed FROM give_claim" + whereClause
             + " GROUP BY unit"
       db.each(
         sql,
         allParams,
         function(err, row) {
-          if (err) { rowErr = err } else { data[row.unit] = row.total }
+          if (err) { rowErr = err } else { data[row.unit] = { amount: row.totalAmount, amountConfirmed: row.totalAmountConfirmed } }
         },
         function(allErr, num) {
           if (rowErr || allErr) {
