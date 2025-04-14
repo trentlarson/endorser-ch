@@ -10,7 +10,8 @@ import { ERROR_CODES, HIDDEN_TEXT, isDid } from '../dist/api/services/util'
 const { Credentials } = require('uport-credentials')
 
 const NOW_EPOCH = Math.floor(new Date().getTime() / 1000)
-const NEXT_MINUTE_EPOCH = NOW_EPOCH + (24 * 60 * 60)
+const NEXT_MINUTE_EPOCH = NOW_EPOCH + 60
+const NEXT_DAY_EPOCH = NOW_EPOCH + (24 * 60 * 60)
 const NEXT_WEEK_EPOCH = NOW_EPOCH + (7 * 24 * 60 * 60)
 
 /**
@@ -97,7 +98,7 @@ const ETHR_CRED_DATA = [
   //{ did: 'did:ethr:0x2224EA786b7C2A8E5782E16020F2f415Dce6bFa7', privateKey: '1c9686218830e75f4c032f42005a99b424e820c5094c721b17e5ccb253f001e4' }, // annual soap surround inhale island jewel blush rookie gate aerobic brave enlist bird nut remain cross undo surround year rapid blade impulse control broccoli
 
   //  mnemonic created with @scure/bip39 (& their wordlists/english) & @ethersproject/hdnode: HDNode.fromMnemonic(bip39.generateMnemonic(wordlist)).derivePath("m/84737769'/0'/0'/0'")
-  // ... and the rest created by Credentials.createIdentity()
+  // ... and the { did: '...', privateKey: '...' } created by Credentials.createIdentity()
 
   { did: 'did:ethr:0x0000694B58C2cC69658993A90D3840C560f2F51F', privateKey: '2b6472c026ec2aa2c4235c994a63868fc9212d18b58f6cbfe861b52e71330f5b' }, // rigid shrug mobile smart veteran half all pond toilet brave review universe ship congress found yard skate elite apology jar uniform subway slender luggage
   { did: 'did:ethr:0x111d15564f824D56C7a07b913aA7aDd03382aA39', privateKey: 'be64d297e1c6f3545971cd0bc24c3bf32656f8639a2ae32cb84a1e3c75ad69cd' }, // island fever beef wine urban aim vacant quit afford total poem flame service calm better adult neither color gaze forum month sister imitate excite
@@ -144,6 +145,7 @@ module.exports = {
   nowEpoch: NOW_EPOCH,
 
   nextMinuteEpoch: NEXT_MINUTE_EPOCH,
+  nextDayEpoch: NEXT_DAY_EPOCH,
 
   jwtTemplate: {
     "iat": NOW_EPOCH,

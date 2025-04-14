@@ -136,7 +136,8 @@ export default express
  *
  * @group user utils - User Utils
  * @route POST /api/userUtil/invite
- * @param {string} inviteJwt.body.required - issuer code to specify invitee, must be 20 characters or more and should be random
+ * @param {string} inviteJwt.body.optional - issuer code to specify invitee, must be 20 characters or more and should be random
+ * @param {string} inviteIdentifier.body.optional - identifier to specify invitee, must be 20 characters or more and should be random
  * @param {string} notes.body.optional - issuer notes to remember the invitee
  * @returns 201 - with a body of { success: true }
  * @returns {Error} 500 - Unexpected error
@@ -146,31 +147,49 @@ export default express
     '/invite',
     async (req, res) => {
       try {
-        if (!req.body.inviteJwt) {
-          res.status(400).json({ error: { message: 'You must specify an inviteJwt.' } }).end()
+        if (req.body.inviteJwt) {
+
+          // This is temporary: we should never custody the actual RegisterAction JWT.
+          // Remove when no invite_one records have any jwt values (and the new Time Safari is deployed).
+          const verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
+          const payloadClaim = ClaimService.extractClaim(verifiedInvite.payload)
+          if (payloadClaim["@type"] !== 'RegisterAction') {
+            res.status(400).json({ error: { message: 'The JWT for an invite must be a RegisterAction claim.' } }).end()
+            return
+          }
+          const identifier = payloadClaim.identifier
+          const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, res.locals.tokenIssuer, payloadClaim, true)
+          if (!identifier || identifier.length < 20) {
+            res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
+          } else if (!verifiedInvite.payload.exp) {
+            res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
+          } else if (checks?.clientError) {
+            res.status(400).json({ error: checks.clientError }).end()
+          } else {
+            const date = new Date(verifiedInvite.payload.exp * 1000).toISOString()
+            await dbService.inviteOneInsert(res.locals.tokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
+            res.status(201).json({ success: true }).end()
+          }
           return
         }
-        const verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
-        const payloadClaim = ClaimService.extractClaim(verifiedInvite.payload)
-        if (payloadClaim["@type"] !== 'RegisterAction') {
-          res.status(400).json({ error: { message: 'The JWT for an invite must be a RegisterAction claim.' } }).end()
+        if (req.body.inviteIdentifier) {
+          const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, res.locals.tokenIssuer, null, true)
+          if (req.body.inviteIdentifier.length < 20) {
+            res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
+          } else if (!req.body.expiresAt) {
+            res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
+          } else if (checks?.clientError) {
+            res.status(400).json({ error: checks.clientError }).end()
+          } else {
+            const expDate = new Date(req.body.expiresAt * 1000).toISOString()
+            await dbService.inviteOneInsert(res.locals.tokenIssuer, req.body.inviteIdentifier, req.body.notes, expDate)
+            res.status(201).json({ success: true }).end()
+          }
           return
         }
-        const identifier = payloadClaim.identifier
-        const date = new Date(verifiedInvite.payload.exp * 1000).toISOString()
-        const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, res.locals.tokenIssuer, payloadClaim, true)
-        if (!identifier || identifier.length < 20) {
-          res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, used inside the RegisterAction given to the invitee.' } }).end()
-        } else if (!verifiedInvite.payload.exp) {
-          res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation. Use the same date as the RegisterAction.' } }).end()
-        } else if (checks) {
-          res.status(400).json({ error: checks.clientError }).end()
-        } else {
-          await dbService.inviteOneInsert(res.locals.tokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
-          res.status(201).json({ success: true }).end()
-        }
+        res.status(400).json({ error: { message: 'You must specify an inviteJwt or inviteIdentifier.' } }).end()
       } catch (error) {
-        res.status(500).json({ error: error }).end()
+        res.status(500).json({ error: { message: error.message, raw: error, stringified: JSON.stringify(error) } }).end()
       }
     }
   )

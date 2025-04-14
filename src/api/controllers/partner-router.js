@@ -16,8 +16,7 @@ import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from 
  *
  * @param {number} memberId - member ID
  * @param {object} member - member record
- * @param {string} content - new content
- * @param {boolean} admitted - admission status (organizer only)
+ * @param {object} bodyData: properties: "content" - new content (member only), "admitted" - admission status (organizer only)
  * @param {object} res - the Response object
  * @returns {object} - success response
  */

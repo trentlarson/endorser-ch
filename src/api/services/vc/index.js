@@ -44,8 +44,8 @@ export async function decodeAndVerifyJwt(jwt) {
 
   if (issuerDid.startsWith(ETHR_DID_PREFIX)) {
     try {
-      const verified = await didJwt.verifyJWT(jwt, {resolver})
-      return verified
+      const verifiedResult = await didJwt.verifyJWT(jwt, {resolver})
+      return verifiedResult
 
     } catch (e) {
       return Promise.reject({

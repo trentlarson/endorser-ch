@@ -446,7 +446,7 @@ describe('9 - User Profiles', () => {
   it('can not retrieve any if profile is not anywhere close', () => {
     return request(Server)
       .get('/api/partner/userProfileForIssuer/' + creds[3].did)
-      .set('Authorization', 'Bearer ' + pushTokens[14])
+      .set('Authorization', 'Bearer ' + pushTokens[15])
       .then(r => {
         expect(r.body.data).to.be.undefined
         expect(r.status).that.equals(403)
@@ -455,8 +455,8 @@ describe('9 - User Profiles', () => {
 
   it('returns 404 when retrieving non-existent profile by DID', () => {
     return request(Server)
-      .get('/api/partner/userProfileForIssuer/' + creds[14].did) // Using creds[14] which hasn't created a profile
-      .set('Authorization', 'Bearer ' + pushTokens[14])
+      .get('/api/partner/userProfileForIssuer/' + creds[15].did) // Using creds[15] which hasn't created a profile
+      .set('Authorization', 'Bearer ' + pushTokens[15])
       .then(r => {
         expect(r.status).that.equals(404)
       })
@@ -564,7 +564,7 @@ describe('9 - User Profiles', () => {
         const profileId = r.body.data.rowId
         return request(Server)
           .get('/api/partner/userProfile/' + profileId)
-          .set('Authorization', 'Bearer ' + pushTokens[14])
+          .set('Authorization', 'Bearer ' + pushTokens[15])
           .then(r => {
             expect(r.body.data.description).to.equal(profile3.description)
             expect(r.body.data.issuerDid).to.equal(HIDDEN_TEXT)

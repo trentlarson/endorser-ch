@@ -249,6 +249,16 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
+  it("missing auth header for group results in some 400 error", () => {
+    return request(Server)
+      .get("/api/partner/groupOnboard")
+      .then((r) => {
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
   it("can see their own room", () => {
     return request(Server)
       .get("/api/partner/groupOnboard")
@@ -331,6 +341,26 @@ describe("P2 - Group Onboarding", () => {
         expect(r.body.data[0]).to.have.property("content");
         const decrypted = await decryptMessage(r.body.data[0].content, PASSWORD);
         expect(decrypted).to.equal(MESSAGE);
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("missing auth header for group membership results in some 400 error", () => {
+    return request(Server)
+      .get(`/api/partner/groupOnboardMember`)
+      .then((r) => {
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("missing auth header for group members results in some 400 error", () => {
+    return request(Server)
+      .get(`/api/partner/groupOnboardMembers`)
+      .then((r) => {
+        expect(r.status).to.be.greaterThan(399).to.be.lessThan(500);
       }).catch((err) => {
         return Promise.reject(err)
       });

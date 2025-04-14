@@ -55,17 +55,20 @@ let options = {
 };
 
 function requesterInfo(req, res, next) {
-  let jwt
+  let authorizationJwt
   const authBearer = req.headers['Authorization'.toLowerCase()]
   const BEARER_PREFIX = 'Bearer '
   if (authBearer != null
       && authBearer.startsWith(BEARER_PREFIX)) {
-    jwt = authBearer.substring(BEARER_PREFIX.length)
+    authorizationJwt = authBearer.substring(BEARER_PREFIX.length)
   } else {
-    jwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
+    authorizationJwt = req.headers[UPORT_PUSH_TOKEN_HEADER.toLowerCase()]
   }
-  if (!jwt || jwt == "undefined") { // maybe we can eliminate the "undefined" case from uport-demo
-    if (req.originalUrl.startsWith("/api/userUtil")) {
+  if (!authorizationJwt || authorizationJwt == "undefined") { // maybe we can eliminate the "undefined" case from uport-demo
+    if (
+      req.originalUrl.startsWith("/api/userUtil")
+      || req.originalUrl.startsWith("/api/partner/groupOnboard")
+    ) {
       // refactor to handle this endpoint in the router like all the rest
       res.status(401).json('Missing Bearer JWT In Authorization header').end()
     } else {
@@ -73,22 +76,30 @@ function requesterInfo(req, res, next) {
       next()
     }
   } else {
-    decodeAndVerifyJwt(jwt)
+    decodeAndVerifyJwt(authorizationJwt)
       .then((result) => {
+        // potentially available: {didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified}
         //console.log("Elements of the decoded JWT", result)
         //console.log("... and the JWT doc publicKey", result.doc && result.doc.publicKey)
         //console.log("... and the JWT doc authentication", result.doc && result.doc.authentication)
         const { header, issuer, payload, verified } = result
-        if (verified) {
-          res.locals.tokenIssuer = payload.iss
-          next()
-        } else {
+        if (issuer !== payload.iss) {
+          res.status(400).json({
+            error: {
+              message: "Decoded issuer of " + issuer + " does not match payload issuer of " + payload.iss,
+              code: ERROR_CODES.JWT_VERIFY_FAILED
+            }
+          }).end()
+        } else if (!verified) {
           res.status(400).json({
             error: {
               message: "Signature failed validation.",
               code: ERROR_CODES.JWT_VERIFY_FAILED
             }
           }).end()
+        } else {
+          res.locals.tokenIssuer = issuer
+          next()
         }
       })
       .catch(e => {
@@ -96,11 +107,11 @@ function requesterInfo(req, res, next) {
         l.error("Low-level error while parsing JWT:", e, " ... which has JSON.stringify thus: " + JSON.stringify(e))
         // ... and you'd think that those would at least hint at stack info but you'd be wrong.
         l.error(e.stack)
-        l.error("Here's the JWT:", jwt)
+        l.error("Here's the JWT:", authorizationJwt)
         // There's a potential to get more fine-grained with a 'clientError'.
         const errorObj = e.clientError
               || {
-                message: "Low-level error while parsing JWT '" + jwt + "': " + JSON.stringify(e),
+                message: "Low-level error while parsing JWT '" + authorizationJwt + "': " + JSON.stringify(e),
                 code: ERROR_CODES.JWT_VERIFY_FAILED
               }
         res.status(400).json({ error: errorObj }).end()

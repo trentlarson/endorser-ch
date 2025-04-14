@@ -5,9 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [???] - 2025.04.??
+### Added
+- Ability to create invite without sending invite JWT
+
+
 ## [4.2.5] - 2025.02.21
 ### Changed
 - /giftedTotals & /giveTotals endpoints now return amountConfirmed.
+
 
 ## [4.2.4] - 2025.02.06
 ### Added

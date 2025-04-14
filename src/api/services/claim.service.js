@@ -1552,6 +1552,9 @@ class ClaimService {
 
     @param claimIssuerDid is the user who issued the payload
 
+    @param payloadClaim is the claim from inside the payload JWT (since there are different limits and invite situations)
+    optional when inviter is creating an invite because they create the registration JWT later
+
     @param isInitialInvitePost indicates that this is an invite registration claim
     which hasn't yet been receemed but may in the future, so some checks should be
     done against the payloadClaim and not looked up from the DB.
@@ -1567,9 +1570,9 @@ class ClaimService {
       }
     }
 
-    if (isEndorserRegistrationClaim(payloadClaim)) {
+    if ((payloadClaim && isEndorserRegistrationClaim(payloadClaim)) || isInitialInvitePost) {
 
-      if (isEndorserInviteClaim(payloadClaim)) {
+      if (payloadClaim && isEndorserInviteClaim(payloadClaim)) {
         // we're checking an invite
 
         // Note that this clause will return (& bypass timing checks) if it's a redemption
@@ -1620,13 +1623,13 @@ class ClaimService {
           // this invite is being redeemed, so there's no need to check limits
           // because they were checked when the invite was created
 
-          return
+          return null
         }
       }
 
       // look at registration limits
 
-      // disallow registering the same day of registration
+      // disallow registering others the same day of their own registration
       const registrationDate = DateTime.fromSeconds(registration.epoch)
       if (DateTime.now().hasSame(registrationDate, 'day')) {
         return {
@@ -1703,12 +1706,11 @@ class ClaimService {
      - id of claim
      - extra info for other created data, eg. planId if one was generated
    **/
-  async createWithClaimEntry(jwtEncoded, authIssuerDid) {
+  async createWithClaimEntry(jwtEncoded, payload, authIssuerDid) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
-    // available: {didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified}
-    const { payload } =
+    const { payload } = 
         await decodeAndVerifyJwt(jwtEncoded)
         .then((result) => {
           const { issuer, payload, verified } = result
