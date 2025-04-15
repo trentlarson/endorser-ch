@@ -6,15 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [4.2.7] - 2025.04.14
-### Fixed
-- Build error
-### Changed
-- Misc variable names for clarity
-
-
-## [4.2.6] - 2025.04.14
 ### Added
 - Ability to create invite without sending invite JWT to the server
+### Changed
+- Misc variable names for clarity
 
 
 ## [4.2.5] - 2025.02.21
