@@ -16,12 +16,12 @@ class ClaimController {
   getIssuersMatchingClaim(req, res) {
     ClaimService.thisClaimAndConfirmationsIssuersMatchingClaimId(req.query.claimId)
       .then(result =>
-            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, { result : result}, []))
+            hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, { result : result}, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end() })
   }
   getRateLimits(req, res) {
-    ClaimService.getRateLimits(res.locals.tokenIssuer)
+    ClaimService.getRateLimits(res.locals.authTokenIssuer)
       .then(r => res.json(r))
       .catch(err => {
         if (err.clientError) {
@@ -40,7 +40,7 @@ import ActionService from '../services/action.service';
 class ActionController {
   getActionClaimsAndConfirmationsSince(req, res) {
     ActionService.getActionClaimsAndConfirmationsForEventsSince(req.query.dateTime)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -52,13 +52,13 @@ import TenureService from '../services/tenure.service';
 class TenureController {
   getAtPoint(req, res) {
     TenureService.atPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
   getClaimsAndConfirmationsAtPoint(req, res) {
     TenureService.getClaimsAndConfirmationsAtPoint(req.query.lat, req.query.lon)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
@@ -70,7 +70,7 @@ import OrgRoleService from '../services/org.service';
 class OrgRoleController {
   getClaimsAndConfirmationsOnDate(req, res) {
     OrgRoleService.getClaimsAndConfirmationsOnDate(req.query.orgName, req.query.roleName, req.query.onDate)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => res.status(500).json(""+err).end())
   }
@@ -91,27 +91,27 @@ class DbController {
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeVisibleTo(req, res) {
-    addCanSee(req.body.did, res.locals.tokenIssuer)
+    addCanSee(req.body.did, res.locals.authTokenIssuer)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeInvisibleTo(req, res) {
-    removeCanSee(req.body.did, res.locals.tokenIssuer)
+    removeCanSee(req.body.did, res.locals.authTokenIssuer)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeGloballyVisible(req, res) {
-    makeGloballyVisible(res.locals.tokenIssuer, req.body.url)
+    makeGloballyVisible(res.locals.authTokenIssuer, req.body.url)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getCanSeeDids(req, res) {
-    getAllDidsRequesterCanSee(res.locals.tokenIssuer)
+    getAllDidsRequesterCanSee(res.locals.authTokenIssuer)
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   getCanSeeMeExplicitly(req, res) {
-    canSeeExplicitly(req.query.did, res.locals.tokenIssuer)
+    canSeeExplicitly(req.query.did, res.locals.authTokenIssuer)
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

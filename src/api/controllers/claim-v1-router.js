@@ -8,8 +8,8 @@ class ClaimController {
 
   getById(req, res) {
     ClaimService
-      .byId(req.params.id, res.locals.tokenIssuer)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .byId(req.params.id, res.locals.authTokenIssuer)
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
@@ -19,7 +19,7 @@ class ClaimController {
 
   async getFullClaimById(req, res) {
     ClaimService
-      .fullJwtById(req.params.id, res.locals.tokenIssuer)
+      .fullJwtById(req.params.id, res.locals.authTokenIssuer)
       .then(result => new Promise((resolve, reject) => {
         if (!result) {
           reject(
@@ -27,17 +27,17 @@ class ClaimController {
           )
         }
         // the issuer can see everything, so just let the claim ones be undefined (and thus R.equal)
-        if (res.locals.tokenIssuer === (result.issuer || result.issuerDid)) {
+        if (res.locals.authTokenIssuer === (result.issuer || result.issuerDid)) {
             resolve({
               fullJwt: result,
               scrubbedJwt: result,
             })
         }
-        hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, [])
+        hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, [])
           .then(scrubbed => {
             // the claim string needs to be examined for embedded DIDs
             let resultClaim = JSON.parse(result.claim)
-            hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, resultClaim, [])
+            hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, resultClaim, [])
             .then(scrubbedClaim => {
               resolve({
                 fullJwt: result,
@@ -57,7 +57,7 @@ class ClaimController {
            ) {
           res.json(r.fullJwt);
         } else {
-          res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.tokenIssuer}. Use a different endpoint to get scrubbed data.`).end();
+          res.status(403).json(`Sorry, but claim ${req.params.id} has elements that are hidden from user ${res.locals.authTokenIssuer}. Use a different endpoint to get scrubbed data.`).end();
         }
       })
       .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
@@ -66,7 +66,7 @@ class ClaimController {
   getByQuery(req, res) {
     const searchTermMaybeDIDs = [req.query.claimContents, req.query.issuer, req.query.subject, req.query.handleId]
     ClaimService.byQuery(req.query)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, searchTermMaybeDIDs))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, searchTermMaybeDIDs))
       .then(r => res.json(r))
       .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
@@ -77,7 +77,7 @@ class ClaimController {
       return;
     }
     ClaimService
-      .createWithClaimEntry(req.body.jwtEncoded, res.locals.tokenIssuer)
+      .createWithClaimEntry(req.body.jwtEncoded, res.locals.authTokenIssuer)
       // no need to check for visible data because they sent it
       .then(r => {
         const result = r.claimId
@@ -122,7 +122,7 @@ class DbController {
       .then(result => {
         if (result) {
           result.claim = JSON.parse(result.claim)
-          return hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, [])
+          return hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, [])
         } else {
           return null
         }

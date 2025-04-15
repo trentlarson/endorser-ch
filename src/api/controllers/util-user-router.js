@@ -45,7 +45,7 @@ export default express
   .post(
     '/cacheContactList',
     async (req, res) => {
-      const limits = await dbService.registrationByDid(res.locals.tokenIssuer)
+      const limits = await dbService.registrationByDid(res.locals.authTokenIssuer)
       if (!limits) {
         res.status(400).json({ error: { message: 'You are not registered for this service.' } }).end()
         return
@@ -53,7 +53,7 @@ export default express
       const counterpartyId = req.query.counterparty || req.body.counterparty
       const result =
         cacheContactList(
-          res.locals.tokenIssuer, counterpartyId,
+          res.locals.authTokenIssuer, counterpartyId,
           req.body.contactHashes, req.body.onlyOneMatch
         )
       if (result.error) {
@@ -86,12 +86,12 @@ export default express
   .get(
     '/getContactMatch',
     async (req, res) => {
-      const limits = await dbService.registrationByDid(res.locals.tokenIssuer)
+      const limits = await dbService.registrationByDid(res.locals.authTokenIssuer)
       if (!limits) {
         res.status(400).json({ error: { message: 'You are not registered for this service.' } }).end()
         return
       }
-      const result = getContactMatch(res.locals.tokenIssuer, req.query.counterparty)
+      const result = getContactMatch(res.locals.authTokenIssuer, req.query.counterparty)
       res.status(200).json(result).end()
     }
   )
@@ -118,13 +118,13 @@ export default express
   .delete(
     '/clearContactCaches',
     async (req, res) => {
-      const limits = await dbService.registrationByDid(res.locals.tokenIssuer)
+      const limits = await dbService.registrationByDid(res.locals.authTokenIssuer)
       if (!limits) {
         res.status(400).json({ error: { message: 'You are not registered for this service.' } }).end()
         return
       }
       const counterpartyId = req.query.counterparty || req.body.counterparty
-      const result = clearContactCaches(res.locals.tokenIssuer, counterpartyId)
+      const result = clearContactCaches(res.locals.authTokenIssuer, counterpartyId)
       res.status(200).json(result).end()
     }
   )
@@ -158,7 +158,7 @@ export default express
             return
           }
           const identifier = payloadClaim.identifier
-          const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, res.locals.tokenIssuer, payloadClaim, true)
+          const checks = await ClaimService.checkClaimLimits(res.locals.authTokenIssuer, res.locals.authTokenIssuer, payloadClaim, true)
           if (!identifier || identifier.length < 20) {
             res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
           } else if (!verifiedInvite.payload.exp) {
@@ -167,13 +167,13 @@ export default express
             res.status(400).json({ error: checks.clientError }).end()
           } else {
             const date = new Date(verifiedInvite.payload.exp * 1000).toISOString()
-            await dbService.inviteOneInsert(res.locals.tokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
+            await dbService.inviteOneInsert(res.locals.authTokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
             res.status(201).json({ success: true }).end()
           }
           return
         }
         if (req.body.inviteIdentifier) {
-          const checks = await ClaimService.checkClaimLimits(res.locals.tokenIssuer, res.locals.tokenIssuer, null, true)
+          const checks = await ClaimService.checkClaimLimits(res.locals.authTokenIssuer, res.locals.authTokenIssuer, null, true)
           if (req.body.inviteIdentifier.length < 20) {
             res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
           } else if (!req.body.expiresAt) {
@@ -182,7 +182,7 @@ export default express
             res.status(400).json({ error: checks.clientError }).end()
           } else {
             const expDate = new Date(req.body.expiresAt * 1000).toISOString()
-            await dbService.inviteOneInsert(res.locals.tokenIssuer, req.body.inviteIdentifier, req.body.notes, expDate)
+            await dbService.inviteOneInsert(res.locals.authTokenIssuer, req.body.inviteIdentifier, req.body.notes, expDate)
             res.status(201).json({ success: true }).end()
           }
           return
@@ -210,7 +210,7 @@ export default express
       const invite = await dbService.getInviteOneByInvitationId(req.params.identifier)
       if (!invite) {
         res.status(400).json({ error: { message: 'There is no invite with that identifier.' } }).end()
-      } else if (invite.issuerDid !== res.locals.tokenIssuer) {
+      } else if (invite.issuerDid !== res.locals.authTokenIssuer) {
         res.status(400).json({ error: { message: 'You do not own the invite with that identifier.' } }).end()
       } else {
         res.status(200).json({ data: invite }).end()
@@ -230,7 +230,7 @@ export default express
   .get(
     '/invite',
     async (req, res) => {
-      const invites = await dbService.getInvitesByIssuer(res.locals.tokenIssuer)
+      const invites = await dbService.getInvitesByIssuer(res.locals.authTokenIssuer)
       res.status(200).json({ data: invites }).end()
     }
   )
@@ -248,7 +248,7 @@ export default express
   .delete(
     '/invite/:identifier',
     async (req, res) => {
-      const numDeleted = await dbService.deleteInviteForIssuer(res.locals.tokenIssuer, req.params.identifier)
+      const numDeleted = await dbService.deleteInviteForIssuer(res.locals.authTokenIssuer, req.params.identifier)
       if (numDeleted == 1) {
         res.status(204).json({ success: true, numDeleted }).end()
       } else {

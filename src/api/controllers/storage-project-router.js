@@ -7,7 +7,7 @@ class PlanController {
   getPlanInfoByClaimIdOrHandleId(req, res) {
     planService
       .infoByClaimIdOrHandleId(req.params.id)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();

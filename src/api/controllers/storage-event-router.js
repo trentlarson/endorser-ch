@@ -6,7 +6,7 @@ export class Controller {
   getById(req, res) {
     EventService
       .byId(req.params.id)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => {
         if (r) res.json(r);
         else res.status(404).end();
@@ -16,21 +16,21 @@ export class Controller {
 
   getByQuery(req, res) {
     EventService.byQuery(req.query)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
   getActionClaimsAndConfirmationsByEventId(req, res) {
     EventService.getActionClaimsAndConfirmationsByEventId(req.params.id)
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
   getActionClaimsAndConfirmationsByEventData(req, res) {
     EventService.getActionClaimsAndConfirmationsByEventData(JSON.parse(req.query.event))
-      .then(result => hideDidsAndAddLinksToNetwork(res.locals.tokenIssuer, result, []))
+      .then(result => hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, []))
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

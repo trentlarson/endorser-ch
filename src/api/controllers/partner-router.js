@@ -33,8 +33,8 @@ async function updateGroupMember(memberId, member, bodyData, res) {
     return res.status(404).json({ error: "Group not found" }).end()
   }
 
-  const isMember = res.locals.tokenIssuer === member.issuerDid
-  const isOrganizer = res.locals.tokenIssuer === group.issuerDid
+  const isMember = res.locals.authTokenIssuer === member.issuerDid
+  const isOrganizer = res.locals.authTokenIssuer === group.issuerDid
 
   if (!isMember && !isOrganizer) {
     return res.status(403).json({ error: "You are not authorized to update this member." }).end()
@@ -52,7 +52,7 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   }
 
   if (isOrganizer && bodyData.admitted !== undefined) {
-    if (memberId === res.locals.tokenIssuer) {
+    if (memberId === res.locals.authTokenIssuer) {
       // organizer cannot revoke their own admission
       return res.status(403).json({ error: "As organizer, you cannot revoke your own admission." }).end()
     }
@@ -139,7 +139,7 @@ export default express
 
       const result =
         await sendAndStoreLink(
-          res.locals.tokenIssuer,
+          res.locals.authTokenIssuer,
           jwtInfo,
           req.body.linkCode,
           req.body.inputJson,
@@ -185,14 +185,14 @@ export default express
     // See the image-api server for an example of how to leverage JWTs to get
     // permission to access data from the other service.
     try {
-      await ClaimService.getRateLimits(res.locals.tokenIssuer)
+      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
     } catch (e) {
       // must not have an account
       return res.status(400).json({ error: "Must be registered to submit a profile" }).end()
     }
 
     // Validate inputs
-    if (!res.locals.tokenIssuer) {
+    if (!res.locals.authTokenIssuer) {
       return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
     }
     if (description && typeof description !== 'string') {
@@ -213,7 +213,7 @@ export default express
 
     try {
       const entry = {
-        issuerDid: res.locals.tokenIssuer,
+        issuerDid: res.locals.authTokenIssuer,
         description,
         locLat,
         locLon,
@@ -253,13 +253,13 @@ export default express
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
       }
-      if (issuerDid !== res.locals.tokenIssuer) {
+      if (issuerDid !== res.locals.authTokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
         // (When we separate this into another service, this will have to be an API call.
         // See the image-api server for an example of how to leverage JWTs to get
         // permission to access data from the other service.)
         const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, [issuerDid])
+          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
         if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
           // the issuerDid is visible to the requester, so continue with full content
         } else {
@@ -300,13 +300,13 @@ export default express
         return res.status(404).json({ error: "Profile not found" }).end()
       }
 
-      if (result.issuerDid !== res.locals.tokenIssuer) {
+      if (result.issuerDid !== res.locals.authTokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
         // (When we separate this into another service, this will have to be an API call.
         // See the image-api server for an example of how to leverage JWTs to get
         // permission to access data from the other service.)
         const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, [result.issuerDid])
+          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [result.issuerDid])
         if (didsSeenByRequesterWhoSeeObject[0] === result.issuerDid) {
           // the issuerDid is visible to the requester, so continue with full content
         } else {
@@ -354,7 +354,7 @@ export default express
       const numMaxLat = maxLocLat ? Number(maxLocLat) : null
       const numMaxLon = maxLocLon ? Number(maxLocLon) : null
 
-      if (!res.locals.tokenIssuer) {
+      if (!res.locals.authTokenIssuer) {
         res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
         return
       }
@@ -391,7 +391,7 @@ export default express
       // See the image-api server for an example of how to leverage JWTs to get
       // permission to access data from the other service.)
       const didsSeenByRequesterWhoSeeObject =
-        await getAllDidsBetweenRequesterAndObjects(res.locals.tokenIssuer, resultList.map(profile => profile.issuerDid))
+        await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, resultList.map(profile => profile.issuerDid))
       // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
       const resultsScrubbed = []
       for (let i = 0; i < resultList.length; i++) {
@@ -439,10 +439,10 @@ export default express
   '/userProfile',
   async (req, res) => {
     try {
-      if (!res.locals.tokenIssuer) {
+      if (!res.locals.authTokenIssuer) {
         return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
       }
-      const result = await partnerDbService.profileDelete(res.locals.tokenIssuer)
+      const result = await partnerDbService.profileDelete(res.locals.authTokenIssuer)
       res.status(204).json({ success: { numDeleted: result } }).end()
     } catch (err) {
       console.error('Error deleting user profile', err)
@@ -558,7 +558,7 @@ export default express
       // (When we separate this into another service, this will have to be an API call.
       // See the image-api server for an example of how to leverage JWTs to get
       // permission to access data from the other service.)
-      await ClaimService.getRateLimits(res.locals.tokenIssuer)
+      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
     } catch (e) {
       return res.status(400).json({ error: { message: "You must have registration permissions to create a group." } }).end()
     }
@@ -582,8 +582,8 @@ export default express
     }
 
     try {
-      const groupId = await partnerDbService.groupOnboardInsert(res.locals.tokenIssuer, name, expiresAt)
-      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content, true)
+      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt)
+      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content, true)
       res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
@@ -611,7 +611,7 @@ export default express
   async (req, res) => {
     try {
       // maybe undefined
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       res.status(200).json({ data: room }).end()
     } catch (err) {
       console.error('Error getting group onboarding room', err)
@@ -679,14 +679,14 @@ export default express
     try {
       let { name, expiresAt, content } = req.body
 
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (!room) {
         return res.status(404).json({ error: { message: "That group was not found for you." } }).end()
       }
 
       const changes = await partnerDbService.groupOnboardUpdate(
         room.groupId,
-        res.locals.tokenIssuer,
+        res.locals.authTokenIssuer,
         name || room.name,
         expiresAt || room.expiresAt,
       )
@@ -696,16 +696,16 @@ export default express
       const result = { success: true }
       // update the member content
       if (content) {
-        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
         if (member) {
           const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
           if (memberChanges === 0) {
             result.message = "Could not update your member content."
-            console.error('User ' + res.locals.tokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
+            console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
           }
         } else {
           result.message = "You were not found as a member of that group."
-          console.error('User ' + res.locals.tokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
+          console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
         }
       } else {
         result.message = "Be sure to provide new 'content' if you change the group password."
@@ -734,11 +734,11 @@ export default express
   '/groupOnboard',
   async (req, res) => {
     try {
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (!room) {
         return res.status(404).json({ error: { message: "No group was found for you." } }).end()
       }
-      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.tokenIssuer)
+      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.authTokenIssuer)
       if (deleted === 0) {
         return res.status(404).json({ error: { message: "That group couldn't be deleted." } }).end()
       }
@@ -787,14 +787,14 @@ export default express
       }
 
       try {
-        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.tokenIssuer, groupId, content)
+        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content)
         res.status(201).json({ success: { memberId: memberId } }).end()
       } catch (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
           // retrieve the member record and continue
           // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
           // (Then again, one wonders if this whole idempotent quality here is a good idea or not.)
-          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
           if (member) {
             // check that the group is the same
             if (member.groupId !== groupId) {
@@ -833,7 +833,7 @@ export default express
   '/groupOnboardMember',
   async (req, res) => {
     try {
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
       res.status(200).json({ data: member }).end()
     } catch (err) {
       console.error('Error getting group membership', err)
@@ -855,7 +855,7 @@ export default express
   async (req, res) => {
     try {
       // get group member is in
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
       if (!member) {
         return res.status(404).json({ error: { message: "You are not found in any group." } }).end()
       }
@@ -867,7 +867,7 @@ export default express
 
       const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
 
-      const isOrganizer = group.issuerDid === res.locals.tokenIssuer
+      const isOrganizer = group.issuerDid === res.locals.authTokenIssuer
 
       if (isOrganizer) {
         // Return everyone with acceptable properties
@@ -881,7 +881,7 @@ export default express
       }
 
       // Find requesting user's membership
-      const requesterMember = members.find(m => m.issuerDid === res.locals.tokenIssuer)
+      const requesterMember = members.find(m => m.issuerDid === res.locals.authTokenIssuer)
       if (!requesterMember) {
         return res.status(403).json({ error: { message: "You have not joined this group." } }).end()
       }
@@ -928,7 +928,7 @@ export default express
   async (req, res) => {
     try {
       // get member record
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.tokenIssuer)
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
       await updateGroupMember(member.memberId, member, req.body, res)
     } catch (err) {
       console.error('Error updating group membership for token issuer', err)
@@ -979,12 +979,12 @@ export default express
   async (req, res) => {
     try {
       // first check that they are not the organizer of a meeting
-      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.tokenIssuer)
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (group) {
         return res.status(403).json({ error: { message: "You are the organizer of a group. You can only leave the group by deleting it." } }).end()
       }
 
-      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.tokenIssuer)
+      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.authTokenIssuer)
       if (deleted === 0) {
         return res.status(404).json({ error: "That membership was not found." }).end()
       }

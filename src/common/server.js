@@ -98,7 +98,7 @@ function requesterInfo(req, res, next) {
             }
           }).end()
         } else {
-          res.locals.tokenIssuer = issuer
+          res.locals.authTokenIssuer = issuer
           next()
         }
       })

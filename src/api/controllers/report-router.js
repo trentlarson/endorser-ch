@@ -18,12 +18,12 @@ function getGiveTotalsMaybeGifted(req, res, next, onlyGifted) {
   const onlyTraded = req.query.onlyTraded === "true"
   const recipientId = req.query.recipientId
   const planId = req.query.planHandleId || globalId(req.query.planId)
-  if (recipientId && recipientId != res.locals.tokenIssuer) {
+  if (recipientId && recipientId != res.locals.authTokenIssuer) {
     res.status(400).json({
       // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
       error: "Request for recipient totals can only be made by that recipient."
     }).end()
-  } else if (agentDid && agentDid != res.locals.tokenIssuer) {
+  } else if (agentDid && agentDid != res.locals.authTokenIssuer) {
     res.status(400).json({
       // see https://endorser.ch/doc/tasks.yaml#specific-searches-visible-if-allowed
       error: "Request for agent totals can only be made by that agent."
@@ -61,7 +61,7 @@ class DbController {
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results,  searchTermMaybeDIDs))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results,  searchTermMaybeDIDs))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -71,12 +71,12 @@ class DbController {
     if (!Array.isArray(claimTypes)) {
       return res.status(400).json({error: "Parameter 'claimTypes' should be an array but got: " + req.query.claimTypes}).end()
     }
-    dbService.jwtIssuerClaimTypesPaged(res.locals.tokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
+    dbService.jwtIssuerClaimTypesPaged(res.locals.authTokenIssuer, claimTypes, req.query.afterId, req.query.beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -103,7 +103,7 @@ class DbController {
         hitLimit: results.hitLimit,
       }))
       .then(results =>
-        hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, [])
+        hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, [])
       )
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -120,7 +120,7 @@ class DbController {
           ),
           hitLimit: results.hitLimit,
         }))
-        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -136,7 +136,7 @@ class DbController {
           ),
           hitLimit: results.hitLimit,
         }))
-        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -155,7 +155,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -163,7 +163,7 @@ class DbController {
   getGiveProviders(req, res, next) {
     const giveHandleId = req.query.handleId || req.query.giveHandleId || globalId(req.query.giveId)
     dbService.giveProviderIds(giveHandleId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -177,7 +177,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -202,20 +202,20 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
   getOffersForPlanOwnerPaged(req, res, next) {
-    dbService.offersForPlanOwnerPaged(res.locals.tokenIssuer, req.query.afterId, req.query.beforeId)
+    dbService.offersForPlanOwnerPaged(res.locals.authTokenIssuer, req.query.afterId, req.query.beforeId)
     .then(results => ({
       data: results.data.map(datum =>
         R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
       ),
       hitLimit: results.hitLimit,
     }))
-    .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+    .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
     .then(results => { res.json(results).end() })
     .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -234,7 +234,7 @@ class DbController {
         ),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -242,7 +242,7 @@ class DbController {
   getOfferTotals(req, res, next) {
     const planId = req.query.handleId || req.query.planHandleId || globalId(req.query.planId)
     const recipientId = req.query.recipientId
-    if (recipientId && recipientId != res.locals.tokenIssuer) {
+    if (recipientId && recipientId != res.locals.authTokenIssuer) {
       res.status(400).json({ error: "Request for recipient totals must be made by that recipient." }).end()
       return
     } else {
@@ -271,7 +271,7 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.plansByParamsPaged(query, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -322,8 +322,8 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    dbService.plansByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+    dbService.plansByIssuerPaged(res.locals.authTokenIssuer, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -344,7 +344,7 @@ class DbController {
       minLocLat, maxLocLat, minLocLon, maxLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -352,7 +352,7 @@ class DbController {
   getPlanFulfilledBy(req, res, next) {
     const handleId = req.query.handleId || req.query.planHandleId || globalId(req.query.planId)
     dbService.planFulfilledBy(handleId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -361,7 +361,7 @@ class DbController {
   getJwtFulfillersToPlan(req, res, next) {
     const handleId = req.query.planHandleId
     dbService.jwtFulfillersToPlan(handleId)
-        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
         .then(results => { res.json(results).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -372,7 +372,7 @@ class DbController {
     const afterId = req.query.afterId
     const beforeId = req.query.beforeId
     dbService.planFulfillersToPlan(handleId, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -384,7 +384,7 @@ class DbController {
     const beforeId = req.query.beforeId
     delete query.beforeId
     dbService.projectsByParamsPaged(query, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -395,8 +395,8 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    dbService.projectsByIssuerPaged(res.locals.tokenIssuer, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+    dbService.projectsByIssuerPaged(res.locals.authTokenIssuer, afterId, beforeId)
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -417,13 +417,13 @@ class DbController {
       minLocLat, maxLocLat, minLocLon, maxLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, results, []))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
   getCanClaim(req, res) {
-    dbService.registrationByDid(res.locals.tokenIssuer)
+    dbService.registrationByDid(res.locals.authTokenIssuer)
       .then(r => {
         const dataResult = { data: !!r }
         if (!r) {
@@ -442,7 +442,7 @@ class ServiceController {
   getConfirmerIds(req, res) {
     const claimEntryIds = req.body.claimEntryIds
     ClaimService.retrieveConfirmersForClaimsEntryIds(claimEntryIds)
-        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.tokenIssuer, { data: results }, []))
+        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, { data: results }, []))
         .then(resultData => { res.json(resultData).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
