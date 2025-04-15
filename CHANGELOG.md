@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Revealed too much when user's DID was in any of a list of results inside ".data"
 - Bad check for previously-submitted partner links
+### Changed in DB or environment
+- Automated endorser SQL script 15
 
 
 ## [4.1.3] - 2024.11.05 - be51bc505650eaa5b1b43d47b609d5d880ac72d3
@@ -65,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Nostr endpoints verify signature based on the public key.
 ### Changed in DB or environment
-- Automated SQL script 14
+- Automated endorser SQL script 14
 - Automated partner SQL script 2
 
 
@@ -79,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - In the give_claim table, fix the agentDid and the amounts that should be null
 ### Changed in DB or environment
-- Automated SQL script 13 & partner SQL script 1
+- Automated endorser SQL script 13 & partner SQL script 1
 - NOSTR_PRIVATE_KEY_NSEC into the .env file
 - For "partner" domains: DNS, haproxy, certificate
 
@@ -116,7 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hidden DIDs in claims that the user issued
 - Hidden DIDs in claims that include the user
 ### Changed in DB or environment
-- SQL script 11
+- Automated SQL script 11
 
 
 
