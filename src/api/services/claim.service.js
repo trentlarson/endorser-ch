@@ -1728,8 +1728,9 @@ class ClaimService {
           return Promise.reject(err)
         })
 
-    const payloadClaim = this.extractClaim(payload)
-    if (!payloadClaim) {
+    const claimPayload = payload
+    const claimPayloadClaim = this.extractClaim(claimPayload)
+    if (!claimPayloadClaim) {
       l.warn(`${this.constructor.name} JWT received without a claim.`)
       return Promise.reject({
         clientError: {
@@ -1739,15 +1740,15 @@ class ClaimService {
     }
 
     // reject if they send an auth JWT but it doesn't match the sent claim where the claim isn't an invite
-    if (authIssuerDid && payload.iss !== authIssuerDid && !isEndorserInviteClaim(payloadClaim)) {
+    if (authIssuerDid && claimPayload.iss !== authIssuerDid && !isEndorserInviteClaim(claimPayloadClaim)) {
       return Promise.reject({
         clientError: {
-          message: `Requesting issuer ${authIssuerDid} does not match claim issuer ${payload.iss}, which is only allowed for invites.`
+          message: `Requesting issuer ${authIssuerDid} does not match claim issuer ${claimPayload.iss}, which is only allowed for invites.`
         }
       })
     }
     // reject if they send an invite for themselves
-    if (authIssuerDid && payload.iss === authIssuerDid && isEndorserInviteClaim(payloadClaim)) {
+    if (authIssuerDid && claimPayload.iss === authIssuerDid && isEndorserInviteClaim(claimPayloadClaim)) {
       return Promise.reject({
         clientError: {
           message: `Requesting issuer ${authIssuerDid} is the same as on the invite.`
@@ -1757,7 +1758,7 @@ class ClaimService {
 
     //// Check limits
 
-    const checkError = await this.checkClaimLimits(authIssuerDid, payload.iss, payloadClaim)
+    const checkError = await this.checkClaimLimits(authIssuerDid, claimPayload.iss, claimPayloadClaim)
     if (checkError) {
       return Promise.reject(checkError)
     }
@@ -1768,7 +1769,7 @@ class ClaimService {
     // We do this basic sanity check here because we want to fail before
     // storing the JWT and give the client an HTTP error code (rather than
     // a 201 result with an embeddedRecordError result).
-    const claimIdsList = findAllLastClaimIdsAndHandleIds(payloadClaim)
+    const claimIdsList = findAllLastClaimIdsAndHandleIds(claimPayloadClaim)
     let claimIdDataList
     try {
       claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdsList))
@@ -1776,7 +1777,7 @@ class ClaimService {
       return Promise.reject({ clientError: { message: err } })
     }
     // If any of that data is not consistent, reject.
-    const claimErrors = this.gatherErrors(payloadClaim, claimIdDataList)
+    const claimErrors = this.gatherErrors(claimPayloadClaim, claimIdDataList)
     if (claimErrors.length > 0) {
       return Promise.reject({
         clientError: { message: claimErrors.join(' ') }
@@ -1796,7 +1797,7 @@ class ClaimService {
     // Generate the local id and find or generate the global "entity" handle ID.
     const jwtId = dbService.newUlid()
 
-    const lastClaimId = payloadClaim.lastClaimId
+    const lastClaimId = claimPayloadClaim.lastClaimId
     const lastClaimInfo =
         lastClaimId
             ? R.find(x => x.lastClaimId === lastClaimId, claimIdDataList)
@@ -1820,12 +1821,12 @@ class ClaimService {
 
       // The previous entry exists.
       // Check if the new context & type matches the old.
-      if (payloadClaim["@context"] != lastClaimJwt.claimContext
-          || payloadClaim["@type"] != lastClaimJwt.claimType) {
+      if (claimPayloadClaim["@context"] != lastClaimJwt.claimContext
+          || claimPayloadClaim["@type"] != lastClaimJwt.claimType) {
         return Promise.reject(
             {
               clientError: {
-                message: `You cannot change the context & type of an existing entry from ${lastClaimJwt.claimContext} & ${lastClaimJwt.claimType} to ${payloadClaim["@context"]} & ${payloadClaim["@type"]}.`
+                message: `You cannot change the context & type of an existing entry from ${lastClaimJwt.claimContext} & ${lastClaimJwt.claimType} to ${claimPayloadClaim["@context"]} & ${claimPayloadClaim["@type"]}.`
               }
             }
         )
@@ -1834,17 +1835,17 @@ class ClaimService {
       // This handleId must have been set by the lastClaimId, so we can accept it because we've run checks for lastClaimId already.
       handleId = lastClaimJwt.handleId
 
-      if (payload.iss == lastClaimJwt.issuer) {
+      if (claimPayload.iss == lastClaimJwt.issuer) {
         // The issuer is the same as the previous.
         // We're OK to continue.
-      } else if (payload.iss == handleId) {
+      } else if (claimPayload.iss == handleId) {
         // The issuer matches the global handle so they're the whole subject of the claim.
         // We're OK to continue.
       } else {
         // The issuer doesn't match the previous entry issuer or person record.
         // They likely shouldn't be allowed, but we'll allow if they're the agent.
         const prevClaim = JSON.parse(lastClaimJwt.claim)
-        if (payload.iss == prevClaim.agent?.identifier) {
+        if (claimPayload.iss == prevClaim.agent?.identifier) {
           // The issuer was assigned as an agent.
           // We're OK to continue.
         } else {
@@ -1859,12 +1860,12 @@ class ClaimService {
         }
       }
 
-    } else if (payloadClaim.identifier && !isEndorserRegistrationClaim(payloadClaim)) {
+    } else if (claimPayloadClaim.identifier && !isEndorserRegistrationClaim(claimPayloadClaim)) {
       // There is no lastClaimId but there's an identifier and it's not from an invite,
       // so we need to run checks that they have permissions to replace a previous entry.
 
       // Check that the previous entry exists.
-      if (isGlobalEndorserHandleId(payloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
+      if (isGlobalEndorserHandleId(claimPayloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
         return Promise.reject(
           {
             clientError: {
@@ -1878,9 +1879,9 @@ class ClaimService {
       // (Is this redundant now that we've got lastClaimId?)
       // 'identifier' is a schema.org convention; may add others
       handleId =
-        isGlobalUri(payloadClaim.identifier)
-          ? payloadClaim.identifier
-          : globalFromLocalEndorserIdentifier(payloadClaim.identifier)
+        isGlobalUri(claimPayloadClaim.identifier)
+          ? claimPayloadClaim.identifier
+          : globalFromLocalEndorserIdentifier(claimPayloadClaim.identifier)
 
       const prevEntry = await dbService.jwtLastByHandleIdRaw(handleId)
       if (prevEntry) {
@@ -1890,8 +1891,8 @@ class ClaimService {
         handleId = prevEntry.handleId
 
         // check that the context nor type has changed
-        if (payloadClaim["@context"] != prevEntry.claimContext
-            || payloadClaim["@type"] != prevEntry.claimType) {
+        if (claimPayloadClaim["@context"] != prevEntry.claimContext
+            || claimPayloadClaim["@type"] != prevEntry.claimType) {
           return Promise.reject(
             { clientError: {
                 message: `You cannot change the type of an existing entry.`
@@ -1900,17 +1901,17 @@ class ClaimService {
         }
 
         // check that the issuer matches
-        if (payload.iss == prevEntry.issuer) {
+        if (claimPayload.iss == prevEntry.issuer) {
           // The issuer is the same as the previous.
           // We're OK to continue.
-        } else if (payload.iss == handleId) {
+        } else if (claimPayload.iss == handleId) {
           // The issuer matches the global handle so they're the whole subject of the claim.
           // We're OK to continue.
         } else {
           // The issuer doesn't match the previous entry issuer or person record.
           // They likely shouldn't be allowed, but we'll allow if they're the agent.
           const prevClaim = JSON.parse(prevEntry.claim)
-          if (payload.iss == prevClaim.agent?.identifier) {
+          if (claimPayload.iss == prevClaim.agent?.identifier) {
             // The issuer was assigned as an agent.
             // We're OK to continue.
           } else {
@@ -1924,7 +1925,7 @@ class ClaimService {
         }
       } else {
         // no previous record with that handle exists
-        if (isGlobalEndorserHandleId(payloadClaim.identifier)) {
+        if (isGlobalEndorserHandleId(claimPayloadClaim.identifier)) {
           // Don't allow any global IDs for this server that weren't created by this server.
           return Promise.reject(
             {
@@ -1934,7 +1935,7 @@ class ClaimService {
               }
             }
           )
-        } else if (!isGlobalUri(payloadClaim.identifier)) {
+        } else if (!isGlobalUri(claimPayloadClaim.identifier)) {
           // Don't allow any local IDs that weren't created by this server.
           // (If you allow this, ensure they can't choose any past or future jwtId.)
           return Promise.reject(
@@ -1960,9 +1961,9 @@ class ClaimService {
 
     //// Insert the claim
 
-    const claimStr = canonicalize(payloadClaim)
+    const claimStr = canonicalize(claimPayloadClaim)
     const jwtEntry = dbService.buildJwtEntry(
-      payload, jwtId, lastClaimId, handleId, payloadClaim, claimStr, jwtEncoded
+      claimPayload, jwtId, lastClaimId, handleId, claimPayloadClaim, claimStr, jwtEncoded
     )
     // guard against a duplicate claim
     const existingJwtId =
@@ -1984,7 +1985,7 @@ class ClaimService {
 
     let embedded =
         await this.createEmbeddedClaimEntries(
-          jwtEncoded, jwtEntry.id, authIssuerDid, payload.iss, jwtEntry.issuedAt, handleId, payloadClaim, claimIdDataList, isFirstClaimForHandleId
+          jwtEncoded, jwtEntry.id, authIssuerDid, claimPayload.iss, jwtEntry.issuedAt, handleId, claimPayloadClaim, claimIdDataList, isFirstClaimForHandleId
         )
         .catch(err => {
           l.error(err, `Failed to create embedded claim records.`)
