@@ -1706,7 +1706,7 @@ class ClaimService {
      - id of claim
      - extra info for other created data, eg. planId if one was generated
    **/
-  async createWithClaimEntry(jwtEncoded, payload, authIssuerDid) {
+  async createWithClaimEntry(jwtEncoded, authIssuerDid) {
     l.trace(`${this.constructor.name}.createWithClaimRecord(ENCODED)`);
     l.trace(jwtEncoded, `${this.constructor.name} ENCODED`)
 
