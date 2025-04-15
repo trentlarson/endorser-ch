@@ -363,15 +363,83 @@ describe('8 - Asynchronous Invitations', () => {
 
   // a totally new user cannot see any info from user #0
   const newIdentity = Credentials.createIdentity()
+  const newCred = new Credentials(newIdentity)
   it('totally new user cannot see any info from user #0', async() => {
-    const cred = new Credentials(newIdentity)
-    const newJwt = await cred.createVerification({ exp: testUtil.nextMinuteEpoch })
+    const newJwt = await newCred.createVerification({ exp: testUtil.nextMinuteEpoch })
     return request(Server)
     .get('/api/claim?issuer=' + creds[0].did)
     .set('Authorization', 'Bearer ' + newJwt)
     .then(r => {
       expect(r.body).to.be.an("array").of.length(0)
       expect(r.status).that.equals(200)
+    })
+    .catch(err => Promise.reject(err))
+  })
+
+  it('user #0 can give new user a JWT so they can register', async() => {
+    const registerUnknownBy0ObjTemp = R.clone(registerUnknownBy0Obj)
+    registerUnknownBy0ObjTemp.claim.identifier = inviteIdentifier2
+    const registerUnknownBy0EncTemp = await credentials[0].createVerification(registerUnknownBy0ObjTemp)
+
+    const newJwt = await newCred.createVerification({ exp: testUtil.nextMinuteEpoch })
+    return request(Server)
+    .post('/api/v2/claim')
+    .set('Authorization', 'Bearer ' + newJwt)
+    .send({ jwtEncoded: registerUnknownBy0EncTemp })
+    .then(r => {
+      console.log(r.body)
+      expect(r.body).to.have.property("success")
+      expect(r.status).that.equals(201)
+    })
+    .catch(err => Promise.reject(err))
+  })
+
+  // now the new user can see #0 activity
+  it('new user can see #0 activity', async() => {
+    const newJwt = await newCred.createVerification({ exp: testUtil.nextMinuteEpoch })
+    return request(Server)
+    .get('/api/claim?issuer=' + creds[0].did)
+    .set('Authorization', 'Bearer ' + newJwt)
+    .then(r => {
+      expect(r.body).to.be.an("array").of.length.greaterThan(0)
+      expect(r.status).that.equals(200)
+    })
+    .catch(err => Promise.reject(err))
+  })
+
+  // now the new user can make an offer claim
+  it('new user can make an offer claim', async() => {
+    const claimOffer_ByNew_JwtObj = R.clone(testUtil.jwtTemplate)
+    claimOffer_ByNew_JwtObj.claim = R.clone(testUtil.claimOffer)
+    claimOffer_ByNew_JwtObj.sub = newCred.did
+
+    const newJwt = await newCred.createVerification(claimOffer_ByNew_JwtObj)
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({ jwtEncoded: newJwt })
+    .then(r => {
+      expect(r.body).to.have.property("success")
+      expect(r.status).that.equals(201)
+    })
+    .catch(err => Promise.reject(err))
+  })
+
+  it('user #0 cannot give any other user that same JWT so they can register', async() => {
+    const registerUnknownBy0ObjTemp = R.clone(registerUnknownBy0Obj)
+    registerUnknownBy0ObjTemp.claim.identifier = inviteIdentifier2
+    const registerUnknownBy0EncTemp = await credentials[0].createVerification(registerUnknownBy0ObjTemp)
+
+    const newIdentity2 = Credentials.createIdentity()
+    const newCred2 = new Credentials(newIdentity2)
+    const newJwt2 = await newCred2.createVerification({ exp: testUtil.nextMinuteEpoch })
+    return request(Server)
+    .post('/api/v2/claim')
+    .set('Authorization', 'Bearer ' + newJwt2)
+    .send({ jwtEncoded: registerUnknownBy0EncTemp })
+    .then(r => {
+      console.log(r.body)
+      expect(r.body).to.have.property("error")
+      expect(r.status).that.equals(400)
     })
     .catch(err => Promise.reject(err))
   })
