@@ -181,8 +181,7 @@ export default express
           } else if (checks?.clientError) {
             res.status(400).json({ error: checks.clientError }).end()
           } else {
-            const expDate = new Date(req.body.expiresAt * 1000).toISOString()
-            await dbService.inviteOneInsert(res.locals.authTokenIssuer, req.body.inviteIdentifier, req.body.notes, expDate)
+            await dbService.inviteOneInsert(res.locals.authTokenIssuer, req.body.inviteIdentifier, req.body.notes, req.body.expiresAt)
             res.status(201).json({ success: true }).end()
           }
           return

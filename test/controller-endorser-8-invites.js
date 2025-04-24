@@ -154,6 +154,7 @@ describe('8 - Asynchronous Invitations', () => {
 
   const EXPECTED_LIMIT = 18
   let inviteIdentifier2, inviteIdentifier3
+  const tomorrow = DateTime.now().plus({ days: 1 }).toISO()
   it('registered user #0 can create many invite records', async () => {
     // create more invite records to get to the limit
     for (let i = 0; i < EXPECTED_LIMIT - 1; i++) {
@@ -171,7 +172,7 @@ describe('8 - Asynchronous Invitations', () => {
           request(Server)
             .post('/api/userUtil/invite')
             .set('Authorization', 'Bearer ' + pushTokens[0])
-            .send({ inviteIdentifier: inviteIdentifierTemp, notes: inviteNotes, expiresAt: testUtil.nextDayEpoch })
+            .send({ inviteIdentifier: inviteIdentifierTemp, notes: inviteNotes, expiresAt: tomorrow })
             .then(r => {
               if (r.body.error) {
                 throw new Error(JSON.stringify(r.body.error))
