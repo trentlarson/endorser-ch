@@ -69,7 +69,7 @@ Debug: `NODE_ENV=dev npm run dev:debug`
 
 Deploy / Release:
 
-* Update CHANGELOG.md & package.json, run `npm install`, then commit and tag the release.
+* Update CHANGELOG.md & package.json, run `npm install`,  commit, and tag the release (`git tag release-XYZ && git push origin release-XYZ`).
 
 Run on Docker:
 
