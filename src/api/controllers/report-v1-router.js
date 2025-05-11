@@ -311,3 +311,65 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/rateLimits', claimController.getRateLimits)
+
+/**
+ * Find users who can see a specific DID through their visibility network
+ * 
+ * @group reports on network - Visibility
+ * @route GET /api/report/usersWhoCanSeeDid
+ * @param {string} claimId.query.required - the ID of the claim containing the DID
+ * @param {string} didProperty.query.required - the property in the claim containing the DID to check
+ * @returns {array.object} 200 - list of users who can see the DID, ordered by shortest path
+ * @returns {Error} 400 - client error
+ */
+.get('/usersWhoCanSeeDid', async (req, res) => {
+  const { claimId, didProperty } = req.query
+  if (!claimId || !didProperty) {
+    return res.status(400).json({ error: "claimId and didProperty are required" }).end()
+  }
+
+  try {
+    // Get the claim to find the target DID
+    const claim = await dbService.getClaim(claimId)
+    if (!claim) {
+      return res.status(404).json({ error: "Claim not found" }).end()
+    }
+
+    // Extract the target DID from the claim
+    const targetDid = claim[didProperty]
+    if (!targetDid) {
+      return res.status(400).json({ error: "DID property not found in claim" }).end()
+    }
+
+    // Get all DIDs that the requester can see
+    const requesterDid = res.locals.authTokenIssuer
+    const didsRequesterCanSee = await getAllDidsRequesterCanSee(requesterDid)
+
+    // For each DID the requester can see, find if they can see the target DID
+    const results = []
+    for (const did of didsRequesterCanSee) {
+      // Skip the requester's own DID
+      if (did === requesterDid) continue
+
+      // Get the path between this DID and the target DID
+      const path = await getAllDidsBetweenRequesterAndObjects(did, [targetDid])
+      
+      // If the first element is the target DID, this user can see it directly
+      // If it's an array, this user can see it through their network
+      if (path[0] === targetDid || (Array.isArray(path[0]) && path[0].length > 0)) {
+        results.push({
+          did,
+          pathLength: path[0] === targetDid ? 1 : path[0].length + 1
+        })
+      }
+    }
+
+    // Sort by path length
+    results.sort((a, b) => a.pathLength - b.pathLength)
+
+    res.status(200).json(results).end()
+  } catch (err) {
+    console.error('Error finding users who can see DID', err)
+    res.status(500).json({ error: err.message }).end()
+  }
+})
