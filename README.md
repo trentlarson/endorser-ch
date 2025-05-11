@@ -1,24 +1,25 @@
 # endorser-ch
 
-This repo is an API for creating and querying claims in privacy-preserving ways.
+This is an API for creating and querying claims in privacy-preserving ways.
 
-In particular:
+* Note that more and more documentation is being written in [README-context.md](./README-context.md) and .cursor/rules MDC files for the purpose of sharing with AI.
 
-* Store and retrieve textual data as public but ensure identifier visibility is fully controlled by each user.
+In particular, this service:
 
-* Allow this without cost, at least for users in selected communities. (It does have some rate-limiting to manage user.)
+* Stores and retrieves textual data as public but ensures identifier visibility is fully controlled by each user.
 
-* Support certain use cases like counting confirmations or totals of certain claims. (This could be a separate service.)
+* Allows this without cost, at least for users in selected communities. (It does have some rate-limiting to manage user.)
+
+* Supports certain use cases like counting confirmations or totals of certain claims. (This could be a separate service.)
 
 This incarnation does have access to the identifier registration and visibility networks, providing some ability to
-discover other users. This can be optional as well, allowing for discovery via users' preferred messaging networks.
+discover other users; the downside is that the server has special permission to see all this information. This could be optional as well, allowing for discovery via users' preferred messaging networks, except that the host of this service should have the ability to restrict or manage network abuses.
 
-This only allows claims (AKA attestations) and confirmations that are cryptographically signed.
+This only allows claims (AKA attestations) and confirmations that are cryptographically signed, in JWTs.
 
 To try in a full system, see TimeSafari.app or use the mobile app linked at
 [the public EndorserSearch.com server](https://endorsersearch.com);
 there's [a test server](https://api-test.endorser.ch).
-
 
 For the roadmap, see [project.task.yml](./project.task.yml).
 

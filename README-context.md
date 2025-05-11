@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-Endorser Search is an API for creating and querying claims in privacy-preserving ways. The system allows users to make cryptographically signed claims (attestations) and confirmations while maintaining control over their personal identifiers' visibility. Others can use a chain of data to verify content origination. Furthermore, it has facilities to enable people to selectively share information, for easy onboarding of individuals or groups, and for some discovery of the network to find originators of data.
+Endorser Search is an API for creating and querying claims in privacy-preserving ways. The system allows users to make cryptographically signed claims (attestations) and confirmations while maintaining control over their personal identifiers' visibility. Others can use a chain of data to verify content origination. It makes most of the payload accessible to the world, but it only reveals the Decentralized IDs (DIDs) to those to whom the issuer has given permission.
+
+Furthermore, it has facilities to enable people to selectively share information, for easy onboarding of individuals or groups, and for some discovery of the network to find originators of data.
 
 Also currently included are some "partner" functions: these reveal more about the users and potentially expose information (like identifiers) with other systems (like nostr). Their use should be clearly segregated from direct access to a person's network information, and eventually this should be a totally separate system (so that there is no file system access).
 
