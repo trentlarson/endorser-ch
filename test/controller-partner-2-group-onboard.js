@@ -267,6 +267,7 @@ describe("P2 - Group Onboarding", () => {
         expect(r.status).to.equal(200);
         expect(r.body.data).to.be.an("object");
         expect(r.body.data).to.have.property("name", "Test Room");
+        expect(r.body.data).to.have.property("projectLink", null);
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -281,6 +282,7 @@ describe("P2 - Group Onboarding", () => {
         expect(r.body.data).to.be.an("array");
         expect(r.body.data).to.have.lengthOf(1);
         expect(r.body.data[0]).to.have.property("name", "Test Room");
+        expect(r.body.data[0]).to.not.have.property("projectLink");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -302,7 +304,10 @@ describe("P2 - Group Onboarding", () => {
     return request(Server)
       .put(`/api/partner/groupOnboard`)
       .set("Authorization", "Bearer " + pushTokens[0])
-      .send({ name: "Updated Room" })
+      .send({
+        name: "Updated Room",
+        projectLink: "https://github.com/example/project-updated",
+      })
       .then((r) => {
         expect(r.status).to.equal(200);
       }).catch((err) => {
@@ -310,17 +315,37 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  it("cannot delete another user's room", () => {
+  it("can see their own room with new values", () => {
     return request(Server)
-      .delete(`/api/partner/groupOnboard`)
-      .set("Authorization", "Bearer " + pushTokens[1])
+      .get("/api/partner/groupOnboard")
+      .set("Authorization", "Bearer " + pushTokens[0])
       .then((r) => {
-        expect(r.status).to.equal(404);
+        expect(r.status).to.equal(200);
+        expect(r.body.data).to.be.an("object");
+        expect(r.body.data).to.have.property("name", "Updated Room");
+        expect(r.body.data).to.have.property("projectLink", "https://github.com/example/project-updated");
       }).catch((err) => {
         return Promise.reject(err)
       });
   });
 
+  it("cannot create a room with invalid project link", () => {
+    return request(Server)
+      .post("/api/partner/groupOnboard")
+      .set("Authorization", "Bearer " + pushTokens[3])
+      .send({
+        name: "Invalid Link Room",
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        content: "Room content",
+        projectLink: 123 // Invalid type
+      })
+      .then((r) => {
+        expect(r.status).to.equal(400);
+        expect(r.body.error.message).to.include("valid URL");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
 
 
 

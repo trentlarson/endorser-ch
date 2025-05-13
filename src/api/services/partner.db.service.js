@@ -61,10 +61,10 @@ class PartnerDatabase {
    * Group Onboarding
    **/
 
-  groupOnboardInsert(issuerDid, name, expiresAt) {
+  groupOnboardInsert(issuerDid, name, expiresAt, projectLink) {
     return new Promise((resolve, reject) => {
-      const stmt = "INSERT INTO group_onboard (issuerDid, name, expiresAt) VALUES (?, ?, datetime(?))"
-      partnerDb.run(stmt, [issuerDid, name, expiresAt], function(err) {
+      const stmt = "INSERT INTO group_onboard (issuerDid, name, expiresAt, projectLink) VALUES (?, ?, datetime(?), ?)"
+      partnerDb.run(stmt, [issuerDid, name, expiresAt, projectLink], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -134,10 +134,10 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardUpdate(id, issuerDid, name, expiresAt) {
+  groupOnboardUpdate(id, issuerDid, name, expiresAt, projectLink) {
     return new Promise((resolve, reject) => {
-      const stmt = "UPDATE group_onboard SET name = ?, expiresAt = datetime(?) WHERE issuerDid = ? AND rowid = ?"
-      partnerDb.run(stmt, [name, expiresAt, issuerDid, id], function(err) {
+      const stmt = "UPDATE group_onboard SET name = ?, expiresAt = datetime(?), projectLink = ? WHERE issuerDid = ? AND rowid = ?"
+      partnerDb.run(stmt, [name, expiresAt, projectLink, issuerDid, id], function(err) {
         if (err) {
           reject(err)
         } else {
