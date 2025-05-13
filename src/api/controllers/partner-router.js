@@ -548,6 +548,7 @@ export default express
  * @param {string} name.body.required - name of the room
  * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
  * @param {string} content.body.required - personal content for the room creator
+ * @param {string} projectLink.body.optional - URL to the project
  * @returns {object} 201 - Created with room ID
  * @returns {Error} 400 - client error
  */
@@ -563,7 +564,7 @@ export default express
       return res.status(400).json({ error: { message: "You must have registration permissions to create a group." } }).end()
     }
 
-    const { name, expiresAt, content } = req.body
+    const { name, expiresAt, content, projectLink } = req.body
     
     // Validate inputs
     if (!name || typeof name !== 'string') {
@@ -581,8 +582,12 @@ export default express
       return res.status(400).json({ error: { message: "The expiration time cannot be more than 24 hours in the future." } }).end()
     }
 
+    if (projectLink && typeof projectLink !== 'string') {
+      return res.status(400).json({ error: { message: "The project link must be a valid URL." } }).end()
+    }
+
     try {
-      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt)
+      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt, projectLink)
       const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content, true)
       res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
     } catch (err) {
@@ -669,7 +674,7 @@ export default express
  * @route PUT /api/partner/groupOnboard
  * @param {string} name.body.optional - new room name
  * @param {string} expiresAt.body.optional - new room expiration date
- * @param {string} content.body.optional - new encrypted content
+ * @param {string} projectLink.body.optional - new project URL
  * @returns 200 - Success
  * @returns {Error} 403 - Unauthorized
  * @returns {Error} 404 - Not found
@@ -678,18 +683,23 @@ export default express
   '/groupOnboard',
   async (req, res) => {
     try {
-      let { name, expiresAt, content } = req.body
+      let { name, expiresAt, content, projectLink } = req.body
 
       const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (!room) {
         return res.status(404).json({ error: { message: "That group was not found for you." } }).end()
       }
 
+      if (projectLink && typeof projectLink !== 'string') {
+        return res.status(400).json({ error: { message: "The project link must be a valid URL." } }).end()
+      }
+
       const changes = await partnerDbService.groupOnboardUpdate(
         room.groupId,
         res.locals.authTokenIssuer,
         name || room.name,
-        expiresAt || room.expiresAt
+        expiresAt || room.expiresAt,
+        projectLink || room.projectLink
       )
       if (changes === 0) {
         return res.status(404).json({ error: { message: "That group was not found to change." } }).end()

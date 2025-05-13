@@ -176,7 +176,7 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  const MESSAGE = '{"message": "Hello, world!", "name": "Scarlet Pimpernel", "projectLink": "01JV3JE9S2FRTE49EZBM5EA0W7"}'
+  const MESSAGE = '{"message": "Hello, world!", "name": "Scarlet Pimpernel"}'
   const PASSWORD = 'I love scarlet.'
   it("can create a room with registration rights", async () => {
     // The content can be any string, typically base-64 encoded bytes which are
@@ -267,6 +267,7 @@ describe("P2 - Group Onboarding", () => {
         expect(r.status).to.equal(200);
         expect(r.body.data).to.be.an("object");
         expect(r.body.data).to.have.property("name", "Test Room");
+        expect(r.body.data).to.have.property("projectLink", null);
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -299,17 +300,13 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  const newProjectLink = "https://endorser.ch/entity/01JV3JE9S2FRTE49EZBM5EA0W7"
-  it("can update own room name and content with new project link", async () => {
-    const updatedMessage = '{"message": "Updated message", "name": "Scarlet Pimpernel", "projectLink": "' + newProjectLink + '"}';
-    const updatedEncrMessage = await encryptMessage(updatedMessage, PASSWORD);
-    
+  it("can update own room name", () => {
     return request(Server)
       .put(`/api/partner/groupOnboard`)
       .set("Authorization", "Bearer " + pushTokens[0])
       .send({
         name: "Updated Room",
-        content: updatedEncrMessage,
+        projectLink: "https://github.com/example/project-updated",
       })
       .then((r) => {
         expect(r.status).to.equal(200);
@@ -318,14 +315,33 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  it("can see their own room with new room name", () => {
+  it("can see their own room with new values", () => {
     return request(Server)
       .get("/api/partner/groupOnboard")
       .set("Authorization", "Bearer " + pushTokens[0])
-      .then(async (r) => {
+      .then((r) => {
         expect(r.status).to.equal(200);
         expect(r.body.data).to.be.an("object");
         expect(r.body.data).to.have.property("name", "Updated Room");
+        expect(r.body.data).to.have.property("projectLink", "https://github.com/example/project-updated");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
+  it("cannot create a room with invalid project link", () => {
+    return request(Server)
+      .post("/api/partner/groupOnboard")
+      .set("Authorization", "Bearer " + pushTokens[3])
+      .send({
+        name: "Invalid Link Room",
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+        content: "Room content",
+        projectLink: 123 // Invalid type
+      })
+      .then((r) => {
+        expect(r.status).to.equal(400);
+        expect(r.body.error.message).to.include("valid URL");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -349,8 +365,7 @@ describe("P2 - Group Onboarding", () => {
         expect(r.body.data[0]).to.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
         const decrypted = await decryptMessage(r.body.data[0].content, PASSWORD);
-        const decryptedObj = JSON.parse(decrypted);
-        expect(decryptedObj).to.have.property("projectLink", newProjectLink);
+        expect(decrypted).to.equal(MESSAGE);
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -520,7 +535,7 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  it("admitted member can see other admitted members with updated project link", () => {
+  it("admitted member can see other admitted members", () => {
     return request(Server)
       .get(`/api/partner/groupOnboardMembers`)
       .set("Authorization", "Bearer " + pushTokens[1])
@@ -530,11 +545,8 @@ describe("P2 - Group Onboarding", () => {
         expect(r.body.data[0]).to.not.have.property("admitted");
         expect(r.body.data[0]).to.have.property("content");
         expect(r.body.data[1]).to.have.property("content").that.equals("Member 1 updated content again");
-        
-        // Verify the encrypted content contains the updated project link
         const decrypted0 = await decryptMessage(r.body.data[0].content, PASSWORD);
-        const decryptedObj = JSON.parse(decrypted0);
-        expect(decryptedObj).to.have.property("projectLink", "https://endorser.ch/entity/01JV3JE9S2FRTE49EZBM5EA0W7");
+        expect(decrypted0).to.equal(MESSAGE);
       }).catch((err) => {
         return Promise.reject(err)
       });

@@ -199,6 +199,7 @@ describe('8 - Asynchronous Invitations', () => {
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .send({ inviteJwt: registerUnknownBy0EncTemp, notes: inviteNotes })
       .then(r => {
+        console.log(r.body)
         expect(r.body).to.have.property("error")
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(400)
@@ -387,6 +388,7 @@ describe('8 - Asynchronous Invitations', () => {
     .set('Authorization', 'Bearer ' + newJwt)
     .send({ jwtEncoded: registerUnknownBy0EncTemp })
     .then(r => {
+      console.log(r.body)
       expect(r.body).to.have.property("success")
       expect(r.status).that.equals(201)
     })
@@ -436,6 +438,7 @@ describe('8 - Asynchronous Invitations', () => {
     .set('Authorization', 'Bearer ' + newJwt2)
     .send({ jwtEncoded: registerUnknownBy0EncTemp })
     .then(r => {
+      console.log(r.body)
       expect(r.body).to.have.property("error")
       expect(r.status).that.equals(400)
     })
