@@ -1,1 +1,0 @@
-ALTER TABLE group_onboard ADD COLUMN projectLink TEXT; 
