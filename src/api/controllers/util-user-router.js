@@ -147,6 +147,20 @@ export default express
     '/invite',
     async (req, res) => {
       try {
+        if (req.body.inviteIdentifier) {
+          const checks = await ClaimService.checkClaimLimits(res.locals.authTokenIssuer, res.locals.authTokenIssuer, null, true)
+          if (req.body.inviteIdentifier.length < 20) {
+            res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
+          } else if (!req.body.expiresAt) {
+            res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
+          } else if (checks?.clientError) {
+            res.status(400).json({ error: checks.clientError }).end()
+          } else {
+            await dbService.inviteOneInsert(res.locals.authTokenIssuer, req.body.inviteIdentifier, req.body.notes, req.body.expiresAt)
+            res.status(201).json({ success: true }).end()
+          }
+          return
+        }
         if (req.body.inviteJwt) {
 
           // This is temporary: we should never custody the actual RegisterAction JWT.
@@ -168,20 +182,6 @@ export default express
           } else {
             const date = new Date(verifiedInvite.payload.exp * 1000).toISOString()
             await dbService.inviteOneInsert(res.locals.authTokenIssuer, identifier, req.body.notes, date, req.body.inviteJwt)
-            res.status(201).json({ success: true }).end()
-          }
-          return
-        }
-        if (req.body.inviteIdentifier) {
-          const checks = await ClaimService.checkClaimLimits(res.locals.authTokenIssuer, res.locals.authTokenIssuer, null, true)
-          if (req.body.inviteIdentifier.length < 20) {
-            res.status(400).json({ error: { message: 'You must specify an identifier of 20+ characters for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
-          } else if (!req.body.expiresAt) {
-            res.status(400).json({ error: { message: 'You must specify an expiration date-time for the invitation, also used inside the RegisterAction given to the invitee.' } }).end()
-          } else if (checks?.clientError) {
-            res.status(400).json({ error: checks.clientError }).end()
-          } else {
-            await dbService.inviteOneInsert(res.locals.authTokenIssuer, req.body.inviteIdentifier, req.body.notes, req.body.expiresAt)
             res.status(201).json({ success: true }).end()
           }
           return
