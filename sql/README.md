@@ -61,7 +61,7 @@ CREATE TABLE event (
 -- cache table, for quick retrieval of claims with type GiveAction
 CREATE TABLE give_claim (
     handleId TEXT PRIMARY KEY,
-    jwtId TEXT,
+    jwtId TEXT, -- updated to the latest JWT ID that updated this
     issuedAt DATETIME,
     updatedAt DATETIME,
 
@@ -197,7 +197,7 @@ CREATE TABLE network (
 -- cache table, for quick retrieval of claims with type Offer
 CREATE TABLE offer_claim (
     handleId TEXT PRIMARY KEY,
-    jwtId TEXT,
+    jwtId TEXT, -- updated to the latest JWT ID that updated this
     issuedAt DATETIME,
     updatedAt DATETIME,
 
@@ -299,9 +299,9 @@ CREATE TABLE plan_claim (
     resultIdentifier TEXT,
     url TEXT
 );
-CREATE INDEX plan_issuerDid ON plan_claim(issuerDid);
 CREATE INDEX plan_fullIri ON plan_claim(handleId);
-CREATE INDEX plan_internalId ON plan_claim(internalId);
+CREATE INDEX plan_index_jwtid ON plan_claim(jwtId);
+CREATE INDEX plan_issuerDid ON plan_claim(issuerDid);
 CREATE INDEX plan_endTime ON plan_claim(endTime);
 CREATE INDEX plan_resultIdentifier ON plan_claim(resultIdentifier);
 CREATE INDEX plan_fulfillsPlan on plan_claim (fulfillsPlanHandleId);

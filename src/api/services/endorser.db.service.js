@@ -802,14 +802,14 @@ class EndorserDatabase {
 
       if (afterIdInput) {
         params.push(afterIdInput)
-        sql += " AND main.rowid > ?"
+        sql += " AND main.jwtId > ?"
       }
       if (beforeIdInput) {
         params.push(beforeIdInput)
-        sql += " AND main.rowid < ?"
+        sql += " AND main.jwtId < ?"
       }
 
-      sql += " ORDER BY main.rowid DESC LIMIT " + DEFAULT_LIMIT
+      sql += " ORDER BY main.jwtId DESC LIMIT " + DEFAULT_LIMIT
 
       const data = []
       db.each(sql, params, function(err, row) {
@@ -840,14 +840,14 @@ class EndorserDatabase {
 
       if (afterIdInput) {
         params.push(afterIdInput)
-        sql += " AND main.rowid > ?"
+        sql += " AND main.jwtId > ?"
       }
       if (beforeIdInput) {
         params.push(beforeIdInput)
-        sql += " AND main.rowid < ?"
+        sql += " AND main.jwtId < ?"
       }
 
-      sql += " ORDER BY main.rowid DESC LIMIT " + DEFAULT_LIMIT
+      sql += " ORDER BY main.jwtId DESC LIMIT " + DEFAULT_LIMIT
 
       const data = []
       db.each(sql, params, function(err, row) {
@@ -2433,6 +2433,65 @@ class EndorserDatabase {
     })
   }
 
+  /**
+   * Retrieve plans that have changed since a given claim ID or date
+   * @param planIds Array of plan handle IDs to check (resulting in [] if empty)
+   * @param afterIdInput Optional pagination parameter
+   * @param beforeIdInput Optional pagination parameter
+   * @returns Promise of { data: [], hitLimit: boolean }
+   */
+  plansChangedSince(planIds, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      if (!planIds || planIds.length === 0) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+
+      const inListStr = planIds.map(() => "?").join(',')
+      let whereClause = " handleId IN (" + inListStr + ")"
+      let allParams = [...planIds]
+
+      // Add pagination
+      if (afterIdInput) {
+        whereClause += " AND jwtId > ?"
+        allParams.push(afterIdInput)
+      }
+      if (beforeIdInput) {
+        whereClause += " AND jwtId < ?"
+        allParams.push(beforeIdInput)
+      }
+
+      let data = []
+      let rowErr
+      const sql =
+        "SELECT * FROM plan_claim WHERE"
+        + whereClause
+        + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.endTime = util.isoAndZonify(row.endTime)
+            row.startTime = util.isoAndZonify(row.startTime)
+            data.push(row)
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data, hitLimit: data.length === DEFAULT_LIMIT }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
   planUpdate(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
@@ -2616,6 +2675,75 @@ class EndorserDatabase {
     })
   }
 
+  /**
+   * Retrieve projects that have changed since a given claim ID or date
+   * @param projectIds Array of project handle IDs to check (resulting in [] if empty)
+   * @param sinceClaimId Optional claim ID to use as reference point
+   * @param afterIdInput Optional pagination parameter
+   * @param beforeIdInput Optional pagination parameter
+   * @returns Promise of { data: [], hitLimit: boolean }
+   */
+  projectsChangedSince(projectIds, sinceClaimId, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      if (!projectIds || projectIds.length === 0) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+
+      const inListStr = projectIds.map(() => "?").join(',')
+      let whereClause = " handleId IN (" + inListStr + ")"
+      let allParams = [...projectIds]
+
+      // Add date or claim ID filter
+      if (sinceClaimId) {
+        whereClause += " AND jwtId > ?"
+        allParams.push(sinceClaimId)
+      }
+
+      // Add pagination
+      if (afterIdInput) {
+        whereClause += " AND jwtId > ?"
+        allParams.push(afterIdInput)
+      }
+      if (beforeIdInput) {
+        whereClause += " AND jwtId < ?"
+        allParams.push(beforeIdInput)
+      }
+
+      let data = []
+      let rowErr
+      const sql =
+        "SELECT * FROM project_claim WHERE"
+        + whereClause
+        + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            row.endTime = util.isoAndZonify(row.endTime)
+            row.startTime = util.isoAndZonify(row.startTime)
+            data.push(row)
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            const result = { data: data }
+            if (data.length === DEFAULT_LIMIT) {
+              result.hitLimit = true
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
   projectUpdate(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
@@ -2638,6 +2766,7 @@ class EndorserDatabase {
       })
     })
   }
+
 
 
 

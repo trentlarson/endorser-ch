@@ -1,7 +1,6 @@
 import * as express from 'express'
 
 import ClaimService from '../services/claim.service'
-import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
 
 class Controller {
 

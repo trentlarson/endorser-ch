@@ -3183,3 +3183,147 @@ describe('6 - claimId & handleId guards', () => {
   })
 
 })
+
+describe('6 - Plans Changed', () => {
+  
+  it('GET /api/v2/report/plansChangedSince returns 400 for missing planIds', () => {
+    return request(Server)
+      .get('/api/v2/report/plansChangedSince')
+      .then(r => {
+        expect(r.status).to.equal(400)
+        expect(r.body.error).to.include('planIds parameter is required')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('POST /api/v2/report/plansChangedSince returns 400 for missing planIds', () => {
+    return request(Server)
+      .post('/api/v2/report/plansChangedSince')
+      .send({})
+      .then(r => {
+        expect(r.status).to.equal(400)
+        expect(r.body.error).to.include('planIds array is required')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('POST /api/v2/report/plansChangedSince returns 400 for empty planIds array', () => {
+    return request(Server)
+      .post('/api/v2/report/plansChangedSince')
+      .send({ planIds: [] })
+      .then(r => {
+        expect(r.status).to.equal(400)
+        expect(r.body.error).to.include('planIds array is required')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('GET /api/v2/report/plansChangedSince works with valid parameters', () => {
+    return request(Server)
+      .get('/api/v2/report/plansChangedSince')
+      .query({
+        planIds: '["test-plan-1","test-plan-2"]',
+        afterId: 'test-claim-id',
+        beforeId: 'test-claim-id'
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('POST /api/v2/report/plansChangedSince works with valid parameters', () => {
+    return request(Server)
+      .post('/api/v2/report/plansChangedSince')
+      .send({
+        planIds: ['test-plan-1', 'test-plan-2'],
+        afterId: 'test-claim-id',
+        beforeId: 'test-claim-id'
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('GET /api/v2/report/plansChangedSince works with sinceDate parameter', () => {
+    return request(Server)
+      .get('/api/v2/report/plansChangedSince')
+      .query({
+        planIds: '["test-plan-1"]',
+        afterId: 'test-claim-id',
+        beforeId: 'test-claim-id'
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('POST /api/v2/report/plansChangedSince works with pagination parameters', () => {
+    return request(Server)
+      .post('/api/v2/report/plansChangedSince')
+      .send({
+        planIds: ['test-plan-1'],
+        afterId: 'test-claim-id',
+        afterId: '123',
+        beforeId: '456'
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('GET /api/v2/report/plansChangedSince returns empty array for non-existent plans', () => {
+    return request(Server)
+      .get('/api/v2/report/plansChangedSince')
+      .query({
+        planIds: '["non-existent-plan-1","non-existent-plan-2"]',
+        afterId: 'test-claim-id',
+        beforeId: 'test-claim-id'
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data).to.have.length(0)
+        expect(r.body.hitLimit).to.be.false
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+})
