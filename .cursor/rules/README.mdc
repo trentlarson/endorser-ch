@@ -1,13 +1,18 @@
 ---
-description: 
-globs: 
-alwaysApply: false
+alwaysApply: true
 ---
+
+## Overall Design Principles
 
 - This service should be as simple as possible, while providing basic functionality for validation and reporting.
 
 - This service should custody as little data as possible, encouraging the users to create and share signed data directly.
 
-- At no point should this service be able to pretend to be any user. All activity should be verifiable by investigating the chain of transactions and the associated signatures.
+- At no point should this service or its administrators be able to pretend to be any user. All activity should be verifiable by investigating the chain of transactions and the associated signatures. Obviously users should never be able to pretend to be someone else.
 
 - Extended functions, especially those that include other systems, should go in a separate path under "/api/partner" with data stored in a separate database.
+
+## ID Architecture
+
+- **External IDs** (`handleId`): Public-facing identifiers, can be shared
+- **Internal IDs** (`claimId`): System-internal identifiers for claims

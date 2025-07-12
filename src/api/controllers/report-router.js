@@ -47,6 +47,19 @@ function getGiveTotalsMaybeGifted(req, res, next, onlyGifted) {
   }
 }
 
+function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
+  if (!planIds || !Array.isArray(planIds)) {
+    return res.status(400).json({ error: 'planIds array parameter is required' })
+  }
+  if (planIds.length === 0) {
+    return res.json({ data: [], hitLimit: false }).end()
+  }
+  dbService.plansLastUpdateBetween(planIds, afterId, beforeId)
+    .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
+    .then(results => { res.json(results).end() })
+    .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+}
+
 class DbController {
 
   getAllJwtsPaged(req, res, next) {
@@ -377,6 +390,26 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  getPlansLastUpdatedBetweenFromPost(req, res, next) {
+    const { planIds, afterId, beforeId } = req.body
+    retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res)
+  }
+
+  getPlansLastUpdatedBetweenFromGet(req, res, next) {
+    const { planIds, afterId, beforeId } = req.query
+    if (!planIds) {
+      return res.status(400).json({ error: 'planIds JSONified array parameter is required' })
+    }
+    let planIdsArray = []
+    try {
+      // Parse projectIds from query string (comma-separated)
+      planIdsArray = JSON.parse(planIds)
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid planIds format. Should be a JSON array of strings.' })
+    }
+    retrievePlansLastUpdateBetween(planIdsArray, afterId, beforeId, req, res)
+  }
+
   getAllProjectsPaged(req, res, next) {
     const query = req.query
     const afterId = req.query.afterId
@@ -417,39 +450,6 @@ class DbController {
       minLocLat, maxLocLat, minLocLon, maxLocLon,
       req.query.afterId, req.query.beforeId, req.query.claimContents
     )
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
-      .then(results => { res.json(results).end() })
-      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
-  }
-
-  getPlansChangedSinceFromPost(req, res, next) {
-    const { planIds, afterId, beforeId } = req.body
-    
-    if (!planIds || !Array.isArray(planIds) || planIds.length === 0) {
-      return res.status(400).json({ error: 'planIds array is required and must not be empty' })
-    }
-
-    dbService.plansChangedSince(planIds, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
-      .then(results => { res.json(results).end() })
-      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
-  }
-
-  getPlansChangedSinceFromGet(req, res, next) {
-    const { planIds, afterId, beforeId } = req.query
-    
-    if (!planIds) {
-      return res.status(400).json({ error: 'planIds parameter is required' })
-    }
-
-    // Parse projectIds from query string (comma-separated)
-    const planIdsArray = JSON.parse(planIds)
-    
-    if (planIdsArray.length === 0) {
-      return res.status(400).json({ error: 'planIds must contain at least one valid ID' })
-    }
-
-    dbService.plansChangedSince(planIdsArray, afterId, beforeId)
       .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -1017,27 +1017,27 @@ export default express
   .get('/providersToGive', dbController.getGiveProviders)
 
 /**
- * Retrieve projects that have changed since a given claim ID or date (GET version)
- * For smaller lists of project IDs, use query parameters
+ * Retrieve plans that have their latest version before/after given claim IDs (GET version)
+ * For smaller lists of plan IDs, use query parameters
  *
  * @group reports - Reports (with paging)
- * @route GET /api/v2/report/projectsChangedSince
+ * @route GET /api/v2/report/plansLastUpdateBetween
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
  * @param {string} afterId.query.optional - pagination parameter
  * @param {string} beforeId.query.optional - pagination parameter
  * @returns {object} Object with data array and hitLimit boolean
  */
-  .get('/plansChangedSince', dbController.getPlansChangedSinceFromGet)
+ .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
 
 /**
- * Retrieve projects that have changed since a given claim ID or date (POST version)
- * For larger lists of project IDs, use POST with JSON body
+ * Retrieve plans that have their latest version before/after given claim IDs (POST version)
+ * For larger lists of plan IDs, use POST with JSON body
  *
  * @group reports - Reports (with paging)
- * @route POST /api/v2/report/projectsChangedSince
+ * @route POST /api/v2/report/plansLastUpdatedBetween
  * @param {string[]} body.planIds.required - Array of plan handle IDs
  * @param {string} body.afterId.optional - pagination parameter
  * @param {string} body.beforeId.optional - pagination parameter
  * @returns {object} Object with data array and hitLimit boolean
  */
-  .post('/plansChangedSince', dbController.getPlansChangedSinceFromPost)
+ .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)

@@ -27,6 +27,7 @@ const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.nextMin
 
 
 const ENTITY_NEW_DESC = 'Edited details for app...'
+const ENTITY_NEW_DESC_2 = 'Edited details again for app...'
 
 
 
@@ -178,15 +179,18 @@ before(async () => {
 
 })
 
-let firstPlanIdExternal, firstPlanIdSecondClaimInternal,
+let firstPlanIdExternal, firstPlanIdInternal,
+  firstPlanClaim2IdInternal,
   secondPlanIdExternal, secondPlanIdInternal,
-  childPlanIdExternal, childPlanIdInternal, childPlanIdInternalClaim2
+  planBy2FulfillsBy1Claim1IdExternal, planBy2FulfillsBy1Claim1IdInternal,
+  planBy2FulfillsBy1Claim2IdInternal,
+  planBy2FulfillsBy1Claim3IdInternal
 
 describe('6 - Plans', () => {
 
   // note that this is similar to Project
 
-  let firstPlanIdInternal, planEndTime
+  let planEndTime
 
   it('v2 insert plan without ID by first user', () => {
     planEndTime = new Date(planWithoutIdBy1JwtObj.claim.endTime)
@@ -478,7 +482,7 @@ describe('6 - Plans', () => {
     .then(r => {
       expect(r.headers['content-type'], /json/)
       expect(r.status).that.equals(201)
-      firstPlanIdSecondClaimInternal = r.body.success.claimId
+      firstPlanClaim2IdInternal = r.body.success.claimId
     }).catch((err) => {
       return Promise.reject(err)
     })
@@ -502,7 +506,7 @@ describe('6 - Plans', () => {
 
   it('access same exact plan by first person & second internal ID, still getting initial plan but with new description', () => {
     return request(Server)
-        .get('/api/plan/' + firstPlanIdSecondClaimInternal)
+        .get('/api/plan/' + firstPlanClaim2IdInternal)
         .set('Authorization', 'Bearer ' + pushTokens[1])
         .then(r => {
           expect(r.headers['content-type'], /json/)
@@ -549,7 +553,7 @@ describe('6 - Plans', () => {
     const planObj = R.clone(testUtil.jwtTemplate)
     planObj.claim = R.clone(testUtil.claimOffer)
     planObj.claim.offeredBy = { identifier: creds[1].did }
-    planObj.claim.lastClaimId = firstPlanIdSecondClaimInternal
+    planObj.claim.lastClaimId = firstPlanClaim2IdInternal
     planObj.claim.includesObject = { description: ENTITY_NEW_DESC }
     planObj.iss = creds[1].did
     const planJwtEnc = await credentials[1].createVerification(planObj)
@@ -761,7 +765,7 @@ describe('6 - Plans', () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = secondPlanIdExternal
-    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanClaim2IdInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
     return request(Server)
@@ -778,7 +782,7 @@ describe('6 - Plans', () => {
   it('make a child plan that fulfills another one', async () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
-    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanClaim2IdInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
     return request(Server)
@@ -787,8 +791,8 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
-        childPlanIdExternal = r.body.success.handleId
-        childPlanIdInternal = r.body.success.claimId
+        planBy2FulfillsBy1Claim1IdExternal = r.body.success.handleId
+        planBy2FulfillsBy1Claim1IdInternal = r.body.success.claimId
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -801,7 +805,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(4)
-        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
@@ -822,7 +826,7 @@ describe('6 - Plans', () => {
 
   it('retrieve one parent plan link from child', () => {
     return request(Server)
-      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -841,7 +845,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.false
       }).catch((err) => {
         return Promise.reject(err)
@@ -850,7 +854,7 @@ describe('6 - Plans', () => {
 
   it('retrieve no child plan link from child', () => {
     return request(Server)
-      .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .get('/api/v2/report/planFulfillersToPlan?planHandleId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -861,15 +865,15 @@ describe('6 - Plans', () => {
   }).timeout(3000)
 
   it('issuer of parent plan confirms fulfills link', async () => {
-    const confirmChildPlanFor2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
-    confirmChildPlanFor2FulfillsBy1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
+    const confirmplanBy2FulfillsBy1Claim1For2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
+    confirmplanBy2FulfillsBy1Claim1For2FulfillsBy1JwtObj.claim = R.clone(testUtil.confirmationTemplate)
     const planClaim = R.clone(planBy2FulfillsBy1Claim)
-    planClaim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal // just to make it like the current record
-    planClaim.lastClaimId = childPlanIdInternal
-    confirmChildPlanFor2FulfillsBy1JwtObj.claim.object.push(planClaim)
-    confirmChildPlanFor2FulfillsBy1JwtObj.sub = creds[2].did
-    confirmChildPlanFor2FulfillsBy1JwtObj.iss = creds[1].did
-    const planJwt = await credentials[1].createVerification(confirmChildPlanFor2FulfillsBy1JwtObj)
+    planClaim.fulfills.lastClaimId = firstPlanClaim2IdInternal // just to make it like the current record
+    planClaim.lastClaimId = planBy2FulfillsBy1Claim1IdInternal
+    confirmplanBy2FulfillsBy1Claim1For2FulfillsBy1JwtObj.claim.object.push(planClaim)
+    confirmplanBy2FulfillsBy1Claim1For2FulfillsBy1JwtObj.sub = creds[2].did
+    confirmplanBy2FulfillsBy1Claim1For2FulfillsBy1JwtObj.iss = creds[1].did
+    const planJwt = await credentials[1].createVerification(confirmplanBy2FulfillsBy1Claim1For2FulfillsBy1JwtObj)
     return request(Server)
       .post('/api/v2/claim')
       .send({jwtEncoded: planJwt})
@@ -892,7 +896,7 @@ describe('6 - Plans', () => {
 
   it('parent plan link from child now shows that it is confirmed', () => {
     return request(Server)
-      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -911,7 +915,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(1)
-        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
         expect(r.body.data[0].fulfillsLinkConfirmed).to.be.true
       }).catch((err) => {
         return Promise.reject(err)
@@ -922,8 +926,8 @@ describe('6 - Plans', () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.claim.fulfills.identifier = secondPlanIdExternal
-    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal
-    planBy2FulfillsBy1JwtObj.claim.lastClaimId = childPlanIdInternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanClaim2IdInternal
+    planBy2FulfillsBy1JwtObj.claim.lastClaimId = planBy2FulfillsBy1Claim1IdInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
     return request(Server)
@@ -940,8 +944,8 @@ describe('6 - Plans', () => {
   it('update child plan and update fulfills claim ID link', async () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
-    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanIdSecondClaimInternal
-    planBy2FulfillsBy1JwtObj.claim.lastClaimId = childPlanIdInternal
+    planBy2FulfillsBy1JwtObj.claim.fulfills.lastClaimId = firstPlanClaim2IdInternal
+    planBy2FulfillsBy1JwtObj.claim.lastClaimId = planBy2FulfillsBy1Claim1IdInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
     return request(Server)
@@ -950,8 +954,8 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
-        childPlanIdExternal = r.body.success.handleId
-        childPlanIdInternalClaim2 = r.body.success.claimId
+        expect(r.body.success.handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
+        planBy2FulfillsBy1Claim2IdInternal = r.body.success.claimId
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -964,9 +968,9 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(4)
-        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
-        expect(globalId(firstPlanIdSecondClaimInternal)).to.not.equal(firstPlanIdExternal)
+        expect(globalId(firstPlanClaim2IdInternal)).to.not.equal(firstPlanIdExternal)
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -976,7 +980,7 @@ describe('6 - Plans', () => {
     const planBy2FulfillsBy1JwtObj = R.clone(testUtil.jwtTemplate)
     planBy2FulfillsBy1JwtObj.claim = R.clone(planBy2FulfillsBy1Claim)
     planBy2FulfillsBy1JwtObj.claim.fulfills = undefined
-    planBy2FulfillsBy1JwtObj.claim.lastClaimId = childPlanIdInternalClaim2
+    planBy2FulfillsBy1JwtObj.claim.lastClaimId = planBy2FulfillsBy1Claim2IdInternal
     planBy2FulfillsBy1JwtObj.iss = creds[2].did
     const planBy2FulfillsBy1JwtEnc = await credentials[2].createVerification(planBy2FulfillsBy1JwtObj)
     return request(Server)
@@ -985,7 +989,8 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.status).that.equals(201)
-        childPlanIdExternal = r.body.success.handleId
+        expect(r.body.success.handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
+        planBy2FulfillsBy1Claim3IdInternal = r.body.success.claimId
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -998,7 +1003,7 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.data).to.be.an('array').of.length(4)
-        expect(r.body.data[0].handleId).to.equal(childPlanIdExternal)
+        expect(r.body.data[0].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
         expect(r.body.data[0].fulfillsPlanHandleId).to.equal(null)
       }).catch((err) => {
         return Promise.reject(err)
@@ -1007,7 +1012,7 @@ describe('6 - Plans', () => {
 
   it('parent plan link from child no longer shows that it is confirmed', () => {
     return request(Server)
-      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(childPlanIdExternal))
+      .get('/api/v2/report/planFulfilledByPlan?planHandleId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal))
       .set('Authorization', 'Bearer ' + pushTokens[2])
       .then(r => {
         expect(r.headers['content-type'], /json/)
@@ -1231,7 +1236,7 @@ describe('6 - Check offer totals', () => {
     credObj.claim = R.clone(testUtil.claimOffer)
     credObj.claim.fulfills = {
       '@type': 'PlanAction',
-      lastClaimId: firstPlanIdSecondClaimInternal,
+      lastClaimId: firstPlanClaim2IdInternal,
     }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR',
@@ -1378,7 +1383,7 @@ describe('6 - Check offer totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
     credObj.claim.fulfills = {
-      '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal
+      '@type': 'PlanAction', lastClaimId: firstPlanClaim2IdInternal
     }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 1, unitCode: 'HUR',
@@ -1410,7 +1415,7 @@ describe('6 - Check offer totals', () => {
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.claimOffer)
     credObj.claim.fulfills = {
-      '@type': 'PlanAction', lastClaimId: firstPlanIdSecondClaimInternal
+      '@type': 'PlanAction', lastClaimId: firstPlanClaim2IdInternal
     }
     credObj.claim.includesObject = {
       '@type': 'TypeAndQuantityNode', amountOfThisGood: 2, unitCode: 'HUR',
@@ -1747,7 +1752,7 @@ describe('6 - Check give totals', () => {
         expect(r.body.success.fulfillsHandleId).to.equal(firstOfferId)
         expect(globalId(r.body.success.fulfillsLastClaimId)).to.equal(firstOfferId)
         expect(r.body.success.fulfillsPlanHandleId).to.equal(firstPlanIdExternal)
-        expect(r.body.success.fulfillsPlanLastClaimId).to.equal(firstPlanIdSecondClaimInternal)
+        expect(r.body.success.fulfillsPlanLastClaimId).to.equal(firstPlanClaim2IdInternal)
         expect(r.body.success.fulfillsLinkConfirmed).to.be.true
         expect(r.body.success.giftNotTrade).to.be.null
         firstGiveRecordHandleId = r.body.success.handleId
@@ -2161,7 +2166,7 @@ describe('6 - Check give totals', () => {
       })
   }).timeout(3000)
 
-  it('wrong user tries to confirm a give', async () => {
+  it('wrong user confirms a give (though it will not be counted later)', async () => {
 
     const credObj = R.clone(testUtil.jwtTemplate)
     credObj.claim = R.clone(testUtil.confirmationTemplate)
@@ -2595,7 +2600,7 @@ describe('6 - Check give totals', () => {
     credObj.claim.recipient = { identifier: creds[1].did }
     delete credObj.claim.fulfills.identifier
     credObj.claim.fulfills = [
-      { lastClaimId: childPlanIdInternalClaim2 },
+      { lastClaimId: planBy2FulfillsBy1Claim2IdInternal },
       { "@type": "TradeAction" },
     ]
     credObj.claim.description = 'Trading the ginger chews'
@@ -2643,7 +2648,7 @@ describe('6 - Check give totals', () => {
 
   it('give totals after #7 are correct for child plan with defaults', () => {
     return request(Server)
-    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal))
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal))
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       expect(r.headers['content-type'], /json/)
@@ -2657,7 +2662,7 @@ describe('6 - Check give totals', () => {
 
   it('give totals after #7 are correct for child plan with only gifted', () => {
     return request(Server)
-    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyGifted=true')
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal) + '&onlyGifted=true')
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       expect(r.headers['content-type'], /json/)
@@ -2671,7 +2676,7 @@ describe('6 - Check give totals', () => {
 
   it('give totals after #7 are correct for child plan with only traded', () => {
     return request(Server)
-    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyTraded=true')
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal) + '&onlyTraded=true')
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       expect(r.headers['content-type'], /json/)
@@ -2706,7 +2711,7 @@ describe('6 - Check give totals', () => {
     credObj.claim.agent = { identifier: creds[3].did }
     delete credObj.claim.fulfills.identifier
     credObj.claim.fulfills = [
-      { lastClaimId: childPlanIdInternalClaim2 },
+      { lastClaimId: planBy2FulfillsBy1Claim2IdInternal },
       { "@type": "DonateAction" },
     ]
     credObj.claim.description = 'Donating the licorice'
@@ -2744,7 +2749,7 @@ describe('6 - Check give totals', () => {
     credObj.claim.agent = { identifier: creds[4].did }
     delete credObj.claim.fulfills.identifier
     credObj.claim.fulfills = [
-      { lastClaimId: childPlanIdInternalClaim2 },
+      { lastClaimId: planBy2FulfillsBy1Claim2IdInternal },
       { "@type": "DonateAction" },
     ]
     credObj.claim.description = 'Donating the licorice'
@@ -2777,7 +2782,7 @@ describe('6 - Check give totals', () => {
 
   it('give totals after #8 are correct for child plan with defaults', () => {
     return request(Server)
-    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal))
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal))
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       expect(r.headers['content-type'], /json/)
@@ -2791,7 +2796,7 @@ describe('6 - Check give totals', () => {
 
   it('give totals after #8 are correct for child plan with only gifted', () => {
     return request(Server)
-    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyGifted=true')
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal) + '&onlyGifted=true')
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       expect(r.headers['content-type'], /json/)
@@ -2805,7 +2810,7 @@ describe('6 - Check give totals', () => {
 
   it('give totals after #8 are correct for child plan with only traded', () => {
     return request(Server)
-    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(childPlanIdExternal) + '&onlyTraded=true')
+    .get('/api/v2/report/giveTotals?planId=' + encodeURIComponent(planBy2FulfillsBy1Claim1IdExternal) + '&onlyTraded=true')
     .set('Authorization', 'Bearer ' + pushTokens[2])
     .then(r => {
       expect(r.headers['content-type'], /json/)
@@ -3091,7 +3096,7 @@ describe('6 - Check plans as providers to gives', () => {
     credObj.claim = R.clone(testUtil.claimGive)
     credObj.claim.description = "Colorful first-grade learning materials"
     credObj.claim.provider = {
-      "@type": "PlanAction",  lastClaimId: firstPlanIdSecondClaimInternal
+      "@type": "PlanAction",  lastClaimId: firstPlanClaim2IdInternal
     }
     credObj.claim.recipient = { identifier: creds[5].did }
     const claimJwtEnc = await credentials[4].createVerification(credObj)
@@ -3184,134 +3189,55 @@ describe('6 - claimId & handleId guards', () => {
 
 })
 
-describe('6 - Plans Changed', () => {
+describe('6 - Plans Last Updated Between', () => {
   
-  it('GET /api/v2/report/plansChangedSince returns 400 for missing planIds', () => {
+  let testPlanIdExternal, testPlanIdInternal, testPlanSecondClaimId
+  let firstPlanClaim3IdInternal
+
+  it('GET plansLastUpdatedBetween returns 400 for missing planIds', () => {
     return request(Server)
-      .get('/api/v2/report/plansChangedSince')
+      .get('/api/v2/report/plansLastUpdatedBetween')
       .then(r => {
         expect(r.status).to.equal(400)
-        expect(r.body.error).to.include('planIds parameter is required')
+        expect(r.body.error).to.include('array parameter is required')
       })
       .catch((err) => {
         return Promise.reject(err)
       })
   })
 
-  it('POST /api/v2/report/plansChangedSince returns 400 for missing planIds', () => {
+  it('POST plansLastUpdatedBetween returns 400 for missing planIds', () => {
     return request(Server)
-      .post('/api/v2/report/plansChangedSince')
+      .post('/api/v2/report/plansLastUpdatedBetween')
       .send({})
       .then(r => {
         expect(r.status).to.equal(400)
-        expect(r.body.error).to.include('planIds array is required')
+        expect(r.body.error).to.include('array parameter is required')
       })
       .catch((err) => {
         return Promise.reject(err)
       })
   })
 
-  it('POST /api/v2/report/plansChangedSince returns 400 for empty planIds array', () => {
+  it('POST plansLastUpdatedBetween returns empty array for empty planIds array', () => {
     return request(Server)
-      .post('/api/v2/report/plansChangedSince')
+      .post('/api/v2/report/plansLastUpdatedBetween')
       .send({ planIds: [] })
       .then(r => {
-        expect(r.status).to.equal(400)
-        expect(r.body.error).to.include('planIds array is required')
+        expect(r.status).to.equal(200)
+        expect(r.body.data).to.be.an('array').of.length(0)
+        expect(r.body.hitLimit).to.be.false
       })
       .catch((err) => {
         return Promise.reject(err)
       })
   })
 
-  it('GET /api/v2/report/plansChangedSince works with valid parameters', () => {
+  it('GET plansLastUpdatedBetween returns empty array for non-existent plans', () => {
     return request(Server)
-      .get('/api/v2/report/plansChangedSince')
+      .get('/api/v2/report/plansLastUpdatedBetween')
       .query({
-        planIds: '["test-plan-1","test-plan-2"]',
-        afterId: 'test-claim-id',
-        beforeId: 'test-claim-id'
-      })
-      .then(r => {
-        expect(r.status).to.equal(200)
-        expect(r.body).to.have.property('data')
-        expect(r.body).to.have.property('hitLimit')
-        expect(r.body.data).to.be.an('array')
-        expect(r.body.hitLimit).to.be.a('boolean')
-      })
-      .catch((err) => {
-        return Promise.reject(err)
-      })
-  })
-
-  it('POST /api/v2/report/plansChangedSince works with valid parameters', () => {
-    return request(Server)
-      .post('/api/v2/report/plansChangedSince')
-      .send({
-        planIds: ['test-plan-1', 'test-plan-2'],
-        afterId: 'test-claim-id',
-        beforeId: 'test-claim-id'
-      })
-      .then(r => {
-        expect(r.status).to.equal(200)
-        expect(r.body).to.have.property('data')
-        expect(r.body).to.have.property('hitLimit')
-        expect(r.body.data).to.be.an('array')
-        expect(r.body.hitLimit).to.be.a('boolean')
-      })
-      .catch((err) => {
-        return Promise.reject(err)
-      })
-  })
-
-  it('GET /api/v2/report/plansChangedSince works with sinceDate parameter', () => {
-    return request(Server)
-      .get('/api/v2/report/plansChangedSince')
-      .query({
-        planIds: '["test-plan-1"]',
-        afterId: 'test-claim-id',
-        beforeId: 'test-claim-id'
-      })
-      .then(r => {
-        expect(r.status).to.equal(200)
-        expect(r.body).to.have.property('data')
-        expect(r.body).to.have.property('hitLimit')
-        expect(r.body.data).to.be.an('array')
-        expect(r.body.hitLimit).to.be.a('boolean')
-      })
-      .catch((err) => {
-        return Promise.reject(err)
-      })
-  })
-
-  it('POST /api/v2/report/plansChangedSince works with pagination parameters', () => {
-    return request(Server)
-      .post('/api/v2/report/plansChangedSince')
-      .send({
-        planIds: ['test-plan-1'],
-        afterId: 'test-claim-id',
-        afterId: '123',
-        beforeId: '456'
-      })
-      .then(r => {
-        expect(r.status).to.equal(200)
-        expect(r.body).to.have.property('data')
-        expect(r.body).to.have.property('hitLimit')
-        expect(r.body.data).to.be.an('array')
-        expect(r.body.hitLimit).to.be.a('boolean')
-      })
-      .catch((err) => {
-        return Promise.reject(err)
-      })
-  })
-
-  it('GET /api/v2/report/plansChangedSince returns empty array for non-existent plans', () => {
-    return request(Server)
-      .get('/api/v2/report/plansChangedSince')
-      .query({
-        planIds: '["non-existent-plan-1","non-existent-plan-2"]',
-        afterId: 'test-claim-id',
-        beforeId: 'test-claim-id'
+        planIds: JSON.stringify(['non-existent-plan-1', 'non-existent-plan-2'])
       })
       .then(r => {
         expect(r.status).to.equal(200)
@@ -3326,4 +3252,237 @@ describe('6 - Plans Changed', () => {
       })
   })
 
+  it('plansLastUpdatedBetween works from a starting point', () => {
+    return request(Server)
+      .get('/api/v2/report/plansLastUpdatedBetween')
+      .query({
+        planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
+        afterId: firstPlanIdInternal,
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data).to.be.an('array').of.length(2)
+        expect(r.body.data[0].jwtId).to.equal(secondPlanIdInternal)
+        expect(r.body.data[0].handleId).to.equal(secondPlanIdExternal)
+        expect(r.body.data[1].jwtId).to.equal(firstPlanClaim2IdInternal)
+        expect(r.body.data[1].handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.hitLimit).to.be.false
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('plansLastUpdatedBetween works from a starting point to an end point', () => {
+    return request(Server)
+      .get('/api/v2/report/plansLastUpdatedBetween')
+      .query({
+        planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
+        afterId: firstPlanIdInternal,
+        beforeId: firstPlanClaim2IdInternal
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data).to.be.an('array').of.length(0)
+        expect(r.body.hitLimit).to.be.false
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('v3 update plan description for plan #1', async () => {
+    // Now can create this JWT with the ID that was assigned.
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.lastClaimId = firstPlanClaim2IdInternal
+    planObj.claim.description = ENTITY_NEW_DESC_2
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+    .post('/api/v2/claim')
+    .send({jwtEncoded: planJwtEnc})
+    .then(r => {
+      expect(r.headers['content-type'], /json/)
+      expect(r.status).that.equals(201)
+      firstPlanClaim3IdInternal = r.body.success.claimId
+    }).catch((err) => {
+      return Promise.reject(err)
+    })
+  }).timeout(5000)
+
+  it('GET plansLastUpdatedBetween works with previous plan IDs', () => {
+    return request(Server)
+      .get('/api/v2/report/plansLastUpdatedBetween')
+      .query({
+        planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
+        afterId: firstPlanIdInternal,
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+        // Should find the first plan's second claim since we're looking for changes after the first claim
+        expect(r.body.data.length).to.equal(2)
+        if (r.body.data.length > 0) {
+          expect(r.body.data[0].jwtId).to.equal(firstPlanClaim3IdInternal)
+          expect(r.body.data[0].handleId).to.equal(firstPlanIdExternal)
+          expect(r.body.data[1].jwtId).to.equal(secondPlanIdInternal)
+          expect(r.body.data[1].handleId).to.equal(secondPlanIdExternal)
+        }
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('GET plansLastUpdatedBetween works with pagination', () => {
+    return request(Server)
+      .get('/api/v2/report/plansLastUpdatedBetween')
+      .query({
+        planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
+        beforeId: secondPlanIdInternal,
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+        // Doesn't find any because beforeId is before a later edit to the plan
+        // ... which is not typically what a client would want.
+        expect(r.body.data.length).to.equal(0)
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('create a test plan for plansLastUpdatedBetween testing', async () => {
+    const testPlanJwtObj = R.clone(testUtil.jwtTemplate)
+    testPlanJwtObj.claim = R.clone(testUtil.claimPlanAction)
+    testPlanJwtObj.claim.agent.identifier = creds[1].did
+    testPlanJwtObj.claim.name = testPlanJwtObj.claim.name + " - for changes testing"
+    testPlanJwtObj.claim.description = "Initial description for changes testing"
+    testPlanJwtObj.iss = creds[1].did
+    const testPlanJwtEnc = await credentials[1].createVerification(testPlanJwtObj)
+    
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: testPlanJwtEnc})
+      .then(r => {
+        expect(r.status).to.equal(201)
+        expect(r.body.success.claimId).to.be.a('string')
+        expect(r.body.success.handleId).to.be.a('string')
+        testPlanIdExternal = r.body.success.handleId  // external ID (handleId)
+        testPlanIdInternal = r.body.success.claimId   // internal ID (claimId)
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('POST plansLastUpdatedBetween works with different boundaries', () => {
+    return request(Server)
+      .post('/api/v2/report/plansLastUpdatedBetween')
+      .send({
+        planIds: [firstPlanIdExternal, secondPlanIdExternal, planBy2FulfillsBy1Claim1IdExternal],
+        afterId: firstPlanIdInternal,
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+        // Should find the first plan's second claim since we're looking for changes after the first claim
+        expect(r.body.data.length).to.equal(3)
+        if (r.body.data.length > 0) {
+          expect(r.body.data[0].jwtId).to.equal(firstPlanClaim3IdInternal)
+          expect(r.body.data[0].handleId).to.equal(firstPlanIdExternal)
+          expect(r.body.data[1].jwtId).to.equal(planBy2FulfillsBy1Claim3IdInternal)
+          expect(r.body.data[1].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
+          expect(r.body.data[2].jwtId).to.equal(secondPlanIdInternal)
+          expect(r.body.data[2].handleId).to.equal(secondPlanIdExternal)
+        }
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('update the test plan to create a change', async () => {
+    const updatedPlanJwtObj = R.clone(testUtil.jwtTemplate)
+    updatedPlanJwtObj.claim = R.clone(testUtil.claimPlanAction)
+    updatedPlanJwtObj.claim.agent.identifier = creds[1].did
+    updatedPlanJwtObj.claim.lastClaimId = testPlanIdInternal
+    updatedPlanJwtObj.claim.name = updatedPlanJwtObj.claim.name + " - for changes testing"
+    updatedPlanJwtObj.claim.description = "Updated description for changes testing"
+    updatedPlanJwtObj.iss = creds[1].did
+    const updatedPlanJwtEnc = await credentials[1].createVerification(updatedPlanJwtObj)
+    
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: updatedPlanJwtEnc})
+      .then(r => {
+        expect(r.status).to.equal(201)
+        expect(r.body.success.claimId).to.be.a('string')
+        testPlanSecondClaimId = r.body.success.claimId
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('GET plansLastUpdatedBetween works with new plan', () => {
+    return request(Server)
+      .post('/api/v2/report/plansLastUpdatedBetween')
+      .send({
+        planIds: [testPlanIdExternal],
+        afterId: firstPlanIdInternal,
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.hitLimit).to.be.a('boolean')
+        // only finds the most recent claim
+        // ... which usually isn't what a client would want.
+        expect(r.body.data.length).to.equal(1)
+        expect(r.body.data[0].jwtId).to.equal(testPlanSecondClaimId)
+        expect(r.body.data[0].handleId).to.equal(testPlanIdExternal)
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('GET plansLastUpdatedBetween finds changes after initial claim', () => {
+    return request(Server)
+      .get('/api/v2/report/plansLastUpdatedBetween')
+      .query({
+        planIds: JSON.stringify([testPlanIdExternal]),
+        afterId: testPlanIdInternal
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('hitLimit')
+        expect(r.body.data).to.be.an('array')
+        // Should find exactly one change (the updated plan) since we're looking for changes after the initial claim
+        expect(r.body.data.length).to.equal(1)
+        expect(r.body.hitLimit).to.be.a('boolean')
+        if (r.body.data.length > 0) {
+          expect(r.body.data[0].jwtId).to.equal(testPlanSecondClaimId)
+          expect(r.body.data[0].handleId).to.equal(testPlanIdExternal)
+        }
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
 })

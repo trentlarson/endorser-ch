@@ -9,7 +9,7 @@ import testUtil from "./util";
 
 const expect = chai.expect
 
-describe('mergeTileCounts', () => {
+describe('P1 - mergeTileCounts', () => {
   it('handles array of unique tiles', () => {
     const tiles = [
       { indexLat: 1, indexLon: 1, minFoundLat: 1.1, minFoundLon: 1.1, maxFoundLat: 1.2, maxFoundLon: 1.2, recordCount: 5 },
@@ -65,7 +65,7 @@ before(async () => {
   return Promise.resolve()
 })
 
-describe('9 - User Profiles', () => {
+describe('P1 - User Profiles', () => {
   // Test data
   const profile0 = {
     description: "Software developer interested in blockchain and decentralized systems",
@@ -583,7 +583,7 @@ describe('9 - User Profiles', () => {
       })
   })
 
-  describe('Profile Location Grid Tests', () => {
+  describe('P1 - Profile Location Grid Tests', () => {
     it('retrieve profile counts inside bounding box containing multiple profiles', () => {
       // Use the location from profile1 as center point
       const lat = profile1.locLat

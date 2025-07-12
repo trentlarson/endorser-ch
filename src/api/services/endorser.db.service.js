@@ -2434,13 +2434,13 @@ class EndorserDatabase {
   }
 
   /**
-   * Retrieve plans that have changed since a given claim ID or date
+   * Retrieve plans whose latest version is before/after a given claim ID
    * @param planIds Array of plan handle IDs to check (resulting in [] if empty)
    * @param afterIdInput Optional pagination parameter
    * @param beforeIdInput Optional pagination parameter
    * @returns Promise of { data: [], hitLimit: boolean }
    */
-  plansChangedSince(planIds, afterIdInput, beforeIdInput) {
+  plansLastUpdateBetween(planIds, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       if (!planIds || planIds.length === 0) {
         resolve({ data: [], hitLimit: false })
