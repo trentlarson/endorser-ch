@@ -256,4 +256,71 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, canSeeExplicitly, getAllDidsBetweenRequesterAndObjects, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }
+/**
+ * Finds the shortest paths from users visible to the requester to the target DID.
+ * Uses breadth-first search to find the shortest paths.
+ * 
+ * @param {string} requesterDid - The DID of the requesting user
+ * @param {string} targetDid - The target DID to find paths to
+ * @param {Object} options - Configuration options
+ * @param {number} options.maxDepth - Maximum search depth (default: 10)
+ * @param {number} options.maxResults - Maximum number of results to return (default: 5)
+ * @returns {Array<{did: string, pathLength: number}>} Array of DIDs with their path lengths, sorted by path length
+ */
+async function findShortestPathsToTargetDid(requesterDid, targetDid, options = {}) {
+  const maxDepth = options.maxDepth || 10;
+  const maxResults = options.maxResults || 5;
+  
+  // Get initial set of DIDs visible to requester
+  const initialDids = await getAllDidsRequesterCanSee(requesterDid);
+  
+  // If target is directly visible, return it immediately
+  if (initialDids.includes(targetDid)) {
+    return [{ did: targetDid, pathLength: 1 }];
+  }
+
+  // Track visited DIDs to avoid cycles
+  const visited = new Set();
+  // Queue for BFS, each entry contains [did, pathLength]
+  const queue = initialDids.map(did => [did, 1]);
+  // Results array to store found paths
+  const results = [];
+  
+  while (queue.length > 0 && results.length < maxResults) {
+    const [currentDid, pathLength] = queue.shift();
+    
+    // Skip if we've already visited this DID or reached max depth
+    if (visited.has(currentDid) || pathLength > maxDepth) {
+      continue;
+    }
+    
+    visited.add(currentDid);
+    
+    // Get DIDs that current DID can see
+    const visibleDids = await getDidsRequesterCanSeeExplicitly(currentDid);
+    
+    for (const nextDid of visibleDids) {
+      // Skip if we've already visited this DID
+      if (visited.has(nextDid)) {
+        continue;
+      }
+      
+      // If we found the target, add it to results
+      if (nextDid === targetDid) {
+        results.push({ did: currentDid, pathLength: pathLength + 1 });
+        // If we have enough results, we can stop
+        if (results.length >= maxResults) {
+          break;
+        }
+      } else {
+        // Add to queue for next level of BFS
+        queue.push([nextDid, pathLength + 1]);
+      }
+    }
+  }
+  
+  // Sort results by path length
+  return results.sort((a, b) => a.pathLength - b.pathLength);
+}
+
+module.exports = { addCanSee, canSeeExplicitly, getAllDidsBetweenRequesterAndObjects, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject, findShortestPathsToTargetDid }
