@@ -6,10 +6,25 @@ const ulid = ulidx.monotonicFactory()
 
 const logger = require('../../common/logger')
 const dbInfo = require('../../conf/flyway.js')
-const db = new sqlite3.Database(dbInfo.fileLoc)
+const db = new sqlite3.Database(dbInfo.fileLoc, sqlite3.OPEN_READWRITE, (err) => {
+  // if (!err) {
+  //   // Enable all SQLite event monitoring
+  //   db.on('trace', (sql) => console.log('DB TRACE:', sql))
+  //   db.on('profile', (sql, time) => console.log('DB PROFILE:', sql, 'took', time, 'ms'))
+  //   db.on('error', (err) => console.log('DB ERROR:', err.message, err.code, err.errno))
+  //   db.on('open', () => console.log('DB OPEN event'))
+  //   db.on('close', () => console.log('DB CLOSE event'))
+    
+  //   // Monitor database busy/lock states
+  //   db.on('busy', () => console.log('DB BUSY: Database is locked'))
+    
+  //   // Set error handling mode
+  //   db.configure('busyTimeout', 5000) // 5 second timeout for busy database
+  // } else {
+  //   console.log('Failed to open database:', err)
+  // }
+})
 const util = require('./util')
-
-
 
 const DEFAULT_LIMIT = 50
 
@@ -1622,6 +1637,80 @@ class EndorserDatabase {
       })
   }
 
+  /**
+   * Find the most recent JWT for each plan before the given ID..
+   *
+   * @param {string[]} planIds any plan IDs
+   * @param {string} earliestIdInput the ID before which we want to find the most recent JWT for each plan
+   * (Note that this is typically the "afterId" parameter from the request.)
+   * @returns {Promise<object[]>}
+   */
+  jwtsMostRecentForPlansBefore(planIds, earliestIdInput) {
+    return new Promise((resolve, reject) => {
+      if (planIds.length === 0) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+      
+      // Follow the standard pattern from other methods
+      const inListStr = planIds.map(() => "?").join(',')
+      const planParams = planIds.map(util.globalId)
+      const allParams = [earliestIdInput].concat(planParams)
+      
+      let data = []
+      let rowErr
+      
+      const sql = 
+        `
+          WITH ranked_jwt AS (
+            SELECT *
+            FROM (
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY handleId ORDER BY id DESC) AS rn
+              FROM jwt
+              WHERE id < ?
+                AND handleId IN (${inListStr})
+            )
+            WHERE rn = 1
+          )
+          SELECT id, issuedAt, issuer, subject, claimContext, claimType, claim, handleId, lastClaimId, claimCanonHash, noncedHashAllChain
+          FROM ranked_jwt;
+        `
+      // Standard db.each pattern like other methods
+      db.each(
+        sql,
+        allParams,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            // Follow the pattern from other methods for date conversion
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push({
+              id: row.id, issuedAt: row.issuedAt, issuer: row.issuer,
+              subject: row.subject, claimContext: row.claimContext,
+              claimType: row.claimType, claim: row.claim,
+              handleId: row.handleId, lastClaimId: row.lastClaimId,
+              claimCanonHash: row.claimCanonHash,
+              noncedHashAllChain: row.noncedHashAllChain,
+            })
+          }
+        },
+        function(allErr, num) {
+          if (rowErr || allErr) {
+            reject(rowErr || allErr)
+          } else {
+            // Follow the standard result pattern from other methods
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result["hitLimit"] = true
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
   jwtLastMerkleHash() {
     return new Promise((resolve, reject) => {
       db.get(
@@ -2394,6 +2483,66 @@ class EndorserDatabase {
     })
   }
 
+  // Safer alternative to planFulfillersToPlan using db.all() instead of db.each()
+  planFulfillersToPlanSafe(handleId, afterIdInput, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      const params = [handleId]
+      let sql = "SELECT sub.* FROM plan_claim sub"
+        + " INNER JOIN plan_claim parent ON sub.fulfillsPlanHandleId = parent.handleId"
+        + " WHERE parent.handleId = ?"
+
+      if (afterIdInput) {
+        params.push(afterIdInput)
+        sql += " AND sub.rowid > ?"
+      }
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND sub.rowid < ?"
+      }
+
+      sql += " ORDER BY sub.rowid DESC LIMIT " + DEFAULT_LIMIT
+
+      logger.debug(`planFulfillersToPlainSafe SQL: ${sql}, params: ${JSON.stringify(params)}`)
+
+      // Use db.all() instead of db.each() to avoid callback memory issues
+      db.all(sql, params, function(err, rows) {
+        if (err) {
+          logger.error(`planFulfillersToPlainSafe error:`, err)
+          reject(err)
+          return
+        }
+
+        try {
+          const data = []
+          
+          if (rows && Array.isArray(rows)) {
+            for (const row of rows) {
+              if (row && typeof row === 'object') {
+                // Process the row safely
+                if (row.endTime) {
+                  row.endTime = util.isoAndZonify(row.endTime)
+                }
+                if (row.startTime) {
+                  row.startTime = util.isoAndZonify(row.startTime)
+                }
+                if (row.fulfillsLinkConfirmed !== undefined) {
+                  row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+                }
+                data.push(row)
+              }
+            }
+          }
+
+          logger.debug(`planFulfillersToPlainSafe completed: ${data.length} rows processed`)
+          resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
+        } catch (processingErr) {
+          logger.error(`planFulfillersToPlainSafe processing error:`, processingErr)
+          reject(processingErr)
+        }
+      })
+    })
+  }
+
   planFulfillersToPlan(handleId, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       const params = [handleId]
@@ -2440,7 +2589,7 @@ class EndorserDatabase {
    * @param beforeIdInput Optional pagination parameter
    * @returns Promise of { data: [], hitLimit: boolean }
    */
-  plansLastUpdateBetween(planIds, afterIdInput, beforeIdInput) {
+  plansLastUpdatedBetween(planIds, afterIdInput, beforeIdInput) {
     return new Promise((resolve, reject) => {
       if (!planIds || planIds.length === 0) {
         resolve({ data: [], hitLimit: false })
@@ -2461,34 +2610,28 @@ class EndorserDatabase {
         allParams.push(beforeIdInput)
       }
 
-      let data = []
-      let rowErr
       const sql =
         "SELECT * FROM plan_claim WHERE"
         + whereClause
         + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
 
-      db.each(
-        sql,
-        allParams,
-        function(err, row) {
-          if (err) {
-            rowErr = err
-          } else {
-            row.endTime = util.isoAndZonify(row.endTime)
-            row.startTime = util.isoAndZonify(row.startTime)
-            data.push(row)
-          }
-        },
-        function(allErr, num) {
-          if (rowErr || allErr) {
-            reject(rowErr || allErr)
-          } else {
-            const result = { data: data, hitLimit: data.length === DEFAULT_LIMIT }
-            resolve(result)
-          }
+      db.all(sql, allParams, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
         }
-      )
+        
+        try {
+          const data = rows.map(row => ({
+            ...row,
+            endTime: util.isoAndZonify(row.endTime),
+            startTime: util.isoAndZonify(row.startTime),
+          }));
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT });
+        } catch (e) {
+          reject(e);
+        }
+      })
     })
   }
 

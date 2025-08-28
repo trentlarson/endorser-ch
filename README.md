@@ -379,10 +379,16 @@ This will help visualize the network from the test data:
 [Here is a sample CSV for contacts](https://raw.githubusercontent.com/trentlarson/endorser-ch/master/test/sample-contacts.csv), with data taken from the tests.
 
 
-#### Run a single test
+#### Run a single test file
 
 ```shell
 test/test.sh "" test/controller1
+```
+
+### Run a single test
+
+```shell
+NODE_ENV=test-local npm test -- --grep "plansLastUpdatedBetween finds changes after initial claim"
 ```
 
 #### Debug the tests

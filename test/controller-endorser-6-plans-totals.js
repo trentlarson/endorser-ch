@@ -3222,7 +3222,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('POST plansLastUpdatedBetween returns empty array for empty planIds array', () => {
     return request(Server)
       .post('/api/v2/report/plansLastUpdatedBetween')
-      .send({ planIds: [] })
+      .send({ planIds: [], afterId: firstPlanIdInternal })
       .then(r => {
         expect(r.status).to.equal(200)
         expect(r.body.data).to.be.an('array').of.length(0)
@@ -3237,7 +3237,8 @@ describe('6 - Plans Last Updated Between', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
       .query({
-        planIds: JSON.stringify(['non-existent-plan-1', 'non-existent-plan-2'])
+        planIds: JSON.stringify(['non-existent-plan-1', 'non-existent-plan-2']),
+        afterId: firstPlanIdInternal
       })
       .then(r => {
         expect(r.status).to.equal(200)
@@ -3262,10 +3263,10 @@ describe('6 - Plans Last Updated Between', () => {
       .then(r => {
         expect(r.status).to.equal(200)
         expect(r.body.data).to.be.an('array').of.length(2)
-        expect(r.body.data[0].jwtId).to.equal(secondPlanIdInternal)
-        expect(r.body.data[0].handleId).to.equal(secondPlanIdExternal)
-        expect(r.body.data[1].jwtId).to.equal(firstPlanClaim2IdInternal)
-        expect(r.body.data[1].handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].plan.jwtId).to.equal(secondPlanIdInternal)
+        expect(r.body.data[0].plan.handleId).to.equal(secondPlanIdExternal)
+        expect(r.body.data[1].plan.jwtId).to.equal(firstPlanClaim2IdInternal)
+        expect(r.body.data[1].plan.handleId).to.equal(firstPlanIdExternal)
         expect(r.body.hitLimit).to.be.false
       })
       .catch((err) => {
@@ -3317,22 +3318,23 @@ describe('6 - Plans Last Updated Between', () => {
       .get('/api/v2/report/plansLastUpdatedBetween')
       .query({
         planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
-        afterId: firstPlanIdInternal,
+        afterId: firstPlanClaim2IdInternal,
       })
       .then(r => {
         expect(r.status).to.equal(200)
         expect(r.body).to.have.property('data')
         expect(r.body).to.have.property('hitLimit')
         expect(r.body.data).to.be.an('array')
-        expect(r.body.hitLimit).to.be.a('boolean')
+        expect(r.body.hitLimit).to.be.false
         // Should find the first plan's second claim since we're looking for changes after the first claim
         expect(r.body.data.length).to.equal(2)
-        if (r.body.data.length > 0) {
-          expect(r.body.data[0].jwtId).to.equal(firstPlanClaim3IdInternal)
-          expect(r.body.data[0].handleId).to.equal(firstPlanIdExternal)
-          expect(r.body.data[1].jwtId).to.equal(secondPlanIdInternal)
-          expect(r.body.data[1].handleId).to.equal(secondPlanIdExternal)
-        }
+        expect(r.body.data[0].plan.jwtId).to.equal(firstPlanClaim3IdInternal)
+        expect(r.body.data[0].plan.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].claimBefore.id).to.equal(firstPlanIdInternal)
+        expect(r.body.data[0].claimBefore.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[1].plan.jwtId).to.equal(secondPlanIdInternal)
+        expect(r.body.data[1].plan.handleId).to.equal(secondPlanIdExternal)
+        expect(r.body.data[1].claimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -3344,6 +3346,7 @@ describe('6 - Plans Last Updated Between', () => {
       .get('/api/v2/report/plansLastUpdatedBetween')
       .query({
         planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
+        afterId: firstPlanIdInternal,
         beforeId: secondPlanIdInternal,
       })
       .then(r => {
@@ -3390,7 +3393,7 @@ describe('6 - Plans Last Updated Between', () => {
       .post('/api/v2/report/plansLastUpdatedBetween')
       .send({
         planIds: [firstPlanIdExternal, secondPlanIdExternal, planBy2FulfillsBy1Claim1IdExternal],
-        afterId: firstPlanIdInternal,
+        afterId: secondPlanIdInternal,
       })
       .then(r => {
         expect(r.status).to.equal(200)
@@ -3399,15 +3402,14 @@ describe('6 - Plans Last Updated Between', () => {
         expect(r.body.data).to.be.an('array')
         expect(r.body.hitLimit).to.be.a('boolean')
         // Should find the first plan's second claim since we're looking for changes after the first claim
-        expect(r.body.data.length).to.equal(3)
-        if (r.body.data.length > 0) {
-          expect(r.body.data[0].jwtId).to.equal(firstPlanClaim3IdInternal)
-          expect(r.body.data[0].handleId).to.equal(firstPlanIdExternal)
-          expect(r.body.data[1].jwtId).to.equal(planBy2FulfillsBy1Claim3IdInternal)
-          expect(r.body.data[1].handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
-          expect(r.body.data[2].jwtId).to.equal(secondPlanIdInternal)
-          expect(r.body.data[2].handleId).to.equal(secondPlanIdExternal)
-        }
+        expect(r.body.data.length).to.equal(2)
+        expect(r.body.data[0].plan.jwtId).to.equal(firstPlanClaim3IdInternal)
+        expect(r.body.data[0].plan.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].claimBefore.id).to.equal(firstPlanClaim2IdInternal)
+        expect(r.body.data[0].claimBefore.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[1].plan.jwtId).to.equal(planBy2FulfillsBy1Claim3IdInternal)
+        expect(r.body.data[1].plan.handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
+        expect(r.body.data[1].claimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -3442,7 +3444,7 @@ describe('6 - Plans Last Updated Between', () => {
       .post('/api/v2/report/plansLastUpdatedBetween')
       .send({
         planIds: [testPlanIdExternal],
-        afterId: firstPlanIdInternal,
+        afterId: testPlanIdInternal,
       })
       .then(r => {
         expect(r.status).to.equal(200)
@@ -3453,8 +3455,9 @@ describe('6 - Plans Last Updated Between', () => {
         // only finds the most recent claim
         // ... which usually isn't what a client would want.
         expect(r.body.data.length).to.equal(1)
-        expect(r.body.data[0].jwtId).to.equal(testPlanSecondClaimId)
-        expect(r.body.data[0].handleId).to.equal(testPlanIdExternal)
+        expect(r.body.data[0].plan.jwtId).to.equal(testPlanSecondClaimId)
+        expect(r.body.data[0].plan.handleId).to.equal(testPlanIdExternal)
+        expect(r.body.data[0].claimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -3476,10 +3479,9 @@ describe('6 - Plans Last Updated Between', () => {
         // Should find exactly one change (the updated plan) since we're looking for changes after the initial claim
         expect(r.body.data.length).to.equal(1)
         expect(r.body.hitLimit).to.be.a('boolean')
-        if (r.body.data.length > 0) {
-          expect(r.body.data[0].jwtId).to.equal(testPlanSecondClaimId)
-          expect(r.body.data[0].handleId).to.equal(testPlanIdExternal)
-        }
+        expect(r.body.data[0].plan.jwtId).to.equal(testPlanSecondClaimId)
+        expect(r.body.data[0].plan.handleId).to.equal(testPlanIdExternal)
+        expect(r.body.data[0].claimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)

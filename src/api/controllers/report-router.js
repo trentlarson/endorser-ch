@@ -51,10 +51,33 @@ function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
   if (!planIds || !Array.isArray(planIds)) {
     return res.status(400).json({ error: 'planIds array parameter is required' })
   }
+  if (!afterId) {
+    return res.status(400).json({ error: 'afterId parameter is required' })
+  }
   if (planIds.length === 0) {
     return res.json({ data: [], hitLimit: false }).end()
   }
-  dbService.plansLastUpdateBetween(planIds, afterId, beforeId)
+  dbService.plansLastUpdatedBetween(planIds, afterId, beforeId)
+    .then(planResults => {
+      // look up earlier JWT claim for each plan that was found
+      if (planResults.data.length === 0) {
+        return { data: [], hitLimit: false }
+      }
+      if (!afterId) {
+        return planResults
+      }
+      return dbService.jwtsMostRecentForPlansBefore(planResults.data.map(datum => datum.handleId), afterId)
+        .then(jwtResults => planResults.data.map(datum => ({
+              plan: datum,
+              claimBefore: jwtResults.data.find(jwt => jwt.handleId === datum.handleId)
+            }))
+        )
+        .then(allResults => ({ data: allResults, hitLimit: planResults.hitLimit }))
+        // .then(results => {
+        //   console.log('retrievePlansLastUpdateBetween full results', results, JSON.stringify(results, null, 2))
+        //   return results
+        // })
+    })
     .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
     .then(results => { res.json(results).end() })
     .catch(err => { console.error(err); res.status(500).json(""+err).end() })
@@ -613,15 +636,27 @@ export default express
  */
 
 /**
- * @typedef PlanSummaryArrayMaybeMoreBody
+ * @typedef PlanSummaryArrayMaybeMore
  * @property {array.PlanSummary} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
  * @typedef PlanSummaryWithFulfilledLinkConfirmation
- * @property {PlanSummary} data (as many as allowed by our limit)
+ * @property {PlanSummary} data
  * @property {boolean} childFullfillsLinkConfirmed true when the link between plans has been confirmed by both
+ */
+
+/**
+ * @typedef PlanSummaryAndPreviousClaim
+ * @property {PlanSummary} plan the current plan details
+ * @property {object} claimBefore the JWT claim that is the most recent before the "after" limit on the query
+ */
+
+/**
+ * @typedef PlanSummaryAndPreviousClaimArrayMaybeMore
+ * @property {array.PlanSummaryAndPreviousClaim} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
 /**
@@ -925,7 +960,7 @@ export default express
  * @param {string} endTime.query.optional
  * @param {string} startTime.query.optional
  * @param {string} resultIdentifier.query.optional
- * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -940,7 +975,7 @@ export default express
  * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -959,7 +994,7 @@ export default express
  * @param {string} maxLocLon.query.required - maximum longitude in degrees of bounding box being searched
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -996,7 +1031,7 @@ export default express
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -1025,7 +1060,7 @@ export default express
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
  * @param {string} afterId.query.optional - pagination parameter
  * @param {string} beforeId.query.optional - pagination parameter
- * @returns {object} Object with data array and hitLimit boolean
+ * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
  .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
 
@@ -1038,6 +1073,6 @@ export default express
  * @param {string[]} body.planIds.required - Array of plan handle IDs
  * @param {string} body.afterId.optional - pagination parameter
  * @param {string} body.beforeId.optional - pagination parameter
- * @returns {object} Object with data array and hitLimit boolean
+ * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
  .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)
