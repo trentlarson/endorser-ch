@@ -1,0 +1,38 @@
+---
+globs: test/*.js
+alwaysApply: false
+---
+# Automated Test Suite
+
+## Test Data Patterns
+
+### Use Real Data, Not Fake Data
+- **Always use real IDs**: Use actual plan/claim IDs created earlier in test suite (e.g., `firstPlanIdExternal`, `childPlanIdInternal`) instead of fake values like `"test-plan-1"`
+- **Create-modify-test pattern**: For "changed since" functionality, create entity, modify it, then test changes (like `giveRecordHandleId` variables)
+- **Capture IDs from responses**: Save `r.body.success.handleId` (external) and `r.body.success.claimId` (internal) from creation responses
+
+### ID Types and Scope
+- **Variable scope**: Declare shared test variables at module level (outside describe blocks) to access across test suites
+
+### Test Validation Requirements
+- **Count verification**: Always check `expect(r.body.data.length).to.equal(expectedCount)` 
+- **Content validation**: Verify actual data properties (`jwtId`, `handleId`) and values match expectations
+- **Structure + content**: Don't just check response structure - verify the data is correct
+
+### Test Organization
+- **Sequential dependencies**: Tests often depend on data created in earlier tests
+- **Real entities**: Create actual database entities rather than mocking
+- **Meaningful scenarios**: Test actual business logic flows, not just API contracts
+
+## Common Patterns
+```javascript
+// Good: Real IDs with meaningful test
+planIds: [firstPlanIdExternal, secondPlanIdExternal]
+expect(r.body.data.length).to.equal(1)
+expect(r.body.data[0].jwtId).to.equal(expectedClaimId)
+
+// Bad: Fake data with minimal validation
+planIds: ['test-plan-1', 'test-plan-2'] 
+expect(r.body.data).to.be.an('array')
+```
+
