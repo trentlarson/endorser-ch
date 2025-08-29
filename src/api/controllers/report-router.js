@@ -63,9 +63,6 @@ function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
       if (planResults.data.length === 0) {
         return { data: [], hitLimit: false }
       }
-      if (!afterId) {
-        return planResults
-      }
       return dbService.jwtsMostRecentForPlansBefore(planResults.data.map(datum => datum.handleId), afterId)
         .then(jwtResults => planResults.data.map(datum => ({
               plan: datum,
@@ -73,6 +70,7 @@ function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
             }))
         )
         .then(allResults => ({ data: allResults, hitLimit: planResults.hitLimit }))
+        // uncomment the following to see the full results
         // .then(results => {
         //   console.log('retrievePlansLastUpdateBetween full results', results, JSON.stringify(results, null, 2))
         //   return results
