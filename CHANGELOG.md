@@ -5,9 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Fixed
+- Result for "between" endpoints should return a claim object (not string)
+### Changed
+- Updated some libraries to avoid critical issues detected by Dependabot
+
+
 ## [4.2.10] - 2025.08.29
 ### Added
 - /plansLastUpdatedBetween endpoints to see changes to plans
+- Automated endorser SQL scripts 15 & 16
 
 
 ## [4.2.9] - 2025.05.12

@@ -64,11 +64,18 @@ function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
         return { data: [], hitLimit: false }
       }
       return dbService.jwtsMostRecentForPlansBefore(planResults.data.map(datum => datum.handleId), afterId)
-        .then(jwtResults => planResults.data.map(datum => ({
+        .then(jwtResults => {
+          return planResults.data.map(datum => {
+            const claimBefore = jwtResults.data.find(jwt => jwt.handleId === datum.handleId);
+            if (claimBefore) {
+              claimBefore.claim = JSON.parse(claimBefore.claim);
+            }
+            return {
               plan: datum,
-              claimBefore: jwtResults.data.find(jwt => jwt.handleId === datum.handleId)
-            }))
-        )
+              wrappedClaimBefore: claimBefore
+            }
+          })
+        })
         .then(allResults => ({ data: allResults, hitLimit: planResults.hitLimit }))
         // uncomment the following to see the full results
         // .then(results => {
@@ -648,7 +655,7 @@ export default express
 /**
  * @typedef PlanSummaryAndPreviousClaim
  * @property {PlanSummary} plan the current plan details
- * @property {object} claimBefore the JWT claim that is the most recent before the "after" limit on the query
+ * @property {object} wrappedClaimBefore the JWT claim that is the most recent before the "after" limit on the query
  */
 
 /**
@@ -668,8 +675,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/claims
- * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, and can also include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
  * @param {string} claimType.query.optional
@@ -687,8 +694,8 @@ export default express
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/claimsForIssuerWithTypes
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
- * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, but can include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
+ * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, and can also include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
  * @returns {JwtSummaryArrayMaybeMoreBody} 200 - 'data' property with array of JwtSummary claims issued by this user with any of those claim types, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
@@ -736,8 +743,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giftedTotals
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planId.query.optional - handle ID of the plan which has received gives
  * @param {string} recipientId.query.optional - DID of recipient who has received gives
  * @param {string} unit.query.optional - unit code to restrict amounts
@@ -754,8 +761,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/gives
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} agentDid.query.optional - issuing agent
  * @param {string} handleId.query.optional - persistent handleId
  * @param {string} recipientId.query.optional - recipient
@@ -774,8 +781,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/givesToPlans
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - JSON.stringified array with handle IDs of the plans which have received gives
  * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of GiveSummary entries, reverse chronologically;
  *   'hitLimit' boolean property if there may be more;
@@ -831,8 +838,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/givesProvidedBy
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} providerId.query.optional - handle ID of the provider which may have helped with gives
  * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of GiveSummary entries, reverse chronologically;
  * 'hitLimit' boolean property if there may be more;
@@ -847,8 +854,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/giveTotals
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} onlyGifted.query.optional - only the ones that fulfill DonateAction (and not any TradeAction)
  * @param {string} onlyTraded.query.optional - only the ones that fulfill TradeAction
  * @param {string} planHandleId.query.optional - handle ID of the plan which has received gives
@@ -866,8 +873,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/offers
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} handleId.query.optional - persistent ID of offer
  * @param {string} offeredByDid.query.optional - originator of offer
  * @param {string} recipientPlanId.query.optional - plan which is recipient of offer
@@ -884,8 +891,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/offersToPlans
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planIds.query.optional - handle ID of the plan which has received offers
  * @returns {OfferSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of OfferSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
@@ -898,8 +905,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/offersToPlansOwnedByMe
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {OfferSummaryArrayMaybeMoreBody} 200 - 'data' property with matching array of OfferSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
@@ -911,8 +918,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/offerTotals
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} planId.query.optional - handle ID of the plan which has received offers
  * @param {string} recipientId.query.optional - DID of recipient who has received offers
  * @param {string} unit.query.optional - unit code to restrict amounts
@@ -948,8 +955,8 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plans
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} jwtId.query.optional
  * @param {string} issuerDid.query.optional
  * @param {string} agentDid.query.optional
@@ -971,7 +978,7 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plansByIssuer
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
@@ -990,7 +997,7 @@ export default express
  * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
  * @param {string} minLocLon.query.required - minimum longitude in degrees of bounding box being searched
  * @param {string} maxLocLon.query.required - maximum longitude in degrees of bounding box being searched
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
+ * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
@@ -1027,8 +1034,8 @@ export default express
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/fulfillersToPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
- * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, but can include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is not included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
  * @returns {Error} 400 - client error
  */
@@ -1056,8 +1063,8 @@ export default express
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plansLastUpdateBetween
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
- * @param {string} afterId.query.optional - pagination parameter
- * @param {string} beforeId.query.optional - pagination parameter
+ * @param {string} afterId.query.required - the JWT ID of the entry after which to look (exclusive)
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
  .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
@@ -1069,8 +1076,8 @@ export default express
  * @group reports - Reports (with paging)
  * @route POST /api/v2/report/plansLastUpdatedBetween
  * @param {string[]} body.planIds.required - Array of plan handle IDs
- * @param {string} body.afterId.optional - pagination parameter
- * @param {string} body.beforeId.optional - pagination parameter
+ * @param {string} body.afterId.required - the JWT ID of the entry after which to look (exclusive)
+ * @param {string} body.beforeId.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
  .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)

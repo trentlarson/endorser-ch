@@ -3265,8 +3265,10 @@ describe('6 - Plans Last Updated Between', () => {
         expect(r.body.data).to.be.an('array').of.length(2)
         expect(r.body.data[0].plan.jwtId).to.equal(secondPlanIdInternal)
         expect(r.body.data[0].plan.handleId).to.equal(secondPlanIdExternal)
+        expect(r.body.data[0].wrappedClaimBefore).to.be.undefined
         expect(r.body.data[1].plan.jwtId).to.equal(firstPlanClaim2IdInternal)
         expect(r.body.data[1].plan.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[1].wrappedClaimBefore).to.be.undefined
         expect(r.body.hitLimit).to.be.false
       })
       .catch((err) => {
@@ -3330,11 +3332,12 @@ describe('6 - Plans Last Updated Between', () => {
         expect(r.body.data.length).to.equal(2)
         expect(r.body.data[0].plan.jwtId).to.equal(firstPlanClaim3IdInternal)
         expect(r.body.data[0].plan.handleId).to.equal(firstPlanIdExternal)
-        expect(r.body.data[0].claimBefore.id).to.equal(firstPlanIdInternal)
-        expect(r.body.data[0].claimBefore.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].wrappedClaimBefore.id).to.equal(firstPlanIdInternal)
+        expect(r.body.data[0].wrappedClaimBefore.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].wrappedClaimBefore.claim.description).to.equal(testUtil.INITIAL_DESCRIPTION)
         expect(r.body.data[1].plan.jwtId).to.equal(secondPlanIdInternal)
         expect(r.body.data[1].plan.handleId).to.equal(secondPlanIdExternal)
-        expect(r.body.data[1].claimBefore).to.be.undefined
+        expect(r.body.data[1].wrappedClaimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -3406,11 +3409,12 @@ describe('6 - Plans Last Updated Between', () => {
         expect(r.body.data.length).to.equal(2)
         expect(r.body.data[0].plan.jwtId).to.equal(firstPlanClaim3IdInternal)
         expect(r.body.data[0].plan.handleId).to.equal(firstPlanIdExternal)
-        expect(r.body.data[0].claimBefore.id).to.equal(firstPlanClaim2IdInternal)
-        expect(r.body.data[0].claimBefore.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].wrappedClaimBefore.id).to.equal(firstPlanClaim2IdInternal)
+        expect(r.body.data[0].wrappedClaimBefore.handleId).to.equal(firstPlanIdExternal)
+        expect(r.body.data[0].wrappedClaimBefore.claim.description).to.equal(ENTITY_NEW_DESC)
         expect(r.body.data[1].plan.jwtId).to.equal(planBy2FulfillsBy1Claim3IdInternal)
         expect(r.body.data[1].plan.handleId).to.equal(planBy2FulfillsBy1Claim1IdExternal)
-        expect(r.body.data[1].claimBefore).to.be.undefined
+        expect(r.body.data[1].wrappedClaimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -3458,7 +3462,7 @@ describe('6 - Plans Last Updated Between', () => {
         expect(r.body.data.length).to.equal(1)
         expect(r.body.data[0].plan.jwtId).to.equal(testPlanSecondClaimId)
         expect(r.body.data[0].plan.handleId).to.equal(testPlanIdExternal)
-        expect(r.body.data[0].claimBefore).to.be.undefined
+        expect(r.body.data[0].wrappedClaimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -3482,7 +3486,7 @@ describe('6 - Plans Last Updated Between', () => {
         expect(r.body.hitLimit).to.be.a('boolean')
         expect(r.body.data[0].plan.jwtId).to.equal(testPlanSecondClaimId)
         expect(r.body.data[0].plan.handleId).to.equal(testPlanIdExternal)
-        expect(r.body.data[0].claimBefore).to.be.undefined
+        expect(r.body.data[0].wrappedClaimBefore).to.be.undefined
       })
       .catch((err) => {
         return Promise.reject(err)

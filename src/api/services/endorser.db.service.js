@@ -1643,7 +1643,7 @@ class EndorserDatabase {
    * @param {string[]} planIds any plan IDs
    * @param {string} earliestIdInput the ID before which we want to find the most recent JWT for each plan
    * (Note that this is typically the "afterId" parameter from the request.)
-   * @returns {Promise<object[]>}
+   * @returns {Promise<Jwt[]>}
    */
   jwtsMostRecentForPlansBefore(planIds, earliestIdInput) {
     return new Promise((resolve, reject) => {

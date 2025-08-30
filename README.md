@@ -42,7 +42,7 @@ Requires node v14+
 sh <(curl https://pkgx.sh) +npm sh
 ````
 
-#### Dependencies
+Add Dependencies
 
 ```shell
 # install dependencies
@@ -55,16 +55,24 @@ cp .env.local .env
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 # note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
-# run in development mode
-NODE_ENV=dev npm run dev
-
 # register ths first permissioned user by adding a DID thus:
 echo "INSERT INTO registration (did, maxClaims, maxRegs, epoch) VALUES ('YOUR_DID', 100, 10000, 1719348718092);" | sqlite3 ../endorser-ch-dev.sqlite3
 # ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
 ```
+
 If you just want to get running with initial test user, run `test/test.sh` (or do the "bare" setup below).
 
-#### Other Ways To Run
+Run
+
+```shell
+# run in development mode
+NODE_ENV=dev npm run dev
+```
+
+
+
+
+### Other Ways To Run
 
 Debug: `NODE_ENV=dev npm run dev:debug`
 
@@ -78,17 +86,32 @@ Run on Docker:
 
 ```
 export ENDORSER_VERSION=release-1.1.35
+export NODE_ENV=test
 
 git checkout $ENDORSER_VERSION
 
-docker build -t endorser-ch:$ENDORSER_VERSION --build-arg ENDORSER_VERSION .
+docker build -t endorser-ch:amd-$ENDORSER_VERSION --build-arg ENDORSER_VERSION --platform linux/amd64 --no-cache .
 
-docker run -d -p 3001:3000 -v /Users/trent/dev/home/endorser-ch-db:/mnt/database --name endorser-ch --env-file $PATH/.env -e APP_DB_FILE=/mnt/database/endorser-ch-dev.sqlite3 -e NODE_ENV=dev endorser-ch:$ENDORSER_VERSION
+cd endorser-ch && git checkout master && git pull && git checkout $ENDORSER_VERSION && cd ..
+
+vi endorser-ch/.env # to add the version
 ```
 
-* Before deploying, ask yourself: do you need to run a migration?
+* Before deploying, ask yourself: do you need to run a migration? If so:
+
+```
+cp endorser-ch-db/endorser-ch-$NODE_ENV.sqlite3 endorser-ch-db/endorser-ch-$NODE_ENV-pre-$ENDORSER_VERSION.sqlite3.bak
+
+sudo docker run --rm -v ~/endorser-ch/sql:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-ch-$NODE_ENV.sqlite3 -user=sa -password=... migrate
+ ```
 
 * See .env.local for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
+
+* Run it:
+
+```
+sudo docker run -d -p 8001:8001 -v ~/endorser-ch-db:/mnt/database --name endorser-ch-$NODE_ENV --env-file ~/endorser-ch/.env -e APP_DB_FILE=/mnt/database/endorser-ch-$NODE_ENV.sqlite3 -e PARTNER_APP_DB_FILE=/mnt/database/endorser-partner-$NODE_ENV.sqlite3 -e NODE_ENV=$NODE_ENV -e ENDORSER_VERSION=$ENDORSER_VERSION endorser-ch:amd-$ENDORSER_VERSION
+```
 
 * After deploying, increment the version & add "-beta" to the package.json and `npm install` and commit.
 
