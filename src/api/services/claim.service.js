@@ -463,6 +463,7 @@ class ClaimService {
 
           await dbService.giveUpdateConfirmed(origGiveClaim.handleId, amount, issuedAt)
           .catch(err => {
+            l.error(err, `Failed to update confirmed give amounts for ${origGiveClaim.handleId}`)
             embeddedResult.embeddedRecordError =
                 (embeddedResult.embeddedRecordError || '')
                 + ` Got an error updating confirmed give amounts: ${err}`
@@ -476,6 +477,7 @@ class ClaimService {
             origGiveClaim.fulfillsPlanHandleId, true
           )
           .catch(err => {
+            l.error(err, `Failed to check if offer amounts need updating for ${origGiveClaim.handleId}`)
             embeddedResult.embeddedRecordError =
                 (embeddedResult.embeddedRecordError || '')
                 + ` Got an error checking if offer amounts need updating: ${err}`
@@ -502,6 +504,7 @@ class ClaimService {
         // mark this issuer as a confirmed provider if they're in the list
         await dbService.giveProviderMarkLinkAsConfirmed(origGiveClaim.handleId, issuerDid)
         .catch(err => {
+          l.error(err, `Failed to mark this issuer as a confirmed provider for ${origGiveClaim.handleId}`)
           embeddedResult.embeddedRecordError =
             (embeddedResult.embeddedRecordError || '')
             + ` Got an error marking this issuer as a confirmed provider: ${err}`
@@ -976,13 +979,19 @@ class ClaimService {
           for (let claim of origClaim) {
             // this must await (see note above)
             const conf = await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, claim, claimIdDataList)
-                .catch(e => ({ embeddedRecordError: e }))
+                .catch(e => {
+                  l.error(e, `Failed to create one confirmation in list for ${jwtId}`)
+                  return { embeddedRecordError: JSON.stringify(e) }
+                })
             recordings.push(conf)
           }
         } else if (origClaim) {
           // this must await (see note above)
           const conf = await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, origClaim, claimIdDataList)
-            .catch(e => ({ embeddedRecordError: e }))
+            .catch(e => {
+              l.error(e, `Failed to create one confirmation for ${jwtId}`)
+              return { embeddedRecordError: JSON.stringify(e) }
+            })
           recordings.push(conf)
         }
       }
@@ -1372,7 +1381,10 @@ class ClaimService {
         const origClaim = claim['originalClaim']
         recordings.push(
           await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, origClaim, claimIdDataList)
-            .catch(e => ({ embeddedRecordError: e }))
+            .catch(e => {
+              l.error(e, `Failed to create one confirmation for ${jwtId}`)
+              return { embeddedRecordError: JSON.stringify(e) }
+            })
         )
       }
 
@@ -1387,7 +1399,10 @@ class ClaimService {
           for (let origClaim of origClaims) {
             recordings.push(
               await this.createOneConfirmation(jwtId, payloadIssuerDid, issuedAt, origClaim, claimIdDataList)
-                .catch(e => ({ embeddedRecordError: e }))
+                .catch(e => {
+                  l.error(e, `Failed to create one confirmation in list for ${jwtId}`)
+                  return { embeddedRecordError: JSON.stringify(e) }
+                })
             )
           }
         }
@@ -1988,8 +2003,8 @@ class ClaimService {
           jwtEncoded, jwtEntry.id, authIssuerDid, claimPayload.iss, jwtEntry.issuedAt, handleId, claimPayloadClaim, claimIdDataList, isFirstClaimForHandleId
         )
         .catch(err => {
-          l.error(err, `Failed to create embedded claim records.`)
-          return { embeddedRecordError: err }
+          l.error(err, `Failed to create embedded claim records for ${jwtEntry.id}`)
+          return { embeddedRecordError: JSON.stringify(err) }
         })
 
     const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId, hashNonce: jwtEntry.hashNonce }, embedded)

@@ -61,6 +61,12 @@ export default express
  * &nbsp;&nbsp;&nbsp; recordsSavedForEdit: number, // number of associated records saved for later editing
  * &nbsp;&nbsp;&nbsp; actionId || orgRoleId || registrationId || tenureId || voteId: number,
  * &nbsp;&nbsp;&nbsp; confirmations: { confirmId: number }
+ * &nbsp;&nbsp;&nbsp; claimEmbeddedError: string, // error message from creating embedded records;
+ *  (The JWT was saved but other reports may not match expectations.
+ *  The string may describe the issue; it may also be something unhelpful like "{}", but something bad happened.)
+ * &nbsp;&nbsp;&nbsp; claimEmbeddedWarning: string, // warning message from creating embedded records; the JWT was saved but other reports may not match expectations
+ *  (The JWT was saved but other reports may not match expectations.
+ *  The string may describe the issue; it may also be something unhelpful like "{}", but something bad happened.)
  * &nbsp; },
  * &nbsp; on error: { code: string, message: string }
  * }
