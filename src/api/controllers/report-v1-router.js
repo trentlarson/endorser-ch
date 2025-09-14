@@ -94,7 +94,13 @@ class DbController {
    * @deprecated use the claim version
    */
   makeMeVisibleTo(req, res) {
-    addCanSee(req.body.did, res.locals.authTokenIssuer)
+    if (!req.headers[AUTHORIZATION_HEADER]
+        || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ success: false, message: 'Missing Authorization header' }).end()
+      return
+    }
+    const authJwt = req.headers[AUTHORIZATION_HEADER].substring(BEARER_PREFIX.length);
+    addCanSee(req.body.did, res.locals.authTokenIssuer, null, authJwt)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -102,7 +108,13 @@ class DbController {
    * @deprecated use the claim version
    */
   makeMeInvisibleTo(req, res) {
-    removeCanSee(req.body.did, res.locals.authTokenIssuer)
+    if (!req.headers[AUTHORIZATION_HEADER]
+        || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ success: false, message: 'Missing Authorization header' }).end()
+      return
+    }
+    const authJwt = req.headers[AUTHORIZATION_HEADER].substring(BEARER_PREFIX.length);
+    removeCanSee(req.body.did, res.locals.authTokenIssuer, null, authJwt)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
@@ -110,7 +122,13 @@ class DbController {
    * @deprecated use the claim version
    */
   makeMeGloballyVisible(req, res) {
-    makeGloballyVisible(res.locals.authTokenIssuer, req.body.url)
+    if (!req.headers[AUTHORIZATION_HEADER]
+        || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ success: false, message: 'Missing Authorization header' }).end()
+      return
+    }
+    const authJwt = req.headers[AUTHORIZATION_HEADER].substring(BEARER_PREFIX.length);
+    makeGloballyVisible(res.locals.authTokenIssuer, req.body.url, authJwt)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

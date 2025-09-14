@@ -2,7 +2,13 @@ import * as express from 'express'
 import R from 'ramda'
 
 import ClaimService from '../services/claim.service'
-import { allEmbeddedRecordErrorsInside, GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from '../services/util'
+import {
+  allEmbeddedRecordErrorsInside,
+  AUTHORIZATION_HEADER,
+  BEARER_PREFIX,
+  GLOBAL_ENTITY_ID_IRI_PREFIX,
+  isGlobalUri
+} from '../services/util'
 import { addCanSee, removeCanSee } from '../services/network-cache.service'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 class ClaimController {
@@ -132,17 +138,35 @@ class DbController {
       .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
   makeMeVisibleTo(req, res) {
-    addCanSee(req.body.did, res.locals.authTokenIssuer)
+    if (!req.headers[AUTHORIZATION_HEADER]
+        || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ success: false, message: 'Missing Authorization header' }).end()
+      return
+    }
+    const authJwt = req.headers[AUTHORIZATION_HEADER].substring(BEARER_PREFIX.length);
+    addCanSee(req.body.did, res.locals.authTokenIssuer, null, authJwt)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeInvisibleTo(req, res) {
-    removeCanSee(req.body.did, res.locals.authTokenIssuer)
+    if (!req.headers[AUTHORIZATION_HEADER]
+        || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ success: false, message: 'Missing Authorization header' }).end()
+      return
+    }
+  const authJwt = req.headers[AUTHORIZATION_HEADER].substring(BEARER_PREFIX.length);
+    removeCanSee(req.body.did, res.locals.authTokenIssuer, null, authJwt)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
   makeMeGloballyVisible(req, res) {
-    makeGloballyVisible(res.locals.authTokenIssuer, req.body.url)
+    if (!req.headers[AUTHORIZATION_HEADER]
+        || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ success: false, message: 'Missing Authorization header' }).end()
+      return
+    }
+    const authJwt = req.headers[AUTHORIZATION_HEADER].substring(BEARER_PREFIX.length);
+    makeGloballyVisible(res.locals.authTokenIssuer, req.body.url, authJwt)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }

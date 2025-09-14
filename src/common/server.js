@@ -7,7 +7,7 @@ import * as os from 'os';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
-import { ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util.js';
+import { AUTHORIZATION_HEADER, BEARER_PREFIX, ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util.js';
 import { decodeAndVerifyJwt } from "../api/services/vc";
 import l from './logger';
 const app = new Express();
@@ -56,8 +56,7 @@ let options = {
 
 function requesterInfo(req, res, next) {
   let authorizationJwt
-  const authBearer = req.headers['Authorization'.toLowerCase()]
-  const BEARER_PREFIX = 'Bearer '
+  const authBearer = req.headers[AUTHORIZATION_HEADER]
   if (authBearer != null
       && authBearer.startsWith(BEARER_PREFIX)) {
     authorizationJwt = authBearer.substring(BEARER_PREFIX.length)

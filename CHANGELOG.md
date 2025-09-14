@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Visibility-setting endpoints into '/api/claims' prefix (because it makes more sense)
 ### Fixed
 - Result for "between" endpoints should return a claim object (not string)
+- Save the JWT for all calls that explicitly set visibility
 ### Changed
 - Updated some libraries to avoid critical issues detected by Dependabot
 

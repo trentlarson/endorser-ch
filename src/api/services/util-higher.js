@@ -203,8 +203,8 @@ function gatherPublicUrls(input) {
   }
 }
 
-async function makeGloballyVisible(issuerDid, url) {
-  return addCanSee("*", issuerDid, url)
+async function makeGloballyVisible(issuerDid, url, jwt) {
+  return addCanSee("*", issuerDid, url, jwt)
     .catch(err => {
       l.error(err, "Got error creating issuer-visible network record for " + issuerDid)
       return Promise.reject("Got error creating issuer-visible network record for " + issuerDid)

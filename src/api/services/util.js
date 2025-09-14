@@ -3,7 +3,8 @@ const crypto = require('crypto')
 const R = require('ramda')
 const canonicalize = require("canonicalize");
 
-// the UI often extracts the address, chops off the first 2 (usually 0x), and shows first and last 3
+const AUTHORIZATION_HEADER = 'Authorization'.toLowerCase()
+const BEARER_PREFIX = 'Bearer '
 const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src/utilities/claims.js
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token' // deprecated: use Authorization instead
 
@@ -421,7 +422,8 @@ function mergeTileCounts(tiles) {
 }
 
 module.exports = {
-  allDidsInside, allEmbeddedRecordErrorsInside, basicClaimDescription,
+  allDidsInside, allEmbeddedRecordErrorsInside, AUTHORIZATION_HEADER,
+  basicClaimDescription, BEARER_PREFIX,
   booleanify, buildConfirmationList, calcBbox, claimHashChain, ERROR_CODES,
   GLOBAL_ENTITY_ID_IRI_PREFIX, findAllLastClaimIdsAndHandleIds,
   globalFromLocalEndorserIdentifier, globalId,
