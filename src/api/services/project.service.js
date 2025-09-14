@@ -14,6 +14,12 @@ class PlanService {
     }
   }
 
+  // gets info for multiple handle IDs
+  infoByHandleIds(handleIds) {
+    l.trace(`${this.constructor.name}.infoByHandleIds(${JSON.stringify(handleIds)})`);
+    return dbService.planInfoByHandleIds(handleIds)
+  }
+
 }
 
 module.exports = { planService: new PlanService() }

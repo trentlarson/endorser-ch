@@ -125,17 +125,18 @@ function constructWhere(params, allowedColumns, claimContents, contentColumns, b
 /**
    @param table is the table name
    @param searchableColumns are names of columns allowing comparison operations (<, =, >)
-   @param otherResultColumns are names of other columns to return in result
-   @param contentColumn is a text column that can be searched with 'claimContents'
+   @param contentColumns are the text columns that can be searched with 'claimContents'
    @param dateColumns are names of date columns which will be converted in result
+   @param booleanColumns are names of boolean columns which will be converted in result
+   @param otherResultColumns are names of other columns to return in result
 
    @param params is an object with a key-value for each column-value to filter, with some special keys:
    - 'claimContents' for text to look for inside claims
    - 'excludeConfirmations' if it should exclude any claimType of 'AgreeAction'
    - column + '_greaterThan[OrEqualTo]' for entries with column value greater than (or equal to) the supplied value
    - column + '_lessThan[OrEqualTo]' for entries with column value less than (or equal to) the supplied value
-   @param afterIdInput (optional) is the start of the search (excluding that item)
-   @param beforeIdInput (optional) is the end of the search (excluding that item)
+   @param afterIdInput (optional) is the start of the search in idColumn (excluding that item)
+   @param beforeIdInput (optional) is the end of the search in idColumn (excluding that item)
 
    @return Promise of object with "data" as a list of results, reverse-chronologically,
      with optional "hitlimit" boolean telling if we hit the limit count for this query
@@ -2231,6 +2232,7 @@ class EndorserDatabase {
       })
     })
   }
+
   planInfoByClaimId(claimId) {
     return new Promise((resolve, reject) => {
       db.get(
@@ -2252,24 +2254,52 @@ class EndorserDatabase {
     })
   }
 
-  planInfoByHandleId(handleId) {
+  planInfoByHandleIds(handleIds) {
     return new Promise((resolve, reject) => {
-      db.get(
-        "SELECT * FROM plan_claim WHERE handleId = ?",
-        [handleId],
-        function(err, row) {
+      if (!Array.isArray(handleIds)) {
+        reject(new Error('planInfoByHandleIds expects an array of handleIds'))
+        return
+      }
+      
+      if (handleIds.length === 0) {
+        resolve([])
+        return
+      }
+      
+      const placeholders = handleIds.map(() => '?').join(', ')
+      const query = `SELECT * FROM plan_claim WHERE handleId IN (${placeholders})`
+      
+      db.all(
+        query,
+        handleIds,
+        function(err, rows) {
           if (err) {
             reject(err)
           } else {
-            if (row) {
-              row.endTime = util.isoAndZonify(row.endTime)
-              row.startTime = util.isoAndZonify(row.startTime)
-              row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
-            }
-            resolve(row)
+            const processedRows = rows.map(row => {
+              if (row) {
+                row.endTime = util.isoAndZonify(row.endTime)
+                row.startTime = util.isoAndZonify(row.startTime)
+                row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+              }
+              return row
+            })
+            
+            resolve(processedRows)
           }
         }
       )
+    })
+  }
+
+  planInfoByHandleId(handleId) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const results = await this.planInfoByHandleIds([handleId])
+        resolve(results.length > 0 ? results[0] : null)
+      } catch (err) {
+        reject(err)
+      }
     })
   }
 

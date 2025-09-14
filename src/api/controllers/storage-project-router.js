@@ -15,6 +15,41 @@ class PlanController {
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
 
+  // gets info for multiple plans by handle IDs
+  getPlanInfoByHandleIds(req, res) {
+    try {
+      let planHandleIds
+      if (req.query.planHandleIds) {
+        planHandleIds = JSON.parse(req.query.planHandleIds)
+      } else {
+        return res.status(400).json({ error: 'planHandleIds query parameter is required' })
+      }
+
+      if (!Array.isArray(planHandleIds)) {
+        return res.status(400).json({ error: 'planHandleIds must be a JSON array' })
+      }
+
+      planService
+        .infoByHandleIds(planHandleIds)
+        .then(results => {
+          // Apply hideDidsAndAddLinksToNetwork to each result
+          const processedResults = results.map(result => 
+            hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, [])
+          )
+          return Promise.all(processedResults)
+        })
+        .then(processedResults => {
+          res.json(processedResults)
+        })
+        .catch(err => { 
+          console.log(err); 
+          res.status(500).json(""+err).end(); 
+        })
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid JSON in planHandleIds parameter' })
+    }
+  }
+
 }
 const planController = new PlanController()
 
@@ -31,6 +66,17 @@ const planRouter = express
     res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
     next();
   })
+
+/**
+ * Retrieve multiple plans by their handle IDs.
+ *
+ * @group storage of projects - Project storage
+ * @route GET /api/plans
+ * @param {string} planHandleIds.query.required - JSON array of plan handle IDs to retrieve
+ * @returns {array.PlanSummary} Array of PlanSummary data for existing plans
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/', planController.getPlanInfoByHandleIds)
 
 /**
  * Retrieve the latest version of a plan based on the persistent ID.
