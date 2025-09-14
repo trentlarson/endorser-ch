@@ -334,13 +334,19 @@ class DbController {
           .infoByHandleIds(planHandleIds)
           .then(results => {
             // Apply hideDidsAndAddLinksToNetwork to each result
-            const processedResults = results.map(result =>
+            const processedResults = results.data.map(result =>
               hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, [])
             )
-            return Promise.all(processedResults)
+            return Promise.all(processedResults).then(processed => ({
+              data: processed,
+              hitLimit: results.hitLimit
+            }))
           })
           .then(processedResults => {
-            const response = { data: processedResults }
+            const response = { data: processedResults.data }
+            if (processedResults.hitLimit) {
+              response.hitLimit = processedResults.hitLimit
+            }
             if (resultWarning) {
               response.resultWarning = resultWarning
             }

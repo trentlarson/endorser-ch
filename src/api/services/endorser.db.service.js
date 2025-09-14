@@ -2262,12 +2262,12 @@ class EndorserDatabase {
       }
       
       if (handleIds.length === 0) {
-        resolve([])
+        resolve({ data: [], hitLimit: false })
         return
       }
       
       const placeholders = handleIds.map(() => '?').join(', ')
-      const query = `SELECT * FROM plan_claim WHERE handleId IN (${placeholders})`
+      const query = `SELECT * FROM plan_claim WHERE handleId IN (${placeholders}) LIMIT ${DEFAULT_LIMIT}`
       
       db.all(
         query,
@@ -2285,7 +2285,11 @@ class EndorserDatabase {
               return row
             })
             
-            resolve(processedRows)
+            const result = {
+              data: processedRows,
+              hitLimit: processedRows.length === DEFAULT_LIMIT
+            }
+            resolve(result)
           }
         }
       )
@@ -2296,7 +2300,7 @@ class EndorserDatabase {
     return new Promise(async (resolve, reject) => {
       try {
         const results = await this.planInfoByHandleIds([handleId])
-        resolve(results.length > 0 ? results[0] : null)
+        resolve(results.data.length > 0 ? results.data[0] : null)
       } catch (err) {
         reject(err)
       }
