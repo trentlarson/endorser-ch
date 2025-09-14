@@ -730,7 +730,7 @@ export default express
 /**
  * Get all claims for the query inputs, paginated, reverse-chronologically
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/claims
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the ID of the JWT entry before which to look (exclusive); by default, the last one is included, and can also include the last one with an explicit value of '7ZZZZZZZZZZZZZZZZZZZZZZZZZ'
@@ -748,7 +748,7 @@ export default express
 /**
  * Get all claims where this user is issuer and the claimType is from `claimTypes` arg (array of string)
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/claimsForIssuerWithTypes
  * @param {string} claimTypes.query.required - the array of `claimType` strings to find
  * @param {string} afterId.query.optional - the ID of the JWT entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
@@ -762,7 +762,7 @@ export default express
 /**
  * Check if current user can create a claim.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/canClaim
  * @returns {object} 200 - 'data' boolean property tells whether this user is allowed to create a claim
  * @returns {Error} 400 - client error
@@ -773,7 +773,7 @@ export default express
 /**
  * Retrieve all confirmers for a set of claims. (Same as POST version. Similar to Elasticsearch approach with parameter in the body.)
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/confirmers
  * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
@@ -785,7 +785,7 @@ export default express
 /**
  * Retrieve all confirmers for a set of claims. (Same as GET version. Similar to Elasticsearch approach for a large number of inputs.)
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route POST /api/v2/report/confirmers
  * @param {array} claimEntryIds.body.required the claim JWT IDs, for whose confirmers I want to find
  * @returns {object} 200 - 'data' array of IDs who have confirmed given claims
@@ -798,7 +798,7 @@ export default express
 /**
  * Get totals of all the gift-only gives (like /giveTotals but only for those that are gifts)
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/giftedTotals
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -816,7 +816,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/gives
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -836,7 +836,7 @@ export default express
 /**
  * Get gives dedicated to any in a list of plan IDs
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/givesToPlans
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -854,7 +854,7 @@ export default express
 /**
  * Get give fulfilled by this give
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/giveFulfilledByGive
  * @param {string} giveHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @returns {GiveSummaryWithFulfilledLinkConfirmation} 200 - 'data' property with PlanSummary entry and flag indicating whether the fulfill relationship is confirmed
@@ -867,7 +867,7 @@ export default express
 /**
  * Get GiveSummary fulfillers for a particular GiveSummary
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/giveFulfillersToGive
  * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
@@ -880,7 +880,7 @@ export default express
 /**
  * Get GiveSummary fulfillers for a particular OfferSummary
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/givefulfillersToOffer
  * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
@@ -893,7 +893,7 @@ export default express
 /**
  * Get gives provided by this provider
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/givesProvidedBy
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -909,7 +909,7 @@ export default express
 /**
  * Get totals of gives (like /giftedTotals but potentially with trades as well)
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/giveTotals
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -928,7 +928,7 @@ export default express
 /**
  * Search offers
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/offers
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -946,7 +946,7 @@ export default express
 /**
  * Get offers dedicated to any in a list of plan IDs
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/offersToPlans
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -960,7 +960,7 @@ export default express
 /**
  * Get offers dedicated to any project owned by the requestor (as issuer or agent)
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/offersToPlansOwnedByMe
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -973,7 +973,7 @@ export default express
 /**
  * Get totals of offers
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/offerTotals
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -993,7 +993,7 @@ export default express
  * Note that the partner API has a similar endpoint /api/partner/userProfileCountsByBBox
  * The front-end is simpler if the parameters and results are similar.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/planCountsByBBox
  * @param {string} minLocLat.query.required - minimum latitude in degrees of bounding box being searched
  * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
@@ -1010,7 +1010,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/planFulfilledByPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @returns {PlanSummaryWithFulfilledLinkConfirmation} 200 - 'data' property with PlanSummary entry and flag indicating whether the fulfill relationship is confirmed
@@ -1024,7 +1024,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/fulfillersToPlan
  * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is not included, and can also include the first one with an explicit value of '0'
@@ -1040,7 +1040,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/plans
  * @param {string} planHandleIds.query.optional - JSON array of plan handle IDs to retrieve specific plans (when provided, other query parameters are ignored and a resultWarning is included)
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
@@ -1065,7 +1065,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/plansByIssuer
  * @param {string} afterId.query.optional - the rowId of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the rowId of the entry before which to look (exclusive); by default, the last one is included
@@ -1080,7 +1080,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/plansByBBox
  * @param {string} minLocLat.query.required - minimum latitude in degrees of bounding box being searched
  * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
@@ -1106,7 +1106,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- *  @group reports - Reports (with paging)
+ *  @group reports
  * @route GET /api/v2/report/providersToGive
  * @param {string} giveHandleId.query.optional - the jwtId of the give entry
  * @returns {array.ProviderLink} 200 - 'data' property with each of the providers with known types
@@ -1119,7 +1119,7 @@ export default express
  * Retrieve plans that have their latest version before/after given claim IDs (GET version)
  * For smaller lists of plan IDs, use query parameters
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route GET /api/v2/report/plansLastUpdateBetween
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
  * @param {string} afterId.query.required - the JWT ID of the entry after which to look (exclusive)
@@ -1132,7 +1132,7 @@ export default express
  * Retrieve plans that have their latest version before/after given claim IDs (POST version)
  * For larger lists of plan IDs, use POST with JSON body
  *
- * @group reports - Reports (with paging)
+ * @group reports
  * @route POST /api/v2/report/plansLastUpdatedBetween
  * @param {string[]} body.planIds.required - Array of plan handle IDs
  * @param {string} body.afterId.required - the JWT ID of the entry after which to look (exclusive)

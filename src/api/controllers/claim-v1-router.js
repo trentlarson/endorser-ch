@@ -3,7 +3,8 @@ import R from 'ramda'
 
 import ClaimService from '../services/claim.service'
 import { allEmbeddedRecordErrorsInside, GLOBAL_ENTITY_ID_IRI_PREFIX, isGlobalUri } from '../services/util'
-import { hideDidsAndAddLinksToNetwork } from '../services/util-higher'
+import { addCanSee, removeCanSee } from '../services/network-cache.service'
+import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 class ClaimController {
 
   getById(req, res) {
@@ -130,6 +131,21 @@ class DbController {
       .then(r => { if (r) { res.json(r) } else { res.status(404).end() } })
       .catch(err => { console.error(err); res.status(500).json(""+err).end(); })
   }
+  makeMeVisibleTo(req, res) {
+    addCanSee(req.body.did, res.locals.authTokenIssuer)
+      .then((result) => res.status(200).json({success:result}).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+  makeMeInvisibleTo(req, res) {
+    removeCanSee(req.body.did, res.locals.authTokenIssuer)
+      .then((result) => res.status(200).json({success:result}).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
+  makeMeGloballyVisible(req, res) {
+    makeGloballyVisible(res.locals.authTokenIssuer, req.body.url)
+      .then((result) => res.status(200).json({success:result}).end())
+      .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
+  }
 }
 let dbController = new DbController()
 
@@ -155,8 +171,18 @@ export default express
  */
 
 /**
+ * @typedef DidBody
+ * @property {string} did.required
+ */
+
+/**
+ * @typedef UrlBody
+ * @property {string} url
+ */
+
+/**
  * Get a Claim JWT
- * @group claims v1 - Claim Entry (with limited feedback)
+ * @group claim retrieval
  * @route GET /api/claim/{id}
  * @param {string} id.path.required - the ID of the Claim JWT entry to retrieve
  * @returns {object} 200 - Claim JWT if it exists
@@ -169,7 +195,7 @@ export default express
 /**
  * Get most recent "entity" (claim that matches an handle ID)
  *
- * @group claims v1 - Claim Entry (with limited feedback)
+ * @group claim retrieval
  * @route GET /api/claim/byHandle/{id}
  * @param {string} id.path.required - the persistent "entity" handle ID
  * @returns {Jwt} 200 - the Claim JWT entry with the most recent changes for that handle ID
@@ -181,7 +207,7 @@ export default express
 
 /**
  * Get a Claim JWT with full encoding
- * @group claims v1 - Claim Entry (with limited feedback)
+ * @group claim retrieval
  * @route GET /api/claim/full/{id}
  * @param {string} id.path.required - the ID of the Claim JWT entry to retrieve
  * @returns {object} 200 - Claim JWT if it exists and user can see all data, otherwise 404
@@ -195,7 +221,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group claims v1 - Claim Entry (with limited feedback)
+ * @group claim report v1 - (with limited result counts; see 'reports')
  * @route GET /api/claim
  * @param {string} claimContents.query.optional
  * @param {string} claimContext.query.optional
@@ -209,14 +235,39 @@ export default express
   .get('/', claimController.getByQuery)
 
 /**
- * Add a Claim JWT and insert claims into their own tables
  * @deprecated use the v2 version (or you'll miss info like the nonce)
+ */
+  .post('/', claimController.importClaim)
+
+/**
+ * Consent to make push-token issuer's ID visible to the given ID
  *
- * @group claims v1 deprecated - Claim Entry (without adequate feedback)
- * @route POST /api/claim
- * @param {EncodedJwt.model} jwtEncoded.body.required
- * @returns {object} 200 - internal ID of Claim JWT
- * @returns {Error} 400 - client error
+ * @group DID visibility
+ * @route POST /api/claim/canSeeMe
+ * @param {DidBody.model} body.body.required
+ * @returns {object} 200 - success
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.post('/', claimController.importClaim)
+  .post('/canSeeMe', dbController.makeMeVisibleTo)
+
+/**
+ * Make push-token issuer's ID invisible to the given ID
+ *
+ * @group DID visibility
+ * @route POST /api/claim/cannotSeeMe
+ * @param {DidBody.model} body.body.required
+ * @returns {object} 200 - success
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
+
+/**
+ * Consent to make push-token issuer's ID visible to the world
+ *
+ * @group DID visibility
+ * @route POST /api/claim/makeMeGloballyVisible
+ * @param {UrlBody.model} body.body.optional
+ * @returns {object} 200 - success
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)

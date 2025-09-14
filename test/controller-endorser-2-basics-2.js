@@ -286,7 +286,7 @@ describe('2 - Visibility', () => {
 
   it('user 2 should make user 2 visible to everyone', () =>
      request(Server)
-     .post('/api/report/makeMeGloballyVisible')
+     .post('/api/claim/makeMeGloballyVisible')
      .set('Authorization', 'Bearer ' + pushTokens[2])
      .send({"url":"https://ignitecommunity.org"})
      .then(r => {

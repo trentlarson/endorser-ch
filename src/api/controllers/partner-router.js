@@ -119,7 +119,7 @@ export default express
 /**
  * Add a link to some partner service
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route POST /api/partner/link
  * @param {string} jwtId.body.required - the claim to relay to the partner
  * @param {string} linkCode.body.required - the partner link code, eg. 'NOSTR-EVENT' (or someday: 'ATTEST.SH')
@@ -165,7 +165,7 @@ export default express
 /**
  * Add a profile for a user
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route POST /api/partner/profile
  * @param {string} description.body.required - free-form description of interests
  * @param {number} latitude.body.optional - latitude coordinate
@@ -235,7 +235,7 @@ export default express
 /**
  * Get a user's profile
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/userProfileForIssuer/{issuerDid}
  * @param {string} issuerDid.path.required - the issuer DID to get the profile for
  * @returns {UserProfile} 200 - success response with profile
@@ -279,7 +279,7 @@ export default express
 /**
  * Get a user's profile by ID
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/userProfile/{id}
  * @param {number} rowId.path.required - the profile ID to retrieve
  * @returns {UserProfile} 200 - success response with profile
@@ -330,7 +330,7 @@ export default express
 /**
  * Get profiles by location or text search
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/userProfile
  * @param {number} minLocLat.query.optional - minimum latitude coordinate
  * @param {number} minLocLon.query.optional - minimum longitude coordinate
@@ -429,7 +429,7 @@ export default express
 /**
  * Delete a user's profile
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route DELETE /api/partner/userProfile
  * @returns 200 - success response with number of deleted profiles
  * @returns {Error} 500 - server error
@@ -458,7 +458,7 @@ export default express
  * Note that the report API has a similar endpoint /api/v2/report/planCountsByBBox
  * The front-end is simpler if the parameters and results are similar.
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/userProfileCountsByBBox
  * @param {string} minLocLat.query.required - minimum latitude in degrees of bounding box being searched
  * @param {string} maxLocLat.query.required - maximum latitude in degrees of bounding box being searched
@@ -543,7 +543,7 @@ export default express
 /**
  * Create a new group onboarding room
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route POST /api/partner/groupOnboard
  * @param {string} name.body.required - name of the room
  * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
@@ -607,7 +607,7 @@ export default express
 /**
  * Get any groups set up by this person
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/groupOnboard
  * @returns {object} 200 - the room they created with "groupId", "name", "expiresAt"
  */
@@ -628,7 +628,7 @@ export default express
 /** 
  * Get a group onboarding room by ID
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/groupOnboard/{groupId}
  * @param {number} groupId.path.required - group ID
  * @returns {object} 200 - the room with "groupId", "name", "expiresAt"
@@ -650,7 +650,7 @@ export default express
 /**
  * Get all group onboarding rooms
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/groupsOnboarding
  * @returns {array} 200 - List of rooms with "groupId", "name", "expiresAt"
  */
@@ -670,7 +670,7 @@ export default express
 /**
  * Update a group onboarding room
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route PUT /api/partner/groupOnboard
  * @param {string} name.body.optional - new room name
  * @param {string} expiresAt.body.optional - new room expiration date
@@ -735,7 +735,7 @@ export default express
 /**
  * Delete a group onboarding room
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route DELETE /api/partner/groupOnboard/{groupId}
  * @returns 204 - Success
  * @returns {Error} 403 - Unauthorized
@@ -774,7 +774,7 @@ export default express
 /**
  * Join a group onboarding room
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route POST /api/partner/groupOnboardMember
  * @param {number} groupId.body.required - group ID to join
  * @param {string} content.body.required - member content
@@ -835,7 +835,7 @@ export default express
 /**
  * Get current user's group membership
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/groupOnboardMember
  * @returns {object} 200 - Member record with groupId, content, and admitted status, or undefined if not in a group
  * @returns {Error} 500 - server error
@@ -856,7 +856,7 @@ export default express
 /**
  * Get group members for the group the member is in
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route GET /api/partner/groupOnboardMembers/{groupId}
  * @returns {array} 200 - List of members with "issuerDid", "content", "admitted"
  * @returns {Error} 403 - Unauthorized
@@ -926,7 +926,7 @@ export default express
 /**
  * Update group membership for token issuer
  *
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route PUT /api/partner/groupOnboardMember/{groupId}
  * @param {number} memberId.path.required - group ID
  * @param {string} content.body.optional - new content
@@ -951,7 +951,7 @@ export default express
 /**
  * Update group membership for given member (by the organizer)
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route PUT /api/partner/groupOnboardMember/{groupId}
  * @param {number} memberId.path.required - group ID
  * @param {string} content.body.optional - new content
@@ -979,7 +979,7 @@ export default express
 /**
  * Leave a group
  * 
- * @group partner utils - Partner Utils
+ * @group partner utils
  * @route DELETE /api/partner/groupOnboardMember/{groupId}
  * @param {number} groupId.path.required - group ID to leave
  * @returns 204 - Success

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - "/plans" endpoint allows arrays of planHandleIds
+- Visibility-setting endpoints into '/api/claims' prefix (because it makes more sense)
 ### Fixed
 - Result for "between" endpoints should return a claim object (not string)
 ### Changed

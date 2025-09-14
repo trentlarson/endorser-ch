@@ -1265,7 +1265,7 @@ describe('1 - Action', () => {
 
   it('should get complaint about a missing JWT', () =>
      request(Server)
-     .post('/api/report/canSeeMe')
+     .post('/api/claim/canSeeMe')
      .expect('Content-Type', /json/)
      .then(r => {
        expect(r.body.success).that.equals(false)
@@ -1648,7 +1648,7 @@ describe('1 - Visibility utils', () => {
 
   it('#0 should set invisible to #2', () =>
     request(Server)
-      .post('/api/report/cannotSeeMe')
+      .post('/api/claim/cannotSeeMe')
       .send({ "did": creds[2].did })
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .expect('Content-Type', /json/)
@@ -1804,7 +1804,7 @@ describe('1 - Visibility utils', () => {
 
   it('#4 should not be able to set invisible to #4', () =>
     request(Server)
-    .post('/api/report/cannotSeeMe')
+    .post('/api/claim/cannotSeeMe')
     .send({ "did": creds[4].did })
     .set('Authorization', 'Bearer ' + pushTokens[4])
     .expect('Content-Type', /json/)
@@ -1828,7 +1828,7 @@ describe('1 - Visibility utils', () => {
 
   it('#4 should set visible to #5', () =>
      request(Server)
-     .post('/api/report/canSeeMe')
+     .post('/api/claim/canSeeMe')
      .send({ "did": creds[5].did })
      .set('Authorization', 'Bearer ' + pushTokens[4])
      .expect('Content-Type', /json/)
@@ -1838,7 +1838,7 @@ describe('1 - Visibility utils', () => {
 
   it('unregistered #16 should set visible to unregistered #17', () =>
     request(Server)
-    .post('/api/report/canSeeMe')
+    .post('/api/claim/canSeeMe')
     .send({ "did": creds[17].did })
     .set('Authorization', 'Bearer ' + pushTokens[16])
     .expect('Content-Type', /json/)
@@ -1880,7 +1880,7 @@ describe('1 - Visibility utils', () => {
 
   it('#4 should set invisible to #5', () =>
      request(Server)
-     .post('/api/report/cannotSeeMe')
+     .post('/api/claim/cannotSeeMe')
      .send({ "did": creds[5].did })
      .set('Authorization', 'Bearer ' + pushTokens[4])
      .expect('Content-Type', /json/)

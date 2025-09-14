@@ -90,16 +90,25 @@ class DbController {
       .then(r => res.json(r))
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
+  /**
+   * @deprecated use the claim version
+   */
   makeMeVisibleTo(req, res) {
     addCanSee(req.body.did, res.locals.authTokenIssuer)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
+  /**
+   * @deprecated use the claim version
+   */
   makeMeInvisibleTo(req, res) {
     removeCanSee(req.body.did, res.locals.authTokenIssuer)
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
+  /**
+   * @deprecated use the claim version
+   */
   makeMeGloballyVisible(req, res) {
     makeGloballyVisible(res.locals.authTokenIssuer, req.body.url)
       .then((result) => res.status(200).json({success:result}).end())
@@ -141,42 +150,27 @@ export default express
  */
 
 /**
- * Consent to make push-token issuer's ID visible to the given ID
- *
- * @group reports on network - Visibility
- * @route POST /api/report/canSeeMe
- * @param {DidBody.model} body.body.required
- * @returns {object} 200 - success
+ * @deprecated use the claim v1 version
+ * @group claims for visibility
  */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/canSeeMe', dbController.makeMeVisibleTo)
 
 /**
- * Make push-token issuer's ID invisible to the given ID
- *
- * @group reports on network - Visibility
- * @route POST /api/report/cannotSeeMe
- * @param {DidBody.model} body.body.required
- * @returns {object} 200 - success
+ * @deprecated use the claim v1 version
+ * @group claims for visibility
  */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/cannotSeeMe', dbController.makeMeInvisibleTo)
 
 /**
- * Consent to make push-token issuer's ID visible to the world
- *
- * @group reports on network - Visibility
- * @route POST /api/report/makeMeGloballyVisible
- * @param {UrlBody.model} body.body.optional
- * @returns {object} 200 - success
+ * @deprecated use the claim v1 version
+ * @group claims for visibility
  */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/makeMeGloballyVisible', dbController.makeMeGloballyVisible)
 
 /**
  * Get all DIDs this person can see
  *
- * @group reports on network - Visibility
+ * @group reports on DID network
  * @route GET /api/report/whichDidsICanSee
  * @returns {array.object} 200 - list of DIDs user can see
  * @returns {Error} 400 - client error
@@ -188,7 +182,7 @@ export default express
  * True if DID can explicitly see requestor.
  * Does not check visibility in general, eg. requestor may be globally visible but not explicitly visible.
  *
- * @group reports on network - Visibility
+ * @group reports on DID network
  * @route GET /api/report/canDidExplicitlySeeMe
  * @param {string} did.query.required
  * @returns boolean 200 - true if the DID can see the caller
@@ -200,12 +194,12 @@ export default express
 /**
  * Retrieve all globally-visible DIDs
  *
- * @group reports v1 - Reports
+ * @group reports on DID network
  * @route GET /api/report/globallyVisibleDids
  * @returns {array.string} 200 - list of DIDs that are globally visible
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get('/globallyVisibleDids', dbController.getSeenByAll)
+  .get('/globallyVisibleDids', dbController.getSeenByAll)
 
 /**
  * Get issuers for a claim
@@ -213,7 +207,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports v1 - Reports (with limited result counts)
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/issuersWhoClaimedOrConfirmed
  * @param {string} claimId.query.required - the ID of the claim
  * @returns {array.String} 200 - issuers who have claimed or confirmed same claim
@@ -227,7 +221,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports v1 - Reports
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/actionClaimsAndConfirmationsSince
  * @param {datetime} date.query.optional - the date from which to show actionclaims
  * @returns {array.ActionClaimsConfirmations} 200 - action claims with the confirmations that go along
@@ -239,7 +233,7 @@ export default express
 /**
  * Get tenure claims for a point
  *
- * @group reports v1 - Reports
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/tenureClaimsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
@@ -254,7 +248,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports v1 - Reports
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/tenureClaimsAndConfirmationsAtPoint
  * @param {number} lat.query.required
  * @param {number} lon.query.required
@@ -269,7 +263,7 @@ export default express
  *
  * Beware: this array may include a "publicUrls" key within it.
  *
- * @group reports v1 - Reports
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/orgRoleClaimsAndConfirmationsOnDate
  * @param {string} orgName.query.required
  * @param {string} roleName.query.required
@@ -283,7 +277,7 @@ export default express
 /**
  * Get all votes for all candidates.
  *
- * @group reports v1 - Reports
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/voteCounts
  * @returns {array.object} 200 - { speaker, title, count }
  * @returns {Error} 400 - client error
@@ -304,7 +298,7 @@ export default express
  /**
  * Get this DID's registration and claim limits.
  *
- * @group reports v1 - Reports
+ * @group reports v1 - (with limited result counts)
  * @route GET /api/report/rateLimits
  * @returns {RateLimits} 200 - the count & limits of claims & registrations
  * @returns {Error} 400 - client error

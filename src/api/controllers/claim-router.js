@@ -47,7 +47,7 @@ export default express
 
 /**
  * Add a Claim JWT (and insert claim data into their own tables for rapid searching)
- * @group claims - Claim Entry (with extended feedback)
+ * @group claim entry
  * @route POST /api/v2/claim
  * @param {EncodedJwt.model} jwtEncoded.body.required
  * @returns {object} 200 -
