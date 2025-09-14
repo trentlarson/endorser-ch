@@ -1039,22 +1039,23 @@ describe('6 - Plans', () => {
   it('GET multiple plans by handle IDs should return array of plans', () => {
     const planHandleIds = [firstPlanIdExternal, secondPlanIdExternal, planBy2FulfillsBy1Claim1IdExternal]
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .query({ planHandleIds: JSON.stringify(planHandleIds) })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(200)
-        expect(r.body).to.be.an('array')
-        expect(r.body.length).to.equal(3)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(3)
         
         // Verify each plan is returned correctly
-        const handleIds = r.body.map(plan => plan.handleId)
+        const handleIds = r.body.data.map(plan => plan.handleId)
         expect(handleIds).to.include(firstPlanIdExternal)
         expect(handleIds).to.include(secondPlanIdExternal)
         expect(handleIds).to.include(planBy2FulfillsBy1Claim1IdExternal)
         
         // Verify structure of each plan
-        r.body.forEach(plan => {
+        r.body.data.forEach(plan => {
           expect(plan).to.have.property('handleId')
           expect(plan).to.have.property('jwtId')
           expect(plan).to.have.property('agentDid')
@@ -1069,13 +1070,14 @@ describe('6 - Plans', () => {
 
   it('GET multiple plans with empty array should return empty array', () => {
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .query({ planHandleIds: JSON.stringify([]) })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(200)
-        expect(r.body).to.be.an('array')
-        expect(r.body.length).to.equal(0)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(0)
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -1085,13 +1087,14 @@ describe('6 - Plans', () => {
   it('GET multiple plans with non-existent IDs should return empty array', () => {
     const nonExistentIds = ['non-existent-1', 'non-existent-2']
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .query({ planHandleIds: JSON.stringify(nonExistentIds) })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(200)
-        expect(r.body).to.be.an('array')
-        expect(r.body.length).to.equal(0)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(0)
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -1101,15 +1104,16 @@ describe('6 - Plans', () => {
   it('GET multiple plans with mixed existing and non-existent IDs should return only existing plans', () => {
     const mixedIds = [firstPlanIdExternal, 'non-existent-id', secondPlanIdExternal]
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .query({ planHandleIds: JSON.stringify(mixedIds) })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(200)
-        expect(r.body).to.be.an('array')
-        expect(r.body.length).to.equal(2)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(2)
         
-        const handleIds = r.body.map(plan => plan.handleId)
+        const handleIds = r.body.data.map(plan => plan.handleId)
         expect(handleIds).to.include(firstPlanIdExternal)
         expect(handleIds).to.include(secondPlanIdExternal)
         expect(handleIds).to.not.include('non-existent-id')
@@ -1119,13 +1123,15 @@ describe('6 - Plans', () => {
       })
   })
 
-  it('GET multiple plans without planHandleIds parameter should return 400', () => {
+  it('GET plans without planHandleIds parameter should return normal plans result', () => {
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
-        expect(r.status).to.equal(400)
-        expect(r.body.error).to.equal('planHandleIds query parameter is required')
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.be.an('array')
+        // Should return normal paginated plans results
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -1134,12 +1140,12 @@ describe('6 - Plans', () => {
 
   it('GET multiple plans with invalid JSON should return 400', () => {
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .query({ planHandleIds: 'invalid-json' })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(400)
-        expect(r.body.error).to.equal('Invalid JSON in planHandleIds parameter')
+        expect(r.body.error).to.include('SyntaxError')
       })
       .catch((err) => {
         return Promise.reject(err)
@@ -1148,12 +1154,35 @@ describe('6 - Plans', () => {
 
   it('GET multiple plans with non-array planHandleIds should return 400', () => {
     return request(Server)
-      .get('/api/plan')
+      .get('/api/v2/report/plans')
       .query({ planHandleIds: JSON.stringify('not-an-array') })
       .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(400)
         expect(r.body.error).to.equal('planHandleIds must be a JSON array')
+      })
+      .catch((err) => {
+        return Promise.reject(err)
+      })
+  })
+
+  it('GET plans with planHandleIds and other parameters should return warning', () => {
+    const planHandleIds = [firstPlanIdExternal]
+    return request(Server)
+      .get('/api/v2/report/plans')
+      .query({
+        planHandleIds: JSON.stringify(planHandleIds),
+        description: 'some description',
+        afterId: '123'
+      })
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body).to.have.property('resultWarning')
+        expect(r.body.resultWarning).to.equal('Only planHandleIds were searched and no other query criteria was used')
+        expect(r.body.data).to.be.an('array')
+        expect(r.body.data.length).to.equal(1)
       })
       .catch((err) => {
         return Promise.reject(err)

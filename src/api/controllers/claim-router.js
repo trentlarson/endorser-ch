@@ -57,6 +57,7 @@ export default express
  * &nbsp;&nbsp;&nbsp; claimId: string, // ID for this claim
  * &nbsp;&nbsp;&nbsp; clientMessage: string,
  * &nbsp;&nbsp;&nbsp; embeddedRecordError: object,
+ * &nbsp;&nbsp;&nbsp; embeddedRecordWarning: object,
  * &nbsp;&nbsp;&nbsp; handleId: string, // ID for permanent reference, potentially based on input
  * &nbsp;&nbsp;&nbsp; recordsSavedForEdit: number, // number of associated records saved for later editing
  * &nbsp;&nbsp;&nbsp; actionId || orgRoleId || registrationId || tenureId || voteId: number,
@@ -66,7 +67,7 @@ export default express
  *  The string may describe the issue; it may also be something unhelpful like "{}", but something bad happened.)
  * &nbsp;&nbsp;&nbsp; claimEmbeddedWarning: string, // warning message from creating embedded records; the JWT was saved but other reports may not match expectations
  *  (The JWT was saved but other reports may not match expectations.
- *  The string may describe the issue; it may also be something unhelpful like "{}", but something bad happened.)
+ *  The string may describe the issue; it may also be something unhelpful like "{}", but something odd happened.)
  * &nbsp; },
  * &nbsp; on error: { code: string, message: string }
  * }

@@ -8,6 +8,7 @@ import {
 
 import ClaimService from '../services/claim.service'
 import { dbService } from '../services/endorser.db.service';
+import { planService } from '../services/project.service';
 import { globalId, latLonFromTile, latWidthToTileWidth } from "../services/util";
 
 // Why does it not work to put this in the class?
@@ -307,14 +308,63 @@ class DbController {
 
   getAllPlansPaged(req, res, next) {
     const query = req.query
-    const afterId = req.query.afterId
-    delete query.afterId
-    const beforeId = req.query.beforeId
-    delete query.beforeId
-    dbService.plansByParamsPaged(query, afterId, beforeId)
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
-      .then(results => { res.json(results).end() })
-      .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+    
+    // Check if planHandleIds parameter is provided
+    if (query.planHandleIds) {
+      try {
+        let planHandleIds
+        try {
+          planHandleIds = JSON.parse(query.planHandleIds)
+        } catch (error) {
+          return res.status(400).json({ error: ""+error }).end()
+        }
+        
+        if (!Array.isArray(planHandleIds)) {
+          return res.status(400).json({ error: 'planHandleIds must be a JSON array' })
+        }
+
+        // Check if other query parameters are present (excluding planHandleIds)
+        const otherParams = Object.keys(query).filter(key => key !== 'planHandleIds')
+        let resultWarning = null
+        if (otherParams.length > 0) {
+          resultWarning = "Only planHandleIds were searched and no other query criteria was used"
+        }
+
+        planService
+          .infoByHandleIds(planHandleIds)
+          .then(results => {
+            // Apply hideDidsAndAddLinksToNetwork to each result
+            const processedResults = results.map(result =>
+              hideDidsAndAddLinksToNetwork(res.locals.authTokenIssuer, result, [])
+            )
+            return Promise.all(processedResults)
+          })
+          .then(processedResults => {
+            const response = { data: processedResults }
+            if (resultWarning) {
+              response.resultWarning = resultWarning
+            }
+            res.json(response)
+          })
+          .catch(err => {
+            console.log(err);
+            res.status(500).json(""+err).end();
+          })
+      } catch (error) {
+        console.error(error)
+        return res.status(500).json(""+error).end()
+      }
+    } else {
+      // Original logic for regular plan queries
+      const afterId = req.query.afterId
+      delete query.afterId
+      const beforeId = req.query.beforeId
+      delete query.beforeId
+      dbService.plansByParamsPaged(query, afterId, beforeId)
+        .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
+        .then(results => { res.json(results).end() })
+        .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+    }
   }
 
   getPlanCountsByBBox(req, res, next) {
@@ -417,6 +467,7 @@ class DbController {
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
+
 
   getPlansLastUpdatedBetweenFromPost(req, res, next) {
     const { planIds, afterId, beforeId } = req.body
@@ -946,7 +997,37 @@ export default express
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-   .get('/planCountsByBBox', dbController.getPlanCountsByBBox)
+  .get('/planCountsByBBox', dbController.getPlanCountsByBBox)
+
+  /**
+ * Get plan fulfilled by given plan
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/planFulfilledByPlan
+ * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
+ * @returns {PlanSummaryWithFulfilledLinkConfirmation} 200 - 'data' property with PlanSummary entry and flag indicating whether the fulfill relationship is confirmed
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/planFulfilledByPlan', dbController.getPlanFulfilledBy)
+
+/**
+ * Get plans that fulfill given plan
+ *
+ * Beware: this array may include a "publicUrls" key within it.
+ *
+ * @group reports - Reports (with paging)
+ * @route GET /api/v2/report/fulfillersToPlan
+ * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
+ * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is not included, and can also include the first one with an explicit value of '0'
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/planFulfillersToPlan', dbController.getPlanFulfillersToPlan)
 
 /**
  * Get all plans for the query inputs, paginated, reverse-chronologically
@@ -955,6 +1036,7 @@ export default express
  *
  * @group reports - Reports (with paging)
  * @route GET /api/v2/report/plans
+ * @param {string} planHandleIds.query.optional - JSON array of plan handle IDs to retrieve specific plans (when provided, other query parameters are ignored and a resultWarning is included)
  * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is included, and can also include the first one with an explicit value of '0'
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @param {string} jwtId.query.optional
@@ -965,11 +1047,12 @@ export default express
  * @param {string} endTime.query.optional
  * @param {string} startTime.query.optional
  * @param {string} resultIdentifier.query.optional
- * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
+ * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more; 'resultWarning' string if planHandleIds was used with other parameters
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plans', dbController.getAllPlansPaged)
+
 
 /**
  * Get all plans by the issuer, paginated, reverse-chronologically
@@ -1011,36 +1094,6 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationAndContentsPaged)
-
-/**
- * Get plan fulfilled by given plan
- *
- * Beware: this array may include a "publicUrls" key within it.
- *
- * @group reports - Reports (with paging)
- * @route GET /api/v2/report/planFulfilledByPlan
- * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
- * @returns {PlanSummaryWithFulfilledLinkConfirmation} 200 - 'data' property with PlanSummary entry and flag indicating whether the fulfill relationship is confirmed
- * @returns {Error} 400 - client error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/planFulfilledByPlan', dbController.getPlanFulfilledBy)
-
-/**
- * Get plans that fulfill given plan
- *
- * Beware: this array may include a "publicUrls" key within it.
- *
- * @group reports - Reports (with paging)
- * @route GET /api/v2/report/fulfillersToPlan
- * @param {string} planHandleId.query.required - the handleId of the plan which is fulfilled by this plan
- * @param {string} afterId.query.optional - the JWT ID of the entry after which to look (exclusive); by default, the first one is not included, and can also include the first one with an explicit value of '0'
- * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
- * @returns {PlanSummaryArrayMaybeMore} 200 - 'data' property with matching array of PlanSummary entries, reverse chronologically; 'hitLimit' boolean property if there may be more
- * @returns {Error} 400 - client error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/planFulfillersToPlan', dbController.getPlanFulfillersToPlan)
 
 /**
  * Get providers for a particular give
