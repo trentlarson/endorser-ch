@@ -9,6 +9,7 @@
 import * as express from 'express'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 import { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, removeCanSee } from '../services/network-cache.service'
+import { AUTHORIZATION_HEADER, BEARER_PREFIX } from '../services/util'
 
 import ClaimService from '../services/claim.service';
 
