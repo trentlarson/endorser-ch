@@ -1131,7 +1131,7 @@ describe('6 - Plans', () => {
         expect(r.status).to.equal(200)
         expect(r.body).to.have.property('data')
         expect(r.body.data).to.be.an('array')
-        // Should return normal paginated plans results
+        expect(r.body.data.length).to.be.greaterThan(3) // should show all we have
       })
       .catch((err) => {
         return Promise.reject(err)

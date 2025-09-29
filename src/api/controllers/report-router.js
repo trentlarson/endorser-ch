@@ -814,7 +814,7 @@ export default express
 /**
  * Search gives
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  * @group reports
  * @route GET /api/v2/report/gives
@@ -1008,7 +1008,7 @@ export default express
   /**
  * Get plan fulfilled by given plan
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  * @group reports
  * @route GET /api/v2/report/planFulfilledByPlan
@@ -1022,7 +1022,7 @@ export default express
 /**
  * Get plans that fulfill given plan
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  * @group reports
  * @route GET /api/v2/report/fulfillersToPlan
@@ -1038,7 +1038,7 @@ export default express
 /**
  * Get all plans for the query inputs, paginated, reverse-chronologically
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  * @group reports
  * @route GET /api/v2/report/plans
@@ -1063,7 +1063,7 @@ export default express
 /**
  * Get all plans by the issuer, paginated, reverse-chronologically
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  * @group reports
  * @route GET /api/v2/report/plansByIssuer
@@ -1078,7 +1078,7 @@ export default express
 /**
  * Get all plans that have a location in the bbox specified, paginated, reverse-chronologically
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  * @group reports
  * @route GET /api/v2/report/plansByBBox
@@ -1104,7 +1104,7 @@ export default express
 /**
  * Get providers for a particular give
  *
- * Beware: this array may include a "publicUrls" key within it.
+ * Beware: the resulting array may include a "publicUrls" key within it.
  *
  *  @group reports
  * @route GET /api/v2/report/providersToGive
