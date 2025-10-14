@@ -51,6 +51,19 @@ CREATE TABLE confirmation (
     planHandleId TEXT
 );
 
+-- cache table, for quick retrieval of claims with type Emoji
+CREATE TABLE emoji_claim (
+    jwtId CHARACTER(26),
+    issuerDid VARCHAR(100), -- DID of the entity who added the emoji; did:ethr are 52 chars
+    text VARCHAR(10), -- the emoji character(s), e.g., '👍', '❤️', '🚀'
+    parentItemHandleId TEXT -- handleId of the item to which this emoji is attached
+);
+
+-- indexes for efficient retrieval
+CREATE INDEX emoji_issuerDid ON emoji_claim(issuerDid);
+CREATE INDEX emoji_parentItemHandleId ON emoji_claim(parentItemHandleId);
+CREATE INDEX emoji_parentItemHandleId_issuerDid ON emoji_claim(parentItemHandleId, issuerDid);
+
 -- an event referenced by a JoinAction in the action_claim table
 CREATE TABLE event (
     orgName VARCHAR(120),
@@ -71,6 +84,8 @@ CREATE TABLE give_claim (
     agentDid TEXT, -- global ID of the entity who gave the item
 
     recipientDid TEXT, -- global ID of recipient
+
+    emojiCount TEXT; -- JSON map from emoji character to count
 
     fulfillsHandleId TEXT, -- global ID to the item to which this Give applies
     fulfillsType TEXT, -- type of that ID (assuming context of schema.org)
@@ -179,7 +194,9 @@ CREATE TABLE jwt (
 
     nonceHash CHARACTER(44), -- hash of canonicalized claim where every DID is replaced by DID + hashNonce, to allow selective disclosure but to avoid correlation
     nonceHashAllChain CHARACTER(44), -- merkle tree of nonceHash values for every claim
-    nonceHashIssuerChain CHARACTER(44) -- merkle tree of nonceHash values issued by this issuer (which they can take over)
+    nonceHashIssuerChain CHARACTER(44), -- merkle tree of nonceHash values issued by this issuer (which they can take over)
+
+    revoked INTEGER DEFAULT 0 -- boolean, eg for removed emoji (and that may be all for a while)
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);

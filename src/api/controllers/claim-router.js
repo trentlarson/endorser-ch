@@ -16,7 +16,7 @@ class Controller {
         const result = { success: r }
         return res
           .status(201)
-          .location(`<%= apiRoot %>/api/claim/${r.claimId}`)
+          .location(`<%= apiRoot %>/api/v2/claim/${r.claimId}`)
           .json(result)
       })
       .catch(err => {
@@ -58,6 +58,7 @@ export default express
  * &nbsp;&nbsp;&nbsp; clientMessage: string,
  * &nbsp;&nbsp;&nbsp; embeddedRecordError: object,
  * &nbsp;&nbsp;&nbsp; embeddedRecordWarning: object,
+ * &nbsp;&nbsp;&nbsp; embeddedRecordMessage: object, // additional info; may change so don't use this for logic
  * &nbsp;&nbsp;&nbsp; handleId: string, // ID for permanent reference, potentially based on input
  * &nbsp;&nbsp;&nbsp; recordsSavedForEdit: number, // number of associated records saved for later editing
  * &nbsp;&nbsp;&nbsp; actionId || orgRoleId || registrationId || tenureId || voteId: number,

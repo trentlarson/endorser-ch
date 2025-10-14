@@ -258,6 +258,37 @@ class ClaimService {
     }
   }
 
+  /**
+   * Update emoji count for a parent item (typically a GiveAction)
+   * @param {string} parentItemHandleId - handle ID of the parent item
+   * @param {string} emojiText - the emoji character
+   * @param {number} delta - change in count (+1 for add, -1 for remove)
+   */
+  async updateEmojiCountForParent(parentItemHandleId, emojiText, delta) {
+    try {
+      // Get current emoji counts for the parent item
+      const currentCounts = await dbService.giveEmojiCounts(parentItemHandleId)
+      
+      // Update the count for this emoji
+      const newCount = (currentCounts[emojiText] || 0) + delta
+      
+      if (newCount <= 0) {
+        // Remove the emoji from counts if count reaches zero or below
+        delete currentCounts[emojiText]
+      } else {
+        currentCounts[emojiText] = newCount
+      }
+      
+      // Save the updated counts back to the database
+      await dbService.giveUpdateEmojiCount(parentItemHandleId, currentCounts)
+      
+      l.trace(`Updated emoji count for ${parentItemHandleId}: ${emojiText} = ${newCount}`)
+    } catch (err) {
+      // Log the error but don't fail the emoji operation
+      l.error(err, `Failed to update emoji count for ${parentItemHandleId}`)
+    }
+  }
+
   async retrieveConfirmersForClaimsEntryIds(claimEntryIds) {
     const allConfirmers = await dbService.confirmersForClaims(claimEntryIds)
     return R.uniq(allConfirmers)
@@ -997,6 +1028,61 @@ class ClaimService {
       }
       return { confirmations: recordings }
 
+    } else if ((!claim['@context'] || claim['@context'] === 'https://endorser.ch')
+          && claim['@type'] === 'Emoji') {
+
+      // Validate emoji claim structure
+      if (!claim.text || typeof claim.text !== 'string' || claim.text.trim().length === 0) {
+        return { embeddedRecordError: 'Emoji claim must have a non-empty text field' }
+      }
+      if (!claim.parentItem || !claim.parentItem.lastClaimId) {
+        return { embeddedRecordError: 'Emoji claim must reference a parent item with lastClaimId' }
+      }
+      // Ensure there is no "agent" field (issuer is the agent)
+      if (claim.agent) {
+        return { embeddedRecordError: 'Emoji claims cannot have an agent field. The issuer is the agent.' }
+      }
+
+      let parentItemHandleId
+      const prevJwtInfo =
+        claimIdDataList.find(claimIdData => claimIdData.lastClaimId === claim.parentItem.lastClaimId)
+      if (prevJwtInfo) {
+        parentItemHandleId = prevJwtInfo.handleId
+      }
+
+      // Check if this emoji already exists for this user on this item (for toggle functionality)
+      const existingEmoji = await dbService.emojiExists(payloadIssuerDid, parentItemHandleId, claim.text)
+      
+      if (existingEmoji) {
+        // Toggle: remove the existing emoji
+        await dbService.emojiDelete(payloadIssuerDid, parentItemHandleId, claim.text)
+        l.trace(`${this.constructor.name} Removed emoji ${claim.text} from ${parentItemHandleId} by ${payloadIssuerDid}`)
+        
+        // Update the emoji count on the parent give claim if it's a GiveAction
+        await this.updateEmojiCountForParent(parentItemHandleId, claim.text, -1)
+
+        // mark the JWT as revoked so that they could send it again
+        await dbService.jwtUpdateRevoked(existingEmoji.jwtId, true)
+
+        return { embeddedRecordMessage: 'Emoji removed' } // lack of emojiId means it was removed
+      } else {
+        // Add new emoji
+        const entry = {
+          jwtId: jwtId,
+          issuerDid: payloadIssuerDid,
+          text: claim.text,
+          parentItemHandleId: parentItemHandleId
+        }
+
+        const emojiId = await dbService.emojiInsert(entry)
+        l.trace(`${this.constructor.name} New emoji ${emojiId} ${util.inspect(entry)}`)
+        
+        // Update the emoji count on the parent give claim if it's a GiveAction
+        await this.updateEmojiCountForParent(parentItemHandleId, claim.text, 1)
+        
+        return { emojiId, embeddedRecordMessage: 'Emoji added' }
+      }
+
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'GiveAction') {
 
@@ -1352,7 +1438,6 @@ class ClaimService {
       l.trace(`${this.constructor.name} New tenure ${tenureId} ${util.inspect(entry)}`)
       return { tenureId }
 
-
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'VoteAction') {
 
@@ -1435,7 +1520,7 @@ class ClaimService {
    * @param claim
    * @param claimInfoList {ClaimInfo[]} list of objects for each claim referenced by claimId or handleId: {}
    * @param isFirstClaimForHandleId {boolean} true if this is the first claim for this handleId, important for determining insert vs update
-   * @return Promise<Record< embeddedResults: string, networkResults: string >>
+   * @return Promise<Record< claimId: string, handleId: string, networkResults: string >>
    */
   async createEmbeddedClaimEntries(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
 
@@ -1980,17 +2065,19 @@ class ClaimService {
     const jwtEntry = dbService.buildJwtEntry(
       claimPayload, jwtId, lastClaimId, handleId, claimPayloadClaim, claimStr, jwtEncoded
     )
-    // guard against a duplicate claim
-    const existingJwtId =
-      await dbService.jwtClaimExists(jwtEntry.claimCanonHash, jwtEntry.issuer, jwtEntry.issuedAt)
-    if (existingJwtId) {
-      return Promise.reject(
-        {
-          clientError: {
-            message: `That claim is a duplicate of one already sent with ID ${existingJwtId}`
+    if (jwtEntry.claimType !== 'Emoji') {
+      // guard against a duplicate claim -- but emoji reactions are different because repeats remove them
+      const existingJwtIdAndRevoked =
+        await dbService.jwtUnrevokedClaimExists(jwtEntry.claimCanonHash, jwtEntry.issuer, jwtEntry.issuedAt)
+      if (!!existingJwtIdAndRevoked.id) {
+        return Promise.reject(
+          {
+            clientError: {
+              message: `That claim is a duplicate of one already sent with ID ${existingJwtIdAndRevoked.id}`
+            }
           }
-        }
-      )
+        )
+      }
     }
     const jwtRowId =
         await dbService.jwtInsert(jwtEntry)

@@ -1,5 +1,6 @@
 
 import chai from "chai";
+import chaiAsPromised from "chai-as-promised"
 import { DateTime } from "luxon";
 import R from "ramda";
 import request from "supertest";
@@ -7,8 +8,8 @@ import { Credentials } from "uport-credentials";
 
 import Server from "../dist";
 import testUtil from "./util";
-import {dbService} from "../dist/api/services/endorser.db.service";
 
+chai.use(chaiAsPromised)
 const expect = chai.expect
 
 const creds = testUtil.ethrCredData

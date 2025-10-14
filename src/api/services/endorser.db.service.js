@@ -624,6 +624,178 @@ class EndorserDatabase {
 
 
 
+
+
+
+  /****************************************************************
+   * Emoji
+   **/
+
+  /**
+   * Insert a new emoji claim
+   * @param {Object} entry - emoji claim entry with jwtId, issuerDid, text, parentItemHandleId
+   * @return {Promise<number>} - the row ID of the inserted emoji claim
+   */
+  emojiInsert(entry) {
+    return new Promise((resolve, reject) => {
+      var stmt = 
+        "INSERT INTO emoji_claim (jwtId, issuerDid, text, parentItemHandleId) " +
+        "VALUES (?, ?, ?, ?)"
+      db.run(stmt, [
+        entry.jwtId,
+        entry.issuerDid,
+        entry.text,
+        entry.parentItemHandleId
+      ], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.lastID)
+        }
+      })
+    })
+  }
+
+  /**
+   * Delete an emoji claim (for toggle functionality)
+   * @param {string} issuerDid - DID of the issuer
+   * @param {string} parentItemHandleId - handle ID of the parent item
+   * @param {string} text - emoji text
+   * @return {Promise<number>} - number of rows deleted
+   */
+  emojiDelete(issuerDid, parentItemHandleId, text) {
+    return new Promise((resolve, reject) => {
+      var stmt = 
+        "DELETE FROM emoji_claim WHERE issuerDid = ? AND parentItemHandleId = ? AND text = ?"
+      db.run(stmt, [issuerDid, parentItemHandleId, text], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  /**
+   * Check if an emoji already exists for a user on a specific item
+   * @param {string} issuerDid - DID of the issuer
+   * @param {string} parentItemHandleId - handle ID of the parent item
+   * @param {string} text - emoji text
+   * @return {Promise<Object|null>} - existing emoji claim or null
+   */
+  emojiExists(issuerDid, parentItemHandleId, text) {
+    return new Promise((resolve, reject) => {
+      var stmt = 
+        "SELECT * FROM emoji_claim WHERE issuerDid = ? AND parentItemHandleId = ? AND text = ?"
+      db.get(stmt, [issuerDid, parentItemHandleId, text], function(err, row) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(row || null)
+        }
+      })
+    })
+  }
+
+  /**
+   * Get all emoji claims for a specific parent item
+   * @param {string} parentItemHandleId - handle ID of the parent item
+   * @param {string} beforeIdInput - JWT ID to end before (exclusive)
+   * @return {Promise<Object>} - object with data array and hitLimit boolean
+   */
+  emojisByParentHandleId(parentItemHandleId, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      const params = [parentItemHandleId]
+      let sql = "SELECT jwtId, issuerDid, text, parentItemHandleId " +
+                "FROM emoji_claim WHERE parentItemHandleId = ?"
+
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND jwtId < ?"
+      }
+
+      sql += " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+
+      const data = []
+      let rowErr
+      db.each(
+        sql,
+        params,
+        function(err, row) {
+          if (err) {
+            rowErr = err
+          } else {
+            data.push(row)
+          }
+        }, function(err, num) {
+          if (rowErr || err) {
+            reject(rowErr || err)
+          } else {
+            const result = { data: data }
+            if (num === DEFAULT_LIMIT) {
+              result['hitLimit'] = true
+            }
+            resolve(result)
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * Update the emoji count for a give claim
+   * @param {string} handleId - handle ID of the give claim
+   * @param {Object} emojiCounts - map of emoji to count
+   * @return {Promise<number>} - number of rows updated
+   */
+  giveUpdateEmojiCount(handleId, emojiCounts) {
+    return new Promise((resolve, reject) => {
+      var stmt = "UPDATE give_claim SET emojiCount = ? WHERE handleId = ?"
+      const emojiCountJson = JSON.stringify(emojiCounts)
+      db.run(stmt, [emojiCountJson, handleId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  /**
+   * Get current emoji counts for a give claim
+   * @param {string} handleId - handle ID of the give claim
+   * @return {Promise<Object>} - emoji counts object
+   */
+  giveEmojiCounts(handleId) {
+    return new Promise((resolve, reject) => {
+      var stmt = "SELECT emojiCount FROM give_claim WHERE handleId = ?"
+      db.get(stmt, [handleId], function(err, row) {
+        if (err) {
+          reject(err)
+        } else if (row && row.emojiCount) {
+          try {
+            resolve(JSON.parse(row.emojiCount))
+          } catch (parseErr) {
+            resolve({})
+          }
+        } else {
+          resolve({})
+        }
+      })
+    })
+  }
+
+
+
+
+
+
+
+
+
+
   /****************************************************************
    * Event
    **/
@@ -746,7 +918,7 @@ class EndorserDatabase {
       ['description'],
       ['issuedAt', 'updatedAt'],
       ['fulfillsLinkConfirmed', 'giftNotTrade'],
-      ['amount', 'fullClaim', 'unit'],
+      ['amount', 'fullClaim', 'unit', 'emojiCount'],
       params,
       afterIdInput,
       beforeIdInput
@@ -1385,16 +1557,16 @@ class EndorserDatabase {
     })
   }
 
-  jwtClaimExists(claimCanonHash, issuerDid, issuedAt) {
+  jwtUnrevokedClaimExists(claimCanonHash, issuerDid, issuedAt) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT id FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?)",
+        "SELECT id, revoked FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?) and revoked = 0",
         [claimCanonHash, issuerDid, issuedAt],
         function(err, row) {
           if (err) {
             reject(err)
           } else {
-            resolve(row?.id)
+            resolve({ id: row?.id })
           }
         })
     })
@@ -1806,6 +1978,15 @@ class EndorserDatabase {
     })
   }
 
+  jwtUpdateRevoked(jwtId, revoked) {
+    const revokedBoolean = revoked ? 1 : 0
+    return new Promise((resolve, reject) => {
+      var stmt = ("UPDATE jwt SET revoked = ? WHERE id = ?");
+      db.run(stmt, [revokedBoolean, jwtId], function(err) {
+        if (err) { reject(err) } else { resolve(this.changes) }
+      })
+    })
+  }
 
 
 

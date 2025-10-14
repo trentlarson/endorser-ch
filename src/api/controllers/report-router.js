@@ -97,13 +97,13 @@ class DbController {
     delete query.afterId
     const beforeId = req.query.beforeId
     delete query.beforeId
-    const searchTermMaybeDIDs = [req.query.claimContents, req.query.issuer, req.query.subject, req.query.handleId]
+    const searchTermMayBeDIDs = [req.query.claimContents, req.query.issuer, req.query.subject, req.query.handleId]
     dbService.jwtsByParamsPaged(query, afterId, beforeId)
       .then(results => ({
         data: results.data.map(datum => R.set(R.lensProp('claim'), JSON.parse(datum.claim), datum)),
         hitLimit: results.hitLimit,
       }))
-      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results,  searchTermMaybeDIDs))
+      .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results,  searchTermMayBeDIDs))
       .then(results => { res.json(results).end() })
       .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
@@ -192,8 +192,13 @@ class DbController {
     dbService.givesByParamsPaged(query, afterId, beforeId)
       .then(results => ({
         data: results.data.map(
-          datum =>
-          R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+          datum => {
+            let processedDatum = R.set(R.lensProp('fullClaim'), JSON.parse(datum.fullClaim), datum)
+            if (datum.emojiCount) {
+              processedDatum = R.set(R.lensProp('emojiCount'), JSON.parse(datum.emojiCount), processedDatum)
+            }
+            return processedDatum
+          }
         ),
         hitLimit: results.hitLimit,
       }))
@@ -564,6 +569,41 @@ class ServiceController {
         .then(resultData => { res.json(resultData).end() })
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
+
+  // get emoji claims for a specific parent item
+  getEmojisForParent(req, res) {
+    const parentHandleId = req.query.parentHandleId
+    if (!parentHandleId) {
+      res.status(400).json({
+        error: "parentHandleId parameter is required"
+      }).end()
+      return
+    }
+
+    const beforeId = req.query.beforeId
+
+    dbService.emojisByParentHandleId(parentHandleId, beforeId)
+      .then(results => {
+        // Transform results to match expected format
+        const response = {
+          data: results.data.map(emoji => ({
+            jwtId: emoji.jwtId,
+            issuerDid: emoji.issuerDid,
+            text: emoji.text,
+            parentItemHandleId: emoji.parentItemHandleId
+          })),
+          hitLimit: results.hitLimit
+        }
+        
+        // Hide DIDs according to visibility rules
+        return hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, response, [])
+      })
+      .then(resultData => { res.json(resultData).end() })
+      .catch(err => { 
+        console.error(err)
+        res.status(500).json(""+err).end() 
+      })
+  }
 }
 let serviceController = new ServiceController();
 
@@ -602,6 +642,7 @@ export default express
  * @property {number} amountConfirmed - amount of this that recipient has confirmed
  * @property {string} description
  * @property {object} fullClaim
+ * @property {object} emojiCount.optional - map of emoji character to count
  * @property {array.IdAndType} providers, where id is the handle ID of the provider; can be sent as inputs, but are retrieved through different endpoints
  * @see also /providersToGive
  */
@@ -628,6 +669,21 @@ export default express
 /**
  * @typedef JwtSummaryArrayMaybeMoreBody
  * @property {array.JwtSummary} data (as many as allowed by our limit)
+ * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
+ */
+
+/**
+ * @typedef EmojiSummary
+ * @property {string} jwtId
+ * @property {string} issuerDid
+ * @property {datetime} issuedAt
+ * @property {string} text - the emoji character(s)
+ * @property {string} parentItemHandleId - handle ID of the parent item this emoji is attached to
+ */
+
+/**
+ * @typedef EmojiSummaryArrayMaybeMoreBody
+ * @property {array.EmojiSummary} data (as many as allowed by our limit)
  * @property {boolean} hitLimit true when the results may have been restricted due to throttling the result size -- so there may be more after the last and, to get complete results, the client should make another request with its ID as the beforeId/afterId
  */
 
@@ -794,6 +850,19 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/confirmers', serviceController.getConfirmerIds)
+
+/**
+ * Get all emoji claims for a specific parent item
+ *
+ * @group reports
+ * @route GET /api/v2/report/emoji
+ * @param {string} parentHandleId.query.required - the handle ID of the parent item (e.g., GiveAction)
+ * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
+ * @returns {EmojiSummaryArrayMaybeMoreBody} 200 - 'data' property with array of emoji claims for the parent item
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get('/emoji', serviceController.getEmojisForParent)
 
 /**
  * Get totals of all the gift-only gives (like /giveTotals but only for those that are gifts)
@@ -1140,3 +1209,4 @@ export default express
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
  .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)
+

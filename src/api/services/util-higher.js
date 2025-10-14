@@ -14,8 +14,8 @@ import { HIDDEN_TEXT, inputContainsDid, isDid } from './util'
  * @returns {Promise<object>} which returns the input but with the key replaced
  * and with any publicUrls moved to the top level
  */
-async function hideDidsAndAddLinksToNetworkInDataKey(requesterDid, input, searchTermMaybeDIDs) {
-  const result = await hideDidsAndAddLinksToNetwork(requesterDid, input["data"], searchTermMaybeDIDs)
+async function hideDidsAndAddLinksToNetworkInDataKey(requesterDid, input, searchTerms) {
+  const result = await hideDidsAndAddLinksToNetwork(requesterDid, input["data"], searchTerms)
   if (result && result["publicUrls"]) {
     input["publicUrls"] = result["publicUrls"]
     delete result["publicUrls"]
@@ -43,19 +43,20 @@ async function hideDidsAndAddLinksToNetworkInDataKey(requesterDid, input, search
 
   @param requesterDid {string} the DID of the user making the request
   @param input {object|array|string} the result to be scrubbed
-  @param searchTermMaybeDIDs {array} an array of strings in potential search fields that may be DIDs or parts of DIDs
+  @param searchTerms {array} an array of strings that are in search terms
+  -- since they may be DIDs or parts of DIDs, and we don't want to show those results if the user doesn't have visibility to them
   @returns {Promise<object|array|string>} the result with DIDs hidden, key + "VisibleToDids" added,
     and links to DIDs with published URLs added as "publicUrls" key (for both objects and arrays)
  **/
-async function hideDidsAndAddLinksToNetwork(requesterDid, inputData, searchTermMaybeDIDs) {
-  if (!searchTermMaybeDIDs) {
-    throw new Error("Parameter searchTermMaybeDIDs is required to ensure no DID-based search parameter gives data to someone without visibility.")
+async function hideDidsAndAddLinksToNetwork(requesterDid, inputData, searchTerms) {
+  if (!searchTerms) {
+    throw new Error("Parameter searchTerms is required to ensure no DID-based search parameter gives data to someone without visibility.")
   }
   if (inputData?.data) {
     throw new Error("With an embedded 'data' key in the result, you probably intended to use hideDidsAndAddLinksToNetworkInDataKey instead.")
   }
 
-  const validSearchTermMaybeDIDs = searchTermMaybeDIDs.filter(R.identity) // exclude any undefined/null/empty
+  const validsearchTerms = searchTerms.filter(R.identity) // exclude any undefined/null/empty
   let allowedDids = await getAllDidsRequesterCanSee(requesterDid)
   let result
   if (Array.isArray(inputData)) {
@@ -72,14 +73,16 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, inputData, searchTermM
           delete oneResult["hashNonce"]
         }
 
-        // Only include any element where the result still includes the search term
+        // Only include any item where the result still includes the search term after hiding DIDs
         // because we shouldn't allow someone to search for a DID (or parts) and get activity that's hidden.
         // (Other criteria are OK for searches for non-personal information, just not DID material.)
-        let allMatch = R.all((term) => JSON.stringify(oneResult).includes(term), validSearchTermMaybeDIDs)
+
+        // Check that ALL terms they searched for are still included after hiding DIDs
+        let allMatch = R.all((term) => JSON.stringify(oneResult).includes(term), validsearchTerms)
         if (allMatch) {
           result = R.append(oneResult, result)
         } else {
-          // don't include it
+          // don't include it, because some search terms ended up being hidden
         }
       }
     }
@@ -110,6 +113,7 @@ async function hideDidsAndAddLinksToNetwork(requesterDid, inputData, searchTermM
 // @param allowedDids {array} the DIDs that the requester can see
 // @param requesterDid {string} the DID of the user making the request
 // @param input {any} the result to be scrubbed
+// @returns {Promise<any>} the result with DIDs hidden, key + "VisibleToDids" added,
 async function hideDidsAndAddLinksToNetworkSub(allowedDids, requesterDid, input) {
 
   // Note that this process is similar in test util hideDids. If you change one, change both!
