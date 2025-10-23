@@ -1,0 +1,21 @@
+-- see README.md in this directory for explanations
+
+-- cache table, for quick retrieval of claims with type Emoji
+CREATE TABLE emoji_claim (
+    jwtId CHARACTER(26),
+    issuerDid VARCHAR(100), -- DID of the entity who added the emoji; did:ethr are 52 chars
+    text VARCHAR(10), -- the emoji character(s), e.g., '👍', '❤️', '🚀'
+    parentItemHandleId TEXT -- handleId of the item to which this emoji is attached
+);
+
+-- indexes for efficient retrieval
+CREATE INDEX emoji_issuerDid ON emoji_claim(issuerDid);
+CREATE INDEX emoji_parentItemHandleId ON emoji_claim(parentItemHandleId);
+CREATE INDEX emoji_parentItemHandleId_issuerDid ON emoji_claim(parentItemHandleId, issuerDid);
+
+-- add emojiCount field to give_claim table to store emoji counts
+ALTER TABLE give_claim ADD COLUMN emojiCount TEXT; -- JSON map from emoji character to count
+
+-- add field to jwt, eg because the same emoji could be sent again
+-- (and we may use it later for other purposes, eg. edited records, revoked confirmations)
+ALTER TABLE jwt ADD COLUMN revoked INTEGER DEFAULT 0; -- boolean
