@@ -17,6 +17,7 @@ describe('0 - Setup', () => {
       epoch: lastMonthEpoch,
       // make sure this isn't the default (which allows fewer registrations mid-month)
       maxRegs: 17, // later we bump this with dbService.registrationUpdateMaxRegsForTests
+      pathToRoot: JSON.stringify([]),
     })
   })
 

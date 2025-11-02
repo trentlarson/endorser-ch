@@ -1401,11 +1401,30 @@ class ClaimService {
         return { embeddedRecordError: "You did not send a participant's identifier for registration." }
       }
 
+      // Calculate pathToRoot: get agent's pathToRoot and prepend agent
+      let pathToRoot = []
+      if (agentDid && agentDid !== participantDid) {
+        const agentRegistration = await dbService.registrationByDid(agentDid)
+        if (agentRegistration && agentRegistration.pathToRoot) {
+          try {
+            const agentPath = JSON.parse(agentRegistration.pathToRoot)
+            pathToRoot = [agentDid, ...agentPath]
+          } catch (e) {
+            l.error(`Error parsing pathToRoot for agent ${agentDid}: ${e}`)
+            pathToRoot = [agentDid]
+          }
+        } else {
+          // Agent has no path, so they are root or not registered
+          pathToRoot = [agentDid]
+        }
+      }
+
       const registration = {
         did: participantDid,
         agent: agentDid,
         epoch: Math.floor(new Date().valueOf() / 1000),
         jwtId: jwtId,
+        pathToRoot: JSON.stringify(pathToRoot),
       }
 
       const registrationId = await dbService.registrationInsert(registration)

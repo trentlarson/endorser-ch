@@ -311,7 +311,7 @@ class PartnerDatabase {
         [entry.issuerDid, entry.description, entry.locLat, entry.locLon, entry.locLat2, entry.locLon2, entry.issuerDid],
         function(err) {
           if (!err && this.changes === 1) {
-            resolve()
+            resolve(this.lastID)
           } else if (!err && this.changes === 0) {
             // If no row was updated, we should insert instead
             resolve(false)

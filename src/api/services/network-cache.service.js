@@ -6,6 +6,9 @@ import { dbService } from './endorser.db.service'
 import l from '../../common/logger'
 
 const BLANK_URL = ""
+const REGISTERED_BY_YOU = "REGISTERED_BY_YOU"
+const REGISTERED_YOU = "REGISTERED_YOU"
+const TARGET = "TARGET"
 
 /**
   URL for each public DID, as an key-value map (... so let's hope there are never too many!)
@@ -256,4 +259,75 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
   return R.intersection(seesList, seenByList)
 }
 
-module.exports = { addCanSee, canSeeExplicitly, getAllDidsBetweenRequesterAndObjects, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }
+/**
+ * Find the nearest neighbor(s) in the registration tree between source and target DIDs.
+ * 
+ * This method finds the nearest common ancestor in the registration tree and returns
+ * the DID that is one step closer to the target from the source's perspective.
+ * 
+ * @param {string} sourceDid - The DID of the requester
+ * @param {string} targetDid - The DID of the target user
+ * @returns {Promise<Array<{did: string, relation: string}>>} - Array of nearest neighbors with their relation
+ *   - relation: "REGISTERED_BY_YOU" if the common ancestor is the source (target is in source's subtree)
+ *   - relation: "REGISTERED_YOU" if the common ancestor is above the source (source needs to go up)
+ */
+async function nearestNeighborsTo(sourceDid, targetDid) {
+  // Get registration info for both DIDs
+  const sourceReg = await dbService.registrationByDid(sourceDid)
+  const targetReg = await dbService.registrationByDid(targetDid)
+  
+  if (!sourceReg || !targetReg) {
+    // One or both users are not registered
+    return []
+  }
+  if (sourceDid === targetDid) {
+    return [{
+      did: targetDid,
+      relation: TARGET,
+    }]
+  }
+  
+  // Parse pathToRoot for both
+  let sourcePath = []
+  let targetPath = []
+  
+  try {
+    // The empty case should only happen for non-registered DIDs
+    sourcePath = sourceReg.pathToRoot ? JSON.parse(sourceReg.pathToRoot) : []
+  } catch (e) {
+    throw new Error(`Error parsing pathToRoot for source ${sourceDid}: ${e}`)
+  }
+  
+  try {
+    // The empty case should only happen for non-registered DIDs
+    targetPath = targetReg.pathToRoot ? JSON.parse(targetReg.pathToRoot) : []
+  } catch (e) {
+    throw new Error(`Error parsing pathToRoot for target ${targetDid}: ${e}`)
+  }
+
+  // Check if target is in source's subtree (source is an ancestor of target)
+  if (targetPath.includes(sourceDid)) {
+    // Source registered someone who eventually registered target
+    // Find who is directly below source in the path to target
+    const sourceIndexInTargetPath = targetPath.indexOf(sourceDid) - 1
+    if (sourceIndexInTargetPath < 0) {
+      return [{
+        did: targetDid,
+        relation: REGISTERED_BY_YOU,
+      }]
+    }
+    return [{
+      did: targetPath[sourceIndexInTargetPath],
+      relation: REGISTERED_BY_YOU,
+    }]
+  }
+
+  // Target path doesn't include source, so source path must include target or be in another branch
+  // Find the next step from source towards target or the common ancestor
+  return [{
+    did: sourcePath[0],
+    relation: REGISTERED_YOU,
+  }]
+}
+
+module.exports = { addCanSee, canSeeExplicitly, getAllDidsBetweenRequesterAndObjects, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, nearestNeighborsTo, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }

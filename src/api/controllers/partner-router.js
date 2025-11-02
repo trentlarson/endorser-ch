@@ -8,7 +8,7 @@ import ClaimService from '../services/claim.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as endorserDbService } from "../services/endorser.db.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
-import { getAllDidsBetweenRequesterAndObjects } from "../services/network-cache.service";
+import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
 /**
@@ -221,9 +221,9 @@ export default express
         locLon2
       }
 
-      await partnerDbService.profileInsertOrUpdate(entry)
+      const userProfileId = await partnerDbService.profileInsertOrUpdate(entry)
 
-      res.status(201).json({ success: true }).end()
+      res.status(201).json({ success: { userProfileId } }).end()
     } catch (err) {
       console.error('Error adding user profile', err)
       res.status(500).json({ error: err.message }).end()
@@ -265,7 +265,7 @@ export default express
         } else {
           // someone the issuer can see can see the profile,
           // but giving up all between would expose their full network
-          return res.status(403).json({ error: "Profile not visible" }).end()
+          return res.status(403).json({ error: "Will not leak the issuer's profile" }).end()
         }
       }
       res.status(200).json({ data: result }).end()
@@ -532,7 +532,45 @@ export default express
   }
 )
 
-
+/**
+ * Get nearest neighbors in the registration tree for a user profile
+ *
+ * @group partner utils
+ * @route GET /api/partner/userProfileNearestNeighbors/{rowId}
+ * @param {number} rowId.path.required - the profile ID to find neighbors for
+ * @returns {array} 200 - success response with array of neighbors, each with "did" and "relation" properties
+ * @returns {Error} 400 - client error
+ * @returns {Error} 404 - profile not found
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfileNearestNeighbors/:rowId',
+  async (req, res) => {
+    try {
+      const { rowId } = req.params
+      const rowIdInt = parseInt(rowId)
+      
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      
+      // Get the profile to find the target DID
+      const profile = await partnerDbService.profileById(rowIdInt)
+      
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" }).end()
+      }
+      
+      // Find nearest neighbors from requester to profile owner
+      const neighbors = await nearestNeighborsTo(res.locals.authTokenIssuer, profile.issuerDid)
+      
+      res.status(200).json({ data: neighbors }).end()
+    } catch (err) {
+      console.error('Error getting nearest neighbors for user profile', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
 
 
 

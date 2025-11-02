@@ -111,7 +111,8 @@ describe('P1 - User Profiles', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.body).to.have.property("success", true)
+        expect(r.body).to.have.property("success").that.is.an("object")
+        expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
       })
@@ -127,7 +128,8 @@ describe('P1 - User Profiles', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.body).to.have.property("success", true)
+        expect(r.body).to.have.property("success").that.is.an("object")
+        expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
       })
@@ -143,7 +145,8 @@ describe('P1 - User Profiles', () => {
         if (r.body.error) {
           throw new Error(JSON.stringify(r.body.error))
         }
-        expect(r.body).to.have.property("success", true)
+        expect(r.body).to.have.property("success").that.is.an("object")
+        expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
       })
@@ -159,7 +162,8 @@ describe('P1 - User Profiles', () => {
       if (r.body.error) {
         throw new Error(JSON.stringify(r.body.error))
       }
-      expect(r.body).to.have.property("success", true)
+      expect(r.body).to.have.property("success").that.is.an("object")
+      expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
       expect(r.headers['content-type']).to.match(/json/)
       expect(r.status).that.equals(201)
     })
@@ -177,7 +181,8 @@ describe('P1 - User Profiles', () => {
       if (r.body.error) {
         throw new Error(JSON.stringify(r.body.error))
       }
-      expect(r.body).to.have.property("success", true)
+      expect(r.body).to.have.property("success").that.is.an("object")
+      expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
       expect(r.headers['content-type']).to.match(/json/)
       expect(r.status).that.equals(201)
     })
@@ -373,7 +378,8 @@ describe('P1 - User Profiles', () => {
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .send(updatedProfile0)
       .then(r => {
-        expect(r.body).to.have.property("success", true)
+        expect(r.body).to.have.property("success").that.is.an("object")
+        expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
       })

@@ -3149,11 +3149,11 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT OR IGNORE INTO registration"
-        + " (did, agent, epoch, jwtId, maxRegs, maxClaims)"
-        + " VALUES (?, ?, ?, ?, ?, ?)");
+        + " (did, agent, epoch, jwtId, maxRegs, maxClaims, pathToRoot)"
+        + " VALUES (?, ?, ?, ?, ?, ?, ?)");
       db.run(
         stmt,
-        [entry.did, entry.agent, entry.epoch, entry.jwtId, entry.maxRegs, entry.maxClaims],
+        [entry.did, entry.agent, entry.epoch, entry.jwtId, entry.maxRegs, entry.maxClaims, entry.pathToRoot],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
         })
@@ -3168,7 +3168,7 @@ class EndorserDatabase {
         } else if (row) {
           resolve({
             id:row.rowid, rowId:row.rowId, did:row.did, agent:row.agent, epoch:row.epoch, jwtId:row.jwtId,
-            maxRegs: row.maxRegs, maxClaims: row.maxClaims
+            maxRegs: row.maxRegs, maxClaims: row.maxClaims, pathToRoot: row.pathToRoot
           })
         } else {
           resolve(null)

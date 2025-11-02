@@ -211,6 +211,10 @@ CREATE TABLE network (
     CONSTRAINT both_unique UNIQUE (subject, object)
 );
 
+-- important now that we're finding nearest contact
+CREATE INDEX IF NOT EXISTS idx_network_subject ON network(subject);
+CREATE INDEX IF NOT EXISTS idx_network_object  ON network(object);
+
 -- cache table, for quick retrieval of claims with type Offer
 CREATE TABLE offer_claim (
     handleId TEXT PRIMARY KEY,
@@ -353,7 +357,8 @@ CREATE TABLE registration (
     epoch INTEGER, -- unix epoch seconds
     jwtId CHARACTER(26),
     maxRegs INTEGER, -- allowed registrations per time period
-    maxClaims INTEGER -- allowed claims per time period
+    maxClaims INTEGER, -- allowed claims per time period
+    pathToRoot TEXT -- JSON array of DIDs from agent to root, e.g. ["agent", "agent's agent", ...]
 );
 CREATE INDEX registered_agent ON registration(agent);
 CREATE INDEX registered_epoch ON registration(epoch);

@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.3.0]
+### Added
+- `/api/partner/userProfileNearestNeighbors/:rowId` endpoint to find nearest connection in registration tree to a user profile
+- `nearestNeighborsTo` method in network-cache service to calculate nearest common ancestor in registration tree
+- Registration tree path tracking: `pathToRoot` column in registration table stores JSON array of DIDs from agent to root
+### Changed in DB or environment
+- Automated endorser SQL scripts 17 & 18 & 19
+- Run `node sql-by-hand/V19.1__populate_pathToRoot.js` to populate pathToRoot for existing registrations
+
+
 ## [4.2.11] - 2025.10.05
 ### Added
 - "/plans" endpoint allows arrays of planHandleIds

@@ -1,0 +1,4 @@
+
+-- important now that we're finding nearest contact
+CREATE INDEX IF NOT EXISTS idx_network_subject ON network(subject);
+CREATE INDEX IF NOT EXISTS idx_network_object  ON network(object);
