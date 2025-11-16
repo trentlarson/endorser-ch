@@ -1047,6 +1047,57 @@ describe('1 - Claim', () => {
      })
   ).timeout(3000)
 
+  it('should fail to register user with blank DID', async () => {
+    const registerFailBlankBy0JwtObj = R.clone(testUtil.jwtTemplate)
+    registerFailBlankBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+    registerFailBlankBy0JwtObj.claim.agent.identifier = creds[0].did
+    registerFailBlankBy0JwtObj.claim.participant.identifier = ""
+    registerFailBlankBy0JwtObj.sub = ""
+    const registerFailBlankBy0JwtEnc = await credentials[0].createVerification(registerFailBlankBy0JwtObj)
+  
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({"jwtEncoded": registerFailBlankBy0JwtEnc})
+      .then(r => {
+        expect(r.body.success).to.have.property("embeddedRecordError")
+      })
+      .catch(err => Promise.reject(err))
+  }).timeout(5000)
+
+  it('should fail to register user with non-DID', async () => {
+    const registerFailNonDidBy0JwtObj = R.clone(testUtil.jwtTemplate)
+    registerFailNonDidBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+    registerFailNonDidBy0JwtObj.claim.agent.identifier = creds[0].did
+    registerFailNonDidBy0JwtObj.claim.participant.identifier = "xyz"
+    registerFailNonDidBy0JwtObj.sub = "xyz"
+    const registerFailNonDidBy0JwtEnc = await credentials[0].createVerification(registerFailNonDidBy0JwtObj)
+  
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({"jwtEncoded": registerFailNonDidBy0JwtEnc})
+      .then(r => {
+        expect(r.body.success).to.have.property("embeddedRecordError")
+      })
+      .catch(err => Promise.reject(err))
+  }).timeout(5000)
+
+  it('should fail to register user with unrecognized DID', async () => {
+    const registerFailUnrecognizedDidBy0JwtObj = R.clone(testUtil.jwtTemplate)
+    registerFailUnrecognizedDidBy0JwtObj.claim = R.clone(testUtil.registrationTemplate)
+    registerFailUnrecognizedDidBy0JwtObj.claim.agent.identifier = creds[0].did
+    registerFailUnrecognizedDidBy0JwtObj.claim.participant.identifier = "did:none:xyz"
+    registerFailUnrecognizedDidBy0JwtObj.sub = "did:none:xyz"
+    const registerFailUnrecognizedDidBy0JwtEnc = await credentials[0].createVerification(registerFailUnrecognizedDidBy0JwtObj)
+  
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({"jwtEncoded": registerFailUnrecognizedDidBy0JwtEnc})
+      .then(r => {
+        expect(r.body.success).to.have.property("embeddedRecordError")
+      })
+      .catch(err => Promise.reject(err))
+  }).timeout(5000)
+
   it('should register user 1', () =>
      request(Server)
      .post('/api/claim')
@@ -1159,7 +1210,7 @@ describe('1 - Claim', () => {
      .then(r => {
        expect(r.body)
          .to.be.an('array')
-         .of.length(6)
+         .of.length(9)
        expect(r.status).that.equals(200)
      })
   ).timeout(3000)
@@ -2003,7 +2054,7 @@ describe('1 - Transitive Connections', () => {
       expect(r.body)
       .that.has.a.property('data')
       const data = r.body.data
-      expect(data).that.has.a.property('count').that.equals(27)
+      expect(data).that.has.a.property('count').that.equals(30)
       expect(data).that.has.a.property('lastNoncedHashAllChain').that.is.not.empty
     })
   )

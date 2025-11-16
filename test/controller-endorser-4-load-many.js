@@ -89,7 +89,7 @@ before(async () => {
   return Promise.resolve()
 })
 
-const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 156, NTH_IN_SECOND_BATCH = 9
+const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 159, NTH_IN_SECOND_BATCH = 9
 let moreBeforeId, firstInList, startOfSecondBatchInList, nthInListInSecondBatch
 
 describe('4 - Load Claims Incrementally', () => {
@@ -317,7 +317,7 @@ describe('4 - Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(6)
+        expect(r.body.data).to.be.an('array').of.length(9)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)
@@ -344,7 +344,27 @@ describe('4 - Load Claims Incrementally', () => {
       })
   ).timeout(3000)
 
-  it('retrieve rest of the earlier claims, reverse chronologically', () =>
+  it('retrieve more of the earlier claims, reverse chronologically', () =>
+    request(Server)
+      .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body).to.be.an('object')
+        expect(r.body).that.has.a.property('data')
+        let expectedCount = RESULT_COUNT_LIMIT
+            // TOTAL_CLAIMS - (RESULT_COUNT_LIMIT + NTH_IN_SECOND_BATCH + RESULT_COUNT_LIMIT)
+        expect(r.body.data).to.be.an('array').of.length(expectedCount)
+        expect(r.body).that.has.a.property('hitLimit')
+        expect(r.body.hitLimit).to.be.true
+        moreBeforeId = r.body.data[r.body.data.length - 1].id
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  )
+
+  it('retrieve the rest of the earlier claims, reverse chronologically', () =>
     request(Server)
       .get('/api/v2/report/claims?beforeId=' + moreBeforeId)
       .set('Authorization', 'Bearer ' + pushTokens[0])
@@ -354,7 +374,7 @@ describe('4 - Load Claims Incrementally', () => {
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
         let expectedCount =
-            TOTAL_CLAIMS - (RESULT_COUNT_LIMIT + NTH_IN_SECOND_BATCH + RESULT_COUNT_LIMIT)
+            TOTAL_CLAIMS - (RESULT_COUNT_LIMIT + NTH_IN_SECOND_BATCH + RESULT_COUNT_LIMIT + RESULT_COUNT_LIMIT)
         expect(r.body.data).to.be.an('array').of.length(expectedCount)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {

@@ -6,8 +6,12 @@ import { dbService } from './endorser.db.service'
 import l from '../../common/logger'
 
 const BLANK_URL = ""
+
+// "REGISTERED_BY_YOU" means the common ancestor is the source (target is in source's subtree)
 const REGISTERED_BY_YOU = "REGISTERED_BY_YOU"
+// "REGISTERED_YOU" means the common ancestor is above the source (source needs to go up)
 const REGISTERED_YOU = "REGISTERED_YOU"
+// "TARGET" means the source and target are the same
 const TARGET = "TARGET"
 
 /**
@@ -267,9 +271,7 @@ async function whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object) {
  * 
  * @param {string} sourceDid - The DID of the requester
  * @param {string} targetDid - The DID of the target user
- * @returns {Promise<Array<{did: string, relation: string}>>} - Array of nearest neighbors with their relation
- *   - relation: "REGISTERED_BY_YOU" if the common ancestor is the source (target is in source's subtree)
- *   - relation: "REGISTERED_YOU" if the common ancestor is above the source (source needs to go up)
+ * @returns {Promise<Array<{did: string, relation: RelationType}>>} - Array of nearest neighbors with their relation
  */
 async function nearestNeighborsTo(sourceDid, targetDid) {
   // Get registration info for both DIDs

@@ -539,7 +539,11 @@ export default express
  * @route GET /api/partner/userProfileNearestNeighbors/{rowId}
  * @param {number} rowId.path.required - the profile ID to find neighbors for
  * @returns {array} 200 - success response with array of neighbors, each with "did" and "relation" properties
- * @returns {Error} 400 - client error
+ * The relation is one of:
+ * - "REGISTERED_BY_YOU" if the common ancestor is the source (target is in source's subtree)
+ * - "REGISTERED_YOU" if the common ancestor is above the source (source needs to go up)
+ * - "TARGET" if the source and target are the same
+* @returns {Error} 400 - client error
  * @returns {Error} 404 - profile not found
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

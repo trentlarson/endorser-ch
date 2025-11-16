@@ -17,7 +17,7 @@ import {
   nonceHashChain,
 } from './util';
 import {addCanSee} from './network-cache.service'
-import {decodeAndVerifyJwt} from "./vc";
+import {decodeAndVerifyJwt, ETHR_DID_PREFIX, PEER_DID_PREFIX} from "./vc";
 
 const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
 
@@ -1399,6 +1399,10 @@ class ClaimService {
 
       if (!participantDid) {
         return { embeddedRecordError: "You did not send a participant's identifier for registration." }
+      }
+      if (!participantDid.startsWith(ETHR_DID_PREFIX)
+          && !participantDid.startsWith(PEER_DID_PREFIX)) {
+        return { embeddedRecordError: "You can only register an identifier starting with a recognized DID method." }
       }
 
       // Calculate pathToRoot: get agent's pathToRoot and prepend agent

@@ -233,7 +233,7 @@ describe('3 - Skills', () => {
     .then(r => {
       expect(r.body)
       .to.be.an('array')
-      .of.length(22)
+      .of.length(25)
       expect(r.body[0].claimType).to.equal('Person')
       expect(r.body[0].claim.identifier).to.equal(creds[0].did)
       expect(r.body[0].subject).to.equal(creds[0].did)
