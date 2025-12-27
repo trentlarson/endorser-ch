@@ -626,13 +626,33 @@ let count = async (moreBefore, ownerDid, ownerPrivateKeyHex) => {
 
 let fillAll = async (ownerDid, ownerPrivateKeyHex) => {
   let moreBefore = 'Z'
-  let all = []
+  let allOrig = [] // all in reverse-chronological order
   do {
     const result = await count(moreBefore, ownerDid, ownerPrivateKeyHex)
-    all = R.concat(all, result.data)
+    allOrig = R.concat(allOrig, result.data)
     moreBefore = result.hitLimit ? result.data[result.data.length - 1].id : ''
-    console.log(all.length, moreBefore, '...')
+    console.log(allOrig.length, moreBefore, '...')
   } while (moreBefore)
+
+  let lastEdit = {}
+  let allUnedited = [] // all not edited
+  for (let index = 0; index < allOrig.length; index++) {
+    const record = allOrig[index]
+    if (lastEdit[record.handleId]) {
+      // current record was edited later so ignore it
+      //console.log("skipped", record.id)
+    } else {
+      allUnedited.push(record)
+      //console.log("pushed", record.id)
+      if (!record.handleId.endsWith(record.id)) {
+        // this is an edit that isn't edited later, so it's the latest edit
+        lastEdit[record.handleId] = record.id
+        //console.log("added edit", record.handleId, record.id)
+      }
+    }
+  }
+  let all = allUnedited.reverse()
+
   console.log('Grand total:', all.length)
   const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), all)
   const grouped = R.groupBy(i => i.month, totalSum)
@@ -654,6 +674,8 @@ let all = await fillAll()
 // Read them from a previous session:
 //all = require('./metrics.json')
 
+// Remember to remove the current month from results you paste elsewhere.
+
 // write all claims with months & issuer & types to CSV
 fs.writeFileSync('metrics.csv', 'month,issuedAt,claimType\n')
 all.map(record => fs.appendFileSync('metrics.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + '\n'))
@@ -669,8 +691,7 @@ R.map(key => fs.appendFileSync('metrics-count.csv', key + ',' + monthClaims[key]
 let selectedTypes = ['GiveAction', 'Offer', 'PlanAction', 'AgreeAction']
 //let selectedTypes = ['RegisterAction']
 let now = new Date()
-let nonEdits = R.filter(record => record.handleId.substring(27) === record.id, all)
-let monthClaimsTypes = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, nonEdits))
+let monthClaimsTypes = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, all))
 fs.writeFileSync('metrics-claims-by-month-filtered.csv', 'date,' + selectedTypes.join(',') + ',total' + '\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
@@ -688,8 +709,9 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
   }
 }
 
-// sum hours given to CSV
-let now = new Date()
+//// sum hours given to CSV
+
+// filter for hours
 let givenHours = R.filter(
   record =>
     record.claimType === 'GiveAction'
@@ -697,15 +719,25 @@ let givenHours = R.filter(
     && record.claim.fulfills?.[0]?.['@type'] !== 'TradeAction',
   all
 )
+
+// save all, mainly for debugging
+fs.writeFileSync('metrics-given-hours-all.csv', 'id,date,amount,unit\n')
+for (let index = 0; index < givenHours.length; index++) {
+  const record = givenHours[index]
+  fs.appendFileSync('metrics-given-hours-all.csv', record.id + ',' + record.issuedAt + ',' + record.claim.object?.amountOfThisGood + ',' + record.claim.object?.unitCode + '\n')
+}
+
+// save aggregate data
 let monthGives = R.groupBy(record => record.issuedAt.substring(0, 7), givenHours)
-fs.writeFileSync('metrics-given-hours.csv', 'month,total\n')
+fs.writeFileSync('metrics-given-hours-sum.csv', 'month,total\n')
+let now = new Date()
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
   for (let month = 0; month <= highMonth; month++) {
     const monthNum = month + 1 // since getMonth is 0-based
     const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
     const monthSum = R.sum((monthGives[monthStr] || []).map(r => r.claim.object?.amountOfThisGood || 0))
-    fs.appendFileSync('metrics-given-hours.csv', monthStr + ',' + monthSum + '\n')
+    fs.appendFileSync('metrics-given-hours-sum.csv', monthStr + ',' + monthSum + '\n')
   }
 }
 
@@ -754,8 +786,6 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 }
 
 ```
-
-- Remember to remove the current month from results.
 
 
 
