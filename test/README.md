@@ -1,6 +1,8 @@
 # Test Documentation
 
-This folder contains comprehensive tests for the Endorser API, with detailed scenarios for plan management, JWT claims, and change detection functionality.
+This folder contains comprehensive tests for the Endorser API, with detailed scenarios for plan management, JWT claims, change detection functionality, and AI-powered profile matching.
+
+---
 
 ## Registration Tree
 
@@ -133,6 +135,7 @@ graph LR
    - Creates transitive visibility paths through the network
 
 
+---
 
 ## Controller Endorser 6 Tests
 
@@ -206,4 +209,34 @@ graph TD
     C1 -.->|fulfills| A2
     C2 -.->|fulfills| A2
     D2 -.->|references| D1
+```
+
+---
+
+## AI Profile Matching Tests
+
+The `controller-partner-3-group-matching.js` test file validates the vector similarity and matching algorithms for pairing event attendees based on their profile descriptions.
+
+### Generating Real Embeddings
+
+Generated `embeddings.json` from real 1536-dimensional embeddings from OpenAI:
+
+```bash
+# Generate real embeddings once (requires OpenAI API key)
+export OPENAI_API_KEY=your-key-here
+npm run test:generate-embeddings
+
+# This creates embeddings.json which is automatically loaded by tests
+```
+
+The `embeddings-generator.js` script will:
+1. Generate embeddings for 26 test profiles with diverse interests & lengths
+2. Save them to `embeddings.json` with metadata about the model used
+3. Display similarity analysis showing which profiles match best
+
+### Running the Tests
+
+```bash
+# Run all tests (uses cached embeddings if available)
+npm test test/controller-partner-3-group-matching.js
 ```

@@ -716,7 +716,10 @@ let givenHours = R.filter(
   record =>
     record.claimType === 'GiveAction'
     && record.claim.object?.unitCode === 'HUR'
-    && record.claim.fulfills?.[0]?.['@type'] !== 'TradeAction',
+    && record.claim.fulfills?.[0]?.['@type'] !== 'TradeAction'
+    // for a specific project, eg. Time Safari MVP
+    && record.claim.fulfills?.[0]?.identifier === 'https://endorser.ch/entity/01H90SQKQZGKHVBXVRVVEX0Z0X'
+    ,
   all
 )
 
