@@ -16,7 +16,7 @@
     "flyway": "bash -c 'flyway -c src/conf/flyway.js \"$1\"; flyway -c src/conf/flyway-partner.js \"$1\"' --",
     "test": "tsc && mocha --require @babel/register --exit",
     "test:debug": "mocha --require @babel/register --inspect-brk --exit",
-    "test:generate-embeddings": "node test/embedding-generator.js",
+    "test:generate-embeddings": "node test/embeddings-generator.js",
     "reset-claim-fields": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-claim-fields.js --exit",
     "reset-confirms": "LOG_LEVEL=info mocha --require @babel/register scripts/reset-confirms.js --exit",
     "set-3-visible": "LOG_LEVEL=info mocha --require @babel/register scripts/set-3-visible.js --exit"

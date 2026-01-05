@@ -16,6 +16,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+const modelId = 'text-embedding-3-small';
+// const modelId = 'text-embedding-3-large'; // not very different results
+
 // Test profiles - diverse interests with varying description lengths
 const profileData = {
   agriculture1: {
@@ -182,7 +186,7 @@ async function generateEmbedding(text) {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'text-embedding-3-small',
+      model: modelId,
       input: text
     })
   });
@@ -223,7 +227,7 @@ async function generateAllEmbeddings() {
   const outputData = {
     meta: {
       modelProvider: 'api.openai.com',
-      model: 'text-embedding-3-small',
+      model: modelId,
       generatedAt: new Date().toISOString(),
       dimensions: Object.values(profilesWithEmbeddings)[0].embedding.length
     },
