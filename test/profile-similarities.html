@@ -213,12 +213,15 @@
         <strong>How to use:</strong><br>
         • Click any profile letter to center it<br>
         • Other profiles arrange by similarity<br>
+        • Click the same profile again to reset to alphabetical view<br>
         • Hover over any profile to see its details
       </div>
       
       <div id="selected-profile">
-        <div style="text-align: center; color: #999; padding: 40px 20px;">
-          👆 Click a profile to begin
+        <div style="text-align: center; color: #666; padding: 40px 20px;">
+          <h3 style="margin-bottom: 15px;">👆 Click any profile</h3>
+          <p>Click to explore similarities</p>
+          <p style="margin-top: 15px; font-size: 14px; color: #999;">Hover to preview</p>
         </div>
       </div>
     </div>
@@ -299,11 +302,30 @@
     // State
     let currentCenter = 0;
     let hoveredProfile = null;
+    let isAlphabeticalMode = true; // Start in alphabetical mode
     
     // Canvas setup
     const svg = document.getElementById('canvas');
     const centerX = 400;
     const centerY = 350;
+    
+    // Calculate alphabetical layout (all profiles in a circle)
+    function calculateAlphabeticalLayout() {
+      const positions = [];
+      const radius = 220;
+      const angleStep = (2 * Math.PI) / profiles.length;
+      
+      profiles.forEach((profile, i) => {
+        const angle = i * angleStep - Math.PI / 2; // Start from top
+        positions[i] = {
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+          similarity: null
+        };
+      });
+      
+      return positions;
+    }
     
     // Calculate radial layout
     function calculateLayout(centerIndex) {
@@ -351,29 +373,31 @@
     
     // Render the visualization
     function render() {
-      const positions = calculateLayout(currentCenter);
+      const positions = isAlphabeticalMode ? calculateAlphabeticalLayout() : calculateLayout(currentCenter);
       svg.innerHTML = '';
       
-      // Draw connection lines first (so they're behind circles)
-      for (let i = 0; i < profiles.length; i++) {
-        if (i !== currentCenter) {
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', positions[currentCenter].x);
-          line.setAttribute('y1', positions[currentCenter].y);
-          line.setAttribute('x2', positions[i].x);
-          line.setAttribute('y2', positions[i].y);
-          line.setAttribute('stroke', '#e5e5e5');
-          line.setAttribute('stroke-width', '1');
-          line.setAttribute('class', 'connection-line');
-          line.setAttribute('opacity', '0.5');
-          svg.appendChild(line);
+      // Draw connection lines first (so they're behind circles) - only in radial mode
+      if (!isAlphabeticalMode) {
+        for (let i = 0; i < profiles.length; i++) {
+          if (i !== currentCenter) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', positions[currentCenter].x);
+            line.setAttribute('y1', positions[currentCenter].y);
+            line.setAttribute('x2', positions[i].x);
+            line.setAttribute('y2', positions[i].y);
+            line.setAttribute('stroke', '#e5e5e5');
+            line.setAttribute('stroke-width', '1');
+            line.setAttribute('class', 'connection-line');
+            line.setAttribute('opacity', '0.5');
+            svg.appendChild(line);
+          }
         }
       }
       
       // Draw profile circles
       profiles.forEach((profile, i) => {
         const pos = positions[i];
-        const isCentered = i === currentCenter;
+        const isCentered = !isAlphabeticalMode && i === currentCenter;
         const size = isCentered ? 50 : 35;
         
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -404,7 +428,13 @@
         
         // Event listeners
         g.addEventListener('click', () => {
-          currentCenter = i;
+          // Toggle alphabetical mode if clicking the same centered profile
+          if (!isAlphabeticalMode && i === currentCenter) {
+            isAlphabeticalMode = true;
+          } else {
+            isAlphabeticalMode = false;
+            currentCenter = i;
+          }
           render();
           updateSidePanel();
         });
@@ -421,8 +451,8 @@
         
         svg.appendChild(g);
         
-        // Add similarity label for non-centered profiles
-        if (!isCentered) {
+        // Add similarity label for non-centered profiles (only in radial mode)
+        if (!isAlphabeticalMode && !isCentered) {
           const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           label.setAttribute('x', pos.x);
           label.setAttribute('y', pos.y + size + 20);
@@ -439,38 +469,68 @@
     // Update side panel with selected and hovered profiles
     function updateSidePanel() {
       const panel = document.getElementById('selected-profile');
-      const centered = profiles[currentCenter];
       
-      let html = `
-        <div class="profile-card">
-          <h2>
-            <span class="profile-letter" style="background: ${centered.color}">
-              ${centered.name[0]}
-            </span>
-            ${centered.name}
-          </h2>
-          <div class="profile-text">${centered.profileText}</div>
-        </div>
-      `;
+      let html = '';
       
-      if (hoveredProfile !== null && hoveredProfile !== currentCenter) {
-        const hovered = profiles[hoveredProfile];
-        const sim = similarities[currentCenter][hoveredProfile];
+      if (isAlphabeticalMode) {
+        // Alphabetical mode - show hoveredProfile or instructions
+        if (hoveredProfile !== null) {
+          const hovered = profiles[hoveredProfile];
+          html = `
+            <div class="profile-card">
+              <h2>
+                <span class="profile-letter" style="background: ${hovered.color}">
+                  ${hovered.name[0]}
+                </span>
+                ${hovered.name}
+              </h2>
+              <div class="profile-text">${hovered.profileText}</div>
+            </div>
+          `;
+        } else {
+          html = `
+            <div style="text-align: center; color: #666; padding: 40px 20px;">
+              <h3 style="margin-bottom: 15px;">📋 Alphabetical View</h3>
+              <p>All profiles arranged in alphabetical order.</p>
+              <p style="margin-top: 15px;">Hover over any profile to see details, or click to explore similarities.</p>
+            </div>
+          `;
+        }
+      } else {
+        // Radial mode - show centered profile and hovered
+        const centered = profiles[currentCenter];
         
-        html += `
-          <div class="hover-profile">
-            <h3>
-              <span class="profile-letter" style="background: ${hovered.color}; width: 24px; height: 24px; font-size: 14px;">
-                ${hovered.name[0]}
+        html = `
+          <div class="profile-card">
+            <h2>
+              <span class="profile-letter" style="background: ${centered.color}">
+                ${centered.name[0]}
               </span>
-              ${hovered.name}
-              <span class="similarity-badge">
-                ${(sim * 100).toFixed(1)}% similar
-              </span>
-            </h3>
-            <div class="profile-text">${hovered.profileText}</div>
+              ${centered.name}
+            </h2>
+            <div class="profile-text">${centered.profileText}</div>
           </div>
         `;
+        
+        if (hoveredProfile !== null && hoveredProfile !== currentCenter) {
+          const hovered = profiles[hoveredProfile];
+          const sim = similarities[currentCenter][hoveredProfile];
+          
+          html += `
+            <div class="hover-profile">
+              <h3>
+                <span class="profile-letter" style="background: ${hovered.color}; width: 24px; height: 24px; font-size: 14px;">
+                  ${hovered.name[0]}
+                </span>
+                ${hovered.name}
+                <span class="similarity-badge">
+                  ${(sim * 100).toFixed(1)}% similar
+                </span>
+              </h3>
+              <div class="profile-text">${hovered.profileText}</div>
+            </div>
+          `;
+        }
       }
       
       panel.innerHTML = html;
