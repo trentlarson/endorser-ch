@@ -1,11 +1,11 @@
 /**
- * Visualize Profile Similarities using Multidimensional Scaling (MDS)
+ * Interactive Profile Similarity Visualizer
  * 
  * This script:
  * 1. Loads test profile embeddings
  * 2. Calculates pairwise cosine similarities
- * 3. Uses MDS to project into 2D space
- * 4. Generates an ASCII and HTML visualization
+ * 3. Generates an interactive radial visualization
+ * 4. Click any profile to center it and see similarities
  * 
  * Usage:
  *   node test/profile-similarity-visualizer.js
@@ -17,6 +17,9 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const EMBEDDINGS_FILE = 'embeddings.json';
+const PRINT_SIMILARITIES = false;
 
 // ============================================================================
 // Vector Math Functions
@@ -32,157 +35,85 @@ function cosineSimilarity(vec1, vec2) {
 }
 
 // ============================================================================
-// Multidimensional Scaling (MDS) Algorithm
+// Radial Layout Calculation
 // ============================================================================
 
 /**
- * Classical MDS algorithm to project high-dimensional similarities into 2D
- * @param {number[][]} distanceMatrix - N×N matrix of pairwise distances
- * @returns {number[][]} - N×2 matrix of 2D coordinates
+ * Calculate radial positions around a center profile based on similarity
+ * @param {number} centerIndex - Index of the profile in the center
+ * @param {number[][]} similarities - Similarity matrix
+ * @param {number} maxRadius - Maximum radius for the least similar profile
+ * @returns {Array} - Array of {x, y, similarity} coordinates
  */
-function classicalMDS(distanceMatrix) {
-  const n = distanceMatrix.length;
+function calculateRadialLayout(centerIndex, similarities, maxRadius = 180) {
+  const n = similarities.length;
+  const positions = [];
   
-  // Step 1: Square the distances
-  const squaredDistances = distanceMatrix.map(row => 
-    row.map(d => d * d)
-  );
-  
-  // Step 2: Create centering matrix and apply double centering
-  const rowMeans = squaredDistances.map(row => 
-    row.reduce((sum, val) => sum + val, 0) / n
-  );
-  const totalMean = rowMeans.reduce((sum, val) => sum + val, 0) / n;
-  
-  const B = squaredDistances.map((row, i) => 
-    row.map((val, j) => -0.5 * (val - rowMeans[i] - rowMeans[j] + totalMean))
-  );
-  
-  // Step 3: Eigenvalue decomposition (simplified - using power iteration for top 2 eigenvectors)
-  const eigenvectors = powerIterationTop2(B);
-  
-  return eigenvectors;
-}
-
-/**
- * Simplified eigenvalue decomposition using power iteration
- * Gets the top 2 eigenvectors for 2D projection
- */
-function powerIterationTop2(matrix) {
-  const n = matrix.length;
-  
-  // Get first eigenvector
-  let v1 = Array(n).fill(1).map(() => Math.random());
-  for (let iter = 0; iter < 100; iter++) {
-    v1 = multiplyMatrixVector(matrix, v1);
-    v1 = normalize(v1);
+  // Get similarities for all other profiles
+  const others = [];
+  for (let i = 0; i < n; i++) {
+    if (i !== centerIndex) {
+      others.push({
+        index: i,
+        similarity: similarities[centerIndex][i]
+      });
+    }
   }
   
-  // Deflate matrix to get second eigenvector
-  const lambda1 = dotProduct(multiplyMatrixVector(matrix, v1), v1);
-  const deflatedMatrix = matrix.map((row, i) =>
-    row.map((val, j) => val - lambda1 * v1[i] * v1[j])
-  );
+  // Sort by similarity (most similar first) for better visual distribution
+  others.sort((a, b) => b.similarity - a.similarity);
   
-  let v2 = Array(n).fill(1).map(() => Math.random());
-  for (let iter = 0; iter < 100; iter++) {
-    v2 = multiplyMatrixVector(deflatedMatrix, v2);
-    v2 = normalize(v2);
-  }
+  // Distribute profiles evenly in a circle, with distance based on similarity
+  const angleStep = (2 * Math.PI) / others.length;
   
-  // Return coordinates as [x, y] pairs
-  const coords = v1.map((x, i) => [x, v2[i]]);
+  others.forEach((other, i) => {
+    const angle = i * angleStep;
+    // Distance inversely proportional to similarity
+    // similarity 1.0 = minRadius (60px), similarity 0.0 = maxRadius (180px)
+    const minRadius = 60;
+    const distance = maxRadius - (other.similarity * (maxRadius - minRadius));
+    
+    positions[other.index] = {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+      similarity: other.similarity
+    };
+  });
   
-  // Normalize to [-1, 1] range
-  const maxAbs = Math.max(...coords.flat().map(Math.abs));
-  return coords.map(([x, y]) => [x / maxAbs, y / maxAbs]);
-}
-
-function multiplyMatrixVector(matrix, vector) {
-  return matrix.map(row =>
-    row.reduce((sum, val, i) => sum + val * vector[i], 0)
-  );
-}
-
-function dotProduct(v1, v2) {
-  return v1.reduce((sum, val, i) => sum + val * v2[i], 0);
-}
-
-function normalize(vector) {
-  const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
-  return vector.map(val => val / magnitude);
+  // Center profile at origin
+  positions[centerIndex] = { x: 0, y: 0, similarity: 1.0 };
+  
+  return positions;
 }
 
 // ============================================================================
 // Visualization Functions
 // ============================================================================
 
-function generateASCIIVisualization(profiles, coordinates) {
-  const width = 80;
-  const height = 40;
+function generateInteractiveHTML(profiles, similarities) {
+  // Serialize the data for JavaScript
+  const profilesData = JSON.stringify(profiles.map((p, i) => ({
+    name: p.name,
+    profileText: p.profileText,
+    index: i,
+    color: `hsl(${i * 360 / profiles.length}, 70%, 60%)`
+  })));
   
-  // Create empty grid
-  const grid = Array(height).fill().map(() => Array(width).fill(' '));
-  
-  // Scale coordinates to grid
-  const scaledCoords = coordinates.map(([x, y]) => {
-    const gridX = Math.floor((x + 1) / 2 * (width - 1));
-    const gridY = Math.floor((1 - (y + 1) / 2) * (height - 1)); // Flip Y axis
-    return [gridX, gridY];
-  });
-  
-  // Draw axes
-  const centerX = Math.floor(width / 2);
-  const centerY = Math.floor(height / 2);
-  for (let i = 0; i < width; i++) grid[centerY][i] = '-';
-  for (let i = 0; i < height; i++) grid[i][centerX] = '|';
-  grid[centerY][centerX] = '+';
-  
-  // Place profiles
-  scaledCoords.forEach((coord, i) => {
-    const [x, y] = coord;
-    const initial = profiles[i].name[0];
-    if (x >= 0 && x < width && y >= 0 && y < height) {
-      grid[y][x] = initial;
-    }
-  });
-  
-  // Convert to string
-  return grid.map(row => row.join('')).join('\n');
-}
-
-function generateHTMLVisualization(profiles, coordinates, similarities) {
-  const profileList = profiles.map(p => p.name).join(', ');
-  
-  const pointsHTML = profiles.map((profile, i) => {
-    const [x, y] = coordinates[i];
-    // Scale from [-1, 1] to [50, 450] for a 500px canvas
-    const canvasX = (x + 1) * 225 + 25;
-    const canvasY = (1 - y) * 225 + 25; // Flip Y for canvas coordinates
-    
-    return `
-      <g class="profile-point" data-name="${profile.name}">
-        <circle cx="${canvasX}" cy="${canvasY}" r="20" 
-                fill="hsl(${i * 60}, 70%, 60%)" 
-                stroke="#333" stroke-width="2"/>
-        <text x="${canvasX}" y="${canvasY}" 
-              text-anchor="middle" 
-              dominant-baseline="middle"
-              font-size="16" font-weight="bold" fill="#000">
-          ${profile.name[0]}
-        </text>
-      </g>`;
-  }).join('\n');
+  const similaritiesData = JSON.stringify(similarities);
   
   // Generate similarity table
   const tableRows = profiles.map((p1, i) => {
     const cells = profiles.map((p2, j) => {
       if (i >= j) return '<td></td>';
       const sim = similarities[i][j];
-      const color = sim > 0.9 ? '#4ade80' : 
-                    sim > 0.8 ? '#86efac' :
-                    sim > 0.7 ? '#fde047' :
-                    sim > 0.6 ? '#fbbf24' : '#f87171';
+      const color = sim > 0.9 ? '#16a34a' :  // Dark green
+                    sim > 0.8 ? '#4ade80' :  // Medium green
+                    sim > 0.7 ? '#86efac' :  // Light green
+                    sim > 0.6 ? '#bbf7d0' :  // Very light green
+                    sim > 0.5 ? '#fde047' :  // Light yellow
+                    sim > 0.4 ? '#fb923c' :  // Orange
+                    sim > 0.3 ? '#f97316' :  // Dark orange
+                    '#f87171';               // Red
       return `<td style="background: ${color}">${sim.toFixed(3)}</td>`;
     }).join('');
     return `<tr><th>${p1.name}</th>${cells}</tr>`;
@@ -196,43 +127,159 @@ function generateHTMLVisualization(profiles, coordinates, similarities) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Profile Similarity Visualization</title>
+  <title>Interactive Profile Similarity Visualization</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-      max-width: 1200px;
-      margin: 40px auto;
-      padding: 20px;
       background: #f5f5f5;
+      overflow-x: hidden;
+    }
+    
+    .header {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 0;
     }
     
     h1 {
       color: #333;
-      border-bottom: 3px solid #4ade80;
-      padding-bottom: 10px;
+      font-size: 28px;
     }
     
-    .container {
+    .subtitle {
+      color: #666;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    
+    .main-container {
+      display: flex;
+      height: calc(100vh - 120px);
+    }
+    
+    .viz-container {
+      flex: 1;
+      position: relative;
       background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #canvas {
+      cursor: pointer;
+    }
+    
+    .side-panel {
+      width: 400px;
+      background: white;
+      border-left: 2px solid #e5e5e5;
       padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow-y: auto;
+    }
+    
+    .profile-card {
       margin-bottom: 30px;
     }
     
-    svg {
-      border: 2px solid #ddd;
+    .profile-card h2 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .profile-letter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .profile-text {
+      color: #555;
+      line-height: 1.6;
+      padding: 15px;
+      background: #f9f9f9;
       border-radius: 8px;
-      background: #fafafa;
+      border-left: 4px solid #4ade80;
+    }
+    
+    .hover-profile {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e5e5;
+    }
+    
+    .hover-profile h3 {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .hover-profile .profile-text {
+      border-left-color: #86efac;
+    }
+    
+    .similarity-badge {
+      display: inline-block;
+      background: #4ade80;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .instructions {
+      background: #fffbeb;
+      border: 2px solid #fbbf24;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #92400e;
+    }
+    
+    .instructions strong {
+      color: #78350f;
     }
     
     .profile-point {
       cursor: pointer;
-      transition: transform 0.2s;
+      transition: all 0.3s ease;
     }
     
-    .profile-point:hover {
-      transform: scale(1.2);
+    .profile-point:hover circle {
+      stroke-width: 4 !important;
+    }
+    
+    .connection-line {
+      transition: opacity 0.3s ease;
+    }
+    
+    .table-container {
+      background: white;
+      padding: 30px;
+      margin: 20px 40px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     
     table {
@@ -264,6 +311,7 @@ function generateHTMLVisualization(profiles, coordinates, similarities) {
       display: flex;
       align-items: center;
       gap: 8px;
+      font-size: 14px;
     }
     
     .legend-color {
@@ -272,66 +320,69 @@ function generateHTMLVisualization(profiles, coordinates, similarities) {
       border-radius: 4px;
       border: 1px solid #999;
     }
-    
-    .info-text {
-      color: #666;
-      line-height: 1.6;
-      margin: 15px 0;
-    }
   </style>
 </head>
 <body>
-  <h1>Profile Similarity Visualization</h1>
-  
-  <div class="container">
-    <h2>2D Projection using Multidimensional Scaling (MDS)</h2>
-    <p class="info-text">
-      Each point represents a profile: <strong>${profileList}</strong>
-      <br>
-      The distances between points approximate their cosine similarity - 
-      closer points have more similar profiles.
-    </p>
-    
-    <svg width="500" height="500" viewBox="0 0 500 500">
-      <!-- Axes -->
-      <line x1="250" y1="0" x2="250" y2="500" stroke="#ccc" stroke-width="2"/>
-      <line x1="0" y1="250" x2="500" y2="250" stroke="#ccc" stroke-width="2"/>
-      
-      <!-- Axis labels -->
-      <text x="490" y="245" font-size="12" fill="#666">x</text>
-      <text x="255" y="15" font-size="12" fill="#666">y</text>
-      <text x="255" y="495" font-size="10" fill="#666">(-1, -1)</text>
-      <text x="470" y="495" font-size="10" fill="#666">(1, -1)</text>
-      <text x="255" y="15" font-size="10" fill="#666">(-1, 1)</text>
-      <text x="470" y="15" font-size="10" fill="#666">(1, 1)</text>
-      
-      <!-- Profile points -->
-      ${pointsHTML}
-    </svg>
+  <div class="header">
+    <h1>🔍 Interactive Profile Similarity Explorer</h1>
+    <p class="subtitle">Click any profile to explore its relationships • Hover to see details</p>
   </div>
   
-  <div class="container">
+  <div class="main-container">
+    <div class="viz-container">
+      <svg id="canvas" width="800" height="700"></svg>
+    </div>
+    
+    <div class="side-panel">
+      <div class="instructions">
+        <strong>How to use:</strong><br>
+        • Click any profile letter to center it<br>
+        • Other profiles arrange by similarity<br>
+        • Hover over any profile to see its details
+      </div>
+      
+      <div id="selected-profile">
+        <div style="text-align: center; color: #999; padding: 40px 20px;">
+          👆 Click a profile to begin
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="table-container">
     <h2>Pairwise Cosine Similarity Matrix</h2>
     <div class="legend">
       <div class="legend-item">
+        <div class="legend-color" style="background: #16a34a"></div>
+        <span>Very High (>0.9)</span>
+      </div>
+      <div class="legend-item">
         <div class="legend-color" style="background: #4ade80"></div>
-        <span>Very Similar (>0.9)</span>
+        <span>High (>0.8)</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background: #86efac"></div>
-        <span>Similar (>0.8)</span>
+        <span>Med-High (>0.7)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #bbf7d0"></div>
+        <span>Medium (>0.6)</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background: #fde047"></div>
-        <span>Medium (>0.7)</span>
+        <span>Med-Low (>0.5)</span>
       </div>
       <div class="legend-item">
-        <div class="legend-color" style="background: #fbbf24"></div>
-        <span>Low (>0.6)</span>
+        <div class="legend-color" style="background: #fb923c"></div>
+        <span>Low (>0.4)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #f97316"></div>
+        <span>Very Low (>0.3)</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background: #f87171"></div>
-        <span>Different (<0.6)</span>
+        <span>Minimal (≤0.3)</span>
       </div>
     </div>
     <table>
@@ -340,37 +391,195 @@ function generateHTMLVisualization(profiles, coordinates, similarities) {
     </table>
   </div>
   
-  <div class="container">
-    <h2>Profile Descriptions</h2>
-    <ul>
-      ${profiles.map(p => `
-        <li><strong>${p.name}:</strong> ${p.profileText}</li>
-      `).join('')}
-    </ul>
-  </div>
-  
-  <div class="container info-text">
-    <h2>About This Visualization</h2>
-    <p>
-      This visualization uses <strong>Classical Multidimensional Scaling (MDS)</strong> 
-      to project high-dimensional profile embeddings (${profiles[0].embedding.length} dimensions) 
-      into a 2D space while preserving pairwise distances.
-    </p>
-    <p>
-      <strong>How it works:</strong>
-    </p>
-    <ol>
-      <li>Calculate cosine similarity for every pair of profiles</li>
-      <li>Convert similarities to distances: distance = 1 - similarity</li>
-      <li>Use MDS to find 2D coordinates that best preserve these distances</li>
-      <li>Plot each profile using the first letter of their name</li>
-    </ol>
-    <p>
-      <strong>Interpretation:</strong> Profiles that are closer together in the visualization 
-      have more similar embeddings (based on their text descriptions). The exact positions 
-      are less important than the relative distances between points.
-    </p>
-  </div>
+  <script>
+    // Data from Node.js
+    const profiles = ${profilesData};
+    const similarities = ${similaritiesData};
+    
+    // State
+    let currentCenter = 0;
+    let hoveredProfile = null;
+    
+    // Canvas setup
+    const svg = document.getElementById('canvas');
+    const centerX = 400;
+    const centerY = 350;
+    
+    // Calculate radial layout
+    function calculateLayout(centerIndex) {
+      const positions = [];
+      const others = [];
+      
+      // Collect all other profiles with their similarities
+      for (let i = 0; i < profiles.length; i++) {
+        if (i !== centerIndex) {
+          others.push({
+            index: i,
+            similarity: similarities[centerIndex][i]
+          });
+        }
+      }
+      
+      // Sort by similarity for better distribution
+      others.sort((a, b) => b.similarity - a.similarity);
+      
+      // Arrange in circle with distance based on similarity
+      const angleStep = (2 * Math.PI) / others.length;
+      const minRadius = 80;
+      const maxRadius = 250;
+      
+      others.forEach((other, i) => {
+        const angle = i * angleStep - Math.PI / 2; // Start from top
+        const distance = maxRadius - (other.similarity * (maxRadius - minRadius));
+        
+        positions[other.index] = {
+          x: centerX + Math.cos(angle) * distance,
+          y: centerY + Math.sin(angle) * distance,
+          similarity: other.similarity
+        };
+      });
+      
+      // Center profile at origin
+      positions[centerIndex] = {
+        x: centerX,
+        y: centerY,
+        similarity: 1.0
+      };
+      
+      return positions;
+    }
+    
+    // Render the visualization
+    function render() {
+      const positions = calculateLayout(currentCenter);
+      svg.innerHTML = '';
+      
+      // Draw connection lines first (so they're behind circles)
+      for (let i = 0; i < profiles.length; i++) {
+        if (i !== currentCenter) {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', positions[currentCenter].x);
+          line.setAttribute('y1', positions[currentCenter].y);
+          line.setAttribute('x2', positions[i].x);
+          line.setAttribute('y2', positions[i].y);
+          line.setAttribute('stroke', '#e5e5e5');
+          line.setAttribute('stroke-width', '1');
+          line.setAttribute('class', 'connection-line');
+          line.setAttribute('opacity', '0.5');
+          svg.appendChild(line);
+        }
+      }
+      
+      // Draw profile circles
+      profiles.forEach((profile, i) => {
+        const pos = positions[i];
+        const isCentered = i === currentCenter;
+        const size = isCentered ? 50 : 35;
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'profile-point');
+        g.setAttribute('data-index', i);
+        
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', pos.x);
+        circle.setAttribute('cy', pos.y);
+        circle.setAttribute('r', size);
+        circle.setAttribute('fill', profile.color);
+        circle.setAttribute('stroke', isCentered ? '#333' : '#666');
+        circle.setAttribute('stroke-width', isCentered ? '4' : '2');
+        
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', pos.x);
+        text.setAttribute('y', pos.y);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', isCentered ? '28' : '20');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('fill', '#fff');
+        text.setAttribute('pointer-events', 'none');
+        text.textContent = profile.name[0];
+        
+        g.appendChild(circle);
+        g.appendChild(text);
+        
+        // Event listeners
+        g.addEventListener('click', () => {
+          currentCenter = i;
+          render();
+          updateSidePanel();
+        });
+        
+        g.addEventListener('mouseenter', () => {
+          hoveredProfile = i;
+          updateSidePanel();
+        });
+        
+        g.addEventListener('mouseleave', () => {
+          hoveredProfile = null;
+          updateSidePanel();
+        });
+        
+        svg.appendChild(g);
+        
+        // Add similarity label for non-centered profiles
+        if (!isCentered) {
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('x', pos.x);
+          label.setAttribute('y', pos.y + size + 20);
+          label.setAttribute('text-anchor', 'middle');
+          label.setAttribute('font-size', '12');
+          label.setAttribute('fill', '#666');
+          label.setAttribute('pointer-events', 'none');
+          label.textContent = pos.similarity.toFixed(3);
+          svg.appendChild(label);
+        }
+      });
+    }
+    
+    // Update side panel with selected and hovered profiles
+    function updateSidePanel() {
+      const panel = document.getElementById('selected-profile');
+      const centered = profiles[currentCenter];
+      
+      let html = \`
+        <div class="profile-card">
+          <h2>
+            <span class="profile-letter" style="background: \${centered.color}">
+              \${centered.name[0]}
+            </span>
+            \${centered.name}
+          </h2>
+          <div class="profile-text">\${centered.profileText}</div>
+        </div>
+      \`;
+      
+      if (hoveredProfile !== null && hoveredProfile !== currentCenter) {
+        const hovered = profiles[hoveredProfile];
+        const sim = similarities[currentCenter][hoveredProfile];
+        
+        html += \`
+          <div class="hover-profile">
+            <h3>
+              <span class="profile-letter" style="background: \${hovered.color}; width: 24px; height: 24px; font-size: 14px;">
+                \${hovered.name[0]}
+              </span>
+              \${hovered.name}
+              <span class="similarity-badge">
+                \${(sim * 100).toFixed(1)}% similar
+              </span>
+            </h3>
+            <div class="profile-text">\${hovered.profileText}</div>
+          </div>
+        \`;
+      }
+      
+      panel.innerHTML = html;
+    }
+    
+    // Initial render
+    render();
+    updateSidePanel();
+  </script>
 </body>
 </html>`;
 }
@@ -381,10 +590,10 @@ function generateHTMLVisualization(profiles, coordinates, similarities) {
 
 async function main() {
   // Load embeddings
-  const embeddingsPath = path.join(__dirname, 'embeddings.json');
+  const embeddingsPath = path.join(__dirname, EMBEDDINGS_FILE);
   
   if (!fs.existsSync(embeddingsPath)) {
-    console.error('❌ embeddings.json not found!');
+    console.error('❌ ${EMBEDDINGS_FILE} not found!');
     console.error('   Run: node test/embeddings-generator.js');
     process.exit(1);
   }
@@ -409,44 +618,24 @@ async function main() {
         const sim = cosineSimilarity(profiles[i].embedding, profiles[j].embedding);
         similarities[i][j] = sim;
         similarities[j][i] = sim;
-        console.log(`  ${profiles[i].name} ↔ ${profiles[j].name}: ${sim.toFixed(3)}`);
+        if (PRINT_SIMILARITIES) {
+          console.log(`  ${profiles[i].name} ↔ ${profiles[j].name}: ${sim.toFixed(3)}`);
+        }
       }
     }
   }
   
   console.log('─'.repeat(60));
   
-  // Step 2: Convert similarities to distances
-  const distances = similarities.map(row =>
-    row.map(sim => 1 - sim)
-  );
-  
-  // Step 3: Apply MDS to get 2D coordinates
-  console.log('\n🔄 Applying Multidimensional Scaling (MDS)...\n');
-  const coordinates = classicalMDS(distances);
-  
-  // Display coordinates
-  console.log('2D Coordinates:');
-  console.log('─'.repeat(60));
-  profiles.forEach((profile, i) => {
-    const [x, y] = coordinates[i];
-    console.log(`  ${profile.name}: (${x.toFixed(3)}, ${y.toFixed(3)})`);
-  });
-  console.log('─'.repeat(60));
-  
-  // Step 4: Generate visualizations
-  console.log('\n📈 Generating ASCII visualization...\n');
-  const asciiViz = generateASCIIVisualization(profiles, coordinates);
-  console.log(asciiViz);
-  
-  console.log('\n📊 Generating HTML visualization...\n');
-  const htmlViz = generateHTMLVisualization(profiles, coordinates, similarities);
+  // Step 2: Generate interactive HTML visualization
+  console.log('\n📊 Generating interactive visualization...\n');
+  const htmlViz = generateInteractiveHTML(profiles, similarities);
   
   const outputPath = path.join(__dirname, 'profile-similarities.html');
   fs.writeFileSync(outputPath, htmlViz);
   
-  console.log(`\n✅ HTML visualization saved to: ${outputPath}`);
-  console.log(`   Open it in your browser to see the interactive visualization!\n`);
+  console.log(`\n✅ Interactive visualization saved to: ${outputPath}`);
+  console.log(`   Open it in your browser and click any profile to explore!\n`);
   
   // Summary statistics
   const allSimilarities = [];
@@ -478,5 +667,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { cosineSimilarity, classicalMDS };
+export { cosineSimilarity, calculateRadialLayout };
 
