@@ -200,6 +200,7 @@ CREATE TABLE jwt (
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
+CREATE INDEX jwt_target on jwt (target);
 
 -- track all the visibility, where each subject can see each object
 CREATE TABLE network (

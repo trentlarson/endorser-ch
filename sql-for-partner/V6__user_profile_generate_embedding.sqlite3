@@ -1,0 +1,6 @@
+-- Add flag to tag individuals as always generating embedding vectors
+-- This flag indicates that when a user edits a profile, an embedding vector should be generated
+-- and stored
+
+ALTER TABLE user_profile ADD COLUMN generateEmbedding BOOLEAN DEFAULT 0;
+

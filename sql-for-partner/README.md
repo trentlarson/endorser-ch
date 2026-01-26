@@ -39,7 +39,7 @@ CREATE TABLE partner_link (
     data TEXT -- JSON data, where format depends on linkCode
     pubKeyHex TEXT, -- public key, eg. used in relayed nostr event
     pubKeyImage TEXT, -- content that is signed
-    pubKeySigHex TEXT, -- signature of pubKeyPayload
+    pubKeySigHex TEXT -- signature of pubKeyPayload
 );
 
 -- a profile is a user's free-form description of their interests
@@ -48,12 +48,13 @@ CREATE TABLE user_profile (
     issuerDid TEXT UNIQUE NOT NULL,
     updatedAt DATETIME NOT NULL,
     description TEXT NOT NULL,
-    locLat DOUBLE NOT NULL,
-    locLon DOUBLE NOT NULL,
-    locLat2 DOUBLE NOT NULL,
-    locLon2 DOUBLE NOT NULL
+    locLat DOUBLE,
+    locLon DOUBLE,
+    locLat2 DOUBLE,
+    locLon2 DOUBLE,
+    generateEmbedding BOOLEAN DEFAULT 0
 );
-CREATE INDEX profile_issuerDid ON profile(issuerDid);
-CREATE INDEX profile_lat_lon ON profile(locLat, locLon);
-CREATE INDEX profile_lat2_lon2 ON profile(locLat2, locLon2);
+CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
+CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
+CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
 ```

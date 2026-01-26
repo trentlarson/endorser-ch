@@ -323,6 +323,25 @@ class PartnerDatabase {
     })
   }
 
+  /**
+   * Update the generateEmbedding flag for a user profile (admin only)
+   * @param {string} issuerDid - the DID of the user
+   * @param {boolean} generateEmbedding - whether to always generate embeddings for this user
+   * @returns {Promise<number>} number of rows updated
+   */
+  profileUpdateGenerateEmbedding(issuerDid, generateEmbedding) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE user_profile SET generateEmbedding = ? WHERE issuerDid = ?"
+      partnerDb.run(stmt, [generateEmbedding ? 1 : 0, issuerDid], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
   profileById(rowid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
@@ -334,6 +353,7 @@ class PartnerDatabase {
           } else {
             if (row) {
               row.updatedAt = util.isoAndZonify(row.updatedAt)
+              row.generateEmbedding = util.booleanify(row.generateEmbedding)
             }
             resolve(row)
           }
@@ -354,6 +374,7 @@ class PartnerDatabase {
             if (row) {
               row.rowId = row.rowid
               row.updatedAt = util.isoAndZonify(row.updatedAt)
+              row.generateEmbedding = util.booleanify(row.generateEmbedding)
             }
             resolve(row)
           }
@@ -408,6 +429,7 @@ class PartnerDatabase {
           rows = rows.map(row => {
             row.rowId = row.rowid
             row.updatedAt = util.isoAndZonify(row.updatedAt)
+            row.generateEmbedding = util.booleanify(row.generateEmbedding)
             return row
           })
           resolve({

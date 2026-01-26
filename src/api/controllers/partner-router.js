@@ -4,9 +4,13 @@
 
 import * as R from 'ramda'
 import * as express from 'express'
+import * as http from 'http'
+
+// See notes on usage of these, since we need to beware permissions when using them
 import ClaimService from '../services/claim.service'
-import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as endorserDbService } from "../services/endorser.db.service";
+
+import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
@@ -69,6 +73,135 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   return res.status(200).json(result).end()
 }
 
+/**
+ * Check if a DID is in the admin user array
+ * @param {string} issuerDid - the DID to check
+ * @returns {boolean} true if the DID is an admin
+ */
+function isAdminUser(issuerDid) {
+  const adminUsers = process.env.ADMIN_USERS
+  if (!adminUsers) {
+    return false
+  }
+  // ADMIN_USERS is a comma-separated list of DIDs
+  const adminList = JSON.parse(adminUsers)
+  return adminList.includes(issuerDid)
+}
+
+/**
+ * Make an API call to /api/claim/:jwtId
+ * @param {string} jwtId - the JWT ID to retrieve
+ * @param {string} authHeader - the Authorization header value to forward
+ * @returns {Promise<object>} - the JWT info
+ */
+function getClaimById(jwtId, authHeader) {
+  return new Promise((resolve, reject) => {
+    const port = process.env.PORT || 80
+    const host = 'localhost'
+    const path = `/api/claim/${jwtId}`
+    
+    const options = {
+      hostname: host,
+      port: port,
+      path: path,
+      method: 'GET',
+      headers: {}
+    }
+    
+    if (authHeader) {
+      options.headers['Authorization'] = authHeader
+    }
+    
+    const req = http.request(options, (res) => {
+      let data = ''
+      
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const result = JSON.parse(data)
+            resolve(result)
+          } catch (err) {
+            reject(new Error(`Failed to parse response: ${err.message}`))
+          }
+        } else if (res.statusCode === 404) {
+          reject(new Error('Claim not found'))
+        } else {
+          reject(new Error(`API call failed with status ${res.statusCode}: ${data}`))
+        }
+      })
+    })
+    
+    req.on('error', (err) => {
+      reject(new Error(`Request failed: ${err.message}`))
+    })
+    
+    req.end()
+  })
+}
+
+/**
+ * Make an API call to /api/report/rateLimits
+ * @param {string} authHeader - the Authorization header value to forward
+ * @returns {Promise<object>} - the rate limits info
+ */
+function getRateLimits(authHeader) {
+  return new Promise((resolve, reject) => {
+    const port = process.env.PORT || 80
+    const host = 'localhost'
+    const path = '/api/report/rateLimits'
+    
+    const options = {
+      hostname: host,
+      port: port,
+      path: path,
+      method: 'GET',
+      headers: {}
+    }
+    
+    if (authHeader) {
+      options.headers['Authorization'] = authHeader
+    }
+    
+    const req = http.request(options, (res) => {
+      let data = ''
+      
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const result = JSON.parse(data)
+            resolve(result)
+          } catch (err) {
+            reject(new Error(`Failed to parse response: ${err.message}`))
+          }
+        } else if (res.statusCode === 400) {
+          // Rate limits endpoint returns 400 if user doesn't have an account
+          const error = new Error('Must be registered')
+          error.clientError = true
+          reject(error)
+        } else {
+          reject(new Error(`API call failed with status ${res.statusCode}: ${data}`))
+        }
+      })
+    })
+    
+    req.on('error', (err) => {
+      reject(new Error(`Request failed: ${err.message}`))
+    })
+    
+    req.end()
+  })
+}
+
+
+
 export default express
 .Router()
 .all('*', function (req, res, next) {
@@ -114,6 +247,7 @@ export default express
  * @property {number} locLon2 - longitude coordinate
  * @property {string} rowId - the profile ID
  * @property {string} createdAt - date the profile was created
+ * @property {boolean} generateEmbedding - whether to always generate embedding vectors for this user
  */
 
 /**
@@ -136,6 +270,9 @@ export default express
       // See the image-api server for an example of how to leverage JWTs to get
       // permission to access data from the other service.
       const jwtInfo = await endorserDbService.jwtById(req.body.jwtId)
+      // Here's the approach we'd like to use:
+      // const authHeader = req.headers['authorization'] || req.headers['Authorization']
+      // const jwtInfo = await getClaimById(req.body.jwtId, authHeader)
 
       const result =
         await sendAndStoreLink(
@@ -186,6 +323,9 @@ export default express
     // permission to access data from the other service.
     try {
       await ClaimService.getRateLimits(res.locals.authTokenIssuer)
+      // Here's the approach we'd like to use:
+      // const authHeader = req.headers['authorization'] || req.headers['Authorization']
+      // await getRateLimits(authHeader)
     } catch (e) {
       // must not have an account
       return res.status(400).json({ error: "Must be registered to submit a profile" }).end()
@@ -265,7 +405,7 @@ export default express
         } else {
           // someone the issuer can see can see the profile,
           // but giving up all between would expose their full network
-          return res.status(403).json({ error: "Will not leak the issuer's profile" }).end()
+          return res.status(403).json({ error: "The issuer's profile is not accessible" }).end()
         }
       }
       res.status(200).json({ data: result }).end()
@@ -446,6 +586,64 @@ export default express
       res.status(204).json({ success: { numDeleted: result } }).end()
     } catch (err) {
       console.error('Error deleting user profile', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update the generateEmbedding flag for a user profile (permissioned users only)
+ *
+ * @group partner utils
+ * @route PUT /api/partner/userProfile/{issuerDid}/generateEmbedding
+ * @param {string} issuerDid.path.required - the DID of the user whose profile to update
+ * @returns 200 - success response
+ * @returns {Error} 403 - unauthorized (not an admin)
+ * @returns {Error} 404 - profile not found
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.put(
+  '/userProfile/:profileDid/generateEmbedding',
+  async (req, res) => {
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+
+      // Check if requester is an admin
+      if (!isAdminUser(res.locals.authTokenIssuer)) {
+        return res.status(403).json({ error: "Only permissioned users can update the generateEmbedding flag" }).end()
+      }
+
+      // We're currently not checking that the issuer can see this profile DID.
+      // We're assuming that permissioned users will not abuse this.
+      // (We considered checking visibility but that approach is quite the rabbit-hole.)
+      const { profileDid } = req.params
+
+      // Check if profile exists
+      const profile = await partnerDbService.profileByIssuerDid(profileDid)
+      if (!profile) {
+        // create an empty profile
+        await partnerDbService.profileInsertOrUpdate({
+          description: '',
+          issuerDid: profileDid,
+          locLat: null,
+          locLon: null,
+          locLat2: null,
+          locLon2: null,
+        })
+      }
+
+      // Update the flag
+      const updated = await partnerDbService.profileUpdateGenerateEmbedding(profileDid, true)
+      if (updated === 0) {
+        return res.status(500).json({ error: "Profile could not be updated" }).end()
+      }
+
+      res.status(200).json({ success: { generateEmbedding: true } }).end()
+    } catch (err) {
+      console.error('Error updating generateEmbedding flag', err)
       res.status(500).json({ error: err.message }).end()
     }
   }

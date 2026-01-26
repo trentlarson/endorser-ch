@@ -178,7 +178,7 @@ try {
 // Unit Tests
 // ============================================================================
 
-describe('Phase 0: Vector Similarity Foundation', () => {
+describe('P3 - Vector Similarity Foundation', () => {
   
   describe('Embedding Metadata', () => {
     
@@ -682,4 +682,3 @@ describe('Phase 0: Vector Similarity Foundation', () => {
     });
   });
 });
-

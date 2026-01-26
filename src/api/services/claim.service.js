@@ -124,6 +124,7 @@ class ClaimService {
     }
   }
 
+  // Note how some uses rely on an error, so beware if you stop returning an error result
   async getRateLimits(requestorDid) {
     const registered = await dbService.registrationByDid(requestorDid)
     if (registered) {
@@ -145,6 +146,7 @@ class ClaimService {
       result.maxRegistrationsPerMonth = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
       return result
     } else {
+      // Note how some uses rely on an error, so beware if you stop returning an error result
       return Promise.reject({
         clientError: { message: 'Rate limits are only available to registered users.',
                        code: ERROR_CODES.UNREGISTERED_USER }
