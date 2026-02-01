@@ -24,149 +24,161 @@ const modelId = 'text-embedding-3-small';
 const profileData = {
   agriculture1: {
     id: 'user-001',
-    name: 'Alice',
+    name: 'A Alice',
     profileText: 'Passionate about sustainable agriculture, permaculture design, and regenerative farming practices'
   },
   agriculture2: {
     id: 'user-002',
-    name: 'Bob',
+    name: 'A Bob',
     profileText: 'Interested in organic farming, permaculture, and sustainable food systems'
   },
   tech: {
     id: 'user-003',
-    name: 'Carol',
+    name: 'A Carol',
     profileText: 'Software developer passionate about open source, decentralization, and blockchain'
   },
   community: {
     id: 'user-004',
-    name: 'Dave',
+    name: 'A Dave',
     profileText: 'Community organizer focused on local resilience, mutual aid, and grassroots movements'
   },
   environment: {
     id: 'user-005',
-    name: 'Eve',
+    name: 'A Eve',
     profileText: 'Environmental activist working on climate justice and ecosystem restoration'
   },
   techCommunity: {
     id: 'user-006',
-    name: 'Frank',
+    name: 'A Frank',
     profileText: 'Building community tech platforms and digital tools for grassroots organizing'
   },
   
   // Education & Homeschooling
   homeschool1: {
     id: 'user-007',
-    name: 'Grace',
+    name: 'A Grace',
     profileText: 'Homeschooling mom using Montessori and unschooling methods. Love nature-based learning, hands-on projects, and building community with other homeschool families. Always looking for co-op opportunities and field trip ideas.'
   },
   education1: {
     id: 'user-008',
-    name: 'Henry',
+    name: 'A Henry',
     profileText: 'Education reform and alternative schools'
   },
   teacher1: {
     id: 'user-009',
-    name: 'Iris',
+    name: 'A Iris',
     profileText: 'Former public school teacher now developing project-based curriculum for small learning communities. Interested in democratic education, Reggio Emilia approach, and helping kids develop critical thinking skills.'
   },
   
   // Construction & Machinery
   construction1: {
     id: 'user-010',
-    name: 'Jack',
+    name: 'A Jack',
     profileText: 'Heavy equipment operator and mechanic. Love working on excavators, dozers, backhoes. Also into welding and metal fabrication.'
   },
   builder1: {
     id: 'user-011',
-    name: 'Kate',
+    name: 'A Kate',
     profileText: 'Natural building techniques'
   },
   carpenter1: {
     id: 'user-012',
-    name: 'Liam',
+    name: 'A Liam',
     profileText: 'Finish carpenter specializing in timber framing and traditional joinery. I build custom furniture using hand tools and teach workshops on woodworking skills. Looking to connect with other craftspeople who appreciate the old ways of building things that last.'
   },
   
   // Software & AI
   aiResearcher1: {
     id: 'user-013',
-    name: 'Maya',
+    name: 'A Maya',
     profileText: 'Machine learning engineer working on natural language processing and ethical AI. Fascinated by large language models, alignment problems, and how we can build AI systems that actually benefit humanity rather than just optimize for engagement metrics.'
   },
   developer1: {
     id: 'user-014',
-    name: 'Noah',
+    name: 'A Noah',
     profileText: 'Full-stack dev. React, Node, Python.'
   },
   dataScience1: {
     id: 'user-015',
-    name: 'Olivia',
+    name: 'A Olivia',
     profileText: 'Data scientist and visualization specialist interested in making complex information accessible to everyone'
   },
   
   // Guns & Firearms
   firearms1: {
     id: 'user-016',
-    name: 'Paul',
+    name: 'A Paul',
     profileText: 'Competitive shooter and firearms instructor teaching safety and marksmanship. Focus on responsible gun ownership, hunting ethics, and Second Amendment rights. Also enjoy reloading ammunition and long-range precision shooting.'
   },
   gunsmith1: {
     id: 'user-017',
-    name: 'Quinn',
+    name: 'A Quinn',
     profileText: 'Gunsmithing and custom builds'
   },
   
   // Outdoors & Nature
   hiking1: {
     id: 'user-018',
-    name: 'Rachel',
+    name: 'A Rachel',
     profileText: 'Backpacking and wilderness survival'
   },
   climber1: {
     id: 'user-019',
-    name: 'Sam',
+    name: 'A Sam',
     profileText: 'Rock climbing, mountaineering, and alpine adventures. Love pushing my limits on technical routes and multi-day expeditions. Always planning the next big objective in the mountains and looking for climbing partners who are passionate about the vertical world.'
   },
   outdoors1: {
     id: 'user-020',
-    name: 'Tara',
+    name: 'A Tara',
     profileText: 'Fly fishing, hunting, wilderness camping. Spend as much time as possible in the backcountry away from screens and crowds.'
   },
   
   // Mushrooms & Foraging
   mycology1: {
     id: 'user-021',
-    name: 'Uma',
+    name: 'A Uma',
     profileText: 'Mushroom cultivation and mycology enthusiast. Growing gourmet and medicinal mushrooms at home, experimenting with different substrates and species. Fascinated by the fungal kingdom and its role in ecosystem health. Also into foraging wild mushrooms and teaching others about identification.'
   },
   forager1: {
     id: 'user-022',
-    name: 'Victor',
+    name: 'A Victor',
     profileText: 'Wild edibles and medicinal plants'
   },
   
   // Travel & Culture
   traveler1: {
     id: 'user-023',
-    name: 'Wendy',
+    name: 'A Wendy',
     profileText: 'Digital nomad living in different countries every few months. Love immersing myself in local cultures, learning languages, and finding the best street food. Currently exploring Southeast Asia and always looking for off-the-beaten-path recommendations and travel buddies for the next adventure.'
   },
   backpacker1: {
     id: 'user-024',
-    name: 'Xavier',
+    name: 'A Xavier',
     profileText: 'Budget travel and cultural exchange'
   },
   
   // Games & Sports
   basketball1: {
     id: 'user-025',
-    name: 'Yara',
+    name: 'A Yara',
     profileText: 'Basketball coach and player. Love pickup games, teaching kids, and watching college hoops.'
   },
   boardgames1: {
     id: 'user-026',
-    name: 'Zack',
+    name: 'A Zack',
     profileText: 'Board game designer and enthusiast with a collection of over 300 games. Host weekly game nights featuring everything from heavy euros to social deduction games. Also run a podcast reviewing new releases and interviewing designers. Looking to playtest prototypes and connect with other gamers in the area.'
+  },
+
+  // empty profiles
+  empty1: {
+    id: 'user-027',
+    name: 'Bold Alice',
+    profileText: ''
+  },
+  empty2: {
+    id: 'user-028',
+    name: 'Bold Bob',
+    profileText: ''
   }
 };
 

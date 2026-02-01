@@ -34,6 +34,20 @@ function cosineSimilarity(vec1, vec2) {
   return dot / (mag1 * mag2);
 }
 
+/**
+ * Two-letter abbreviation for a name: first letter of first two words, or first two chars if one word.
+ * @param {string} name
+ * @returns {string}
+ */
+function twoLetterAbbrev(name) {
+  const words = String(name).trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  const s = String(name).trim();
+  return (s.slice(0, 2) || s[0] || '?').toUpperCase();
+}
+
 // ============================================================================
 // Radial Layout Calculation
 // ============================================================================
@@ -91,9 +105,10 @@ function calculateRadialLayout(centerIndex, similarities, maxRadius = 180) {
 // ============================================================================
 
 function generateInteractiveHTML(profiles, similarities) {
-  // Serialize the data for JavaScript
+  // Serialize the data for JavaScript (include two-letter abbrev for labels)
   const profilesData = JSON.stringify(profiles.map((p, i) => ({
     name: p.name,
+    abbrev: twoLetterAbbrev(p.name),
     profileText: p.profileText,
     index: i,
     color: `hsl(${i * 360 / profiles.length}, 70%, 60%)`
@@ -202,10 +217,13 @@ function generateInteractiveHTML(profiles, similarities) {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
+      min-width: 32px;
+      width: auto;
+      padding: 0 6px;
       height: 32px;
       border-radius: 50%;
       font-weight: bold;
+      font-size: 14px;
       color: white;
     }
     
@@ -282,10 +300,17 @@ function generateInteractiveHTML(profiles, similarities) {
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    .table-scroll-wrapper {
+      overflow-x: auto;
       margin-top: 20px;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+    }
+    
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
     }
     
     th, td {
@@ -298,6 +323,21 @@ function generateInteractiveHTML(profiles, similarities) {
       background: #4ade80;
       color: white;
       font-weight: 600;
+    }
+    
+    /* Sticky first column so row headers stay visible when scrolling horizontally */
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: white;
+      border-right: 2px solid #999;
+      min-width: 120px;
+    }
+    th:first-child {
+      background: #4ade80;
+      color: white;
     }
     
     .legend {
@@ -336,7 +376,7 @@ function generateInteractiveHTML(profiles, similarities) {
     <div class="side-panel">
       <div class="instructions">
         <strong>How to use:</strong><br>
-        • Click any profile letter to center it<br>
+        • Click any profile (two-letter label) to center it<br>
         • Other profiles arrange by similarity<br>
         • Click the same profile again to reset to alphabetical view<br>
         • Hover over any profile to see its details
@@ -388,10 +428,12 @@ function generateInteractiveHTML(profiles, similarities) {
         <span>Minimal (≤0.3)</span>
       </div>
     </div>
-    <table>
-      ${headerRow}
-      ${tableRows}
-    </table>
+    <div class="table-scroll-wrapper">
+      <table>
+        ${headerRow}
+        ${tableRows}
+      </table>
+    </div>
   </div>
   
   <script>
@@ -517,11 +559,11 @@ function generateInteractiveHTML(profiles, similarities) {
         text.setAttribute('y', pos.y);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('dominant-baseline', 'middle');
-        text.setAttribute('font-size', isCentered ? '28' : '20');
+        text.setAttribute('font-size', isCentered ? '18' : '14');
         text.setAttribute('font-weight', 'bold');
         text.setAttribute('fill', '#fff');
         text.setAttribute('pointer-events', 'none');
-        text.textContent = profile.name[0];
+        text.textContent = profile.abbrev;
         
         g.appendChild(circle);
         g.appendChild(text);
@@ -580,7 +622,7 @@ function generateInteractiveHTML(profiles, similarities) {
             <div class="profile-card">
               <h2>
                 <span class="profile-letter" style="background: \${hovered.color}">
-                  \${hovered.name[0]}
+                  \${hovered.abbrev}
                 </span>
                 \${hovered.name}
               </h2>
@@ -604,7 +646,7 @@ function generateInteractiveHTML(profiles, similarities) {
           <div class="profile-card">
             <h2>
               <span class="profile-letter" style="background: \${centered.color}">
-                \${centered.name[0]}
+                \${centered.abbrev}
               </span>
               \${centered.name}
             </h2>
@@ -619,8 +661,8 @@ function generateInteractiveHTML(profiles, similarities) {
           html += \`
             <div class="hover-profile">
               <h3>
-                <span class="profile-letter" style="background: \${hovered.color}; width: 24px; height: 24px; font-size: 14px;">
-                  \${hovered.name[0]}
+                <span class="profile-letter" style="background: \${hovered.color}; width: auto; min-width: 24px; height: 24px; font-size: 12px; padding: 0 4px;">
+                  \${hovered.abbrev}
                 </span>
                 \${hovered.name}
                 <span class="similarity-badge">
@@ -727,5 +769,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { cosineSimilarity, calculateRadialLayout };
+export { cosineSimilarity, calculateRadialLayout, twoLetterAbbrev };
 
