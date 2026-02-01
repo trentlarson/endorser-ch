@@ -531,14 +531,168 @@ class PartnerDatabase {
 
   profileDelete(issuerDid) {
     return new Promise((resolve, reject) => {
-      const stmt = "DELETE FROM user_profile WHERE issuerDid = ?"
-      partnerDb.run(stmt, [issuerDid], function(err) {
+      // Delete embedding first (user_profile_embedding references user_profile.rowid)
+      partnerDb.run(
+        "DELETE FROM user_profile_embedding WHERE userProfileRowId IN (SELECT rowid FROM user_profile WHERE issuerDid = ?)",
+        [issuerDid],
+        function(err1) {
+          if (err1) {
+            reject(err1)
+            return
+          }
+          partnerDb.run("DELETE FROM user_profile WHERE issuerDid = ?", [issuerDid], function(err2) {
+            if (err2) {
+              reject(err2)
+            } else {
+              resolve(this.changes)
+            }
+          })
+        }
+      )
+    })
+  }
+
+  /****************************************************************
+   * Profile Embedding (for semantic matching)
+   **/
+
+  /**
+   * Insert or update embedding for a profile
+   * @param {number} profileRowId - user_profile.rowid
+   * @param {string} embeddingVector - comma-separated vector string
+   * @returns {Promise<number>} profileRowId on success
+   */
+  profileEmbeddingInsertOrUpdate(profileRowId, embeddingVector) {
+    return new Promise((resolve, reject) => {
+      const stmt = `
+        INSERT INTO user_profile_embedding (userProfileRowId, embeddingVector, updatedAt)
+        VALUES (?, ?, datetime())
+        ON CONFLICT(userProfileRowId) DO UPDATE SET
+          embeddingVector = excluded.embeddingVector,
+          updatedAt = datetime()
+        WHERE userProfileRowId = ?`
+      partnerDb.run(stmt, [profileRowId, embeddingVector, profileRowId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(profileRowId)
+        }
+      })
+    })
+  }
+
+  /**
+   * Get embedding for a single profile
+   * @param {number} profileRowId - user_profile.rowid
+   * @returns {Promise<object|null>} { profileRowId, embeddingVector, updatedAt } or null
+   */
+  profileEmbeddingGetByProfileRowId(profileRowId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT userProfileRowId, embeddingVector, updatedAt FROM user_profile_embedding WHERE userProfileRowId = ?",
+        [profileRowId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            if (row) {
+              row.updatedAt = util.isoAndZonify(row.updatedAt)
+            }
+            resolve(row)
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * Get embeddings for multiple profiles
+   * @param {number[]} profileRowIds - array of user_profile.rowid
+   * @returns {Promise<Array<{profileRowId: number, embeddingVector: string}>>}
+   */
+  profileEmbeddingGetByProfileRowIds(profileRowIds) {
+    if (!profileRowIds || profileRowIds.length === 0) {
+      return Promise.resolve([])
+    }
+    const placeholders = profileRowIds.map(() => '?').join(',')
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        `SELECT userProfileRowId, embeddingVector FROM user_profile_embedding WHERE userProfileRowId IN (${placeholders})`,
+        profileRowIds,
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows || [])
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * Delete embedding when profile has generateEmbedding set to false or profile is deleted
+   * @param {number} profileRowId - user_profile.rowid
+   * @returns {Promise<number>} number of rows deleted
+   */
+  profileEmbeddingDeleteByProfileRowId(profileRowId) {
+    return new Promise((resolve, reject) => {
+      const stmt = "DELETE FROM user_profile_embedding WHERE userProfileRowId = ?"
+      partnerDb.run(stmt, [profileRowId], function(err) {
         if (err) {
           reject(err)
         } else {
           resolve(this.changes)
         }
       })
+    })
+  }
+
+  /**
+   * Get admitted group members who have embeddings for matching
+   * @param {number} groupId - group_onboard.rowid
+   * @returns {Promise<Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string}>>}
+   */
+  groupMembersWithEmbeddings(groupId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        `SELECT p.rowid as rowId, p.issuerDid, p.description, e.embeddingVector
+         FROM group_onboard_member m
+         JOIN user_profile p ON m.issuerDid = p.issuerDid
+         JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
+         WHERE m.groupId = ? AND m.admitted = 1 AND p.generateEmbedding = 1`,
+        [groupId],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows || [])
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * Get all profiles that have generateEmbedding=true, with their embeddings
+   * @returns {Promise<Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string}>>}
+   */
+  profilesWithEmbeddingsForMatching() {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        `SELECT p.rowid as rowId, p.issuerDid, p.description, e.embeddingVector
+         FROM user_profile p
+         JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
+         WHERE p.generateEmbedding = 1`,
+        [],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows || [])
+          }
+        }
+      )
     })
   }
 }

@@ -4,3 +4,14 @@
 
 ALTER TABLE user_profile ADD COLUMN generateEmbedding BOOLEAN DEFAULT 0;
 
+-- Profile embeddings for AI-powered semantic matching
+-- Stores embedding vectors as comma-separated string for profiles with generateEmbedding flag
+
+CREATE TABLE user_profile_embedding (
+  userProfileRowId INTEGER PRIMARY KEY,
+  embeddingVector TEXT NOT NULL,
+  updatedAt DATETIME NOT NULL,
+  FOREIGN KEY (userProfileRowId) REFERENCES user_profile(rowid)
+);
+
+CREATE INDEX user_profile_embedding_userProfileRowId ON user_profile_embedding(userProfileRowId);

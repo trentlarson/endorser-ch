@@ -12,6 +12,8 @@ import { dbService as endorserDbService } from "../services/endorser.db.service"
 
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
+import embeddingsService from "../services/embeddings.service";
+import { matchParticipants, buildParticipantsFromRows } from "../services/matching.service";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
@@ -86,6 +88,27 @@ function isAdminUser(issuerDid) {
   // ADMIN_DIDS is a comma-separated list of DIDs
   const adminList = JSON.parse(adminUsers)
   return adminList.includes(issuerDid)
+}
+
+/**
+ * Ensure profile embedding is generated/stored when generateEmbedding flag is set,
+ * or deleted when flag is cleared.
+ * @param {string} issuerDid - the profile owner's DID
+ */
+async function ensureProfileEmbedding(issuerDid) {
+  const profile = await partnerDbService.profileByIssuerDid(issuerDid)
+  if (!profile) return
+  const profileRowId = profile.rowId ?? profile.rowid
+  if (!profileRowId) return
+
+  if (!profile.generateEmbedding) {
+    await partnerDbService.profileEmbeddingDeleteByProfileRowId(profileRowId)
+    return
+  }
+
+  const embedding = await embeddingsService.generateEmbedding(profile.description)
+  const vectorStr = embeddingsService.embeddingToStorageString(embedding)
+  await partnerDbService.profileEmbeddingInsertOrUpdate(profileRowId, vectorStr)
 }
 
 /**
@@ -364,6 +387,11 @@ export default express
 
       const userProfileId = await partnerDbService.profileInsertOrUpdate(entry)
 
+      // Generate embedding in background if generateEmbedding flag is set
+      ensureProfileEmbedding(res.locals.authTokenIssuer).catch((err) => {
+        console.error('Error generating profile embedding:', err)
+      })
+
       res.status(201).json({ success: { userProfileId } }).end()
     } catch (err) {
       console.error('Error adding user profile', err)
@@ -391,8 +419,10 @@ export default express
     try {
       let result = await partnerDbService.profileByIssuerDid(issuerDid)
 
+      // use this message for not visible profiles as well so as to not leak information about this DID attached to any profile
+      const NOT_SEEN_MESSAGE = "There is no profile for this issuer or it is not visible to you."
       if (!result) {
-        return res.status(404).json({ error: "Profile not found" }).end()
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
       }
       if (issuerDid !== res.locals.authTokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
@@ -406,7 +436,7 @@ export default express
         } else {
           // someone the issuer can see can see the profile,
           // but giving up all between would expose their full network
-          return res.status(403).json({ error: "The issuer's profile is not accessible" }).end()
+          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
         }
       }
       res.status(200).json({ data: result }).end()
@@ -596,7 +626,7 @@ export default express
  * Update the generateEmbedding flag for a user profile (permissioned users only)
  *
  * @group partner utils
- * @route PUT /api/partner/userProfile/{issuerDid}/generateEmbedding
+ * @route PUT /api/partner/userProfile/generateEmbedding/{issuerDid}
  * @param {string} issuerDid.path.required - the DID of the user whose profile to update
  * @returns 200 - success response
  * @returns {Error} 403 - unauthorized (not an admin)
@@ -605,7 +635,7 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .put(
-  '/userProfile/:profileDid/generateEmbedding',
+  '/userProfileGenerateEmbedding/:profileDid',
   async (req, res) => {
     try {
       if (!res.locals.authTokenIssuer) {
@@ -643,6 +673,14 @@ export default express
       const updated = await partnerDbService.profileUpdateGenerateEmbedding(profileDid, generateEmbedding)
       if (updated === 0) {
         return res.status(500).json({ error: "Profile could not be updated." }).end()
+      }
+
+      // Generate or remove embedding based on flag
+      try {
+        await ensureProfileEmbedding(profileDid)
+      } catch (embErr) {
+        console.error('Error updating profile embedding:', embErr)
+        return res.status(500).json({ error: 'Profile updated but embedding generation failed. ' + embErr.message }).end()
       }
 
       res.status(200).json({ success: { generateEmbedding } }).end()
@@ -745,7 +783,7 @@ export default express
  * - "REGISTERED_BY_YOU" if the common ancestor is the source (target is in source's subtree)
  * - "REGISTERED_YOU" if the common ancestor is above the source (source needs to go up)
  * - "TARGET" if the source and target are the same
-* @returns {Error} 400 - client error
+ * @returns {Error} 400 - client error
  * @returns {Error} 404 - profile not found
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -886,6 +924,64 @@ export default express
       res.status(200).json({ data: room }).end()
     } catch (err) {
       console.error('Error getting group onboarding room by ID', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Trigger semantic matching for a group (organizer only)
+ * Pairs admitted members who have embeddings based on profile similarity.
+ *
+ * @group partner utils
+ * @route POST /api/partner/groupOnboard/{groupId}/match
+ * @param {number} groupId.path.required - group ID
+ * @param {string[]} excludedIds.body.optional - issuerDids to exclude from matching
+ * @param {Array<[string, string]>} excludedPairs.body.optional - pairs of issuerDids to never match
+ * @param {Array<[string, string]>} previousPairs.body.optional - pairs from previous rounds (don't repeat)
+ * @returns {object} 200 - pairs with participants and similarity scores
+ */
+.post(
+  '/groupOnboard/:groupId/match',
+  async (req, res) => {
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT." }).end()
+      }
+
+      const groupId = parseInt(req.params.groupId)
+      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (!group) {
+        return res.status(404).json({ error: "Group not found." }).end()
+      }
+      if (group.issuerDid !== res.locals.authTokenIssuer) {
+        return res.status(403).json({ error: "Only the organizer can trigger matching." }).end()
+      }
+
+      const { excludedIds = [], excludedPairs = [], previousPairs = [] } = req.body || {}
+
+      const rows = await partnerDbService.groupMembersWithEmbeddings(groupId)
+      if (rows.length < 2) {
+        return res.status(400).json({
+          error: "Need at least 2 admitted members with embeddings to match. Members must have generateEmbedding enabled and a profile.",
+        }).end()
+      }
+
+      const participants = buildParticipantsFromRows(rows)
+      const result = matchParticipants(participants, excludedPairs, excludedIds, previousPairs)
+
+      const pairsForResponse = result.pairs.map((pair) => ({
+        pairNumber: pair.pairNumber,
+        similarity: pair.similarity,
+        participants: pair.participants.map((p) => ({
+          issuerDid: p.issuerDid,
+          description: p.description,
+        })),
+      }))
+
+      res.status(200).json({ data: { pairs: pairsForResponse } }).end()
+    } catch (err) {
+      console.error('Error matching group members', err)
       res.status(500).json({ error: err.message }).end()
     }
   }

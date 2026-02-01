@@ -1,0 +1,136 @@
+/**
+ * Matching service - vector similarity and pairing algorithm for profile matching.
+ * Uses cosine similarity and greedy pairing to maximize total similarity.
+ */
+
+const { storageStringToEmbedding } = require('./embeddings.service');
+
+/**
+ * Calculate dot product of two vectors
+ */
+function dotProduct(vec1, vec2) {
+  if (vec1.length !== vec2.length) {
+    throw new Error('Vectors must have same length');
+  }
+  return vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
+}
+
+/**
+ * Calculate magnitude (length) of a vector
+ */
+function magnitude(vec) {
+  return Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
+}
+
+/**
+ * Calculate cosine similarity between two vectors.
+ * Returns a value between -1 (opposite) and 1 (identical)
+ */
+function cosineSimilarity(vec1, vec2) {
+  if (vec1.length !== vec2.length) {
+    throw new Error('Vectors must have same length');
+  }
+  const dot = dotProduct(vec1, vec2);
+  const mag1 = magnitude(vec1);
+  const mag2 = magnitude(vec2);
+  if (mag1 === 0 || mag2 === 0) {
+    return 0;
+  }
+  return dot / (mag1 * mag2);
+}
+
+/**
+ * Create pairs from participants based on similarity scores.
+ * Uses greedy algorithm: sort all pairs by similarity descending, then pick non-overlapping pairs.
+ *
+ * @param {Array<{id: string, embedding: number[]}>} participants - Participants with embeddings
+ * @param {Array<[string, string]>} excludedPairs - Pairs to never match
+ * @param {string[]} excludedIds - Participant IDs to exclude from matching
+ * @param {Array<[string, string]>} previousPairs - Previous round pairs (don't repeat)
+ * @returns {{ pairs: Array<{participants: Array, similarity: number, pairNumber: number}> }}
+ */
+function matchParticipants(participants, excludedPairs = [], excludedIds = [], previousPairs = []) {
+  const available = participants.filter((p) => !excludedIds.includes(p.id));
+
+  if (available.length < 2) {
+    throw new Error('Need at least 2 participants for matching');
+  }
+
+  if (available.length % 2 !== 0) {
+    throw new Error('Need an even number of participants for matching');
+  }
+
+  const similarities = [];
+  for (let i = 0; i < available.length; i++) {
+    for (let j = i + 1; j < available.length; j++) {
+      const p1 = available[i];
+      const p2 = available[j];
+
+      const isExcluded = excludedPairs.some(
+        ([id1, id2]) =>
+          (id1 === p1.id && id2 === p2.id) || (id1 === p2.id && id2 === p1.id)
+      );
+
+      const wasPreviouslyPaired = previousPairs.some(
+        ([id1, id2]) =>
+          (id1 === p1.id && id2 === p2.id) || (id1 === p2.id && id2 === p1.id)
+      );
+
+      if (!isExcluded && !wasPreviouslyPaired) {
+        const similarity = cosineSimilarity(p1.embedding, p2.embedding);
+        similarities.push({ i, j, p1, p2, similarity });
+      }
+    }
+  }
+
+  if (similarities.length === 0) {
+    throw new Error('No valid pairs available after applying constraints');
+  }
+
+  similarities.sort((a, b) => b.similarity - a.similarity);
+
+  const pairs = [];
+  const used = new Set();
+
+  for (const { p1, p2, similarity } of similarities) {
+    if (!used.has(p1.id) && !used.has(p2.id)) {
+      pairs.push({
+        participants: [p1, p2],
+        similarity,
+        pairNumber: pairs.length + 1,
+      });
+      used.add(p1.id);
+      used.add(p2.id);
+    }
+  }
+
+  return { pairs };
+}
+
+/**
+ * Build participant objects with embeddings from DB rows.
+ * @param {Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string}>} rows
+ * @returns {Array<{id: string, embedding: number[], issuerDid: string, description: string}>}
+ */
+function buildParticipantsFromRows(rows) {
+  return rows.map((row) => {
+    const embedding = storageStringToEmbedding(row.embeddingVector);
+    if (!embedding || embedding.length === 0) {
+      throw new Error(`Invalid embedding for profile ${row.rowId}`);
+    }
+    return {
+      id: row.issuerDid,
+      issuerDid: row.issuerDid,
+      description: row.description,
+      embedding,
+    };
+  });
+}
+
+module.exports = {
+  dotProduct,
+  magnitude,
+  cosineSimilarity,
+  matchParticipants,
+  buildParticipantsFromRows,
+};

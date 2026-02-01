@@ -7,10 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.3.1]
 ### Added
-- Flag generateEmbedding to mark profiles that should generate embeddings
+- Generation of vector embeddings for user profiles, with generateEmbedding flag to mark profiles that should generate them
 ### Changed in DB or environment
 - Automated endorser partner SQL script 6
-- Add any ADMIN_DIDS
+- ADMIN_DIDS & OPENAI_API_KEY
 
 ## [4.3.0]
 ### Added

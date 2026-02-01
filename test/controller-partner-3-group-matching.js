@@ -1,135 +1,23 @@
 import chai from "chai";
+import { createRequire } from "module";
 
+const require = createRequire(import.meta.url);
 const expect = chai.expect;
+
+const {
+  dotProduct,
+  magnitude,
+  cosineSimilarity,
+  matchParticipants,
+} = require("../src/api/services/matching.service.js");
 
 /**
  * Phase 0: Vector Similarity Foundation Tests
- * 
+ *
  * This test suite validates the core vector math functions and matching algorithms
  * that will be used for AI-powered profile matching at events.
+ * Uses matching.service.js for dotProduct, magnitude, cosineSimilarity, matchParticipants.
  */
-
-// ============================================================================
-// Core Vector Math Functions
-// ============================================================================
-
-/**
- * Calculate dot product of two vectors
- * @param {number[]} vec1 - First vector
- * @param {number[]} vec2 - Second vector
- * @returns {number} Dot product
- */
-function dotProduct(vec1, vec2) {
-  if (vec1.length !== vec2.length) {
-    throw new Error('Vectors must have same length');
-  }
-  return vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
-}
-
-/**
- * Calculate magnitude (length) of a vector
- * @param {number[]} vec - Input vector
- * @returns {number} Magnitude
- */
-function magnitude(vec) {
-  return Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0));
-}
-
-/**
- * Calculate cosine similarity between two vectors
- * Returns a value between -1 (opposite) and 1 (identical)
- * @param {number[]} vec1 - First vector
- * @param {number[]} vec2 - Second vector
- * @returns {number} Similarity score
- */
-function cosineSimilarity(vec1, vec2) {
-  if (vec1.length !== vec2.length) {
-    throw new Error('Vectors must have same length');
-  }
-  const dot = dotProduct(vec1, vec2);
-  const mag1 = magnitude(vec1);
-  const mag2 = magnitude(vec2);
-  
-  if (mag1 === 0 || mag2 === 0) {
-    return 0;
-  }
-  
-  return dot / (mag1 * mag2);
-}
-
-// ============================================================================
-// Matching Algorithm Functions
-// ============================================================================
-
-/**
- * Create pairs from a list of participants based on similarity scores
- * @param {Array} participants - Array of participant objects with embeddings
- * @param {Array} excludedPairs - Array of [id1, id2] pairs to exclude
- * @param {Array} excludedIds - Array of participant IDs to exclude from matching
- * @param {Array} previousPairs - Array of previous round pairs to avoid repeating
- * @returns {Object} { pairs: Array }
- */
-function matchParticipants(participants, excludedPairs = [], excludedIds = [], previousPairs = []) {
-  // Filter out excluded participants
-  const available = participants.filter(p => !excludedIds.includes(p.id));
-  
-  if (available.length < 2) {
-    throw new Error('Need at least 2 participants for matching');
-  }
-  
-  if (available.length % 2 !== 0) {
-    throw new Error('Need an even number of participants for matching');
-  }
-  
-  // Calculate all similarities
-  const similarities = [];
-  for (let i = 0; i < available.length; i++) {
-    for (let j = i + 1; j < available.length; j++) {
-      const p1 = available[i];
-      const p2 = available[j];
-      
-      // Check if this pair is excluded
-      const isExcluded = excludedPairs.some(([id1, id2]) => 
-        (id1 === p1.id && id2 === p2.id) || (id1 === p2.id && id2 === p1.id)
-      );
-      
-      // Check if this pair was in a previous round
-      const wasPreviouslyPaired = previousPairs.some(([id1, id2]) =>
-        (id1 === p1.id && id2 === p2.id) || (id1 === p2.id && id2 === p1.id)
-      );
-      
-      if (!isExcluded && !wasPreviouslyPaired) {
-        const similarity = cosineSimilarity(p1.embedding, p2.embedding);
-        similarities.push({ i, j, p1, p2, similarity });
-      }
-    }
-  }
-  
-  if (similarities.length === 0) {
-    throw new Error('No valid pairs available after applying constraints');
-  }
-  
-  // Sort by similarity (highest first)
-  similarities.sort((a, b) => b.similarity - a.similarity);
-  
-  // Greedy pairing algorithm
-  const pairs = [];
-  const used = new Set();
-  
-  for (const { p1, p2, similarity } of similarities) {
-    if (!used.has(p1.id) && !used.has(p2.id)) {
-      pairs.push({
-        participants: [p1, p2],
-        similarity,
-        pairNumber: pairs.length + 1
-      });
-      used.add(p1.id);
-      used.add(p2.id);
-    }
-  }
-  
-  return { pairs };
-}
 
 // ============================================================================
 // Test Data - Sample Profile Embeddings
@@ -449,12 +337,12 @@ describe('P3 - Vector Similarity Foundation', () => {
       expect(() => matchParticipants(participants)).to.throw('Need an even number of participants for matching');
     });
     
-    it('should handle 26 people with 13 pairs', () => {
+    it('should handle 28 people with 14 pairs', () => {
       const participants = Object.values(testProfiles);
       
       const result = matchParticipants(participants);
       
-      expect(result.pairs).to.have.length(13);
+      expect(result.pairs).to.have.length(14);
       
       // All participants should be used exactly once
       const usedIds = new Set();
@@ -464,7 +352,7 @@ describe('P3 - Vector Similarity Foundation', () => {
           usedIds.add(p.id);
         });
       });
-      expect(usedIds.size).to.equal(26);
+      expect(usedIds.size).to.equal(28);
     });
     
     it('should assign pair numbers sequentially', () => {

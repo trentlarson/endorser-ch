@@ -622,61 +622,31 @@ describe("P2 - Group Onboarding", () => {
     // Set ADMIN_USERS environment variable before tests
     before(() => {
       // Store original value
-      process.env.ADMIN_USERS = JSON.stringify([adminDid])
+      process.env.ADMIN_DIDS = JSON.stringify([adminDid])
     })
 
     after(() => {
       // Clean up
-      delete process.env.ADMIN_USERS
+      delete process.env.ADMIN_DIDS
     })
 
     it('should reject request without valid JWT', () => {
       return request(Server)
-        .put('/api/partner/userProfile/' + userWithProfileDid + '/generateEmbedding')
+        .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
         // No Authorization header
         .then(r => {
           expect(r.status).to.equal(400) // Bad request - missing auth token
-          expect(r.body.error).to.equal("Request must include a valid Authorization JWT")
+          expect(r.body.error).to.contain("must include a valid Authorization JWT")
         })
     })
 
     it('should reject non-admin user attempting to set generateEmbeddings flag', () => {
       return request(Server)
-        .put('/api/partner/userProfile/' + userWithProfileDid + '/generateEmbedding')
+        .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
         .set('Authorization', 'Bearer ' + pushTokens[2]) // non-admin user
         .then(r => {
           expect(r.status).to.equal(403)
-          expect(r.body.error).to.equal("Only permissioned users can update the generateEmbedding flag")
-        })
-    })
-
-    it('should allow admin to set generateEmbeddings flag for user with profile', () => {
-      // First verify the user has a profile
-      return request(Server)
-        .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)
-        .set('Authorization', 'Bearer ' + pushTokens[1])
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.data).to.exist
-          expect(r.body.data.generateEmbedding).to.equal(false)
-          
-          // Now set the flag as admin
-          return request(Server)
-            .put('/api/partner/userProfile/' + userWithProfileDid + '/generateEmbedding')
-            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin user
-        })
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.success).to.exist
-          
-          // Verify the flag was set by retrieving the profile
-          return request(Server)
-            .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin can see it
-        })
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.data.generateEmbedding).to.equal(true)
+          expect(r.body.error).to.contain("Only permissioned users can update the generateEmbedding flag")
         })
     })
 
@@ -690,7 +660,7 @@ describe("P2 - Group Onboarding", () => {
           
           // Now set the flag as admin - this should create a profile
           return request(Server)
-            .put('/api/partner/userProfile/' + userWithoutProfileDid + '/generateEmbedding')
+            .put('/api/partner/userProfileGenerateEmbedding/' + userWithoutProfileDid)
             .set('Authorization', 'Bearer ' + pushTokens[0]) // admin user
         })
         .then(r => {
@@ -704,7 +674,7 @@ describe("P2 - Group Onboarding", () => {
             .set('Authorization', 'Bearer ' + pushTokens[0])
         })
         .then(r => {
-          expect(r.status).to.equal(403)
+          expect(r.status).to.equal(404)
 
           // now retrieve the profile as the user and see that the flag is set
           return request(Server)
@@ -718,7 +688,38 @@ describe("P2 - Group Onboarding", () => {
         .catch(err => {
           return Promise.reject(err)
         });
-})
+    })
+
+    it('should allow admin to set generateEmbeddings flag for user with profile (which fails without OPENAI_API_KEY)', () => {
+      // First verify the user has a profile
+      return request(Server)
+        .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[1])
+        .then(r => {
+          expect(r.status).to.equal(200)
+          expect(r.body.data).to.exist
+          expect(r.body.data.generateEmbedding).to.equal(false)
+          
+          // Now set the flag as admin
+          return request(Server)
+            .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
+            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin user
+        })
+        .then(r => {
+          console.log('r.body', r.body)
+          expect(r.status).to.equal(200)
+          expect(r.body.success).to.exist
+          
+          // Verify the flag was set by retrieving the profile
+          return request(Server)
+            .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)
+            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin can see it
+        })
+        .then(r => {
+          expect(r.status).to.equal(200)
+          expect(r.body.data.generateEmbedding).to.equal(true)
+        })
+    })
   })
 
 });

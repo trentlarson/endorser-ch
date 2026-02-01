@@ -49,7 +49,7 @@ Add Dependencies
 npm ci
 
 # set up the environment (optional)
-cp .env.local .env
+cp .env.example .env
 
 # setup/migrate DB
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
@@ -105,7 +105,7 @@ cp endorser-ch-db/endorser-ch-$NODE_ENV.sqlite3 endorser-ch-db/endorser-ch-$NODE
 sudo docker run --rm -v ~/endorser-ch/sql:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-ch-$NODE_ENV.sqlite3 -user=sa -password=... migrate
  ```
 
-* See .env.local for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
+* See .env.example for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
 
 * Run it:
 

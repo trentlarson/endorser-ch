@@ -445,7 +445,7 @@ describe('P1 - User Profiles', () => {
       .set('Authorization', 'Bearer ' + pushTokens[5])
       .then(r => {
         expect(r.body.data).to.be.undefined
-        expect(r.status).that.equals(403)
+        expect(r.status).that.equals(404)
       })
   })
 
@@ -455,7 +455,7 @@ describe('P1 - User Profiles', () => {
       .set('Authorization', 'Bearer ' + pushTokens[15])
       .then(r => {
         expect(r.body.data).to.be.undefined
-        expect(r.status).that.equals(403)
+        expect(r.status).that.equals(404)
       })
   })
 

@@ -57,4 +57,13 @@ CREATE TABLE user_profile (
 CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
 CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
 CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
+
+-- embeddings for semantic profile matching (OpenAI text-embedding-3-small)
+CREATE TABLE user_profile_embedding (
+    userProfileRowId INTEGER PRIMARY KEY,
+    embeddingVector TEXT NOT NULL,  -- comma-separated vector values
+    updatedAt DATETIME NOT NULL,
+    FOREIGN KEY (userProfileRowId) REFERENCES user_profile(rowid)
+);
+CREATE INDEX user_profile_embedding_userProfileRowId ON user_profile_embedding(userProfileRowId);
 ```
