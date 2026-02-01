@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Flag generateEmbedding to mark profiles that should generate embeddings
 ### Changed in DB or environment
 - Automated endorser partner SQL script 6
+- Add any ADMIN_DIDS
 
 ## [4.3.0]
 ### Added

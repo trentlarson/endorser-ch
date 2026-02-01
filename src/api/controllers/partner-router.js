@@ -79,11 +79,11 @@ async function updateGroupMember(memberId, member, bodyData, res) {
  * @returns {boolean} true if the DID is an admin
  */
 function isAdminUser(issuerDid) {
-  const adminUsers = process.env.ADMIN_USERS
+  const adminUsers = process.env.ADMIN_DIDS
   if (!adminUsers) {
     return false
   }
-  // ADMIN_USERS is a comma-separated list of DIDs
+  // ADMIN_DIDS is a comma-separated list of DIDs
   const adminList = JSON.parse(adminUsers)
   return adminList.includes(issuerDid)
 }
@@ -248,6 +248,7 @@ export default express
  * @property {string} rowId - the profile ID
  * @property {string} createdAt - date the profile was created
  * @property {boolean} generateEmbedding - whether to always generate embedding vectors for this user
+ * (only set by admins, and might only be visible to admins)
  */
 
 /**
@@ -608,18 +609,21 @@ export default express
   async (req, res) => {
     try {
       if (!res.locals.authTokenIssuer) {
-        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+        return res.status(400).json({ error: "The request must include a valid Authorization JWT." }).end()
       }
 
       // Check if requester is an admin
       if (!isAdminUser(res.locals.authTokenIssuer)) {
-        return res.status(403).json({ error: "Only permissioned users can update the generateEmbedding flag" }).end()
+        return res.status(403).json({ error: "Only permissioned users can update the generateEmbedding flag." }).end()
       }
 
       // We're currently not checking that the issuer can see this profile DID.
       // We're assuming that permissioned users will not abuse this.
       // (We considered checking visibility but that approach is quite the rabbit-hole.)
       const { profileDid } = req.params
+      const generateEmbedding = req.body && typeof req.body.generateEmbedding === 'boolean'
+        ? req.body.generateEmbedding
+        : true
 
       // Check if profile exists
       const profile = await partnerDbService.profileByIssuerDid(profileDid)
@@ -636,14 +640,14 @@ export default express
       }
 
       // Update the flag
-      const updated = await partnerDbService.profileUpdateGenerateEmbedding(profileDid, true)
+      const updated = await partnerDbService.profileUpdateGenerateEmbedding(profileDid, generateEmbedding)
       if (updated === 0) {
-        return res.status(500).json({ error: "Profile could not be updated" }).end()
+        return res.status(500).json({ error: "Profile could not be updated." }).end()
       }
 
-      res.status(200).json({ success: { generateEmbedding: true } }).end()
+      res.status(200).json({ success: { generateEmbedding } }).end()
     } catch (err) {
-      console.error('Error updating generateEmbedding flag', err)
+      console.error('Error updating generateEmbedding flag.', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
