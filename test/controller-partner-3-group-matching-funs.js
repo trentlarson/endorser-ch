@@ -2,7 +2,6 @@ import chai from "chai";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const expect = chai.expect;
 
 const {
   dotProduct,
@@ -11,8 +10,10 @@ const {
   matchParticipants,
 } = require("../src/api/services/matching.service.js");
 
+const expect = chai.expect;
+
 /**
- * Phase 0: Vector Similarity Foundation Tests
+ * Vector Similarity Foundation Tests
  *
  * This test suite validates the core vector math functions and matching algorithms
  * that will be used for AI-powered profile matching at events.
@@ -383,7 +384,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       // Exclude agriculture1 and agriculture2 from being paired
       const excludedPairs = [['user-001', 'user-002']];
       
-      const result = matchParticipants(participants, excludedPairs);
+      const result = matchParticipants(participants, [], excludedPairs);
       
       // Verify agriculture1 and agriculture2 are NOT paired together
       const hasForbiddenPair = result.pairs.some(pair => {
@@ -405,7 +406,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       // Exclude agriculture1 and agriculture2 from matching (e.g., they're organizers)
       const excludedIds = ['user-001', 'user-002'];
       
-      const result = matchParticipants(participants, [], excludedIds);
+      const result = matchParticipants(participants, excludedIds);
       
       // Should only have 2 people in matching (even number)
       const allParticipants = result.pairs.flatMap(pair => pair.participants);
@@ -484,7 +485,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       
       const excludedPairs = [['user-001', 'user-003']];
       
-      expect(() => matchParticipants(participants, excludedPairs))
+      expect(() => matchParticipants(participants, [], excludedPairs))
         .to.throw('No valid pairs available');
     });
     
@@ -569,4 +570,5 @@ describe('P3 - Vector Similarity Foundation', () => {
       expect(['user-002', 'user-005']).to.include(agriculturePartner.id);
     });
   });
+
 });

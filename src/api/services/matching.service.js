@@ -44,12 +44,12 @@ function cosineSimilarity(vec1, vec2) {
  * Uses greedy algorithm: sort all pairs by similarity descending, then pick non-overlapping pairs.
  *
  * @param {Array<{id: string, embedding: number[]}>} participants - Participants with embeddings
- * @param {Array<[string, string]>} excludedPairs - Pairs to never match
  * @param {string[]} excludedIds - Participant IDs to exclude from matching
+ * @param {Array<[string, string]>} excludedPairs - Pairs to never match
  * @param {Array<[string, string]>} previousPairs - Previous round pairs (don't repeat)
  * @returns {{ pairs: Array<{participants: Array, similarity: number, pairNumber: number}> }}
  */
-function matchParticipants(participants, excludedPairs = [], excludedIds = [], previousPairs = []) {
+function matchParticipants(participants, excludedIds = [], excludedPairs = [], previousPairs = []) {
   const available = participants.filter((p) => !excludedIds.includes(p.id));
 
   if (available.length < 2) {

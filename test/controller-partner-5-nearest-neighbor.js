@@ -26,7 +26,7 @@ before(async () => {
 });
 
 let profile0RowId, profile1RowId, profile2RowId, profile3RowId, profile16RowId, profile18RowId;
-describe("P3 - Nearest Neighbor for Current, Flat Tree", () => {
+describe("P5 - Nearest Neighbor for Current, Flat Tree", () => {
   /**
    * Test setup:
    * We'll create a registration tree and user profiles to test various scenarios
@@ -274,7 +274,7 @@ describe("P3 - Nearest Neighbor for Current, Flat Tree", () => {
   });
 });
 
-describe("P3 - Nearest Neighbor for Deeper Tree", () => {
+describe("P5 - Nearest Neighbor for Deeper Tree", () => {
   it("should register users 16, 17, and 18 and create at least one profile", async () => {
     const yesterdayEpoch = DateTime.utc().minus({day: 1}).toSeconds();
     await dbService.registrationUpdateIssueDateForTests(testUtil.ethrCredData[1].did, yesterdayEpoch);

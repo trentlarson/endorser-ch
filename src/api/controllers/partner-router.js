@@ -934,7 +934,7 @@ export default express
  * Pairs admitted members who have embeddings based on profile similarity.
  *
  * @group partner utils
- * @route POST /api/partner/groupOnboard/{groupId}/match
+ * @route POST /api/partner/groupOnboardMatch/{groupId}
  * @param {number} groupId.path.required - group ID
  * @param {string[]} excludedIds.body.optional - issuerDids to exclude from matching
  * @param {Array<[string, string]>} excludedPairs.body.optional - pairs of issuerDids to never match
@@ -942,11 +942,12 @@ export default express
  * @returns {object} 200 - pairs with participants and similarity scores
  */
 .post(
-  '/groupOnboard/:groupId/match',
+  '/groupOnboardMatch/:groupId',
   async (req, res) => {
     try {
+      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
       if (!res.locals.authTokenIssuer) {
-        return res.status(400).json({ error: "Request must include a valid Authorization JWT." }).end()
+        return res.status(401).json({ error: "Request must include a valid Authorization JWT." }).end()
       }
 
       const groupId = parseInt(req.params.groupId)
@@ -968,7 +969,7 @@ export default express
       }
 
       const participants = buildParticipantsFromRows(rows)
-      const result = matchParticipants(participants, excludedPairs, excludedIds, previousPairs)
+      const result = matchParticipants(participants, excludedIds, excludedPairs, previousPairs)
 
       const pairsForResponse = result.pairs.map((pair) => ({
         pairNumber: pair.pairNumber,
