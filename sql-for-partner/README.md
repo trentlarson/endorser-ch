@@ -15,20 +15,21 @@ CREATE TABLE group_onboard (
   issuerDid TEXT UNIQUE NOT NULL,
   name TEXT UNIQUE NOT NULL,
   projectLink TEXT,
+  previousMatches TEXT,  -- JSON of most recent matching results, null if none yet
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   expiresAt DATETIME NOT NULL
 ); 
 CREATE INDEX group_onboard_issuerDid ON group_onboard(issuerDid);
 
-CREATE TABLE group_onboard_members (
+CREATE TABLE group_onboard_member (
   issuerDid TEXT NOT NULL,
   groupId INTEGER NOT NULL,
   admitted BOOLEAN DEFAULT FALSE,
   content TEXT NOT NULL,
   FOREIGN KEY (groupId) REFERENCES group_onboard(rowid)
 ); 
-CREATE INDEX group_onboard_members_issuerDid ON group_onboard_members(issuerDid);
-CREATE INDEX group_onboard_members_groupId ON group_onboard_members(groupId);
+CREATE INDEX group_onboard_member_issuerDid ON group_onboard_member(issuerDid);
+CREATE INDEX group_onboard_member_groupId ON group_onboard_member(groupId);
 
 -- partners are other systems with whom this system collaborates
 CREATE TABLE partner_link (

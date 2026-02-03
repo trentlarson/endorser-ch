@@ -1,4 +1,4 @@
-export const EMBEDDING_EMPTY_STRING = 
+export const EMBEDDING_FOR_EMPTY_STRING = 
 {
   "meta": {
     "modelProvider": "api.openai.com",
@@ -8,8 +8,6 @@ export const EMBEDDING_EMPTY_STRING =
   },
   "data": {
     "empty": {
-      "id": "user-001",
-      "name": "Alice",
       "profileText": "",
       "embedding": [
         0.015368387,

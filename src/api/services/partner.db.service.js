@@ -147,6 +147,19 @@ class PartnerDatabase {
     })
   }
 
+  groupOnboardUpdatePreviousMatches(groupId, previousMatchesJson) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE group_onboard SET previousMatches = ? WHERE rowid = ?"
+      partnerDb.run(stmt, [previousMatchesJson, groupId], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
   /****************************************************************
    * Group Onboarding Members
    **/
@@ -649,17 +662,19 @@ class PartnerDatabase {
   }
 
   /**
-   * Get admitted group members who have embeddings for matching
+   * Get admitted group members with profiles for matching; uses left-outer-join on
+   * user_profile_embedding so members without an embedding row are included with
+   * embeddingVector null.
    * @param {number} groupId - group_onboard.rowid
-   * @returns {Promise<Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string}>>}
+   * @returns {Promise<Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string|null}>>}
    */
   groupMembersWithEmbeddings(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
         `SELECT p.rowid as rowId, p.issuerDid, p.description, e.embeddingVector
          FROM group_onboard_member m
-         JOIN user_profile p ON m.issuerDid = p.issuerDid
-         JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
+         LEFT JOIN user_profile p ON m.issuerDid = p.issuerDid
+         LEFT JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
          WHERE m.groupId = ? AND m.admitted = 1 AND p.generateEmbedding = 1`,
         [groupId],
         function(err, rows) {

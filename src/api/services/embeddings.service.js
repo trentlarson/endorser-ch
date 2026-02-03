@@ -6,7 +6,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const { EMBEDDING_EMPTY_STRING } = require('./embedding-empty-string');
+const { EMBEDDING_FOR_EMPTY_STRING } = require('./embedding-empty-string');
 const MODEL_ID = 'text-embedding-3-small';
 
 /**
@@ -18,7 +18,7 @@ const MODEL_ID = 'text-embedding-3-small';
 async function generateEmbedding(text) {
   const trimmed = typeof text === 'string' ? text.trim() : '';
   if (trimmed === '') {
-    return EMBEDDING_EMPTY_STRING.data.empty.embedding;
+    return EMBEDDING_FOR_EMPTY_STRING.data.empty.embedding;
   }
 
   const apiKey = process.env.OPENAI_API_KEY;

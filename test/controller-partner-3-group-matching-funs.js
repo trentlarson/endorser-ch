@@ -51,7 +51,11 @@ try {
     
     // Extract metadata and data
     embeddingMeta = embeddingsFile.meta;
-    testProfiles = embeddingsFile.data;
+    const raw = embeddingsFile.data;
+    // Ensure each profile has issuerDid (matching.service uses issuerDid)
+    testProfiles = Object.fromEntries(
+      Object.entries(raw).map(([k, v]) => [k, { ...v, issuerDid: v.issuerDid ?? v.id }])
+    );
     
     console.log(`✓ Using real embeddings from ${embeddingMeta.model} (${embeddingMeta.dimensions}D) via ${embeddingMeta.modelProvider}`);
   } else {
@@ -311,19 +315,19 @@ describe('P3 - Vector Similarity Foundation', () => {
       
       // Find the pair with agriculture1
       const agriculturePair = result.pairs.find(pair =>
-        pair.participants.some(p => p.id === 'user-001')
+        pair.participants.some(p => p.issuerDid === 'user-001')
       );
       
       // Agriculture1 should be paired with agriculture2 (highest similarity)
-      const partner = agriculturePair.participants.find(p => p.id !== 'user-001');
-      expect(partner.id).to.equal('user-002');
+      const partner = agriculturePair.participants.find(p => p.issuerDid !== 'user-001');
+      expect(partner.issuerDid).to.equal('user-002');
       
       // Tech should be paired with techCommunity
       const techPair = result.pairs.find(pair =>
-        pair.participants.some(p => p.id === 'user-003')
+        pair.participants.some(p => p.issuerDid === 'user-003')
       );
-      const techPartner = techPair.participants.find(p => p.id !== 'user-003');
-      expect(techPartner.id).to.equal('user-006');
+      const techPartner = techPair.participants.find(p => p.issuerDid !== 'user-003');
+      expect(techPartner.issuerDid).to.equal('user-006');
     });
     
     it('should throw error with odd number of people (5)', () => {
@@ -346,14 +350,14 @@ describe('P3 - Vector Similarity Foundation', () => {
       expect(result.pairs).to.have.length(14);
       
       // All participants should be used exactly once
-      const usedIds = new Set();
+      const usedDids = new Set();
       result.pairs.forEach(pair => {
         pair.participants.forEach(p => {
-          expect(usedIds.has(p.id)).to.be.false;
-          usedIds.add(p.id);
+          expect(usedDids.has(p.issuerDid)).to.be.false;
+          usedDids.add(p.issuerDid);
         });
       });
-      expect(usedIds.size).to.equal(28);
+      expect(usedDids.size).to.equal(28);
     });
     
     it('should assign pair numbers sequentially', () => {
@@ -382,14 +386,14 @@ describe('P3 - Vector Similarity Foundation', () => {
       ];
       
       // Exclude agriculture1 and agriculture2 from being paired
-      const excludedPairs = [['user-001', 'user-002']];
+      const excludedPairDids = [['user-001', 'user-002']];
       
-      const result = matchParticipants(participants, [], excludedPairs);
+      const result = matchParticipants(participants, [], excludedPairDids);
       
       // Verify agriculture1 and agriculture2 are NOT paired together
       const hasForbiddenPair = result.pairs.some(pair => {
-        const ids = pair.participants.map(p => p.id).sort();
-        return ids[0] === 'user-001' && ids[1] === 'user-002';
+        const dids = pair.participants.map(p => p.issuerDid).sort();
+        return dids[0] === 'user-001' && dids[1] === 'user-002';
       });
       
       expect(hasForbiddenPair).to.be.false;
@@ -404,16 +408,16 @@ describe('P3 - Vector Similarity Foundation', () => {
       ];
       
       // Exclude agriculture1 and agriculture2 from matching (e.g., they're organizers)
-      const excludedIds = ['user-001', 'user-002'];
+      const excludedDids = ['user-001', 'user-002'];
       
-      const result = matchParticipants(participants, excludedIds);
+      const result = matchParticipants(participants, excludedDids);
       
       // Should only have 2 people in matching (even number)
       const allParticipants = result.pairs.flatMap(pair => pair.participants);
       
       expect(allParticipants).to.have.length(2);
-      expect(allParticipants.some(p => p.id === 'user-001')).to.be.false;
-      expect(allParticipants.some(p => p.id === 'user-002')).to.be.false;
+      expect(allParticipants.some(p => p.issuerDid === 'user-001')).to.be.false;
+      expect(allParticipants.some(p => p.issuerDid === 'user-002')).to.be.false;
     });
     
     it('should prevent repeating pairs from previous rounds', () => {
@@ -427,20 +431,20 @@ describe('P3 - Vector Similarity Foundation', () => {
       // First round
       const round1 = matchParticipants(participants);
       
-      // Extract previous pairs
-      const previousPairs = round1.pairs.map(pair => 
-        pair.participants.map(p => p.id)
+      // Extract previous pairs (issuerDids)
+      const previousPairDids = round1.pairs.map(pair =>
+        pair.participants.map(p => p.issuerDid)
       );
       
       // Second round - should not repeat any pairs
-      const round2 = matchParticipants(participants, [], [], previousPairs);
+      const round2 = matchParticipants(participants, [], [], previousPairDids);
       
       // Verify no pairs are repeated
       round2.pairs.forEach(pair => {
-        const ids = pair.participants.map(p => p.id).sort();
-        const wasInRound1 = previousPairs.some(prevPair => {
-          const prevIds = prevPair.sort();
-          return prevIds[0] === ids[0] && prevIds[1] === ids[1];
+        const dids = pair.participants.map(p => p.issuerDid).sort();
+        const wasInRound1 = previousPairDids.some(prevPair => {
+          const prevDids = [...prevPair].sort();
+          return prevDids[0] === dids[0] && prevDids[1] === dids[1];
         });
         expect(wasInRound1).to.be.false;
       });
@@ -483,9 +487,9 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.tech
       ];
       
-      const excludedPairs = [['user-001', 'user-003']];
+      const excludedPairDids = [['user-001', 'user-003']];
       
-      expect(() => matchParticipants(participants, [], excludedPairs))
+      expect(() => matchParticipants(participants, [], excludedPairDids))
         .to.throw('No valid pairs available');
     });
     
@@ -493,10 +497,10 @@ describe('P3 - Vector Similarity Foundation', () => {
       // All profiles are identical - any pairing should work
       const identicalProfile = testProfiles.agriculture1;
       const participants = [
-        { ...identicalProfile, id: 'dup-001' },
-        { ...identicalProfile, id: 'dup-002' },
-        { ...identicalProfile, id: 'dup-003' },
-        { ...identicalProfile, id: 'dup-004' }
+        { ...identicalProfile, id: 'dup-001', issuerDid: 'dup-001' },
+        { ...identicalProfile, id: 'dup-002', issuerDid: 'dup-002' },
+        { ...identicalProfile, id: 'dup-003', issuerDid: 'dup-003' },
+        { ...identicalProfile, id: 'dup-004', issuerDid: 'dup-004' }
       ];
       
       const result = matchParticipants(participants);
@@ -563,11 +567,11 @@ describe('P3 - Vector Similarity Foundation', () => {
       
       // Agriculture profiles should be paired together due to high similarity
       const agriculturePair = result.pairs.find(pair =>
-        pair.participants.some(p => p.id === 'user-001')
+        pair.participants.some(p => p.issuerDid === 'user-001')
       );
       expect(agriculturePair).to.not.be.undefined;
-      const agriculturePartner = agriculturePair.participants.find(p => p.id !== 'user-001');
-      expect(['user-002', 'user-005']).to.include(agriculturePartner.id);
+      const agriculturePartner = agriculturePair.participants.find(p => p.issuerDid !== 'user-001');
+      expect(['user-002', 'user-005']).to.include(agriculturePartner.issuerDid);
     });
   });
 

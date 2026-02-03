@@ -706,7 +706,6 @@ describe("P2 - Group Onboarding", () => {
             .set('Authorization', 'Bearer ' + pushTokens[0]) // admin user
         })
         .then(r => {
-          console.log('r.body', r.body)
           expect(r.status).to.equal(200)
           expect(r.body.success).to.exist
           

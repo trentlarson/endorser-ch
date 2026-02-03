@@ -159,7 +159,7 @@ describe('P4 - Group Onboard Matching API', () => {
     
     it('should reject request without JWT', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .then(r => {
           expect(r.status).to.equal(401);
         });
@@ -167,21 +167,11 @@ describe('P4 - Group Onboard Matching API', () => {
 
     it('should reject request from non-organizer', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[1])
         .then(r => {
-          expect(r.status).to.equal(403);
-          expect(r.body.error).to.include('Only the organizer');
-        });
-    });
-
-    it('should reject request for non-existent group', () => {
-      return request(Server)
-        .post('/api/partner/groupOnboardMatch/99999')
-        .set('Authorization', 'Bearer ' + pushTokens[0])
-        .then(r => {
           expect(r.status).to.equal(404);
-          expect(r.body.error).to.include('Group not found');
+          expect(r.body.error).to.include('no meeting with you as the organizer');
         });
     });
   });
@@ -190,7 +180,7 @@ describe('P4 - Group Onboard Matching API', () => {
     
     it('should successfully match members in a group', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
@@ -215,7 +205,7 @@ describe('P4 - Group Onboard Matching API', () => {
 
     it('should match similar profiles together', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
@@ -251,10 +241,10 @@ describe('P4 - Group Onboard Matching API', () => {
     
     it('should exclude specified IDs from matching', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .send({
-          excludedIds: [creds[1].did, creds[2].did]
+          excludedDids: [creds[1].did, creds[2].did]
         })
         .then(r => {
           expect(r.status).to.equal(200);
@@ -272,10 +262,10 @@ describe('P4 - Group Onboard Matching API', () => {
 
     it('should exclude specified pairs from matching', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .send({
-          excludedPairs: [[creds[1].did, creds[2].did]]
+          excludedPairDids: [[creds[1].did, creds[2].did]]
         })
         .then(r => {
           expect(r.status).to.equal(200);
@@ -294,22 +284,22 @@ describe('P4 - Group Onboard Matching API', () => {
     it('should not repeat previous pairs', () => {
       // Get first round of matches
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
           const round1Pairs = r.body.data.pairs;
           
           // Extract previous pairs
-          const previousPairs = round1Pairs.map(pair =>
+          const previousPairDids = round1Pairs.map(pair =>
             pair.participants.map(p => p.issuerDid)
           );
           
-          // Request second round with previousPairs constraint
+          // Request second round with previousPairDids constraint
           return request(Server)
-            .post(`/api/partner/groupOnboardMatch/${groupId}`)
+            .post(`/api/partner/groupOnboardMatch`)
             .set('Authorization', 'Bearer ' + pushTokens[0])
-            .send({ previousPairs })
+            .send({ previousPairDids })
             .then(r2 => {
               expect(r2.status).to.equal(200);
               const round2Pairs = r2.body.data.pairs;
@@ -318,7 +308,7 @@ describe('P4 - Group Onboard Matching API', () => {
               round2Pairs.forEach(pair => {
                 const dids = pair.participants.map(p => p.issuerDid).sort();
                 
-                const wasInRound1 = previousPairs.some(prevPair => {
+                const wasInRound1 = previousPairDids.some(prevPair => {
                   const prevDids = [...prevPair].sort();
                   return prevDids[0] === dids[0] && prevDids[1] === dids[1];
                 });
@@ -348,7 +338,7 @@ describe('P4 - Group Onboard Matching API', () => {
           
           // Try to match with only organizer
           return request(Server)
-            .post(`/api/partner/groupOnboardMatch/${smallGroupId}`)
+            .post(`/api/partner/groupOnboardMatch`)
             .set('Authorization', 'Bearer ' + pushTokens[5]);
         })
         .then(r => {
@@ -357,23 +347,13 @@ describe('P4 - Group Onboard Matching API', () => {
         });
     });
 
-    it('should handle invalid group ID format', () => {
-      return request(Server)
-        .post('/api/partner/groupOnboardMatch/invalid')
-        .set('Authorization', 'Bearer ' + pushTokens[0])
-        .then(r => {
-          // Should either be 400, 404, or 500 depending on how the server handles it
-          expect(r.status).to.be.greaterThan(399);
-        });
-    });
-
     it('should reject empty excludedPairs array elements', () => {
       // This tests robustness - empty pairs should be handled gracefully
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .send({
-          excludedPairs: [[]]
+          excludedPairDids: [[]]
         })
         .then(r => {
           // Should either succeed (ignoring empty pairs) or fail gracefully
@@ -386,7 +366,7 @@ describe('P4 - Group Onboard Matching API', () => {
     
     it('should return pairs sorted or numbered correctly', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
@@ -400,7 +380,7 @@ describe('P4 - Group Onboard Matching API', () => {
 
     it('should return similarity scores within valid range', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
@@ -416,7 +396,7 @@ describe('P4 - Group Onboard Matching API', () => {
 
     it('should not expose sensitive data in response', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
@@ -439,7 +419,7 @@ describe('P4 - Group Onboard Matching API', () => {
 
     it('should use each participant exactly once', () => {
       return request(Server)
-        .post(`/api/partner/groupOnboardMatch/${groupId}`)
+        .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200);
@@ -451,6 +431,100 @@ describe('P4 - Group Onboard Matching API', () => {
           // Check for duplicates
           const uniqueDids = new Set(allDids);
           expect(allDids.length).to.equal(uniqueDids.size);
+        });
+    });
+  });
+
+  describe('Retrieval of Previous Matches', () => {
+
+    it('should reject GET request without JWT', () => {
+      return request(Server)
+        .get(`/api/partner/groupOnboardMatch`)
+        .then(r => {
+          expect(r.status).to.equal(401);
+        });
+    });
+
+    it('should reject GET request from non-member', () => {
+      return request(Server)
+        .get(`/api/partner/groupOnboardMatch`)
+        .set('Authorization', 'Bearer ' + pushTokens[6])
+        .then(r => {
+          expect(r.status).to.equal(404);
+        });
+    });
+
+    it('should return stored matches for organizer', () => {
+      return request(Server)
+        .get(`/api/partner/groupOnboardMatch`)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(200);
+          expect(r.body.data).to.have.property('pairs');
+          expect(r.body.data.pairs).to.be.an('array');
+          expect(r.body.data.pairs).to.have.length(2);
+
+          r.body.data.pairs.forEach(pair => {
+            expect(pair).to.have.property('pairNumber');
+            expect(pair).to.have.property('similarity');
+            expect(pair).to.have.property('participants');
+            expect(pair.participants).to.have.length(2);
+            pair.participants.forEach(participant => {
+              expect(participant).to.have.property('issuerDid');
+              expect(participant).to.have.property('description');
+            });
+          });
+        });
+    });
+
+    it('should return stored matches for admitted member', () => {
+      return request(Server)
+        .get(`/api/partner/groupOnboardMatch`)
+        .set('Authorization', 'Bearer ' + pushTokens[1])
+        .then(r => {
+          expect(r.status).to.equal(200);
+          expect(r.body.data).to.have.property('pairs');
+          expect(r.body.data.pairs).to.be.an('array');
+          expect(r.body.data.pairs).to.have.length(2);
+        });
+    });
+
+    let postPairs;
+    it('should return same pairs as last POST match', () => {
+      return request(Server)
+        .post(`/api/partner/groupOnboardMatch`)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(200);
+          postPairs = r.body.data.pairs;
+          return request(Server)
+            .get(`/api/partner/groupOnboardMatch`)
+            .set('Authorization', 'Bearer ' + pushTokens[2]);
+        })
+        .then(r => {
+          expect(r.status).to.equal(200);
+          expect(r.body.data.pairs).to.deep.equal(postPairs);
+        });
+
+    });
+
+    it('should return different pairs from last POST match', () => {
+      const previousPairDids = postPairs.map(pair => pair.participants.map(p => p.issuerDid));
+      return request(Server)
+        .post(`/api/partner/groupOnboardMatch`)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .send({ previousPairDids })
+        .then(r => {
+          expect(r.status).to.equal(200);
+          expect(r.body.data.pairs).to.not.deep.equal(postPairs);
+          postPairs = r.body.data.pairs;
+          return request(Server)
+            .get(`/api/partner/groupOnboardMatch`)
+            .set('Authorization', 'Bearer ' + pushTokens[2])
+            .then(r => {
+              expect(r.status).to.equal(200);
+              expect(r.body.data.pairs).to.deep.equal(postPairs);
+            });
         });
     });
   });

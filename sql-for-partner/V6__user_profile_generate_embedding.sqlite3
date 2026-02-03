@@ -7,6 +7,8 @@ ALTER TABLE user_profile ADD COLUMN generateEmbedding BOOLEAN DEFAULT 0;
 -- Profile embeddings for AI-powered semantic matching
 -- Stores embedding vectors as comma-separated string for profiles with generateEmbedding flag
 
+ALTER TABLE group_onboard ADD COLUMN previousMatches TEXT;
+
 CREATE TABLE user_profile_embedding (
   userProfileRowId INTEGER PRIMARY KEY,
   embeddingVector TEXT NOT NULL,

@@ -43,14 +43,14 @@ function cosineSimilarity(vec1, vec2) {
  * Create pairs from participants based on similarity scores.
  * Uses greedy algorithm: sort all pairs by similarity descending, then pick non-overlapping pairs.
  *
- * @param {Array<{id: string, embedding: number[]}>} participants - Participants with embeddings
- * @param {string[]} excludedIds - Participant IDs to exclude from matching
- * @param {Array<[string, string]>} excludedPairs - Pairs to never match
- * @param {Array<[string, string]>} previousPairs - Previous round pairs (don't repeat)
+ * @param {Array<{issuerDid: string, embedding: number[]}>} participants - Participants with embeddings
+ * @param {string[]} excludedDids - issuerDids to exclude from matching
+ * @param {Array<[string, string]>} excludedPairDids - Pairs of issuerDids to never match
+ * @param {Array<[string, string]>} previousPairDids - Pairs of issuerDids from previous rounds (don't repeat)
  * @returns {{ pairs: Array<{participants: Array, similarity: number, pairNumber: number}> }}
  */
-function matchParticipants(participants, excludedIds = [], excludedPairs = [], previousPairs = []) {
-  const available = participants.filter((p) => !excludedIds.includes(p.id));
+function matchParticipants(participants, excludedDids = [], excludedPairDids = [], previousPairDids = []) {
+  const available = participants.filter((p) => !excludedDids.includes(p.issuerDid));
 
   if (available.length < 2) {
     throw new Error('Need at least 2 participants for matching');
@@ -66,14 +66,14 @@ function matchParticipants(participants, excludedIds = [], excludedPairs = [], p
       const p1 = available[i];
       const p2 = available[j];
 
-      const isExcluded = excludedPairs.some(
-        ([id1, id2]) =>
-          (id1 === p1.id && id2 === p2.id) || (id1 === p2.id && id2 === p1.id)
+      const isExcluded = excludedPairDids.some(
+        ([did1, did2]) =>
+          (did1 === p1.issuerDid && did2 === p2.issuerDid) || (did1 === p2.issuerDid && did2 === p1.issuerDid)
       );
 
-      const wasPreviouslyPaired = previousPairs.some(
-        ([id1, id2]) =>
-          (id1 === p1.id && id2 === p2.id) || (id1 === p2.id && id2 === p1.id)
+      const wasPreviouslyPaired = previousPairDids.some(
+        ([did1, did2]) =>
+          (did1 === p1.issuerDid && did2 === p2.issuerDid) || (did1 === p2.issuerDid && did2 === p1.issuerDid)
       );
 
       if (!isExcluded && !wasPreviouslyPaired) {
@@ -93,14 +93,14 @@ function matchParticipants(participants, excludedIds = [], excludedPairs = [], p
   const used = new Set();
 
   for (const { p1, p2, similarity } of similarities) {
-    if (!used.has(p1.id) && !used.has(p2.id)) {
+    if (!used.has(p1.issuerDid) && !used.has(p2.issuerDid)) {
       pairs.push({
         participants: [p1, p2],
         similarity,
         pairNumber: pairs.length + 1,
       });
-      used.add(p1.id);
-      used.add(p2.id);
+      used.add(p1.issuerDid);
+      used.add(p2.issuerDid);
     }
   }
 

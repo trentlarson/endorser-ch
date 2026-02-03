@@ -12,8 +12,9 @@ import { dbService as endorserDbService } from "../services/endorser.db.service"
 
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
-import embeddingsService from "../services/embeddings.service";
+import embeddingsService, { embeddingToStorageString } from "../services/embeddings.service";
 import { matchParticipants, buildParticipantsFromRows } from "../services/matching.service";
+import { EMBEDDING_FOR_EMPTY_STRING } from "../services/embedding-empty-string";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
 import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
@@ -936,13 +937,13 @@ export default express
  * @group partner utils
  * @route POST /api/partner/groupOnboardMatch/{groupId}
  * @param {number} groupId.path.required - group ID
- * @param {string[]} excludedIds.body.optional - issuerDids to exclude from matching
- * @param {Array<[string, string]>} excludedPairs.body.optional - pairs of issuerDids to never match
- * @param {Array<[string, string]>} previousPairs.body.optional - pairs from previous rounds (don't repeat)
+ * @param {string[]} excludedDids.body.optional - issuerDids to exclude from matching
+ * @param {Array<[string, string]>} excludedPairDids.body.optional - pairs of issuerDids to never match
+ * @param {Array<[string, string]>} previousPairDids.body.optional - pairs from previous rounds (don't repeat)
  * @returns {object} 200 - pairs with participants and similarity scores
  */
 .post(
-  '/groupOnboardMatch/:groupId',
+  '/groupOnboardMatch',
   async (req, res) => {
     try {
       // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
@@ -950,26 +951,29 @@ export default express
         return res.status(401).json({ error: "Request must include a valid Authorization JWT." }).end()
       }
 
-      const groupId = parseInt(req.params.groupId)
-      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (!group) {
-        return res.status(404).json({ error: "Group not found." }).end()
-      }
-      if (group.issuerDid !== res.locals.authTokenIssuer) {
-        return res.status(403).json({ error: "Only the organizer can trigger matching." }).end()
+        return res.status(404).json({ error: "There is no meeting with you as the organizer." }).end()
       }
 
-      const { excludedIds = [], excludedPairs = [], previousPairs = [] } = req.body || {}
+      const { excludedDids = [], excludedPairDids = [], previousPairDids = [] } = req.body || {}
 
-      const rows = await partnerDbService.groupMembersWithEmbeddings(groupId)
+      const rows = await partnerDbService.groupMembersWithEmbeddings(group.groupId)
       if (rows.length < 2) {
         return res.status(400).json({
           error: "Need at least 2 admitted members with embeddings to match. Members must have generateEmbedding enabled and a profile.",
         }).end()
       }
 
-      const participants = buildParticipantsFromRows(rows)
-      const result = matchParticipants(participants, excludedIds, excludedPairs, previousPairs)
+      const emptyEmbeddingStorage = embeddingToStorageString(EMBEDDING_FOR_EMPTY_STRING.data.empty.embedding)
+      const rowsWithEmbeddings = rows.map((row) => ({
+        ...row,
+        embeddingVector: row.embeddingVector != null && String(row.embeddingVector).trim() !== ''
+          ? row.embeddingVector
+          : emptyEmbeddingStorage,
+      }))
+      const participants = buildParticipantsFromRows(rowsWithEmbeddings)
+      const result = matchParticipants(participants, excludedDids, excludedPairDids, previousPairDids)
 
       const pairsForResponse = result.pairs.map((pair) => ({
         pairNumber: pair.pairNumber,
@@ -980,9 +984,53 @@ export default express
         })),
       }))
 
+      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, JSON.stringify(pairsForResponse))
+
       res.status(200).json({ data: { pairs: pairsForResponse } }).end()
     } catch (err) {
       console.error('Error matching group members', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get previous matching results for a group (anyone in the meeting)
+ *
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMatch
+ * @returns {object} 200 - previous pairs with participants and similarity scores, or null if none yet
+ */
+.get(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Group-onboard-match check must include valid authorization." }).end()
+      }
+
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!member) {
+        return res.status(404).json({ error: "There is no meeting with you as a member." }).end()
+      }
+      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+      if (!group) {
+        return res.status(500).json({ error: "The server had a problem with this meeting. You'll need to start over. Report this to an admin with your details." }).end()
+      }
+
+      let pairs = null
+      if (group.previousMatches) {
+        try {
+          pairs = JSON.parse(group.previousMatches)
+        } catch (err) {
+          console.error('Error parsing previous matches', err)
+          return res.status(500).json({ error: "The server had a problem with this meeting pairs. You'll need to start over. Report this to an admin with your details." }).end()
+        }
+      }
+      res.status(200).json({ data: { pairs } }).end()
+    } catch (err) {
+      console.error('Error getting group previous matches', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
