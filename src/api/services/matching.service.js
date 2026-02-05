@@ -53,11 +53,11 @@ function matchParticipants(participants, excludedDids = [], excludedPairDids = [
   const available = participants.filter((p) => !excludedDids.includes(p.issuerDid));
 
   if (available.length < 2) {
-    throw new Error('Need at least 2 participants for matching');
+    throw new Error('You need at least 2 participants for matching.');
   }
 
   if (available.length % 2 !== 0) {
-    throw new Error('Need an even number of participants for matching');
+    throw new Error('You need an even number of participants for matching.');
   }
 
   const similarities = [];
@@ -84,7 +84,7 @@ function matchParticipants(participants, excludedDids = [], excludedPairDids = [
   }
 
   if (similarities.length === 0) {
-    throw new Error('No valid pairs available after applying constraints');
+    throw new Error('No more valid pairs are available. Erase previous matches and start over.');
   }
 
   similarities.sort((a, b) => b.similarity - a.similarity);

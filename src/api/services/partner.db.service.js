@@ -97,8 +97,8 @@ class PartnerDatabase {
           reject(err)
         } else {
           if (row) {
-            row.createdAt = util.isoAndZonify(row.createdAt)
-            row.expiresAt = util.isoAndZonify(row.expiresAt)
+            row.createdAt = row.createdAt ? util.isoAndZonify(row.createdAt) : null
+            row.expiresAt = row.expiresAt ? util.isoAndZonify(row.expiresAt) : null
           }
           resolve(row)
         }
@@ -666,16 +666,16 @@ class PartnerDatabase {
    * user_profile_embedding so members without an embedding row are included with
    * embeddingVector null.
    * @param {number} groupId - group_onboard.rowid
-   * @returns {Promise<Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string|null}>>}
+   * @returns {Promise<Array<{rowId: number, issuerDid: string, content: string, description: string, embeddingVector: string|null}>>}
    */
-  groupMembersWithEmbeddings(groupId) {
+  groupMembersPlusEmbeddings(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        `SELECT p.rowid as rowId, p.issuerDid, p.description, e.embeddingVector
+        `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description, e.embeddingVector
          FROM group_onboard_member m
          LEFT JOIN user_profile p ON m.issuerDid = p.issuerDid
          LEFT JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
-         WHERE m.groupId = ? AND m.admitted = 1 AND p.generateEmbedding = 1`,
+         WHERE m.groupId = ? AND m.admitted = 1`,
         [groupId],
         function(err, rows) {
           if (err) {
@@ -688,28 +688,6 @@ class PartnerDatabase {
     })
   }
 
-  /**
-   * Get all profiles that have generateEmbedding=true, with their embeddings
-   * @returns {Promise<Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string}>>}
-   */
-  profilesWithEmbeddingsForMatching() {
-    return new Promise((resolve, reject) => {
-      partnerDb.all(
-        `SELECT p.rowid as rowId, p.issuerDid, p.description, e.embeddingVector
-         FROM user_profile p
-         JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
-         WHERE p.generateEmbedding = 1`,
-        [],
-        function(err, rows) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(rows || [])
-          }
-        }
-      )
-    })
-  }
 }
 
 module.exports = { dbService: new PartnerDatabase() }
