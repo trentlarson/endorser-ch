@@ -39,6 +39,9 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   if (!group) {
     return res.status(404).json({ error: "Group not found" }).end()
   }
+  if (group.expiresAt && group.expiresAt < Date.now()) {
+    return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+  }
 
   const isMember = res.locals.authTokenIssuer === member.issuerDid
   const isOrganizer = res.locals.authTokenIssuer === group.issuerDid
@@ -98,11 +101,9 @@ function isAdminUser(issuerDid) {
  */
 async function ensureProfileEmbedding(issuerDid) {
   const profile = await partnerDbService.profileByIssuerDid(issuerDid)
-  if (!profile) return
-  const profileRowId = profile.rowId ?? profile.rowid
-  if (!profileRowId) return
+  const profileRowId = profile?.rowId ?? profile?.rowid
 
-  if (!profile.generateEmbedding) {
+  if (!profile?.generateEmbedding) {
     await partnerDbService.profileEmbeddingDeleteByProfileRowId(profileRowId)
     return
   }
@@ -332,7 +333,7 @@ export default express
         res.status(201).json({ success: { signedEvent: result.signedEvent } }).end()
       }
     } catch (err) {
-      console.error('Error adding partner link', err)
+      console.error('Error adding partner link for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -404,12 +405,13 @@ export default express
 
       // Generate embedding in background if generateEmbedding flag is set
       ensureProfileEmbedding(res.locals.authTokenIssuer).catch((err) => {
-        console.error('Error generating profile embedding:', err)
+        console.error('Error generating profile embedding for DID:', res.locals.authTokenIssuer, err)
+        res.status(500).json({ error: err.message }).end()
       })
 
       res.status(201).json({ success: { userProfileId } }).end()
     } catch (err) {
-      console.error('Error adding user profile', err)
+      console.error('Error adding user profile for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -454,9 +456,10 @@ export default express
           return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
         }
       }
+      result.hasEmbedding = await partnerDbService.profileHasEmbedding(result.rowId)
       res.status(200).json({ data: result }).end()
     } catch (err) {
-      console.error('Error getting user profile for issuer', err)
+      console.error('Error getting user profile for issuer:', issuerDid, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -505,16 +508,17 @@ export default express
           }
         }
       }
+      result.hasEmbedding = await partnerDbService.profileHasEmbedding(rowIdInt)
       res.status(200).json({ data: result }).end()
     } catch (err) {
-      console.error('Error getting user profile by ID', err)
+      console.error('Error getting user profile by ID:', rowId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
 /**
- * Get profiles by location or text search
+ * Search for profiles by location or text
  *
  * @group partner utils
  * @route GET /api/partner/userProfile
@@ -532,8 +536,8 @@ export default express
 .get(
   '/userProfile',
   async (req, res, next) => {
+    const { minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId } = req.query
     try {
-      const { minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId } = req.query
 
       const numMinLat = minLocLat ? Number(minLocLat) : null
       const numMinLon = minLocLon ? Number(minLocLon) : null
@@ -606,7 +610,7 @@ export default express
       }
       res.status(200).json(fullResult).end()
     } catch (err) {
-      console.error('Error getting user profile', err)
+      console.error('Error getting user profiles from search:', err, '... for params:', JSON.stringify({ minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId }))
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -631,7 +635,7 @@ export default express
       const result = await partnerDbService.profileDelete(res.locals.authTokenIssuer)
       res.status(204).json({ success: { numDeleted: result } }).end()
     } catch (err) {
-      console.error('Error deleting user profile', err)
+      console.error('Error deleting user profile for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -652,6 +656,7 @@ export default express
 .put(
   '/userProfileGenerateEmbedding/:profileDid',
   async (req, res) => {
+    const { profileDid } = req.params
     try {
       if (!res.locals.authTokenIssuer) {
         return res.status(400).json({ error: "The request must include a valid Authorization JWT." }).end()
@@ -665,7 +670,6 @@ export default express
       // We're currently not checking that the issuer can see this profile DID.
       // We're assuming that permissioned users will not abuse this.
       // (We considered checking visibility but that approach is quite the rabbit-hole.)
-      const { profileDid } = req.params
       const generateEmbedding = req.body && typeof req.body.generateEmbedding === 'boolean'
         ? req.body.generateEmbedding
         : true
@@ -694,13 +698,13 @@ export default express
       try {
         await ensureProfileEmbedding(profileDid)
       } catch (embErr) {
-        console.error('Error updating profile embedding:', embErr)
+        console.error('Error updating profile embedding for DID:', profileDid, embErr)
         return res.status(500).json({ error: 'Profile updated but embedding generation failed. ' + embErr.message }).end()
       }
 
       res.status(200).json({ success: { generateEmbedding } }).end()
     } catch (err) {
-      console.error('Error updating generateEmbedding flag.', err)
+      console.error('Error updating generateEmbedding flag for DID:', res.locals.authTokenIssuer, '... for params:', JSON.stringify({ profileDid, generateEmbedding }), err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -781,7 +785,7 @@ export default express
       if ("" + err !== "[object Object]") {
         errorObj = "" + err // sometimes this gives more info
       }
-      console.error('Error getting user profile counts by bbox', err)
+      console.error('Error getting user profile counts by bbox:', err, '... for query params:', JSON.stringify(req.query))
       res.status(500).json({ error: errorObj }).end()
     }
   }
@@ -805,8 +809,8 @@ export default express
 .get(
   '/userProfileNearestNeighbors/:rowId',
   async (req, res) => {
+    const { rowId } = req.params
     try {
-      const { rowId } = req.params
       const rowIdInt = parseInt(rowId)
       
       if (!res.locals.authTokenIssuer) {
@@ -825,7 +829,7 @@ export default express
       
       res.status(200).json({ data: neighbors }).end()
     } catch (err) {
-      console.error('Error getting nearest neighbors for user profile', err)
+      console.error('Error getting nearest neighbors for user profile:', rowId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -858,14 +862,14 @@ export default express
       // permission to access data from the other service.)
       await ClaimService.getRateLimits(res.locals.authTokenIssuer)
     } catch (e) {
-      return res.status(400).json({ error: { userMessage: "You must have registration permissions to create a group." } }).end()
+      return res.status(400).json({ error: { userMessage: "You must have registration permissions to create a meeting." } }).end()
     }
 
     const { name, expiresAt, content, projectLink } = req.body
     
     // Validate inputs
     if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: { userMessage: "The group name must be non-empty text." } }).end()
+      return res.status(400).json({ error: { userMessage: "The meeting name must be non-empty text." } }).end()
     }
 
     const expireDate = new Date(expiresAt)
@@ -890,12 +894,12 @@ export default express
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
         if (err.message.includes('issuerDid')) {
-          return res.status(400).json({ error: { userMessage: "You already have an active group." } }).end()
+          return res.status(400).json({ error: { userMessage: "You already have an active meeting." } }).end()
         } else {
-          return res.status(400).json({ error: { userMessage: "That group name is already taken." } }).end()
+          return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
         }
       }
-      console.error('Error creating group onboarding room', err)
+      console.error('Error creating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -919,7 +923,7 @@ export default express
       }
       res.status(200).json({ data: room }).end()
     } catch (err) {
-      console.error('Error getting group onboarding room', err)
+      console.error('Error getting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -939,6 +943,9 @@ export default express
     try {
       const groupId = parseInt(req.params.groupId)
       const room = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (room && room.expiresAt && room.expiresAt < Date.now()) {
+        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+      }
       if (room) {
         // remove potentially sensitive data
         delete room.issuerDid
@@ -946,7 +953,7 @@ export default express
       }
       res.status(200).json({ data: room }).end()
     } catch (err) {
-      console.error('Error getting group onboarding room by ID', err)
+      console.error('Error getting meeting onboarding room by ID:', req.params.groupId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -972,7 +979,7 @@ export default express
 
       const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (!room) {
-        return res.status(404).json({ error: { userMessage: "That group was not found for you." } }).end()
+        return res.status(404).json({ error: { userMessage: "That meeting was not found for you." } }).end()
       }
 
       if (projectLink && typeof projectLink !== 'string') {
@@ -987,7 +994,7 @@ export default express
         projectLink || room.projectLink
       )
       if (changes === 0) {
-        return res.status(404).json({ error: { userMessage: "That group was not found to change." } }).end()
+        return res.status(404).json({ error: { userMessage: "That meeting was not found to change." } }).end()
       }
       const result = { success: true }
       // update the member content
@@ -1004,14 +1011,14 @@ export default express
           console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
         }
       } else {
-        result.message = "Be sure to provide new 'content' if you change the group password."
+        result.message = "Be sure to provide new 'content' if you change the meeting password."
       }
       res.status(200).json(result).end()
     } catch (err) {
       if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(400).json({ error: { userMessage: "That group name is already taken." } }).end()
+        return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
       }
-      console.error('Error updating group onboarding room', err)
+      console.error('Error updating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1032,16 +1039,16 @@ export default express
     try {
       const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
       if (!room) {
-        return res.status(404).json({ error: { userMessage: "No group was found for you." } }).end()
+        return res.status(404).json({ error: { userMessage: "No meeting was found for you." } }).end()
       }
       const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.authTokenIssuer)
       if (deleted === 0) {
-        return res.status(404).json({ error: { userMessage: "That group couldn't be deleted." } }).end()
+        return res.status(404).json({ error: { userMessage: "That meeting couldn't be deleted." } }).end()
       }
       await partnerDbService.groupOnboardMemberDeleteByGroupId(room.groupId)
       res.status(204).json({ success: true }).end()
     } catch (err) {
-      console.error('Error deleting group onboarding room', err)
+      console.error('Error deleting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1109,7 +1116,7 @@ export default express
 
       res.status(200).json({ data: { pairs: pairsForResponse } }).end()
     } catch (err) {
-      console.error('Error matching group members', err)
+      console.error('Error matching meeting members for body params:', JSON.stringify(req.body), '... with potential client message:', err)
       // the matchParticipants error messages are useful for the user
       res.status(400).json({ error: { userMessage: err.message } }).end()
     }
@@ -1129,7 +1136,7 @@ export default express
     try {
       // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
       if (!res.locals.authTokenIssuer) {
-        return res.status(401).json({ error: "Group-onboard-match check must include valid authorization." }).end()
+        return res.status(401).json({ error: "Meeting-onboard-match check must include valid authorization." }).end()
       }
 
       const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
@@ -1146,13 +1153,13 @@ export default express
         try {
           pairs = JSON.parse(group.previousMatches)
         } catch (err) {
-          console.error('Error parsing previous matches', err)
+          console.error('Error parsing previous matches for group:', req.params.groupId, err)
           return res.status(500).json({ error: "The server had a problem with this meeting pairs. You'll need to start over. Report this to an admin with your details." }).end()
         }
       }
       res.status(200).json({ data: { pairs } }).end()
     } catch (err) {
-      console.error('Error getting group previous matches', err)
+      console.error('Error getting meeting previous matches for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1170,7 +1177,7 @@ export default express
       await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, null)
       res.status(200).json({ success: true }).end()
     } catch (err) {
-      console.error('Error deleting group previous matches', err)
+      console.error('Error deleting group previous matches for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1187,10 +1194,10 @@ export default express
   '/groupsOnboarding',
   async (req, res) => {
     try {
-      const rooms = await partnerDbService.groupOnboardGetAll()
+      const rooms = await partnerDbService.groupOnboardGetAllActive()
       res.status(200).json({ data: rooms }).end()
     } catch (err) {
-      console.error('Error getting all group onboarding rooms', err)
+      console.error('Error getting all meeting onboarding rooms:', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1218,8 +1225,8 @@ export default express
 .post(
   '/groupOnboardMember',
   async (req, res) => {
+    const { groupId, content } = req.body
     try {
-      const { groupId, content } = req.body
 
       if (!content || typeof content !== 'string') {
         return res.status(400).json({ error: { userMessage: "The content must be non-empty text." } }).end()
@@ -1229,6 +1236,9 @@ export default express
       const group = await partnerDbService.groupOnboardGetByRowId(groupId)
       if (!group) {
         return res.status(404).json({ error: { userMessage: "That group was not found." } }).end()
+      }
+      if (group.expiresAt && group.expiresAt < Date.now()) {
+        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
       }
 
       try {
@@ -1260,7 +1270,7 @@ export default express
         throw err
       }
     } catch (err) {
-      console.error('Error joining group onboarding room', err)
+      console.error('Error joining group onboarding room for DID:', res.locals.authTokenIssuer, '... for group:', groupId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1281,7 +1291,7 @@ export default express
       const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
       res.status(200).json({ data: member }).end()
     } catch (err) {
-      console.error('Error getting group membership', err)
+      console.error('Error getting group membership for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1351,7 +1361,7 @@ export default express
 
       res.status(200).json({ data: admittedMembers }).end()
     } catch (err) {
-      console.error('Error getting group members', err)
+      console.error('Error getting group members for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1376,7 +1386,7 @@ export default express
       const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
       await updateGroupMember(member.memberId, member, req.body, res)
     } catch (err) {
-      console.error('Error updating group membership for token issuer', err)
+      console.error('Error updating group membership for token issuer:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1404,7 +1414,7 @@ export default express
       const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
       await updateGroupMember(memberId, member, req.body, res)
     } catch (err) {
-      console.error('Error updating group membership for given member', err)
+      console.error('Error updating group membership for given member:', req.params.memberId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1435,7 +1445,7 @@ export default express
       }
       res.status(204).end()
     } catch (err) {
-      console.error('Error leaving group', err)
+      console.error('Error leaving group for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }

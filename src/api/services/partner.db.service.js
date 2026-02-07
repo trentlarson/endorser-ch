@@ -106,9 +106,9 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardGetAll() {
+  groupOnboardGetAllActive() {
     return new Promise((resolve, reject) => {
-      partnerDb.all("SELECT rowid as groupId, name, expiresAt FROM group_onboard", function(err, rows) {
+      partnerDb.all("SELECT rowid as groupId, name, expiresAt FROM group_onboard WHERE expiresAt > datetime('now')", function(err, rows) {
         if (err) {
           reject(err)
         } else {
@@ -591,6 +591,27 @@ class PartnerDatabase {
           resolve(profileRowId)
         }
       })
+    })
+  }
+
+  /**
+   * Check whether a user profile has an embedding generated.
+   * @param {number} profileRowId - user_profile.rowid
+   * @returns {Promise<boolean>}
+   */
+  profileHasEmbedding(profileRowId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.get(
+        "SELECT 1 FROM user_profile_embedding WHERE userProfileRowId = ? LIMIT 1",
+        [profileRowId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(!!row)
+          }
+        }
+      )
     })
   }
 

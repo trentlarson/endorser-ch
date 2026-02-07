@@ -158,7 +158,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("registration permissions");
+        expect(r.body.error.userMessage).to.include("registration permissions");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -210,7 +210,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("already taken");
+        expect(r.body.error.userMessage).to.include("already taken");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -227,7 +227,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("already have an active group");
+        expect(r.body.error.userMessage).to.include("already have an active meeting");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -243,7 +243,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("24 hours");
+        expect(r.body.error.userMessage).to.include("24 hours");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -341,7 +341,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("valid URL");
+        expect(r.body.error.userMessage).to.include("valid URL");
       }).catch((err) => {
         return Promise.reject(err)
       });

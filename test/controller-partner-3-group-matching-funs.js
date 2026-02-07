@@ -339,7 +339,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.community
       ];
       
-      expect(() => matchParticipants(participants)).to.throw('Need an even number of participants for matching');
+      expect(() => matchParticipants(participants)).to.throw('You need an even number of participants');
     });
     
     it('should handle 28 people with 14 pairs', () => {
@@ -472,13 +472,13 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.community
       ];
       
-      expect(() => matchParticipants(participants)).to.throw('Need an even number of participants for matching');
+      expect(() => matchParticipants(participants)).to.throw('You need an even number of participants');
     });
     
     it('should throw error with less than 2 people', () => {
       const participants = [testProfiles.agriculture1];
       
-      expect(() => matchParticipants(participants)).to.throw('Need at least 2 participants');
+      expect(() => matchParticipants(participants)).to.throw('You need at least 2 participants');
     });
     
     it('should throw error when all pairs are excluded', () => {
@@ -490,7 +490,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       const excludedPairDids = [['user-001', 'user-003']];
       
       expect(() => matchParticipants(participants, [], excludedPairDids))
-        .to.throw('No valid pairs available');
+        .to.throw('No more valid pairs');
     });
     
     it('should handle very similar profiles gracefully', () => {

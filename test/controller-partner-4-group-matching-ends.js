@@ -145,7 +145,7 @@ describe('P4 - Group Onboard Matching API', () => {
       member4Id = response.body.success.memberId;
 
       // Organizer admits all members
-      for (const memberId of [member1Id, member2Id, member3Id, member4Id]) {
+      for (const memberId of [member1Id, member2Id, member3Id]) {
         response = await request(Server)
           .put(`/api/partner/groupOnboardMember/${memberId}`)
           .set('Authorization', 'Bearer ' + pushTokens[0])
@@ -171,7 +171,7 @@ describe('P4 - Group Onboard Matching API', () => {
         .set('Authorization', 'Bearer ' + pushTokens[1])
         .then(r => {
           expect(r.status).to.equal(404);
-          expect(r.body.error).to.include('no meeting with you as the organizer');
+          expect(r.body.error.userMessage).to.include('no meeting with you as the organizer');
         });
     });
   });
@@ -203,10 +203,21 @@ describe('P4 - Group Onboard Matching API', () => {
         });
     });
 
+    it('should add another person to make an odd number', () => {
+      return request(Server)
+        .put(`/api/partner/groupOnboardMember/${member4Id}`)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .send({ admitted: true })
+        .then(r => {
+          expect(r.status).to.equal(200);
+        });
+    });
+
     it('should match similar profiles together', () => {
       return request(Server)
         .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
+        .send({ excludedDids: [creds[0].did] })
         .then(r => {
           expect(r.status).to.equal(200);
           const pairs = r.body.data.pairs;
@@ -244,7 +255,7 @@ describe('P4 - Group Onboard Matching API', () => {
         .post(`/api/partner/groupOnboardMatch`)
         .set('Authorization', 'Bearer ' + pushTokens[0])
         .send({
-          excludedDids: [creds[1].did, creds[2].did]
+          excludedDids: [creds[0].did, creds[1].did, creds[2].did]
         })
         .then(r => {
           expect(r.status).to.equal(200);
@@ -257,6 +268,16 @@ describe('P4 - Group Onboard Matching API', () => {
           const allDids = pairs.flatMap(pair => pair.participants.map(p => p.issuerDid));
           expect(allDids).to.not.include(creds[1].did);
           expect(allDids).to.not.include(creds[2].did);
+        });
+    });
+
+    it('should remove a person to make an even number', () => {
+      return request(Server)
+        .put(`/api/partner/groupOnboardMember/${member4Id}`)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .send({ admitted: false })
+        .then(r => {
+          expect(r.status).to.equal(200);
         });
     });
 
@@ -343,7 +364,7 @@ describe('P4 - Group Onboard Matching API', () => {
         })
         .then(r => {
           expect(r.status).to.equal(400);
-          expect(r.body.error).to.include('at least 2 admitted members');
+          expect(r.body.error.userMessage).to.include('at least 2 admitted members');
         });
     });
 
