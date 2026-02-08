@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed in DB or environment
 - Automated endorser partner SQL script 6
 - ADMIN_DIDS & OPENAI_API_KEY
+- Create an empty_embedding_vector with a single entry, useful for manual reporting queries
 
 ## [4.3.0]
 ### Added

@@ -407,15 +407,6 @@ class PartnerDatabase {
         params.push(minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon)
       }
 
-      if (beforeRowId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
-        params.push(beforeRowId)
-      }
-      if (afterRowId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
-        params.push(afterRowId)
-      }
-
       // Add text search if claimContents is provided
       if (claimContents) {
         // Split into words for multi-word search
@@ -427,6 +418,19 @@ class PartnerDatabase {
             params.push(trimmed)
           }
         }
+      } else if (whereClause === "") {
+        // there's no claim string search, and no location search,
+        // so don't pick up any that don't have a description
+        whereClause = "description != ''"
+      }
+
+      if (beforeRowId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
+        params.push(beforeRowId)
+      }
+      if (afterRowId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
+        params.push(afterRowId)
       }
 
       // If no conditions were added, return all profiles
