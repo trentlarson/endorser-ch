@@ -110,7 +110,8 @@ async function ensureProfileEmbedding(issuerDid) {
 
   const embedding = await embeddingsService.generateEmbedding(profile.description)
   const vectorStr = embeddingsService.embeddingToStorageString(embedding)
-  await partnerDbService.profileEmbeddingInsertOrUpdate(profileRowId, vectorStr)
+  const isForEmptyString = profile.description === ''
+  await partnerDbService.profileEmbeddingInsertOrUpdate(profileRowId, vectorStr, isForEmptyString)
 }
 
 /**
@@ -404,12 +405,13 @@ export default express
       const userProfileId = await partnerDbService.profileInsertOrUpdate(entry)
 
       // Generate embedding in background if generateEmbedding flag is set
-      ensureProfileEmbedding(res.locals.authTokenIssuer).catch((err) => {
+      const warningMessage = undefined;
+      await ensureProfileEmbedding(res.locals.authTokenIssuer).catch((err) => {
         console.error('Error generating profile embedding for DID:', res.locals.authTokenIssuer, err)
-        res.status(500).json({ error: err.message }).end()
+        warningMessage = "Failed to generate profile embedding: " + err.message
       })
 
-      res.status(201).json({ success: { userProfileId } }).end()
+      res.status(201).json({ success: { userProfileId }, warningMessage }).end()
     } catch (err) {
       console.error('Error adding user profile for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
@@ -441,6 +443,8 @@ export default express
       if (!result) {
         return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
       }
+
+      const rowId = result.rowId
       if (issuerDid !== res.locals.authTokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
         // (When we separate this into another service, this will have to be an API call.
@@ -453,10 +457,22 @@ export default express
         } else {
           // someone the issuer can see can see the profile,
           // but giving up all between would expose their full network
-          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+
+          // If this is an admin user, they can see the generateEmbedding flag
+          if (isAdminUser(res.locals.authTokenIssuer)) {
+            // but they can't see the other info
+            result = {
+              issuerDid: result.issuerDid,
+              generateEmbedding: result.generateEmbedding,
+            }
+          } else {
+            return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+          }
         }
       }
-      result.hasEmbedding = await partnerDbService.profileHasEmbedding(result.rowId)
+      const embeddingResult = await partnerDbService.profileHasEmbedding(rowId)
+      result.hasEmbedding = embeddingResult.hasEmbedding
+      result.embeddingIsForEmptyString = embeddingResult.isForEmptyString
       res.status(200).json({ data: result }).end()
     } catch (err) {
       console.error('Error getting user profile for issuer:', issuerDid, err)
@@ -508,7 +524,9 @@ export default express
           }
         }
       }
-      result.hasEmbedding = await partnerDbService.profileHasEmbedding(rowIdInt)
+      const embeddingResult = await partnerDbService.profileHasEmbedding(rowIdInt)
+      result.hasEmbedding = embeddingResult.hasEmbedding
+      result.embeddingIsForEmptyString = embeddingResult.isForEmptyString
       res.status(200).json({ data: result }).end()
     } catch (err) {
       console.error('Error getting user profile by ID:', rowId, err)
@@ -667,7 +685,7 @@ export default express
         return res.status(403).json({ error: "Only permissioned users can update the generateEmbedding flag." }).end()
       }
 
-      // We're currently not checking that the issuer can see this profile DID.
+      // We're currently not checking that the admin user can see this profile DID.
       // We're assuming that permissioned users will not abuse this.
       // (We considered checking visibility but that approach is quite the rabbit-hole.)
       const generateEmbedding = req.body && typeof req.body.generateEmbedding === 'boolean'

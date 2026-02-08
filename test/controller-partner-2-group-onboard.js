@@ -674,7 +674,11 @@ describe("P2 - Group Onboarding", () => {
             .set('Authorization', 'Bearer ' + pushTokens[0])
         })
         .then(r => {
-          expect(r.status).to.equal(404)
+          expect(r.status).to.equal(200)
+          expect(r.body.data.generateEmbedding).to.equal(true)
+          // but don't reveal more info
+          expect(r.body.data.description).to.be.undefined
+          expect(r.body.data.rowId).to.be.undefined
 
           // now retrieve the profile as the user and see that the flag is set
           return request(Server)

@@ -575,16 +575,17 @@ class PartnerDatabase {
    * @param {string} embeddingVector - comma-separated vector string
    * @returns {Promise<number>} profileRowId on success
    */
-  profileEmbeddingInsertOrUpdate(profileRowId, embeddingVector) {
+  profileEmbeddingInsertOrUpdate(profileRowId, embeddingVector, isForEmptyString) {
     return new Promise((resolve, reject) => {
       const stmt = `
-        INSERT INTO user_profile_embedding (userProfileRowId, embeddingVector, updatedAt)
-        VALUES (?, ?, datetime())
+        INSERT INTO user_profile_embedding (userProfileRowId, embeddingVector, isForEmptyString, updatedAt)
+        VALUES (?, ?, ?, datetime())
         ON CONFLICT(userProfileRowId) DO UPDATE SET
           embeddingVector = excluded.embeddingVector,
+          isForEmptyString = excluded.isForEmptyString,
           updatedAt = datetime()
         WHERE userProfileRowId = ?`
-      partnerDb.run(stmt, [profileRowId, embeddingVector, profileRowId], function(err) {
+      partnerDb.run(stmt, [profileRowId, embeddingVector, isForEmptyString ? 1 : 0, profileRowId], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -602,13 +603,13 @@ class PartnerDatabase {
   profileHasEmbedding(profileRowId) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT 1 FROM user_profile_embedding WHERE userProfileRowId = ? LIMIT 1",
+        "SELECT isForEmptyString FROM user_profile_embedding WHERE userProfileRowId = ? LIMIT 1",
         [profileRowId],
         function(err, row) {
           if (err) {
             reject(err)
           } else {
-            resolve(!!row)
+            resolve({ hasEmbedding: !!row, isForEmptyString: row ? util.booleanify(row.isForEmptyString) : null })
           }
         }
       )
@@ -618,18 +619,19 @@ class PartnerDatabase {
   /**
    * Get embedding for a single profile
    * @param {number} profileRowId - user_profile.rowid
-   * @returns {Promise<object|null>} { profileRowId, embeddingVector, updatedAt } or null
+   * @returns {Promise<object|null>} { profileRowId, embeddingVector, isForEmptyString, updatedAt } or null
    */
   profileEmbeddingGetByProfileRowId(profileRowId) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT userProfileRowId, embeddingVector, updatedAt FROM user_profile_embedding WHERE userProfileRowId = ?",
+        "SELECT userProfileRowId, embeddingVector, isForEmptyString, updatedAt FROM user_profile_embedding WHERE userProfileRowId = ?",
         [profileRowId],
         function(err, row) {
           if (err) {
             reject(err)
           } else {
             if (row) {
+              row.isForEmptyString = util.booleanify(row.isForEmptyString)
               row.updatedAt = util.isoAndZonify(row.updatedAt)
             }
             resolve(row)
@@ -651,12 +653,17 @@ class PartnerDatabase {
     const placeholders = profileRowIds.map(() => '?').join(',')
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        `SELECT userProfileRowId, embeddingVector FROM user_profile_embedding WHERE userProfileRowId IN (${placeholders})`,
+        `SELECT userProfileRowId, embeddingVector, isForEmptyString, updatedAt FROM user_profile_embedding WHERE userProfileRowId IN (${placeholders})`,
         profileRowIds,
         function(err, rows) {
           if (err) {
             reject(err)
           } else {
+            rows = rows.map(row => {
+              row.isForEmptyString = util.booleanify(row.isForEmptyString)
+              row.updatedAt = util.isoAndZonify(row.updatedAt)
+              return row
+            })
             resolve(rows || [])
           }
         }
@@ -687,12 +694,12 @@ class PartnerDatabase {
    * user_profile_embedding so members without an embedding row are included with
    * embeddingVector null.
    * @param {number} groupId - group_onboard.rowid
-   * @returns {Promise<Array<{rowId: number, issuerDid: string, content: string, description: string, embeddingVector: string|null}>>}
+   * @returns {Promise<Array<{rowId: number, issuerDid: string, content: string, description: string, embeddingVector: string|null, isForEmptyString: boolean}>>}
    */
   groupMembersPlusEmbeddings(groupId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description, e.embeddingVector
+        `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description, e.embeddingVector, e.isForEmptyString
          FROM group_onboard_member m
          LEFT JOIN user_profile p ON m.issuerDid = p.issuerDid
          LEFT JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
@@ -702,6 +709,10 @@ class PartnerDatabase {
           if (err) {
             reject(err)
           } else {
+            rows = rows.map(row => {
+              row.isForEmptyString = util.booleanify(row.isForEmptyString)
+              return row
+            })
             resolve(rows || [])
           }
         }

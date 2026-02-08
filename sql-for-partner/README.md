@@ -48,11 +48,16 @@ CREATE TABLE user_profile (
     rowid INTEGER PRIMARY KEY AUTOINCREMENT,
     issuerDid TEXT UNIQUE NOT NULL,
     updatedAt DATETIME NOT NULL,
+
+    -- may be '', ie. if admin triggered creation via generateEmbedding
     description TEXT NOT NULL,
+
     locLat DOUBLE,
     locLon DOUBLE,
     locLat2 DOUBLE,
     locLon2 DOUBLE,
+
+    -- admin flag to generate embedding whenever description changes
     generateEmbedding BOOLEAN DEFAULT 0
 );
 CREATE INDEX profile_issuerDid ON user_profile(issuerDid);

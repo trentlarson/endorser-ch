@@ -12,6 +12,7 @@ ALTER TABLE group_onboard ADD COLUMN previousMatches TEXT;
 CREATE TABLE user_profile_embedding (
   userProfileRowId INTEGER PRIMARY KEY,
   embeddingVector TEXT NOT NULL,
+  isForEmptyString INTEGER NOT NULL,
   updatedAt DATETIME NOT NULL,
   FOREIGN KEY (userProfileRowId) REFERENCES user_profile(rowid)
 );
