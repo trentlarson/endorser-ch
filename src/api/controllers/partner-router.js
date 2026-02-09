@@ -95,26 +95,6 @@ function isAdminUser(issuerDid) {
 }
 
 /**
- * Ensure profile embedding is generated/stored when generateEmbedding flag is set,
- * or deleted when flag is cleared.
- * @param {string} issuerDid - the profile owner's DID
- */
-async function ensureProfileEmbedding(issuerDid) {
-  const profile = await partnerDbService.profileByIssuerDid(issuerDid)
-  const profileRowId = profile?.rowId ?? profile?.rowid
-
-  if (!profile?.generateEmbedding) {
-    await partnerDbService.profileEmbeddingDeleteByProfileRowId(profileRowId)
-    return
-  }
-
-  const embedding = await embeddingsService.generateEmbedding(profile.description)
-  const vectorStr = embeddingsService.embeddingToStorageString(embedding)
-  const isForEmptyString = profile.description === ''
-  await partnerDbService.profileEmbeddingInsertOrUpdate(profileRowId, vectorStr, isForEmptyString)
-}
-
-/**
  * Make an API call to /api/claim/:jwtId
  * @param {string} jwtId - the JWT ID to retrieve
  * @param {string} authHeader - the Authorization header value to forward
@@ -273,7 +253,6 @@ export default express
  * @property {number} locLon2 - longitude coordinate
  * @property {string} rowId - the profile ID
  * @property {string} createdAt - date the profile was created
- * @property {boolean} generateEmbedding - whether to always generate embedding vectors for this user
  * (only set by admins, and might only be visible to admins)
  */
 
@@ -404,14 +383,15 @@ export default express
 
       const userProfileId = await partnerDbService.profileInsertOrUpdate(entry)
 
-      // Generate embedding in background if generateEmbedding flag is set
-      const warningMessage = undefined;
-      await ensureProfileEmbedding(res.locals.authTokenIssuer).catch((err) => {
-        console.error('Error generating profile embedding for DID:', res.locals.authTokenIssuer, err)
-        warningMessage = "Failed to generate profile embedding: " + err.message
-      })
+      // if generateEmbedding flag is set, generate the new embedding and store it
+      const embeddingResult = await partnerDbService.profileEmbeddingWithoutVector(res.locals.authTokenIssuer)
+      if (embeddingResult?.generateEmbedding) {
+        const vectorStr = await embeddingsService.generateEmbeddingStorageString(description)
+        const isForEmptyString = description === ''
+        await partnerDbService.profileEmbeddingInsertOrUpdate(res.locals.authTokenIssuer, vectorStr, isForEmptyString, true)
+      }
 
-      res.status(201).json({ success: { userProfileId }, warningMessage }).end()
+      res.status(201).json({ success: { userProfileId } }).end()
     } catch (err) {
       console.error('Error adding user profile for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
@@ -444,7 +424,6 @@ export default express
         return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
       }
 
-      const rowId = result.rowId
       if (issuerDid !== res.locals.authTokenIssuer) {
         // check if they can see the profile, or if they're linked to someone who can
         // (When we separate this into another service, this will have to be an API call.
@@ -470,9 +449,6 @@ export default express
           }
         }
       }
-      const embeddingResult = await partnerDbService.profileHasEmbedding(rowId)
-      result.hasEmbedding = embeddingResult.hasEmbedding
-      result.embeddingIsForEmptyString = embeddingResult.isForEmptyString
       res.status(200).json({ data: result }).end()
     } catch (err) {
       console.error('Error getting user profile for issuer:', issuerDid, err)
@@ -524,9 +500,6 @@ export default express
           }
         }
       }
-      const embeddingResult = await partnerDbService.profileHasEmbedding(rowIdInt)
-      result.hasEmbedding = embeddingResult.hasEmbedding
-      result.embeddingIsForEmptyString = embeddingResult.isForEmptyString
       res.status(200).json({ data: result }).end()
     } catch (err) {
       console.error('Error getting user profile by ID:', rowId, err)
@@ -660,6 +633,35 @@ export default express
 )
 
 /**
+ * Get a user's profile embedding
+ *
+ * @group partner utils
+ * @route GET /api/partner/userProfileEmbeddingMetadata/{issuerDid}
+ * @param {string} issuerDid.path.required - the DID of the user whose profile embedding to retrieve
+ * @returns {UserProfileEmbedding} 200 - success response with profile embedding
+ * @returns {Error} 403 - unauthorized
+ * @returns {Error} 404 - profile not found
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfileEmbeddingMetadata/:issuerDid',
+  async (req, res) => {
+    const { issuerDid } = req.params
+    try {
+      const result = await partnerDbService.profileEmbeddingWithoutVector(issuerDid)
+      if (!result) {
+        return res.status(404).json({ error: "Profile embedding not found" }).end()
+      }
+      res.status(200).json({ data: result }).end()
+    } catch (err) {
+      console.error('Error getting user profile embedding for DID:', issuerDid, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
  * Update the generateEmbedding flag for a user profile (permissioned users only)
  *
  * @group partner utils
@@ -672,9 +674,9 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .put(
-  '/userProfileGenerateEmbedding/:profileDid',
+  '/userProfileGenerateEmbedding/:issuerDid',
   async (req, res) => {
-    const { profileDid } = req.params
+    const { issuerDid } = req.params
     try {
       if (!res.locals.authTokenIssuer) {
         return res.status(400).json({ error: "The request must include a valid Authorization JWT." }).end()
@@ -685,44 +687,27 @@ export default express
         return res.status(403).json({ error: "Only permissioned users can update the generateEmbedding flag." }).end()
       }
 
-      // We're currently not checking that the admin user can see this profile DID.
-      // We're assuming that permissioned users will not abuse this.
+      // We currently do not not check that the admin user can see this profile DID.
+      // We assume that permissioned users will not abuse this.
       // (We considered checking visibility but that approach is quite the rabbit-hole.)
       const generateEmbedding = req.body && typeof req.body.generateEmbedding === 'boolean'
         ? req.body.generateEmbedding
         : true
 
-      // Check if profile exists
-      const profile = await partnerDbService.profileByIssuerDid(profileDid)
-      if (!profile) {
-        // create an empty profile
-        await partnerDbService.profileInsertOrUpdate({
-          description: '',
-          issuerDid: profileDid,
-          locLat: null,
-          locLon: null,
-          locLat2: null,
-          locLon2: null,
-        })
-      }
-
-      // Update the flag
-      const updated = await partnerDbService.profileUpdateGenerateEmbedding(profileDid, generateEmbedding)
-      if (updated === 0) {
-        return res.status(500).json({ error: "Profile could not be updated." }).end()
-      }
-
       // Generate or remove embedding based on flag
-      try {
-        await ensureProfileEmbedding(profileDid)
-      } catch (embErr) {
-        console.error('Error updating profile embedding for DID:', profileDid, embErr)
-        return res.status(500).json({ error: 'Profile updated but embedding generation failed. ' + embErr.message }).end()
+      if (generateEmbedding) {
+        const profile = await partnerDbService.profileByIssuerDid(issuerDid)
+        const description = profile?.description || ''
+        const vectorStr = await embeddingsService.generateEmbeddingStorageString(description)
+        const isForEmptyString = description === ''
+        await partnerDbService.profileEmbeddingInsertOrUpdate(issuerDid, vectorStr, isForEmptyString, true)
+      } else {
+        await partnerDbService.profileEmbeddingDeleteByIssuerDid(issuerDid)
       }
 
       res.status(200).json({ success: { generateEmbedding } }).end()
     } catch (err) {
-      console.error('Error updating generateEmbedding flag for DID:', res.locals.authTokenIssuer, '... for params:', JSON.stringify({ profileDid, generateEmbedding }), err)
+      console.error('Error updating generateEmbedding flag for DID:', res.locals.authTokenIssuer, '... for params:', JSON.stringify({ issuerDid, generateEmbedding }), err)
       res.status(500).json({ error: err.message }).end()
     }
   }

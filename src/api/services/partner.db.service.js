@@ -336,29 +336,13 @@ class PartnerDatabase {
     })
   }
 
-  /**
-   * Update the generateEmbedding flag for a user profile (admin only)
-   * @param {string} issuerDid - the DID of the user
-   * @param {boolean} generateEmbedding - whether to always generate embeddings for this user
-   * @returns {Promise<number>} number of rows updated
-   */
-  profileUpdateGenerateEmbedding(issuerDid, generateEmbedding) {
-    return new Promise((resolve, reject) => {
-      const stmt = "UPDATE user_profile SET generateEmbedding = ? WHERE issuerDid = ?"
-      partnerDb.run(stmt, [generateEmbedding ? 1 : 0, issuerDid], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(this.changes)
-        }
-      })
-    })
-  }
-
   profileById(rowid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT * FROM user_profile WHERE rowid = ?",
+        `SELECT p.rowid, p.issuerDid, p.updatedAt, p.description, p.locLat, p.locLon, p.locLat2, p.locLon2, e.generateEmbedding
+         FROM user_profile p
+         LEFT JOIN user_profile_embedding e ON p.issuerDid = e.issuerDid
+         WHERE p.rowid = ?`,
         [rowid],
         function(err, row) {
           if (err) {
@@ -378,7 +362,10 @@ class PartnerDatabase {
   profileByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT rowid, * FROM user_profile WHERE issuerDid = ?",
+        `SELECT p.rowid, p.issuerDid, p.updatedAt, p.description, p.locLat, p.locLon, p.locLat2, p.locLon2, e.generateEmbedding
+         FROM user_profile p
+         LEFT JOIN user_profile_embedding e ON p.issuerDid = e.issuerDid
+         WHERE p.issuerDid = ?`,
         [issuerDid],
         function(err, row) {
           if (err) {
@@ -446,7 +433,6 @@ class PartnerDatabase {
           rows = rows.map(row => {
             row.rowId = row.rowid
             row.updatedAt = util.isoAndZonify(row.updatedAt)
-            row.generateEmbedding = util.booleanify(row.generateEmbedding)
             return row
           })
           resolve({
@@ -548,9 +534,9 @@ class PartnerDatabase {
 
   profileDelete(issuerDid) {
     return new Promise((resolve, reject) => {
-      // Delete embedding first (user_profile_embedding references user_profile.rowid)
+      // Delete embedding first (user_profile_embedding keyed by issuerDid)
       partnerDb.run(
-        "DELETE FROM user_profile_embedding WHERE userProfileRowId IN (SELECT rowid FROM user_profile WHERE issuerDid = ?)",
+        "DELETE FROM user_profile_embedding WHERE issuerDid = ?",
         [issuerDid],
         function(err1) {
           if (err1) {
@@ -575,68 +561,50 @@ class PartnerDatabase {
 
   /**
    * Insert or update embedding for a profile
-   * @param {number} profileRowId - user_profile.rowid
+   * @param {string} issuerDid - user_profile.issuerDid
    * @param {string} embeddingVector - comma-separated vector string
-   * @returns {Promise<number>} profileRowId on success
+   * @param {boolean} isForEmptyString - whether the embedding is for an empty string
+   * @param {boolean} generateEmbedding - whether the embedding was generated
+   * @returns {Promise<number>} number of rows inserted or updated
    */
-  profileEmbeddingInsertOrUpdate(profileRowId, embeddingVector, isForEmptyString) {
+  profileEmbeddingInsertOrUpdate(issuerDid, embeddingVector, isForEmptyString, generateEmbedding) {
     return new Promise((resolve, reject) => {
       const stmt = `
-        INSERT INTO user_profile_embedding (userProfileRowId, embeddingVector, isForEmptyString, updatedAt)
-        VALUES (?, ?, ?, datetime())
-        ON CONFLICT(userProfileRowId) DO UPDATE SET
+        INSERT INTO user_profile_embedding (issuerDid, embeddingVector, isForEmptyString, generateEmbedding, updatedAt)
+        VALUES (?, ?, ?, ?, datetime())
+        ON CONFLICT(issuerDid) DO UPDATE SET
           embeddingVector = excluded.embeddingVector,
           isForEmptyString = excluded.isForEmptyString,
+          generateEmbedding = excluded.generateEmbedding,
           updatedAt = datetime()
-        WHERE userProfileRowId = ?`
-      partnerDb.run(stmt, [profileRowId, embeddingVector, isForEmptyString ? 1 : 0, profileRowId], function(err) {
+        WHERE issuerDid = ?`
+      partnerDb.run(stmt, [issuerDid, embeddingVector, isForEmptyString ? 1 : 0, generateEmbedding ? 1 : 0, issuerDid], function(err) {
         if (err) {
           reject(err)
         } else {
-          resolve(profileRowId)
+          resolve(this.changes)
         }
       })
     })
   }
 
   /**
-   * Check whether a user profile has an embedding generated.
-   * @param {number} profileRowId - user_profile.rowid
-   * @returns {Promise<boolean>}
+   * Check whether a user profile has an embedding generated, and whether it's for an empty string.
+   * @param {string} issuerDid - user_profile.issuerDid
+   * @returns {Promise<{hasEmbedding: boolean, isForEmptyString: boolean|null}>}
    */
-  profileHasEmbedding(profileRowId) {
+  profileEmbeddingWithoutVector(issuerDid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT isForEmptyString FROM user_profile_embedding WHERE userProfileRowId = ? LIMIT 1",
-        [profileRowId],
-        function(err, row) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve({ hasEmbedding: !!row, isForEmptyString: row ? util.booleanify(row.isForEmptyString) : null })
-          }
-        }
-      )
-    })
-  }
-
-  /**
-   * Get embedding for a single profile
-   * @param {number} profileRowId - user_profile.rowid
-   * @returns {Promise<object|null>} { profileRowId, embeddingVector, isForEmptyString, updatedAt } or null
-   */
-  profileEmbeddingGetByProfileRowId(profileRowId) {
-    return new Promise((resolve, reject) => {
-      partnerDb.get(
-        "SELECT userProfileRowId, embeddingVector, isForEmptyString, updatedAt FROM user_profile_embedding WHERE userProfileRowId = ?",
-        [profileRowId],
+        "SELECT generateEmbedding, isForEmptyString FROM user_profile_embedding WHERE issuerDid = ? LIMIT 1",
+        [issuerDid],
         function(err, row) {
           if (err) {
             reject(err)
           } else {
             if (row) {
+              row.generateEmbedding = util.booleanify(row.generateEmbedding)
               row.isForEmptyString = util.booleanify(row.isForEmptyString)
-              row.updatedAt = util.isoAndZonify(row.updatedAt)
             }
             resolve(row)
           }
@@ -645,20 +613,22 @@ class PartnerDatabase {
     })
   }
 
+
+
   /**
    * Get embeddings for multiple profiles
-   * @param {number[]} profileRowIds - array of user_profile.rowid
-   * @returns {Promise<Array<{profileRowId: number, embeddingVector: string}>>}
+   * @param {string[]} issuerDids - array of user_profile.issuerDid
+   * @returns {Promise<Array<{issuerDid: string, embeddingVector: string}>>}
    */
-  profileEmbeddingGetByProfileRowIds(profileRowIds) {
-    if (!profileRowIds || profileRowIds.length === 0) {
+  profileEmbeddingsGetByIssuerDids(issuerDids) {
+    if (!issuerDids || issuerDids.length === 0) {
       return Promise.resolve([])
     }
-    const placeholders = profileRowIds.map(() => '?').join(',')
+    const placeholders = issuerDids.map(() => '?').join(',')
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        `SELECT userProfileRowId, embeddingVector, isForEmptyString, updatedAt FROM user_profile_embedding WHERE userProfileRowId IN (${placeholders})`,
-        profileRowIds,
+        `SELECT issuerDid, embeddingVector, isForEmptyString, updatedAt FROM user_profile_embedding WHERE issuerDid IN (${placeholders})`,
+        issuerDids,
         function(err, rows) {
           if (err) {
             reject(err)
@@ -677,13 +647,13 @@ class PartnerDatabase {
 
   /**
    * Delete embedding when profile has generateEmbedding set to false or profile is deleted
-   * @param {number} profileRowId - user_profile.rowid
+   * @param {string} issuerDid - user_profile.issuerDid
    * @returns {Promise<number>} number of rows deleted
    */
-  profileEmbeddingDeleteByProfileRowId(profileRowId) {
+  profileEmbeddingDeleteByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
-      const stmt = "DELETE FROM user_profile_embedding WHERE userProfileRowId = ?"
-      partnerDb.run(stmt, [profileRowId], function(err) {
+      const stmt = "DELETE FROM user_profile_embedding WHERE issuerDid = ?"
+      partnerDb.run(stmt, [issuerDid], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -706,7 +676,7 @@ class PartnerDatabase {
         `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description, e.embeddingVector, e.isForEmptyString
          FROM group_onboard_member m
          LEFT JOIN user_profile p ON m.issuerDid = p.issuerDid
-         LEFT JOIN user_profile_embedding e ON p.rowid = e.userProfileRowId
+         LEFT JOIN user_profile_embedding e ON p.issuerDid = e.issuerDid
          WHERE m.groupId = ? AND m.admitted = 1`,
         [groupId],
         function(err, rows) {

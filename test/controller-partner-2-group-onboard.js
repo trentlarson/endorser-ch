@@ -668,26 +668,23 @@ describe("P2 - Group Onboarding", () => {
           expect(r.body.success).to.exist
           expect(r.body.success.generateEmbedding).to.equal(true)
           
-          // Even though the admin can set the flag, they cannot view the profile without visibility permission
+          // admin can see the metadata for the profile embedding
           return request(Server)
-            .get('/api/partner/userProfileForIssuer/' + userWithoutProfileDid)
+            .get('/api/partner/userProfileEmbeddingMetadata/' + userWithoutProfileDid)
             .set('Authorization', 'Bearer ' + pushTokens[0])
         })
         .then(r => {
           expect(r.status).to.equal(200)
           expect(r.body.data.generateEmbedding).to.equal(true)
-          // but don't reveal more info
-          expect(r.body.data.description).to.be.undefined
-          expect(r.body.data.rowId).to.be.undefined
+          expect(r.body.data.isForEmptyString).to.equal(true)
 
-          // now retrieve the profile as the user and see that the flag is set
+          // even though the metadata exists, the profile still does not exist
           return request(Server)
             .get('/api/partner/userProfileForIssuer/' + userWithoutProfileDid)
             .set('Authorization', 'Bearer ' + pushTokens[4])
         })
         .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.data.generateEmbedding).to.equal(true)
+          expect(r.status).to.equal(404)
         })
         .catch(err => {
           return Promise.reject(err)
@@ -721,6 +718,17 @@ describe("P2 - Group Onboarding", () => {
         .then(r => {
           expect(r.status).to.equal(200)
           expect(r.body.data.generateEmbedding).to.equal(true)
+
+          // Admin can see the metadata for the profile embedding
+          return request(Server)
+            .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+            .set('Authorization', 'Bearer ' + pushTokens[0])
+        })
+        .then(r => {
+          expect(r.status).to.equal(200)
+          expect(r.body.data.generateEmbedding).to.equal(true)
+          expect(r.body.data.isForEmptyString).to.equal(false)
+
         })
     })
   })

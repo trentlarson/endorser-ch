@@ -1,20 +1,14 @@
--- Add flag to tag individuals as always generating embedding vectors
--- This flag indicates that when a user edits a profile, an embedding vector should be generated
--- and stored
-
-ALTER TABLE user_profile ADD COLUMN generateEmbedding BOOLEAN DEFAULT 0;
-
 -- Profile embeddings for AI-powered semantic matching
--- Stores embedding vectors as comma-separated string for profiles with generateEmbedding flag
+-- Stores embedding vectors as comma-separated string.
+-- 'generateEmbedding' flags that this user should always have an embedding generated.
 
 ALTER TABLE group_onboard ADD COLUMN previousMatches TEXT;
 
 CREATE TABLE user_profile_embedding (
-  userProfileRowId INTEGER PRIMARY KEY,
+  issuerDid TEXT PRIMARY KEY,
   embeddingVector TEXT NOT NULL,
   isForEmptyString INTEGER NOT NULL,
   updatedAt DATETIME NOT NULL,
-  FOREIGN KEY (userProfileRowId) REFERENCES user_profile(rowid)
+  generateEmbedding BOOLEAN DEFAULT 1,
+  FOREIGN KEY (issuerDid) REFERENCES user_profile(issuerDid)
 );
-
-CREATE INDEX user_profile_embedding_userProfileRowId ON user_profile_embedding(userProfileRowId);

@@ -49,7 +49,7 @@ describe("P5 - Nearest Neighbor for Current, Flat Tree", () => {
    */
 
   // Create profile for testing since it was deleted
-  it("should create profile for user 0", () => {
+  it("should create profile for user 0 (which fails without OPENAI_API_KEY)", () => {
     return request(Server)
       .post("/api/partner/userProfile")
       .set("Authorization", "Bearer " + pushTokens[0])

@@ -62,7 +62,7 @@ describe('P4 - Group Onboard Matching API', () => {
         });
     });
 
-    it('should enable embedding generation for test users', async () => {
+    it('should enable embedding generation for test users (which fails without OPENAI_API_KEY)', async () => {
       // Enable embeddings for users 1-4
       for (let i = 1; i <= 4; i++) {
         const response = await request(Server)

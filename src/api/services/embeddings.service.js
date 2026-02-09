@@ -65,6 +65,12 @@ function embeddingToStorageString(vec) {
   return vec.map((v) => String(v)).join(',');
 }
 
+async function generateEmbeddingStorageString(description) {
+  const embedding = await generateEmbedding(description)
+  const vectorStr = embeddingToStorageString(embedding)
+  return vectorStr
+}
+
 /**
  * Parse comma-separated embedding string back to number array.
  * @param {string} str - Comma-separated embedding values
@@ -80,6 +86,7 @@ function storageStringToEmbedding(str) {
 module.exports = {
   generateEmbedding,
   embeddingToStorageString,
+  generateEmbeddingStorageString,
   storageStringToEmbedding,
   MODEL_ID,
 };

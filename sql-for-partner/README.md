@@ -55,21 +55,20 @@ CREATE TABLE user_profile (
     locLat DOUBLE,
     locLon DOUBLE,
     locLat2 DOUBLE,
-    locLon2 DOUBLE,
-
-    -- admin flag to generate embedding whenever description changes
-    generateEmbedding BOOLEAN DEFAULT 0
+    locLon2 DOUBLE
 );
 CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
 CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
 CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
 
--- embeddings for semantic profile matching (OpenAI text-embedding-3-small)
+-- embeddings for semantic profile matching (OpenAI text-embedding-3-small).
+-- generateEmbedding: admin flag to always generate embedding when profile is edited.
 CREATE TABLE user_profile_embedding (
-    userProfileRowId INTEGER PRIMARY KEY,
+    issuerDid TEXT PRIMARY KEY,
     embeddingVector TEXT NOT NULL,  -- comma-separated vector values
+    isForEmptyString INTEGER NOT NULL,
     updatedAt DATETIME NOT NULL,
-    FOREIGN KEY (userProfileRowId) REFERENCES user_profile(rowid)
+    generateEmbedding BOOLEAN DEFAULT 1,
+    FOREIGN KEY (issuerDid) REFERENCES user_profile(issuerDid)
 );
-CREATE INDEX user_profile_embedding_userProfileRowId ON user_profile_embedding(userProfileRowId);
 ```
