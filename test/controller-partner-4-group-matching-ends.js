@@ -72,7 +72,7 @@ describe('P4 - Group Onboard Matching API', () => {
       }
     }).timeout(5000);
 
-    it('should create profiles for users 1-4', async () => {
+    it('should create profiles for users 1-4 (which fails without OPENAI_API_KEY)', async () => {
       const profiles = [
         { index: 1, description: 'Passionate about organic farming and sustainable agriculture. Love growing vegetables and teaching others about permaculture.' },
         { index: 2, description: 'Small-scale farmer focusing on regenerative agriculture practices. Interested in composting and soil health.' },
