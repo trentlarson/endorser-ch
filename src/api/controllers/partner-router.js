@@ -649,10 +649,28 @@ export default express
   async (req, res) => {
     const { issuerDid } = req.params
     try {
-      const result = await partnerDbService.profileEmbeddingWithoutVector(issuerDid)
-      if (!result) {
-        return res.status(404).json({ error: "Profile embedding not found" }).end()
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Authentication required" }).end()
       }
+
+      const result = await partnerDbService.profileEmbeddingWithoutVector(issuerDid)
+
+      // use a generic message so as to not leak whether an embedding exists for this DID
+      const NOT_SEEN_MESSAGE = "There is no embedding for this issuer or it is not visible to you."
+      if (!result) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+      }
+
+      if (issuerDid !== res.locals.authTokenIssuer) {
+        const didsSeenByRequesterWhoSeeObject =
+          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
+        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
+          // the issuerDid is visible to the requester, so continue with full content
+        } else if (!isAdminUser(res.locals.authTokenIssuer)) {
+          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+        }
+      }
+
       res.status(200).json({ data: result }).end()
     } catch (err) {
       console.error('Error getting user profile embedding for DID:', issuerDid, err)
