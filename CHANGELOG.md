@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [4.3.1]
+## [4.3.1] - 2026.02.18
 ### Added
 - Generation of vector embeddings for user profiles, with generateEmbedding flag to mark profiles that should generate them
 - Generate 1-on-1 matches of people during meetings
@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADMIN_DIDS & OPENAI_API_KEY
 - Create an empty_embedding_vector with a single entry, useful for manual reporting queries
 
-## [4.3.0]
+
+## [4.3.0] - 2025.11.02
 ### Added
 - `/api/partner/userProfileNearestNeighbors/:rowId` endpoint to find nearest connection in registration tree to a user profile
 - `nearestNeighborsTo` method in network-cache service to calculate nearest common ancestor in registration tree
