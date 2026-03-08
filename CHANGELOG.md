@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.0]
+### Added
+- fromEntity and toEntity columns on jwt table for GiveAction and Offer claims (derived from claim content)
+### Fixed
+- Authentication for viewing embedding metadata
+### Changed in DB or environment
+- Run Flyway migration (V20 adds fromEntity & toEntity columns & indexes): `NODE_ENV=dev npm run flyway migrate`
+- See `sql-by-hand/V20.1__backfill_from_entity_to_entity.js` and follow instructions.
+
+
 ## [4.3.1] - 2026.02.18
 ### Added
 - Generation of vector embeddings for user profiles, with generateEmbedding flag to mark profiles that should generate them

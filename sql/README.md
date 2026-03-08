@@ -168,7 +168,7 @@ CREATE INDEX idx_invite_one_inviteIdentifier ON invite_one(inviteIdentifier);
 -- table for all the raw incoming claims, before they are parsed and potentially stored in the other tables
 CREATE TABLE jwt (
     id CHARACTER(26) PRIMARY KEY,
-    subject VARCHAR(100),
+    subject VARCHAR(100), -- the 'sub' property from the JWT, not really used
     claimType VARCHAR(60),
     claimContext VARCHAR(60),
     claim TEXT, -- text of the JSON for the claim, canonicalized
@@ -178,7 +178,7 @@ CREATE TABLE jwt (
     hashNonce CHARACTER(24) -- randomized 18 bytes (currently base64-encoded), kept private, used for nonceHashHex
     handleId TEXT, -- global IRI, used to update data via later claims (see also lastClaimId)
     issuedAt DATETIME,
-    issuer CHARACTER(100), -- DID of the confirming entity; did:ethr are 52 chars
+    issuer CHARACTER(100), -- DID of the issuing entity; did:ethr are 52 chars
     jwtEncoded TEXT, -- the full original JWT
 
     -- This is the ID of the claim JWT to which this claim directly links.
@@ -196,10 +196,16 @@ CREATE TABLE jwt (
     nonceHashAllChain CHARACTER(44), -- merkle tree of nonceHash values for every claim
     nonceHashIssuerChain CHARACTER(44), -- merkle tree of nonceHash values issued by this issuer (which they can take over)
 
-    revoked INTEGER DEFAULT 0 -- boolean, eg for removed emoji (and that may be all for a while)
+    revoked INTEGER DEFAULT 0, -- boolean, eg for removed emoji (and that may be all for a while)
+
+    -- For GiveAction and Offer claims only: derived from claim content at ingestion
+    fromEntity TEXT, -- giver/offerer DID (GiveAction: agent; Offer: offeredBy or issuer)
+    toEntity TEXT    -- recipient or fulfills target (recipient identifier or fulfills[0].identifier)
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);
+CREATE INDEX IF NOT EXISTS idx_jwt_fromEntity ON jwt(fromEntity);
+CREATE INDEX IF NOT EXISTS idx_jwt_toEntity ON jwt(toEntity);
 CREATE INDEX jwt_target on jwt (target);
 
 -- track all the visibility, where each subject can see each object
@@ -226,6 +232,7 @@ CREATE TABLE offer_claim (
     issuerDid VARCHAR(100),
 
     -- note that did:peer are 58 chars
+    -- (let's deprecate this: nobody should make an offer for someone else)
     offeredByDid TEXT, -- global ID of the offering entity (issuer if it was sent empty)
 
     recipientDid TEXT, -- global ID of recipient (if any)

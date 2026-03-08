@@ -604,7 +604,7 @@ class ClaimService {
 
       // confirm contribution link if not yet confirmed
       // (note that there is similar update-link-confirmed code in multiple places)
-      const origClaimFulfills = origClaim.fulfills || origClaim.itemOffered?.isPartOf
+      const origClaimFulfills = origClaim.fulfills || origClaim.itemOffered?.isPartOf // isPartOf is deprecated
       if (origClaimFulfills) {
         const origOfferRecord = await dbService.offerInfoByHandleId(origClaimHandleId)
         if (origOfferRecord?.fulfillsHandleId
@@ -845,7 +845,7 @@ class ClaimService {
     }
     // look for Plan in parentage, ie fulfilled item's "object.fullfills"
     if (!fulfillsPlanLastClaimId && !fulfillsPlanHandleId) {
-      const fulfillsPlanInfo =
+      const fulfillsPlanInfo = // note 'isPartOf' is deprecated
         await this.retrieveClauseClaimAndIssuer(claimFulfills?.object?.isPartOf, claimIdDataList, 'PlanAction')
       fulfillsPlanLastClaimId = fulfillsPlanInfo?.clauseLastClaimId
       fulfillsPlanHandleId = fulfillsPlanInfo?.clauseHandleId
@@ -1161,8 +1161,8 @@ class ClaimService {
     } else if (isContextSchemaOrg(claim['@context'])
                && claim['@type'] === 'Offer') {
 
-      // First check for direct "fulfills" property (recommended approach)
-      // or for itemOffered.isPartOf (deprecated approach)
+      // First check for direct "fulfills" property
+      // (or for deprecated itemOffered.isPartOf)
       const fulfillsData = claim.fulfills || claim.itemOffered?.isPartOf
       const fulfillsInfo =
           await this.retrieveClauseClaimAndIssuer(fulfillsData, claimIdDataList, null, payloadIssuerDid)
@@ -1825,6 +1825,23 @@ class ClaimService {
   }
 
   /**
+   * Extract toEntity from claim: recipient identifier, or PlanAction fulfills (identifier or lastClaimId resolved to handleId).
+   * Uses claimIdDataList to resolve lastClaimId to handleId when fulfills references a PlanAction by lastClaimId.
+   */
+  async toEntityFromClaimWithLookup(claim, claimIdDataList) {
+    if (claim.recipient?.identifier) return claim.recipient.identifier
+    const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
+    const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction')
+    if (!planActionFulfills) return undefined
+    if (planActionFulfills.identifier) return planActionFulfills.identifier
+    if (planActionFulfills.lastClaimId) {
+      const info = await this.retrieveClauseClaimAndIssuer(planActionFulfills, claimIdDataList, 'PlanAction')
+      return info?.clauseHandleId
+    }
+    return undefined
+  }
+  
+  /**
      @param authIssuerDid is the issuer if an Authorization Bearer JWT is sent
 
      @return object with:
@@ -2087,8 +2104,16 @@ class ClaimService {
     //// Insert the claim
 
     const claimStr = canonicalize(claimPayloadClaim)
+    let fromEntityOverride, toEntityOverride
+    if (claimPayloadClaim['@type'] === 'GiveAction' || claimPayloadClaim['@type'] === 'Offer') {
+      fromEntityOverride = claimPayloadClaim['@type'] === 'GiveAction'
+        ? claimPayloadClaim.agent?.identifier
+        : (claimPayloadClaim.offeredBy?.identifier ?? claimPayload.iss)
+      toEntityOverride = await this.toEntityFromClaimWithLookup(claimPayloadClaim, claimIdDataList)
+    }
     const jwtEntry = dbService.buildJwtEntry(
-      claimPayload, jwtId, lastClaimId, handleId, claimPayloadClaim, claimStr, jwtEncoded
+      claimPayload, jwtId, lastClaimId, handleId, claimPayloadClaim, claimStr, jwtEncoded,
+      fromEntityOverride, toEntityOverride
     )
     if (jwtEntry.claimType !== 'Emoji') {
       // guard against a duplicate claim -- but emoji reactions are different because repeats remove them

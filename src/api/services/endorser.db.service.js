@@ -33,8 +33,16 @@ const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
-
-
+/**
+ * Extract toEntity from claim: recipient identifier, or first fulfills element of type PlanAction with an identifier.
+ * The fulfills array may have Offer/PlanAction in any position; only PlanAction entries contribute to toEntity.
+ */
+function toEntityFromClaim(claim) {
+  if (claim.recipient?.identifier) return claim.recipient.identifier
+  const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
+  const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction' && f?.identifier)
+  return planActionFulfills?.identifier
+}
 
 function constructWhereConditions(params, allowedColumns, claimContents, contentColumns, booleanColumns = [], excludeConfirmations) {
 
@@ -1476,7 +1484,7 @@ class EndorserDatabase {
    * @param jwtEncoded
    * @returns {{claim: string, claimContext: string, claimCanonHash: string, claimType: string, handleId: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, noncedHash: string, subject: string}}
    */
-  buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, jwtEncoded) {
+  buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, jwtEncoded, fromEntityOverride, toEntityOverride) {
     const claimCanonHash =
       crypto.createHash('sha256').update(claimStr).digest('base64url')
     const claimContext = claim['@context']
@@ -1495,11 +1503,26 @@ class EndorserDatabase {
       iss: payload.iss,
     })
     const subject = payload.sub
+
+    let fromEntity = fromEntityOverride
+    let toEntity = toEntityOverride
+    if (fromEntity === undefined && toEntity === undefined) {
+      if (claim['@type'] === 'GiveAction') {
+        fromEntity = claim.agent?.identifier
+        toEntity = toEntityFromClaim(claim)
+      } else if (claim['@type'] === 'Offer') {
+        fromEntity = claim.offeredBy?.identifier ?? payload.iss
+        toEntity = toEntityFromClaim(claim)
+      }
+    }
+
     return {
       claim: claimStr,
       claimContext: claimContext,
       claimCanonHash: claimCanonHash,
       claimType: claimType,
+      fromEntity: fromEntity,
+      toEntity: toEntity,
       handleId: handleId,
       hashNonce: hashNonce,
       id: id,
@@ -1520,7 +1543,7 @@ class EndorserDatabase {
         [id],
         function(err, row) {
           row.issuedAt = util.isoAndZonify(row.issuedAt)
-          data = {
+            data = {
             id: row.id, issuedAt: row.issuedAt, issuer: row.issuer, subject: row.subject,
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
             handleId: row.handleId, lastClaimId: row.lastClaimId,
@@ -1673,13 +1696,14 @@ class EndorserDatabase {
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
-        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHash, claimType, handleId, lastClaimId, noncedHash, hashNonce, jwtEncoded)"
-        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHash, claimType, fromEntity, toEntity, handleId, lastClaimId, noncedHash, hashNonce, jwtEncoded)"
+        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       db.run(
         stmt,
         [
           entry.id, entry.issuedAt, entry.issuer, entry.subject,
           entry.claim, entry.claimContext, entry.claimCanonHash, entry.claimType,
+          entry.fromEntity ?? null, entry.toEntity ?? null,
           entry.handleId, entry.lastClaimId, entry.noncedHash, entry.hashNonce, entry.jwtEncoded
         ],
         function(err) {

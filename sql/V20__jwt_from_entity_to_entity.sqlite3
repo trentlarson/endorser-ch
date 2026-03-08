@@ -1,0 +1,5 @@
+
+ALTER TABLE jwt ADD COLUMN fromEntity TEXT;
+ALTER TABLE jwt ADD COLUMN toEntity TEXT;
+CREATE INDEX IF NOT EXISTS idx_jwt_fromEntity ON jwt(fromEntity);
+CREATE INDEX IF NOT EXISTS idx_jwt_toEntity ON jwt(toEntity);
