@@ -3,6 +3,7 @@
  * for the report router. Partner router adds profile data on top.
  */
 
+import { decodeTime } from 'ulidx'
 import { dbService as endorserDbService } from './endorser.db.service'
 import { hideDidsAndAddLinksToNetwork } from './util-higher'
 import { globalId } from './util'
@@ -14,13 +15,15 @@ const ULID_REGEX = /^[0-9A-HJKMNP-TV-Z]{26}$/
 
 /**
  * Normalize alertSearch params from either POST body or GET query.
- * Returns { afterId, beforeId, location, planHandleIds, paramErrors }.
+ * Returns { afterId, beforeId, afterDate, beforeDate, location, planHandleIds, paramErrors }.
  */
 export function alertSearchParamsFromRequest(req) {
   const isGet = req.method === 'GET'
   const src = isGet ? (req.body || req.query) : req.body
   const afterId = src?.afterId
   const beforeId = src?.beforeId
+  const afterDate = src?.afterDate
+  const beforeDate = src?.beforeDate
   const paramErrors = []
   let location = null
   if (src?.location && typeof src.location === 'object') {
@@ -51,7 +54,7 @@ export function alertSearchParamsFromRequest(req) {
       paramErrors.push("Parameter 'planIds' or 'planHandleIds' or 'handleIds' must be valid JSON array: " + e.message)
     }
   }
-  return { afterId, beforeId, location, planHandleIds, paramErrors }
+  return { afterId, beforeId, afterDate, beforeDate, location, planHandleIds, paramErrors }
 }
 
 /**
@@ -78,6 +81,47 @@ export function resolveAlertSearchAfterId(afterId, paramErrors = []) {
   }
   const effectiveAfterId = (afterId && typeof afterId === 'string') ? afterId : ''
   return { effectiveAfterId, paramErrors }
+}
+
+function parseDateToIso(dateStr, paramName, paramErrors) {
+  if (dateStr == null || typeof dateStr !== 'string') return undefined
+  const ms = new Date(dateStr).getTime()
+  if (Number.isNaN(ms)) {
+    paramErrors.push(`${paramName} must be a valid ISO date string if provided.`)
+    return undefined
+  }
+  return new Date(ms).toISOString()
+}
+
+/**
+ * Compute effective after/before date bounds for partner alert search (profiles).
+ * Prioritizes afterDate/beforeDate when supplied; otherwise derives from afterId/beforeId.
+ * Returns { afterDateIso, beforeDateIso, paramErrors }.
+ */
+export function resolveAlertSearchDateBoundsForPartner(afterId, beforeId, afterDate, beforeDate, paramErrors = []) {
+  if (paramErrors == null) paramErrors = []
+  let afterDateIso = parseDateToIso(afterDate, 'afterDate', paramErrors)
+  if (afterDateIso == null && afterId != null && typeof afterId === 'string') {
+    if (ULID_REGEX.test(afterId)) {
+      afterDateIso = new Date(decodeTime(afterId)).toISOString()
+    } else {
+      paramErrors.push("afterId must be a valid ULID if provided.")
+    }
+  }
+  if (afterDateIso == null) {
+    afterDateIso = new Date(0).toISOString()
+  }
+
+  let beforeDateIso = parseDateToIso(beforeDate, 'beforeDate', paramErrors)
+  if (beforeDateIso == null && beforeId != null && typeof beforeId === 'string') {
+    if (ULID_REGEX.test(beforeId)) {
+      beforeDateIso = new Date(decodeTime(beforeId)).toISOString()
+    } else {
+      paramErrors.push("beforeId must be a valid ULID if provided.")
+    }
+  }
+
+  return { afterDateIso, beforeDateIso: beforeDateIso ?? undefined, paramErrors }
 }
 
 /**

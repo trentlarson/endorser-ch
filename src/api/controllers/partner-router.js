@@ -12,8 +12,7 @@ import { dbService as endorserDbService } from "../services/endorser.db.service"
 
 import {
   alertSearchParamsFromRequest,
-  resolveAlertSearchAfterId,
-  resolveAlertSearchBeforeId,
+  resolveAlertSearchDateBoundsForPartner,
 } from '../services/alert-search.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
@@ -22,7 +21,6 @@ import { matchParticipants, buildParticipantsFromRows } from "../services/matchi
 import { EMBEDDING_FOR_EMPTY_STRING } from "../services/embedding-empty-string";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
 import { hideDidsAndAddLinksToNetwork } from '../services/util-higher';
-import { decodeTime } from 'ulidx';
 import { globalId, HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
 const ALERT_SEARCH_TIMEOUT_MS = 2000
@@ -49,21 +47,14 @@ async function alertSearchHandler(req, res) {
     return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
   }
   const paramsResult = alertSearchParamsFromRequest(req)
-  let { afterId, beforeId, location, planHandleIds, paramErrors } = paramsResult
-  const { effectiveAfterId, paramErrors: afterParamErrors } = resolveAlertSearchAfterId(afterId, paramErrors)
-  const { effectiveBeforeId, paramErrors: resolvedParamErrors } = resolveAlertSearchBeforeId(beforeId, afterParamErrors)
+  let { afterId, beforeId, afterDate, beforeDate, location, planHandleIds, paramErrors } = paramsResult
+  const { afterDateIso, beforeDateIso, paramErrors: resolvedParamErrors } = resolveAlertSearchDateBoundsForPartner(afterId, beforeId, afterDate, beforeDate, paramErrors)
 
   try {
     const did = res.locals.authTokenIssuer
 
     let profilesNearbyRaw = { data: [], hitLimit: false }
     if (location) {
-      const afterDateIso = effectiveAfterId
-        ? new Date(decodeTime(effectiveAfterId)).toISOString()
-        : new Date(0).toISOString()
-      const beforeDateIso = effectiveBeforeId
-        ? new Date(decodeTime(effectiveBeforeId)).toISOString()
-        : undefined
       const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
       profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(minLocLat, minLocLon, maxLocLat, maxLocLon, afterDateIso, beforeDateIso)
     }

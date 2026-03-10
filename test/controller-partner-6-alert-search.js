@@ -103,6 +103,30 @@ describe('P6 - Alert Search partner', () => {
       .catch((err) => Promise.reject(err))
   })
 
+  it('partner alertSearch with afterDate and beforeDate filters by date range', () => {
+    // Use ISO date strings instead of ULIDs; afterDate/beforeDate take precedence
+    const afterDateIso = new Date(Date.now() - 86400000 * 7).toISOString() // 7 days ago
+    const beforeDateIso = new Date(Date.now() + 86400000).toISOString() // 1 day from now
+    return request(Server)
+      .post('/api/partner/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send({
+        afterDate: afterDateIso,
+        beforeDate: beforeDateIso,
+        location: {
+          minLocLat: 40.7120,
+          maxLocLat: 40.7150,
+          minLocLon: -74.0080,
+          maxLocLon: -74.0050,
+        },
+      })
+      .then((r) => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.profilesNearby).to.be.an('array')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
   it('partner alertSearch invalid planHandleIds adds userMessage but continues', () => {
     return request(Server)
       .post('/api/partner/alertSearch')
