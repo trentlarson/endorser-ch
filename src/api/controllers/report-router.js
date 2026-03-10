@@ -8,6 +8,12 @@ import {
 
 import ClaimService from '../services/claim.service'
 import { dbService } from '../services/endorser.db.service';
+import {
+  alertSearchParamsFromRequest,
+  resolveAlertSearchAfterId,
+  resolveAlertSearchBeforeId,
+  fetchAlertSearchEndorserData,
+} from '../services/alert-search.service';
 import { planService } from '../services/project.service';
 import { globalId, latLonFromTile, latWidthToTileWidth } from "../services/util";
 
@@ -87,6 +93,50 @@ function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
     .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
     .then(results => { res.json(results).end() })
     .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+}
+
+async function alertSearchReportHandler(req, res) {
+  if (!res.locals.authTokenIssuer) {
+    return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+  }
+  const paramsResult = alertSearchParamsFromRequest(req)
+  let { afterId, beforeId, location, planHandleIds, paramErrors } = paramsResult
+  const { effectiveAfterId, paramErrors: afterParamErrors } = resolveAlertSearchAfterId(afterId, paramErrors)
+  const { effectiveBeforeId, paramErrors: resolvedParamErrors } = resolveAlertSearchBeforeId(beforeId, afterParamErrors)
+
+  try {
+    const did = res.locals.authTokenIssuer
+    const endorserData = await fetchAlertSearchEndorserData(did, {
+      effectiveAfterId,
+      effectiveBeforeId,
+      location,
+      planHandleIds,
+    })
+
+    const response = {
+      data: {
+        claims: endorserData.claims,
+        personalPlanContributions: endorserData.personalPlanContributions,
+        trackedPlanUpdates: endorserData.trackedPlanUpdates,
+        trackedPlanClaims: endorserData.trackedPlanClaims,
+        plansNearby: endorserData.plansNearby,
+      },
+    }
+    const userMessages = []
+    if (resolvedParamErrors?.length) {
+      userMessages.push(resolvedParamErrors.join(' '))
+    }
+    if (endorserData.anyTruncated) {
+      userMessages.push('Some data was not available in this search. Check the detail screens for the full set of data.')
+    }
+    if (userMessages.length) {
+      response.userMessage = userMessages.join(' ')
+    }
+    res.status(200).json(response).end()
+  } catch (err) {
+    console.error('Error in report alertSearch for DID:', res.locals.authTokenIssuer, err)
+    res.status(500).json({ error: err.message }).end()
+  }
 }
 
 class DbController {
@@ -1195,7 +1245,8 @@ export default express
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
- .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
 
 /**
  * Retrieve plans that have their latest version before/after given claim IDs (POST version)
@@ -1208,5 +1259,29 @@ export default express
  * @param {string} body.beforeId.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
- .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)
+
+/**
+ * Alert search: claims, plan contributions, tracked plan updates/claims, plans by location.
+ * Does not include profiles (see partner /alertSearch for profiles).
+ *
+ * @group reports
+ * @route GET /api/v2/report/alertSearch
+ * @route POST /api/v2/report/alertSearch
+ * @param {string} afterId.query.optional - JWT ULID to return items after (GET, POST)
+ * @param {string} beforeId.query.optional - JWT ULID to return items before (GET, POST)
+ * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {number} minLocLat.query.optional - min latitude (GET)
+ * @param {number} maxLocLat.query.optional - max latitude (GET)
+ * @param {number} minLocLon.query.optional - min longitude (GET)
+ * @param {number} maxLocLon.query.optional - max longitude (GET)
+ * @param {string[]} planHandleIds.query.optional - plan handle IDs to track (GET, POST)
+ * @param {string[]} planIds.query.optional - plan IDs to track (GET, POST)
+ * @param {string[]} handleIds.query.optional - handle IDs to track (GET, POST)
+ * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby } }
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/alertSearch', alertSearchReportHandler)
+  .post('/alertSearch', alertSearchReportHandler)
 

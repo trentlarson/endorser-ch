@@ -10,13 +10,85 @@ import * as http from 'http'
 import ClaimService from '../services/claim.service'
 import { dbService as endorserDbService } from "../services/endorser.db.service";
 
+import {
+  alertSearchParamsFromRequest,
+  resolveAlertSearchAfterId,
+  resolveAlertSearchBeforeId,
+} from '../services/alert-search.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
 import embeddingsService, { embeddingToStorageString } from "../services/embeddings.service";
 import { matchParticipants, buildParticipantsFromRows } from "../services/matching.service";
 import { EMBEDDING_FOR_EMPTY_STRING } from "../services/embedding-empty-string";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
-import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
+import { hideDidsAndAddLinksToNetwork } from '../services/util-higher';
+import { decodeTime } from 'ulidx';
+import { globalId, HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
+
+const ALERT_SEARCH_TIMEOUT_MS = 2000
+
+/**
+ * Resolves with the promise result if it completes within ms, otherwise with fallback.
+ * Returns { result, timedOut }. The original promise continues in the background.
+ */
+async function withTimeout(promise, fallback, functionName) {
+  const timeout = new Promise((resolve) => {
+    setTimeout(() => {
+      console.error('SQL Timeout: data fetch for', functionName, 'exceeded timeout of', ALERT_SEARCH_TIMEOUT_MS, 'ms')
+      resolve({ result: fallback, timedOut: true })
+    }, ALERT_SEARCH_TIMEOUT_MS)
+  })
+  return Promise.race([
+    promise.then((r) => ({ result: r, timedOut: false })),
+    timeout,
+  ])
+}
+
+async function alertSearchHandler(req, res) {
+  if (!res.locals.authTokenIssuer) {
+    return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+  }
+  const paramsResult = alertSearchParamsFromRequest(req)
+  let { afterId, beforeId, location, planHandleIds, paramErrors } = paramsResult
+  const { effectiveAfterId, paramErrors: afterParamErrors } = resolveAlertSearchAfterId(afterId, paramErrors)
+  const { effectiveBeforeId, paramErrors: resolvedParamErrors } = resolveAlertSearchBeforeId(beforeId, afterParamErrors)
+
+  try {
+    const did = res.locals.authTokenIssuer
+
+    let profilesNearbyRaw = { data: [], hitLimit: false }
+    if (location) {
+      const afterDateIso = effectiveAfterId
+        ? new Date(decodeTime(effectiveAfterId)).toISOString()
+        : new Date(0).toISOString()
+      const beforeDateIso = effectiveBeforeId
+        ? new Date(decodeTime(effectiveBeforeId)).toISOString()
+        : undefined
+      const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
+      profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(minLocLat, minLocLon, maxLocLat, maxLocLon, afterDateIso, beforeDateIso)
+    }
+
+    const profilesData = await hideDidsAndAddLinksToNetwork(did, profilesNearbyRaw.data, [])
+
+    const response = {
+      data: {
+        profilesNearby: profilesData,
+      },
+    }
+
+    const userMessages = []
+    if (resolvedParamErrors?.length) {
+      userMessages.push(resolvedParamErrors.join(' '))
+    }
+    if (userMessages.length) {
+      response.userMessage = userMessages.join(' ')
+    }
+    res.status(200).json(response).end()
+  } catch (err) {
+    console.error('Error in alertSearch for DID:', res.locals.authTokenIssuer, err)
+    res.status(500).json({ error: err.message }).end()
+  }
+}
 
 /**
  * Update membership details for given member
@@ -399,6 +471,26 @@ export default express
   }
 )
 
+/**
+ * Alert search: claims, plan contributions, and optionally location-based profiles/plans since afterId.
+ *
+ * @group partner utils
+ * @route GET /api/partner/alertSearch
+ * @route POST /api/partner/alertSearch
+ * @param {string} afterId.body.optional - JWT ULID to return items after (GET, POST)
+ * @param {string} beforeId.body.optional - JWT ULID to return items before (GET, POST)
+ * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {number} minLocLat.body.optional - min latitude (GET)
+ * @param {number} maxLocLat.body.optional - max latitude (GET)
+ * @param {number} minLocLon.body.optional - min longitude (GET)
+ * @param {number} maxLocLon.body.optional - max longitude (GET)
+ * @returns {object} 200 - { data: {
+ *   profilesNearby: UserProfile[],
+ *  }
+ * }
+ */
+.get('/alertSearch', alertSearchHandler)
+.post('/alertSearch', alertSearchHandler)
 
 /**
  * Get a user's profile

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.4.0]
 ### Added
+- /alertSearch for endorser & partner servers 
 - fromEntity and toEntity columns on jwt table for GiveAction and Offer claims (derived from claim content)
 ### Fixed
 - Authentication for viewing embedding metadata

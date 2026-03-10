@@ -1653,6 +1653,138 @@ class EndorserDatabase {
   }
 
   /**
+   * JWTs where user appears as toEntity or fromEntity but not as issuer, after given JWT ID.
+   * Uses UNION for index-friendly queries on idx_jwt_toEntity and idx_jwt_fromEntity.
+   * @param {string} beforeId - optional; only return claims with id < beforeId
+   * @return Promise of { data: [], hitLimit: true|false }
+   */
+  jwtsWithDidAfterId(did, afterId, beforeId) {
+    return new Promise((resolve, reject) => {
+      const beforeClause = beforeId ? " AND id < ?" : ""
+      const beforeParams = beforeId ? [beforeId] : []
+      const sql =
+        "SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity"
+        + " FROM jwt WHERE toEntity = ? AND issuer != ? AND id > ?" + beforeClause
+        + " UNION"
+        + " SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity"
+        + " FROM jwt WHERE fromEntity = ? AND issuer != ? AND id > ?" + beforeClause
+        + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
+      const params = [did, did, afterId, ...beforeParams, did, did, afterId, ...beforeParams]
+      const data = []
+      let rowErr
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          if (row) {
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push(row)
+          }
+        }
+      }, function (allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
+   * JWTs for GiveAction and Offer claims where toEntity or fromEntity is in the given plan handle IDs.
+   * Used for alert search when user tracks specific plans. No ownership check—returns any such claims.
+   * Uses UNION for index-friendly queries on idx_jwt_toEntity and idx_jwt_fromEntity.
+   *
+   * @param {string[]} planHandleIds - plan handle IDs to match against toEntity/fromEntity
+   * @param {string} afterId - only return claims with id > afterId
+   * @param {string} beforeId - optional; only return claims with id < beforeId
+   * @return Promise of { data: [], hitLimit: true|false }
+   */
+  jwtsGiveActionOfferForPlanHandleIds(planHandleIds, afterId, beforeId) {
+    return new Promise((resolve, reject) => {
+      if (!planHandleIds || planHandleIds.length === 0) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+      const beforeClause = beforeId ? " AND j.id < ?" : ""
+      const inListStr = planHandleIds.map(() => '?').join(',')
+      const sql =
+        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        + " FROM jwt j WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND j.toEntity IN (" + inListStr + ") AND j.id > ?" + beforeClause
+        + " UNION"
+        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        + " FROM jwt j WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND j.fromEntity IN (" + inListStr + ") AND j.id > ?" + beforeClause
+        + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
+      const beforeParams = beforeId ? [beforeId] : []
+      const params = [...planHandleIds, afterId, ...beforeParams, ...planHandleIds, afterId, ...beforeParams]
+      const data = []
+      let rowErr
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          if (row) {
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push(row)
+          }
+        }
+      }, function (allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
+   * JWTs for GiveAction and Offer claims associated with plans owned by user (issuer or agent).
+   * Joins jwt to plan_claim on toEntity or fromEntity via UNION for index-friendly queries.
+   * @param {string} beforeId - optional; only return claims with id < beforeId
+   * @return Promise of { data: [], hitLimit: true|false }
+   */
+  jwtsForUserPlanContributions(did, afterId, beforeId) {
+    return new Promise((resolve, reject) => {
+      const beforeClause = beforeId ? " AND j.id < ?" : ""
+      const sql =
+        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.toEntity"
+        + " WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND ? in (p.issuerDid, p.agentDid) AND j.id > ?" + beforeClause
+        + " UNION"
+        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.fromEntity"
+        + " WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND ? in (p.issuerDid, p.agentDid) AND j.id > ?" + beforeClause
+        + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
+      const beforeParams = beforeId ? [beforeId] : []
+      const params = [did, afterId, ...beforeParams, did, afterId, ...beforeParams]
+      const data = []
+      let rowErr
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          if (row) {
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push(row)
+          }
+        }
+      }, function (allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
      See tableEntriesByParamsPaged
      Returns Promise of { data: [], hitLimit: true|false }
    **/
@@ -2607,6 +2739,40 @@ class EndorserDatabase {
           reject(err)
         } else {
           resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
+   * Plans in bounding box, new or changed since claim (jwtId > afterId).
+   * @param {string} beforeId - optional; only return plans with jwtId < beforeId
+   * Returns Promise of { data: [], hitLimit: true|false }
+   */
+  plansByLocationAfterId(minLat, maxLat, minLon, maxLon, afterId, beforeId) {
+    return new Promise((resolve, reject) => {
+      const beforeClause = beforeId ? " AND jwtId < ?" : ""
+      const sql =
+        "SELECT * FROM plan_claim"
+        + " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+        + " AND jwtId > ?" + beforeClause
+        + " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
+      const params = beforeId ? [minLat, maxLat, minLon, maxLon, afterId, beforeId] : [minLat, maxLat, minLon, maxLon, afterId]
+      const data = []
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          row.endTime = util.isoAndZonify(row.endTime)
+          row.startTime = util.isoAndZonify(row.startTime)
+          row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+          data.push(row)
+        }
+      }, function (err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
         }
       })
     })

@@ -383,6 +383,42 @@ class PartnerDatabase {
     })
   }
 
+  /**
+   * Profiles in bounding box updated after the given ISO date.
+   * user_profile has no JWT; caller decodes afterId to ISO and passes here.
+   * @param {string} beforeDateIso - optional; only return profiles with updatedAt < beforeDateIso
+   * Returns Promise of { data: [], hitLimit: boolean }
+   */
+  profilesByLocationAfterDate(minLat, minLon, maxLat, maxLon, afterDateIso, beforeDateIso) {
+    return new Promise((resolve, reject) => {
+      if (minLat == null || minLon == null || maxLat == null || maxLon == null) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+      let whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?)) AND updatedAt > datetime(?)"
+      const params = [minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon, afterDateIso]
+      if (beforeDateIso) {
+        whereClause += " AND updatedAt < datetime(?)"
+        params.push(beforeDateIso)
+      }
+      const sql = `SELECT rowid as rowid, * FROM user_profile WHERE ${whereClause} ORDER BY updatedAt DESC LIMIT ${DEFAULT_LIMIT}`
+
+      partnerDb.all(sql, params, function (err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          const hitLimit = rows.length === DEFAULT_LIMIT
+          rows = rows.map(row => {
+            row.rowId = row.rowid
+            row.updatedAt = util.isoAndZonify(row.updatedAt)
+            return row
+          })
+          resolve({ data: rows, hitLimit })
+        }
+      })
+    })
+  }
+
   profilesByLocationAndContentsPaged(minLat, minLon, maxLat, maxLon, beforeRowId, afterRowId, claimContents) {
     return new Promise((resolve, reject) => {
       let whereClause = ""

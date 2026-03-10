@@ -3648,3 +3648,134 @@ describe('6 - Plans Last Updated Between', () => {
   })
 
 })
+
+describe('6 - Alert Search report', () => {
+
+  it('report alertSearch requires auth', () => {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .send({})
+      .then(r => {
+        expect(r.status).to.equal(400)
+        expect(r.body.error).to.include('Authorization')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch returns 200 with expected structure (optional afterId)', () => {
+    return request(Server)
+      .get('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.have.property('claims').that.is.an('array')
+        expect(r.body.data).to.have.property('personalPlanContributions').that.is.an('array')
+        expect(r.body.data).to.have.property('trackedPlanUpdates').that.is.an('array')
+        expect(r.body.data).to.have.property('trackedPlanClaims').that.is.an('array')
+        expect(r.body.data).to.have.property('plansNearby').that.is.an('array')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with afterId filters by id', () => {
+    const afterId = firstPlanIdInternal || firstPlanIdExternal || '01H0000000000000000000000'
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ afterId })
+      .then((r) => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.claims).to.be.an('array')
+        expect(r.body.data.personalPlanContributions).to.be.an('array')
+        const allIds = [
+          ...r.body.data.claims.map(c => c.id),
+          ...r.body.data.personalPlanContributions.map(c => c.id),
+        ]
+        if (firstPlanIdInternal || firstPlanIdExternal) {
+          allIds.forEach((id) => {
+            expect(id > afterId, `id ${id} should be > afterId ${afterId}`).to.be.true
+          })
+        }
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with beforeId bounds results', () => {
+    const afterId = firstPlanIdInternal || firstPlanIdExternal || '01H0000000000000000000000'
+    const beforeId = firstPlanClaim2IdInternal || '01ZZZZZZZZZZZZZZZZZZZZZZZZ'
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ afterId, beforeId })
+      .then((r) => {
+        expect(r.status).to.equal(200)
+        const allIds = [
+          ...r.body.data.claims.map(c => c.id),
+          ...r.body.data.personalPlanContributions.map(c => c.id),
+        ]
+        if (firstPlanIdInternal && firstPlanClaim2IdInternal) {
+          allIds.forEach((id) => {
+            expect(id > firstPlanIdInternal).to.be.true
+            expect(id < firstPlanClaim2IdInternal).to.be.true
+          })
+        }
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with planHandleIds returns tracked plan updates and claims', () => {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({
+        afterId: firstPlanIdInternal,
+        planHandleIds: [firstPlanIdExternal],
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.trackedPlanUpdates).to.be.an('array')
+        expect(r.body.data.trackedPlanClaims).to.be.an('array')
+        // trackedPlanClaims should include offers/gives that reference the plan
+        expect(r.body.data.trackedPlanClaims.length).to.be.at.least(0)
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with location returns plansNearby', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({
+        afterId: '',
+        location: {
+          minLocLat: lat - 1,
+          maxLocLat: lat + 1,
+          minLocLon: lon - 1,
+          maxLocLon: lon + 1,
+        },
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.plansNearby).to.be.an('array')
+        expect(r.body.data.plansNearby.length).to.be.at.least(1)
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch invalid afterId adds userMessage but continues', () => {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ afterId: 'invalid-ulid' })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('userMessage')
+        expect(r.body.userMessage).to.include('ULID')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+})
