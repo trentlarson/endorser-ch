@@ -334,6 +334,655 @@ export default express
  */
 
 /**
+ * Alert search: claims, plan contributions, and optionally location-based profiles/plans since afterId.
+ *
+ * @group partner utils
+ * @route GET /api/partner/alertSearch
+ * @route POST /api/partner/alertSearch
+ * @param {string} afterId.body.optional - JWT ULID to return items after (GET, POST)
+ * @param {string} beforeId.body.optional - JWT ULID to return items before (GET, POST)
+ * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {number} minLocLat.body.optional - min latitude (GET)
+ * @param {number} maxLocLat.body.optional - max latitude (GET)
+ * @param {number} minLocLon.body.optional - min longitude (GET)
+ * @param {number} maxLocLon.body.optional - max longitude (GET)
+ * @returns {object} 200 - { data: {
+ *   profilesNearby: UserProfile[],
+ *  }
+ * }
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/alertSearch', alertSearchHandler)
+  .post('/alertSearch', alertSearchHandler)
+
+
+
+
+
+
+
+
+/******************************************************
+ * Group Onboarding
+ ******************************************************/
+
+/**
+ * Create a new group onboarding room
+ * 
+ * @group partner utils
+ * @route POST /api/partner/groupOnboard
+ * @param {string} name.body.required - name of the room
+ * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
+ * @param {string} content.body.required - personal content for the room creator
+ * @param {string} projectLink.body.optional - URL to the project
+ * @returns {object} 201 - Created with room ID
+ * @returns {Error} 400 - client error
+ */
+.post(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      // (When we separate this into another service, this will have to be an API call.
+      // See the image-api server for an example of how to leverage JWTs to get
+      // permission to access data from the other service.)
+      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
+    } catch (e) {
+      return res.status(400).json({ error: { userMessage: "You must have registration permissions to create a meeting." } }).end()
+    }
+
+    const { name, expiresAt, content, projectLink } = req.body
+    
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: { userMessage: "The meeting name must be non-empty text." } }).end()
+    }
+
+    const expireDate = new Date(expiresAt)
+    if (isNaN(expireDate.getTime())) {
+      return res.status(400).json({ error: { userMessage: "The expiration date is invalid." } }).end()
+    }
+
+    const maxExpireTime = new Date()
+    maxExpireTime.setHours(maxExpireTime.getHours() + 24)
+    if (expireDate > maxExpireTime) {
+      return res.status(400).json({ error: { userMessage: "The expiration time cannot be more than 24 hours in the future." } }).end()
+    }
+
+    if (projectLink && typeof projectLink !== 'string') {
+      return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
+    }
+
+    try {
+      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt, projectLink)
+      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content, true)
+      res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        if (err.message.includes('issuerDid')) {
+          return res.status(400).json({ error: { userMessage: "You already have an active meeting." } }).end()
+        } else {
+          return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
+        }
+      }
+      console.error('Error creating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get any groups set up by this person
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboard
+ * @returns {object} 200 - the room they created with "groupId", "name", "expiresAt"
+ */
+.get(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      // maybe undefined
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (room && room.previousMatches) {
+        room.previousMatches = JSON.parse(room.previousMatches)
+      }
+      res.status(200).json({ data: room }).end()
+    } catch (err) {
+      console.error('Error getting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/** 
+ * Get non-sensitive information about a group onboarding room by ID
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboard/{groupId}
+ * @param {number} groupId.path.required - group ID
+ * @returns {object} 200 - the room with "groupId", "name", "expiresAt" (but not other potentially sensitive information)
+ */
+.get(
+  '/groupOnboard/:groupId',
+  async (req, res) => {
+    try {
+      const groupId = parseInt(req.params.groupId)
+      const room = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (room && room.expiresAt && room.expiresAt < Date.now()) {
+        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+      }
+      if (room) {
+        // remove potentially sensitive data
+        delete room.issuerDid
+        delete room.previousMatches
+      }
+      res.status(200).json({ data: room }).end()
+    } catch (err) {
+      console.error('Error getting meeting onboarding room by ID:', req.params.groupId, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update a group onboarding room
+ * 
+ * @group partner utils
+ * @route PUT /api/partner/groupOnboard
+ * @param {string} name.body.optional - new room name
+ * @param {string} expiresAt.body.optional - new room expiration date
+ * @param {string} projectLink.body.optional - new project URL
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      let { name, expiresAt, content, projectLink } = req.body
+
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!room) {
+        return res.status(404).json({ error: { userMessage: "That meeting was not found for you." } }).end()
+      }
+
+      if (projectLink && typeof projectLink !== 'string') {
+        return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
+      }
+
+      const changes = await partnerDbService.groupOnboardUpdate(
+        room.groupId,
+        res.locals.authTokenIssuer,
+        name || room.name,
+        expiresAt || room.expiresAt,
+        projectLink || room.projectLink
+      )
+      if (changes === 0) {
+        return res.status(404).json({ error: { userMessage: "That meeting was not found to change." } }).end()
+      }
+      const result = { success: true }
+      // update the member content
+      if (content) {
+        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+        if (member) {
+          const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
+          if (memberChanges === 0) {
+            result.message = "Could not update your member content."
+            console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
+          }
+        } else {
+          result.message = "You were not found as a member of that group."
+          console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
+        }
+      } else {
+        result.message = "Be sure to provide new 'content' if you change the meeting password."
+      }
+      res.status(200).json(result).end()
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
+      }
+      console.error('Error updating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Delete a group onboarding room
+ *
+ * @group partner utils
+ * @route DELETE /api/partner/groupOnboard
+ * @returns 204 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!room) {
+        return res.status(404).json({ error: { userMessage: "No meeting was found for you." } }).end()
+      }
+      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.authTokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: { userMessage: "That meeting couldn't be deleted." } }).end()
+      }
+      await partnerDbService.groupOnboardMemberDeleteByGroupId(room.groupId)
+      res.status(204).json({ success: true }).end()
+    } catch (err) {
+      console.error('Error deleting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get all group onboarding rooms
+ *
+ * @group partner utils
+ * @route GET /api/partner/groupsOnboarding
+ * @returns {array} 200 - List of rooms with "groupId", "name", "expiresAt"
+ */
+.get(
+  '/groupsOnboarding',
+  async (req, res) => {
+    try {
+      const rooms = await partnerDbService.groupOnboardGetAllActive()
+      res.status(200).json({ data: rooms }).end()
+    } catch (err) {
+      console.error('Error getting all meeting onboarding rooms:', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Trigger semantic matching for a group (organizer only)
+ * Pairs admitted members who have embeddings based on profile similarity.
+ *
+ * @group partner utils
+ * @route POST /api/partner/groupOnboardMatch
+ * @param {string[]} excludedDids.body.optional - issuerDids to exclude from matching
+ * @param {Array<[string, string]>} excludedPairDids.body.optional - pairs of issuerDids to never match
+ * @param {Array<[string, string]>} previousPairDids.body.optional - pairs from previous rounds (don't repeat)
+ * @returns {object} 200 - pairs with participants and similarity scores
+ */
+.post(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Request must include a valid Authorization JWT." }).end()
+      }
+
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!group) {
+        return res.status(404).json({ error: { userMessage: "There is no meeting with you as the organizer." } }).end()
+      }
+
+      const { excludedDids = [], excludedPairDids = [], previousPairDids = [] } = req.body || {}
+
+      const rows = await partnerDbService.groupMembersPlusEmbeddings(group.groupId)
+      if (rows.length < 2) {
+        return res.status(400).json({
+          error: { userMessage: "Need at least 2 admitted members to match." },
+        }).end()
+      }
+
+      const emptyEmbeddingStorage = embeddingToStorageString(EMBEDDING_FOR_EMPTY_STRING.data.empty.embedding)
+      const rowsWithEmbeddings = rows.map((row) => ({
+        ...row,
+        embeddingVector: row.embeddingVector != null && String(row.embeddingVector).trim() !== ''
+          ? row.embeddingVector
+          : emptyEmbeddingStorage,
+      }))
+      const participants = buildParticipantsFromRows(rowsWithEmbeddings)
+      const result = matchParticipants(participants, excludedDids, excludedPairDids, previousPairDids)
+
+      // create lookup from issuerDid to content from rows
+      const issuerDidToContent = new Map(rows.map((row) => [row.issuerDid, row.content]))
+
+      const pairsForResponse = result.pairs.map((pair) => ({
+        pairNumber: pair.pairNumber,
+        similarity: pair.similarity,
+        participants: pair.participants.map((p) => ({
+          issuerDid: p.issuerDid,
+          content: issuerDidToContent.get(p.issuerDid),
+          description: p.description,
+        })),
+      }))
+
+      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, JSON.stringify(pairsForResponse))
+
+      res.status(200).json({ data: { pairs: pairsForResponse } }).end()
+    } catch (err) {
+      console.error('Error matching meeting members for body params:', JSON.stringify(req.body), '... with potential client message:', err)
+      // the matchParticipants error messages are useful for the user
+      res.status(400).json({ error: { userMessage: err.message } }).end()
+    }
+  }
+)
+
+/**
+ * Get previous matching results for a group (anyone in the meeting)
+ *
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMatch
+ * @returns {object} 200 - previous pairs with participants and similarity scores, or null if none yet
+ */
+.get(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Meeting-onboard-match check must include valid authorization." }).end()
+      }
+
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!member) {
+        return res.status(404).json({ error: "There is no meeting with you as a member." }).end()
+      }
+      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+      if (!group) {
+        return res.status(500).json({ error: "The server had a problem with this meeting. You'll need to start over. Report this to an admin with your details." }).end()
+      }
+
+      let pairs = null
+      if (group.previousMatches) {
+        try {
+          pairs = JSON.parse(group.previousMatches)
+        } catch (err) {
+          console.error('Error parsing previous matches for group:', req.params.groupId, err)
+          return res.status(500).json({ error: "The server had a problem with this meeting pairs. You'll need to start over. Report this to an admin with your details." }).end()
+        }
+      }
+      res.status(200).json({ data: { pairs } }).end()
+    } catch (err) {
+      console.error('Error getting meeting previous matches for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/** Delete previous matches for a group (organizer only) */
+.delete(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!group) {
+        return res.status(404).json({ error: "There is no meeting with you as the organizer." }).end()
+      }
+      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, null)
+      res.status(200).json({ success: true }).end()
+    } catch (err) {
+      console.error('Error deleting group previous matches for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/******************************************************
+ * Group Onboarding Members
+ ******************************************************/
+
+/**
+ * Join a group onboarding room
+ * 
+ * @group partner utils
+ * @route POST /api/partner/groupOnboardMember
+ * @param {number} groupId.body.required - group ID to join
+ * @param {string} content.body.required - member content
+ * @returns {object} 201 - Created
+ * @returns {Error} 400 - client error
+ */
+.post(
+  '/groupOnboardMember',
+  async (req, res) => {
+    const { groupId, content } = req.body
+    try {
+
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: { userMessage: "The content must be non-empty text." } }).end()
+      }
+
+      // Verify group exists
+      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (!group) {
+        return res.status(404).json({ error: { userMessage: "That group was not found." } }).end()
+      }
+      if (group.expiresAt && group.expiresAt < Date.now()) {
+        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+      }
+
+      try {
+        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content)
+        res.status(201).json({ success: { memberId: memberId } }).end()
+      } catch (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          // retrieve the member record and continue
+          // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
+          // (Then again, one wonders if this whole idempotent quality here is a good idea or not.)
+          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+          if (member) {
+            // check that the group is the same
+            if (member.groupId !== groupId) {
+              return res.status(400).json({ error: { userMessage: "You already exist in a different group." } }).end()
+            }
+            // update their content if they sent something new
+            const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
+            if (memberChanges === 0) {
+              return res.status(400).json({ error: { userMessage: "You already exist in this group but your content could not be updated." } }).end()
+            } else {
+              return res.status(200).json({ success: { memberId: member.memberId } }).end()
+            }
+          } else {
+            // may be a client error but I'm really not sure
+            return res.status(400).json({ error: err.message }).end()
+          }
+        }
+        throw err
+      }
+    } catch (err) {
+      console.error('Error joining group onboarding room for DID:', res.locals.authTokenIssuer, '... for group:', groupId, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get current user's group membership
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMember
+ * @returns {object} 200 - Member record with groupId, content, and admitted status, or undefined if not in a group
+ * @returns {Error} 500 - server error
+ */
+.get(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      res.status(200).json({ data: member }).end()
+    } catch (err) {
+      console.error('Error getting group membership for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get group members for the group the member is in
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMembers
+ * @returns {array} 200 - List of members with "issuerDid", "content", "admitted"
+ * @returns {Error} 403 - Unauthorized
+ */
+.get(
+  '/groupOnboardMembers',
+  async (req, res) => {
+    try {
+      // get group member is in
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!member) {
+        return res.status(404).json({ error: { userMessage: "You are not found in any group." } }).end()
+      }
+
+      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+      if (!group) {
+        return res.status(404).json({ error: { userMessage: "That is not a valid group." } }).end()
+      }
+
+      const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
+
+      const isOrganizer = group.issuerDid === res.locals.authTokenIssuer
+
+      if (isOrganizer) {
+        // Return everyone with acceptable properties
+        const allMembers = members
+          .map(m => ({
+            admitted: m.admitted,
+            memberId: m.memberId,
+            content: m.content,
+          }))
+        return res.status(200).json({ data: allMembers }).end()
+      }
+
+      // Find requesting user's membership
+      const requesterMember = members.find(m => m.issuerDid === res.locals.authTokenIssuer)
+      if (!requesterMember) {
+        return res.status(403).json({ error: { userMessage: "You have not joined this group." } }).end()
+      }
+      if (!requesterMember.admitted) {
+        const organizer = members[0]
+        const result = [
+          {
+            memberId: organizer.memberId,
+            content: organizer.content
+          }
+        ]
+        return res.status(200).json({ data: result }).end()
+      }
+
+      // Return only admitted members
+      const admittedMembers = members
+        .filter(m => m.admitted)
+        .map(m => ({
+          memberId: m.memberId,
+          content: m.content
+        }))
+
+      res.status(200).json({ data: admittedMembers }).end()
+    } catch (err) {
+      console.error('Error getting group members for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership for token issuer (self)
+ *
+ * @group partner utils
+ * @route PUT /api/partner/groupOnboardMember
+ * @param {string} content.body.optional - new content
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      await updateGroupMember(member.memberId, member, req.body, res)
+    } catch (err) {
+      console.error('Error updating group membership for token issuer:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership for given member (by the organizer)
+ * 
+ * @group partner utils
+ * @route PUT /api/partner/groupOnboardMember/{memberId}
+ * @param {number} memberId.path.required - member ID to update
+ * @param {string} content.body.optional - new content
+ * @param {boolean} admitted.body.optional - admission status (organizer only)
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember/:memberId',
+  async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.memberId)
+
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
+      await updateGroupMember(memberId, member, req.body, res)
+    } catch (err) {
+      console.error('Error updating group membership for given member:', req.params.memberId, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Leave a group
+ * 
+ * @group partner utils
+ * @route DELETE /api/partner/groupOnboardMember
+ * @returns 204 - Success
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      // first check that they are not the organizer of a meeting
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (group) {
+        return res.status(403).json({ error: { userMessage: "You are the organizer of a group. You can only leave the group by deleting it." } }).end()
+      }
+
+      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.authTokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: { userMessage: "That membership was not found." } }).end()
+      }
+      res.status(204).end()
+    } catch (err) {
+      console.error('Error leaving group for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
  * Add a link to some partner service
  *
  * @group partner utils
@@ -382,11 +1031,32 @@ export default express
   }
 )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/******************************************************
+ * User Profiles
+ ******************************************************/
+
 /**
  * Add a profile for a user
  *
  * @group partner utils
- * @route POST /api/partner/profile
+ * @route POST /api/partner/userProfile
  * @param {string} description.body.required - free-form description of interests
  * @param {number} latitude.body.optional - latitude coordinate
  * @param {number} longitude.body.optional - longitude coordinate
@@ -463,88 +1133,10 @@ export default express
 )
 
 /**
- * Alert search: claims, plan contributions, and optionally location-based profiles/plans since afterId.
- *
- * @group partner utils
- * @route GET /api/partner/alertSearch
- * @route POST /api/partner/alertSearch
- * @param {string} afterId.body.optional - JWT ULID to return items after (GET, POST)
- * @param {string} beforeId.body.optional - JWT ULID to return items before (GET, POST)
- * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
- * @param {number} minLocLat.body.optional - min latitude (GET)
- * @param {number} maxLocLat.body.optional - max latitude (GET)
- * @param {number} minLocLon.body.optional - min longitude (GET)
- * @param {number} maxLocLon.body.optional - max longitude (GET)
- * @returns {object} 200 - { data: {
- *   profilesNearby: UserProfile[],
- *  }
- * }
- */
-.get('/alertSearch', alertSearchHandler)
-.post('/alertSearch', alertSearchHandler)
-
-/**
- * Get a user's profile
- *
- * @group partner utils
- * @route GET /api/partner/userProfileForIssuer/{issuerDid}
- * @param {string} issuerDid.path.required - the issuer DID to get the profile for
- * @returns {UserProfile} 200 - success response with profile
- * @returns {Error} 403 - unauthorized
- * @returns {Error} 400 - client error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get(
-  '/userProfileForIssuer/:issuerDid',
-  async (req, res) => {
-    const { issuerDid } = req.params
-    try {
-      let result = await partnerDbService.profileByIssuerDid(issuerDid)
-
-      // use this message for not visible profiles as well so as to not leak information about this DID attached to any profile
-      const NOT_SEEN_MESSAGE = "There is no profile for this issuer or it is not visible to you."
-      if (!result) {
-        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
-      }
-
-      if (issuerDid !== res.locals.authTokenIssuer) {
-        // check if they can see the profile, or if they're linked to someone who can
-        // (When we separate this into another service, this will have to be an API call.
-        // See the image-api server for an example of how to leverage JWTs to get
-        // permission to access data from the other service.)
-        const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
-        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
-          // the issuerDid is visible to the requester, so continue with full content
-        } else {
-          // someone the issuer can see can see the profile,
-          // but giving up all between would expose their full network
-
-          // If this is an admin user, they can see the generateEmbedding flag
-          if (isAdminUser(res.locals.authTokenIssuer)) {
-            // but they can't see the other info
-            result = {
-              issuerDid: result.issuerDid,
-              generateEmbedding: result.generateEmbedding,
-            }
-          } else {
-            return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
-          }
-        }
-      }
-      res.status(200).json({ data: result }).end()
-    } catch (err) {
-      console.error('Error getting user profile for issuer:', issuerDid, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
  * Get a user's profile by ID
  *
  * @group partner utils
- * @route GET /api/partner/userProfile/{id}
+ * @route GET /api/partner/userProfile/{rowId}
  * @param {number} rowId.path.required - the profile ID to retrieve
  * @returns {UserProfile} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
@@ -766,7 +1358,7 @@ export default express
  * Update the generateEmbedding flag for a user profile (permissioned users only)
  *
  * @group partner utils
- * @route PUT /api/partner/userProfile/generateEmbedding/{issuerDid}
+ * @route PUT /api/partner/userProfileGenerateEmbedding/{issuerDid}
  * @param {string} issuerDid.path.required - the DID of the user whose profile to update
  * @returns 200 - success response
  * @returns {Error} 403 - unauthorized (not an admin)
@@ -896,6 +1488,63 @@ export default express
 )
 
 /**
+ * Get a user's profile
+ *
+ * @group partner utils
+ * @route GET /api/partner/userProfileForIssuer/{issuerDid}
+ * @param {string} issuerDid.path.required - the issuer DID to get the profile for
+ * @returns {UserProfile} 200 - success response with profile
+ * @returns {Error} 403 - unauthorized
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfileForIssuer/:issuerDid',
+  async (req, res) => {
+    const { issuerDid } = req.params
+    try {
+      let result = await partnerDbService.profileByIssuerDid(issuerDid)
+
+      // use this message for not visible profiles as well so as to not leak information about this DID attached to any profile
+      const NOT_SEEN_MESSAGE = "There is no profile for this issuer or it is not visible to you."
+      if (!result) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+      }
+
+      if (issuerDid !== res.locals.authTokenIssuer) {
+        // check if they can see the profile, or if they're linked to someone who can
+        // (When we separate this into another service, this will have to be an API call.
+        // See the image-api server for an example of how to leverage JWTs to get
+        // permission to access data from the other service.)
+        const didsSeenByRequesterWhoSeeObject =
+          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
+        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
+          // the issuerDid is visible to the requester, so continue with full content
+        } else {
+          // someone the issuer can see can see the profile,
+          // but giving up all between would expose their full network
+
+          // If this is an admin user, they can see the generateEmbedding flag
+          if (isAdminUser(res.locals.authTokenIssuer)) {
+            // but they can't see the other info
+            result = {
+              issuerDid: result.issuerDid,
+              generateEmbedding: result.generateEmbedding,
+            }
+          } else {
+            return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+          }
+        }
+      }
+      res.status(200).json({ data: result }).end()
+    } catch (err) {
+      console.error('Error getting user profile for issuer:', issuerDid, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
  * Get nearest neighbors in the registration tree for a user profile
  *
  * @group partner utils
@@ -939,618 +1588,3 @@ export default express
   }
 )
 
-
-
-/******************************************************
- * Group Onboarding
- ******************************************************/
-
-/**
- * Create a new group onboarding room
- * 
- * @group partner utils
- * @route POST /api/partner/groupOnboard
- * @param {string} name.body.required - name of the room
- * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
- * @param {string} content.body.required - personal content for the room creator
- * @param {string} projectLink.body.optional - URL to the project
- * @returns {object} 201 - Created with room ID
- * @returns {Error} 400 - client error
- */
-.post(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      // (When we separate this into another service, this will have to be an API call.
-      // See the image-api server for an example of how to leverage JWTs to get
-      // permission to access data from the other service.)
-      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
-    } catch (e) {
-      return res.status(400).json({ error: { userMessage: "You must have registration permissions to create a meeting." } }).end()
-    }
-
-    const { name, expiresAt, content, projectLink } = req.body
-    
-    // Validate inputs
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: { userMessage: "The meeting name must be non-empty text." } }).end()
-    }
-
-    const expireDate = new Date(expiresAt)
-    if (isNaN(expireDate.getTime())) {
-      return res.status(400).json({ error: { userMessage: "The expiration date is invalid." } }).end()
-    }
-
-    const maxExpireTime = new Date()
-    maxExpireTime.setHours(maxExpireTime.getHours() + 24)
-    if (expireDate > maxExpireTime) {
-      return res.status(400).json({ error: { userMessage: "The expiration time cannot be more than 24 hours in the future." } }).end()
-    }
-
-    if (projectLink && typeof projectLink !== 'string') {
-      return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
-    }
-
-    try {
-      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt, projectLink)
-      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content, true)
-      res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
-    } catch (err) {
-      if (err.message.includes('UNIQUE constraint failed')) {
-        if (err.message.includes('issuerDid')) {
-          return res.status(400).json({ error: { userMessage: "You already have an active meeting." } }).end()
-        } else {
-          return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
-        }
-      }
-      console.error('Error creating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get any groups set up by this person
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboard
- * @returns {object} 200 - the room they created with "groupId", "name", "expiresAt"
- */
-.get(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      // maybe undefined
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (room && room.previousMatches) {
-        room.previousMatches = JSON.parse(room.previousMatches)
-      }
-      res.status(200).json({ data: room }).end()
-    } catch (err) {
-      console.error('Error getting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/** 
- * Get non-sensitive information about a group onboarding room by ID
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboard/{groupId}
- * @param {number} groupId.path.required - group ID
- * @returns {object} 200 - the room with "groupId", "name", "expiresAt" (but not other potentially sensitive information)
- */
-.get(
-  '/groupOnboard/:groupId',
-  async (req, res) => {
-    try {
-      const groupId = parseInt(req.params.groupId)
-      const room = await partnerDbService.groupOnboardGetByRowId(groupId)
-      if (room && room.expiresAt && room.expiresAt < Date.now()) {
-        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
-      }
-      if (room) {
-        // remove potentially sensitive data
-        delete room.issuerDid
-        delete room.previousMatches
-      }
-      res.status(200).json({ data: room }).end()
-    } catch (err) {
-      console.error('Error getting meeting onboarding room by ID:', req.params.groupId, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update a group onboarding room
- * 
- * @group partner utils
- * @route PUT /api/partner/groupOnboard
- * @param {string} name.body.optional - new room name
- * @param {string} expiresAt.body.optional - new room expiration date
- * @param {string} projectLink.body.optional - new project URL
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.put(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      let { name, expiresAt, content, projectLink } = req.body
-
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!room) {
-        return res.status(404).json({ error: { userMessage: "That meeting was not found for you." } }).end()
-      }
-
-      if (projectLink && typeof projectLink !== 'string') {
-        return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
-      }
-
-      const changes = await partnerDbService.groupOnboardUpdate(
-        room.groupId,
-        res.locals.authTokenIssuer,
-        name || room.name,
-        expiresAt || room.expiresAt,
-        projectLink || room.projectLink
-      )
-      if (changes === 0) {
-        return res.status(404).json({ error: { userMessage: "That meeting was not found to change." } }).end()
-      }
-      const result = { success: true }
-      // update the member content
-      if (content) {
-        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-        if (member) {
-          const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
-          if (memberChanges === 0) {
-            result.message = "Could not update your member content."
-            console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
-          }
-        } else {
-          result.message = "You were not found as a member of that group."
-          console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
-        }
-      } else {
-        result.message = "Be sure to provide new 'content' if you change the meeting password."
-      }
-      res.status(200).json(result).end()
-    } catch (err) {
-      if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
-      }
-      console.error('Error updating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Delete a group onboarding room
- *
- * @group partner utils
- * @route DELETE /api/partner/groupOnboard/{groupId}
- * @returns 204 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.delete(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!room) {
-        return res.status(404).json({ error: { userMessage: "No meeting was found for you." } }).end()
-      }
-      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.authTokenIssuer)
-      if (deleted === 0) {
-        return res.status(404).json({ error: { userMessage: "That meeting couldn't be deleted." } }).end()
-      }
-      await partnerDbService.groupOnboardMemberDeleteByGroupId(room.groupId)
-      res.status(204).json({ success: true }).end()
-    } catch (err) {
-      console.error('Error deleting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Trigger semantic matching for a group (organizer only)
- * Pairs admitted members who have embeddings based on profile similarity.
- *
- * @group partner utils
- * @route POST /api/partner/groupOnboardMatch/{groupId}
- * @param {number} groupId.path.required - group ID
- * @param {string[]} excludedDids.body.optional - issuerDids to exclude from matching
- * @param {Array<[string, string]>} excludedPairDids.body.optional - pairs of issuerDids to never match
- * @param {Array<[string, string]>} previousPairDids.body.optional - pairs from previous rounds (don't repeat)
- * @returns {object} 200 - pairs with participants and similarity scores
- */
-.post(
-  '/groupOnboardMatch',
-  async (req, res) => {
-    try {
-      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
-      if (!res.locals.authTokenIssuer) {
-        return res.status(401).json({ error: "Request must include a valid Authorization JWT." }).end()
-      }
-
-      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!group) {
-        return res.status(404).json({ error: { userMessage: "There is no meeting with you as the organizer." } }).end()
-      }
-
-      const { excludedDids = [], excludedPairDids = [], previousPairDids = [] } = req.body || {}
-
-      const rows = await partnerDbService.groupMembersPlusEmbeddings(group.groupId)
-      if (rows.length < 2) {
-        return res.status(400).json({
-          error: { userMessage: "Need at least 2 admitted members to match." },
-        }).end()
-      }
-
-      const emptyEmbeddingStorage = embeddingToStorageString(EMBEDDING_FOR_EMPTY_STRING.data.empty.embedding)
-      const rowsWithEmbeddings = rows.map((row) => ({
-        ...row,
-        embeddingVector: row.embeddingVector != null && String(row.embeddingVector).trim() !== ''
-          ? row.embeddingVector
-          : emptyEmbeddingStorage,
-      }))
-      const participants = buildParticipantsFromRows(rowsWithEmbeddings)
-      const result = matchParticipants(participants, excludedDids, excludedPairDids, previousPairDids)
-
-      // create lookup from issuerDid to content from rows
-      const issuerDidToContent = new Map(rows.map((row) => [row.issuerDid, row.content]))
-
-      const pairsForResponse = result.pairs.map((pair) => ({
-        pairNumber: pair.pairNumber,
-        similarity: pair.similarity,
-        participants: pair.participants.map((p) => ({
-          issuerDid: p.issuerDid,
-          content: issuerDidToContent.get(p.issuerDid),
-          description: p.description,
-        })),
-      }))
-
-      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, JSON.stringify(pairsForResponse))
-
-      res.status(200).json({ data: { pairs: pairsForResponse } }).end()
-    } catch (err) {
-      console.error('Error matching meeting members for body params:', JSON.stringify(req.body), '... with potential client message:', err)
-      // the matchParticipants error messages are useful for the user
-      res.status(400).json({ error: { userMessage: err.message } }).end()
-    }
-  }
-)
-
-/**
- * Get previous matching results for a group (anyone in the meeting)
- *
- * @group partner utils
- * @route GET /api/partner/groupOnboardMatch
- * @returns {object} 200 - previous pairs with participants and similarity scores, or null if none yet
- */
-.get(
-  '/groupOnboardMatch',
-  async (req, res) => {
-    try {
-      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
-      if (!res.locals.authTokenIssuer) {
-        return res.status(401).json({ error: "Meeting-onboard-match check must include valid authorization." }).end()
-      }
-
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!member) {
-        return res.status(404).json({ error: "There is no meeting with you as a member." }).end()
-      }
-      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
-      if (!group) {
-        return res.status(500).json({ error: "The server had a problem with this meeting. You'll need to start over. Report this to an admin with your details." }).end()
-      }
-
-      let pairs = null
-      if (group.previousMatches) {
-        try {
-          pairs = JSON.parse(group.previousMatches)
-        } catch (err) {
-          console.error('Error parsing previous matches for group:', req.params.groupId, err)
-          return res.status(500).json({ error: "The server had a problem with this meeting pairs. You'll need to start over. Report this to an admin with your details." }).end()
-        }
-      }
-      res.status(200).json({ data: { pairs } }).end()
-    } catch (err) {
-      console.error('Error getting meeting previous matches for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/** Delete previous matches for a group (organizer only) */
-.delete(
-  '/groupOnboardMatch',
-  async (req, res) => {
-    try {
-      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!group) {
-        return res.status(404).json({ error: "There is no meeting with you as the organizer." }).end()
-      }
-      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, null)
-      res.status(200).json({ success: true }).end()
-    } catch (err) {
-      console.error('Error deleting group previous matches for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get all group onboarding rooms
- *
- * @group partner utils
- * @route GET /api/partner/groupsOnboarding
- * @returns {array} 200 - List of rooms with "groupId", "name", "expiresAt"
- */
-.get(
-  '/groupsOnboarding',
-  async (req, res) => {
-    try {
-      const rooms = await partnerDbService.groupOnboardGetAllActive()
-      res.status(200).json({ data: rooms }).end()
-    } catch (err) {
-      console.error('Error getting all meeting onboarding rooms:', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-
-
-
-
-
-/******************************************************
- * Group Onboarding Members
- ******************************************************/
-
-/**
- * Join a group onboarding room
- * 
- * @group partner utils
- * @route POST /api/partner/groupOnboardMember
- * @param {number} groupId.body.required - group ID to join
- * @param {string} content.body.required - member content
- * @returns {object} 201 - Created
- * @returns {Error} 400 - client error
- */
-.post(
-  '/groupOnboardMember',
-  async (req, res) => {
-    const { groupId, content } = req.body
-    try {
-
-      if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: { userMessage: "The content must be non-empty text." } }).end()
-      }
-
-      // Verify group exists
-      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
-      if (!group) {
-        return res.status(404).json({ error: { userMessage: "That group was not found." } }).end()
-      }
-      if (group.expiresAt && group.expiresAt < Date.now()) {
-        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
-      }
-
-      try {
-        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content)
-        res.status(201).json({ success: { memberId: memberId } }).end()
-      } catch (err) {
-        if (err.message.includes('UNIQUE constraint failed')) {
-          // retrieve the member record and continue
-          // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
-          // (Then again, one wonders if this whole idempotent quality here is a good idea or not.)
-          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-          if (member) {
-            // check that the group is the same
-            if (member.groupId !== groupId) {
-              return res.status(400).json({ error: { userMessage: "You already exist in a different group." } }).end()
-            }
-            // update their content if they sent something new
-            const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
-            if (memberChanges === 0) {
-              return res.status(400).json({ error: { userMessage: "You already exist in this group but your content could not be updated." } }).end()
-            } else {
-              return res.status(200).json({ success: { memberId: member.memberId } }).end()
-            }
-          } else {
-            // may be a client error but I'm really not sure
-            return res.status(400).json({ error: err.message }).end()
-          }
-        }
-        throw err
-      }
-    } catch (err) {
-      console.error('Error joining group onboarding room for DID:', res.locals.authTokenIssuer, '... for group:', groupId, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get current user's group membership
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboardMember
- * @returns {object} 200 - Member record with groupId, content, and admitted status, or undefined if not in a group
- * @returns {Error} 500 - server error
- */
-.get(
-  '/groupOnboardMember',
-  async (req, res) => {
-    try {
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      res.status(200).json({ data: member }).end()
-    } catch (err) {
-      console.error('Error getting group membership for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get group members for the group the member is in
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboardMembers/{groupId}
- * @returns {array} 200 - List of members with "issuerDid", "content", "admitted"
- * @returns {Error} 403 - Unauthorized
- */
-.get(
-  '/groupOnboardMembers',
-  async (req, res) => {
-    try {
-      // get group member is in
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!member) {
-        return res.status(404).json({ error: { userMessage: "You are not found in any group." } }).end()
-      }
-
-      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
-      if (!group) {
-        return res.status(404).json({ error: { userMessage: "That is not a valid group." } }).end()
-      }
-
-      const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
-
-      const isOrganizer = group.issuerDid === res.locals.authTokenIssuer
-
-      if (isOrganizer) {
-        // Return everyone with acceptable properties
-        const allMembers = members
-          .map(m => ({
-            admitted: m.admitted,
-            memberId: m.memberId,
-            content: m.content,
-          }))
-        return res.status(200).json({ data: allMembers }).end()
-      }
-
-      // Find requesting user's membership
-      const requesterMember = members.find(m => m.issuerDid === res.locals.authTokenIssuer)
-      if (!requesterMember) {
-        return res.status(403).json({ error: { userMessage: "You have not joined this group." } }).end()
-      }
-      if (!requesterMember.admitted) {
-        const organizer = members[0]
-        const result = [
-          {
-            memberId: organizer.memberId,
-            content: organizer.content
-          }
-        ]
-        return res.status(200).json({ data: result }).end()
-      }
-
-      // Return only admitted members
-      const admittedMembers = members
-        .filter(m => m.admitted)
-        .map(m => ({
-          memberId: m.memberId,
-          content: m.content
-        }))
-
-      res.status(200).json({ data: admittedMembers }).end()
-    } catch (err) {
-      console.error('Error getting group members for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update group membership for token issuer
- *
- * @group partner utils
- * @route PUT /api/partner/groupOnboardMember/{groupId}
- * @param {number} memberId.path.required - group ID
- * @param {string} content.body.optional - new content
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.put(
-  '/groupOnboardMember',
-  async (req, res) => {
-    try {
-      // get member record
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      await updateGroupMember(member.memberId, member, req.body, res)
-    } catch (err) {
-      console.error('Error updating group membership for token issuer:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update group membership for given member (by the organizer)
- * 
- * @group partner utils
- * @route PUT /api/partner/groupOnboardMember/{groupId}
- * @param {number} memberId.path.required - group ID
- * @param {string} content.body.optional - new content
- * @param {boolean} admitted.body.optional - admission status (organizer only)
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.put(
-  '/groupOnboardMember/:memberId',
-  async (req, res) => {
-    try {
-      const memberId = parseInt(req.params.memberId)
-
-      // get member record
-      const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
-      await updateGroupMember(memberId, member, req.body, res)
-    } catch (err) {
-      console.error('Error updating group membership for given member:', req.params.memberId, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Leave a group
- * 
- * @group partner utils
- * @route DELETE /api/partner/groupOnboardMember/{groupId}
- * @param {number} groupId.path.required - group ID to leave
- * @returns 204 - Success
- * @returns {Error} 404 - Not found
- */
-.delete(
-  '/groupOnboardMember',
-  async (req, res) => {
-    try {
-      // first check that they are not the organizer of a meeting
-      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (group) {
-        return res.status(403).json({ error: { userMessage: "You are the organizer of a group. You can only leave the group by deleting it." } }).end()
-      }
-
-      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.authTokenIssuer)
-      if (deleted === 0) {
-        return res.status(404).json({ error: { userMessage: "That membership was not found." } }).end()
-      }
-      res.status(204).end()
-    } catch (err) {
-      console.error('Error leaving group for DID:', res.locals.authTokenIssuer, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)

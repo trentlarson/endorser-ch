@@ -834,6 +834,30 @@ export default express
  */
 
 /**
+ * Alert search: claims, plan contributions, tracked plan updates/claims, plans by location.
+ * Does not include profiles (see partner /alertSearch for profiles).
+ *
+ * @group reports
+ * @route GET /api/v2/report/alertSearch
+ * @route POST /api/v2/report/alertSearch
+ * @param {string} afterId.query.optional - JWT ULID to return items after (GET, POST)
+ * @param {string} beforeId.query.optional - JWT ULID to return items before (GET, POST)
+ * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {number} minLocLat.query.optional - min latitude (GET)
+ * @param {number} maxLocLat.query.optional - max latitude (GET)
+ * @param {number} minLocLon.query.optional - min longitude (GET)
+ * @param {number} maxLocLon.query.optional - max longitude (GET)
+ * @param {string[]} planHandleIds.query.optional - plan handle IDs to track (GET, POST)
+ * @param {string[]} planIds.query.optional - plan IDs to track (GET, POST)
+ * @param {string[]} handleIds.query.optional - handle IDs to track (GET, POST)
+ * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby } }
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/alertSearch', alertSearchReportHandler)
+  .post('/alertSearch', alertSearchReportHandler)
+
+
+/**
  * Get all claims for the query inputs, paginated, reverse-chronologically
  *
  * @group reports
@@ -1000,7 +1024,7 @@ export default express
  * Get GiveSummary fulfillers for a particular OfferSummary
  *
  * @group reports
- * @route GET /api/v2/report/givefulfillersToOffer
+ * @route GET /api/v2/report/giveFulfillersToOffer
  * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
@@ -1214,8 +1238,8 @@ export default express
   .get('/plansByBBox', dbController.getPlansByLocationAndContentsPaged)
 
 /**
- * @deprecated
- * @see /api/v2/report/plansByBBox
+ * @deprecated Use /api/v2/report/plansByBBox instead.
+ * @route GET /api/v2/report/plansByLocation
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationAndContentsPaged)
@@ -1239,7 +1263,7 @@ export default express
  * For smaller lists of plan IDs, use query parameters
  *
  * @group reports
- * @route GET /api/v2/report/plansLastUpdateBetween
+ * @route GET /api/v2/report/plansLastUpdatedBetween
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
  * @param {string} afterId.query.required - the JWT ID of the entry after which to look (exclusive)
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
@@ -1261,27 +1285,3 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)
-
-/**
- * Alert search: claims, plan contributions, tracked plan updates/claims, plans by location.
- * Does not include profiles (see partner /alertSearch for profiles).
- *
- * @group reports
- * @route GET /api/v2/report/alertSearch
- * @route POST /api/v2/report/alertSearch
- * @param {string} afterId.query.optional - JWT ULID to return items after (GET, POST)
- * @param {string} beforeId.query.optional - JWT ULID to return items before (GET, POST)
- * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
- * @param {number} minLocLat.query.optional - min latitude (GET)
- * @param {number} maxLocLat.query.optional - max latitude (GET)
- * @param {number} minLocLon.query.optional - min longitude (GET)
- * @param {number} maxLocLon.query.optional - max longitude (GET)
- * @param {string[]} planHandleIds.query.optional - plan handle IDs to track (GET, POST)
- * @param {string[]} planIds.query.optional - plan IDs to track (GET, POST)
- * @param {string[]} handleIds.query.optional - handle IDs to track (GET, POST)
- * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby } }
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-  .get('/alertSearch', alertSearchReportHandler)
-  .post('/alertSearch', alertSearchReportHandler)
-
