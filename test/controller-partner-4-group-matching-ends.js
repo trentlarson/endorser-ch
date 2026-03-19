@@ -62,7 +62,12 @@ describe('P4 - Group Onboard Matching API', () => {
         });
     });
 
-    it('should enable embedding generation for test users (which fails without OPENAI_API_KEY)', async () => {
+    it('should enable embedding generation for test users (which fails without OPENAI_API_KEY)', async function () {
+      if (!process.env.OPENAI_API_KEY) {
+        console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
+        this.skip()
+      }
+
       // Enable embeddings for users 1-4
       for (let i = 1; i <= 4; i++) {
         const response = await request(Server)
@@ -72,7 +77,12 @@ describe('P4 - Group Onboard Matching API', () => {
       }
     }).timeout(5000);
 
-    it('should create profiles for users 1-4 (which fails without OPENAI_API_KEY)', async () => {
+    it('should create profiles for users 1-4 (which fails without OPENAI_API_KEY)', async function () {
+      if (!process.env.OPENAI_API_KEY) {
+        console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
+        this.skip()
+      }
+
       const profiles = [
         { index: 1, description: 'Passionate about organic farming and sustainable agriculture. Love growing vegetables and teaching others about permaculture.' },
         { index: 2, description: 'Small-scale farmer focusing on regenerative agriculture practices. Interested in composting and soil health.' },

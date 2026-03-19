@@ -691,7 +691,12 @@ describe("P2 - Group Onboarding", () => {
         });
     })
 
-    it('should allow admin to set generateEmbeddings flag for user with profile (which fails without OPENAI_API_KEY)', () => {
+    it('should allow admin to set generateEmbeddings flag for user with profile (which fails without OPENAI_API_KEY)', function () {
+      if (!process.env.OPENAI_API_KEY) {
+        console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
+        this.skip()
+      }
+
       // First verify the user has a profile
       return request(Server)
         .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)

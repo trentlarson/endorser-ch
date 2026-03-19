@@ -39,7 +39,6 @@ describe('P6 - Alert Search partner', () => {
       .get('/api/partner/alertSearch')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then((r) => {
-        console.log('r.body', r.body)
         expect(r.status).to.equal(200)
         expect(r.body).to.have.property('data')
         expect(r.body.data).to.have.property('profilesNearby').that.is.an('array')
@@ -186,7 +185,12 @@ describe('P6 - Alert Search partner', () => {
       .catch((err) => Promise.reject(err))
   })
 
-  it('partner alertSearch count increases by 1 after update to existing profile (which fails without OPENAI_API_KEY)', () => {
+  it('partner alertSearch count increases by 1 after update to existing profile (which fails without OPENAI_API_KEY)', function () {
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
+      this.skip()
+    }
+
     // profile1 (pushTokens[1]); no embedding row when P4 not run; use empty desc if 500
     const location = {
       minLocLat: 40.7120,

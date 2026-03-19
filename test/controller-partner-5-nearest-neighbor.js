@@ -157,16 +157,16 @@ describe("P5 - Nearest Neighbor for Current, Flat Tree", () => {
   });
 
   // Test 4: Same user looking at their own profile
-  // Should return empty array or handle gracefully
-  it("should return empty array when user looks at their own profile", () => {
+  // Should return TARGET relation
+  it("should return TARGET when user looks at their own profile", () => {
     return request(Server)
       .get("/api/partner/userProfileNearestNeighbors/" + profile1RowId)
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(200);
-        expect(r.body.data).to.be.an("array");
-        // When looking at own profile, there's no path to traverse
-        // The implementation should handle this gracefully
+        expect(r.body.data).to.be.an("array").with.lengthOf(1);
+        expect(r.body.data[0]).to.have.property("did", creds[1].did);
+        expect(r.body.data[0]).to.have.property("relation", "TARGET");
       });
   });
 
