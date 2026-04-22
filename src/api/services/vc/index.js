@@ -31,13 +31,24 @@ const resolver = new Resolver({ 'ethr': didEthLocalResolver });
 // ... and also if successfully verified by did-jwt (not JWANT): data, doc, signature, signer
 export async function decodeAndVerifyJwt(jwt) {
   const pieces = jwt.split('.')
-  const header = JSON.parse(base64url.decode(pieces[0]))
-  const payload = JSON.parse(base64url.decode(pieces[1]))
+  let header, payload;
+  try {
+    header = JSON.parse(base64url.decode(pieces[0]))
+    payload = JSON.parse(base64url.decode(pieces[1]))
+  } catch (e) {
+    return Promise.reject({
+      clientError: {
+        message: `Error parsing JWT header or payload: ` + e.toString(),
+        code: JWT_VERIFY_FAILED_CODE,
+      }
+    })
+  }
   const issuerDid = payload.iss
   if (!issuerDid) {
     return Promise.reject({
       clientError: {
         message: `Missing "iss" field in JWT.`,
+        code: JWT_VERIFY_FAILED_CODE,
       }
     })
   }
@@ -51,7 +62,7 @@ export async function decodeAndVerifyJwt(jwt) {
       return Promise.reject({
         clientError: {
           message: `JWT failed verification: ` + e.toString(),
-          code: JWT_VERIFY_FAILED_CODE
+          code: JWT_VERIFY_FAILED_CODE,
         }
       })
     }
