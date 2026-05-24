@@ -55,7 +55,6 @@ export default express
  * &nbsp; on success:
  * &nbsp; {
  * &nbsp;&nbsp;&nbsp; claimId: string, // ID for this claim
- * &nbsp;&nbsp;&nbsp; clientMessage: string,
  * &nbsp;&nbsp;&nbsp; embeddedRecordError: object,
  * &nbsp;&nbsp;&nbsp; embeddedRecordWarning: object,
  * &nbsp;&nbsp;&nbsp; embeddedRecordMessage: object, // additional info; may change so don't use this for logic

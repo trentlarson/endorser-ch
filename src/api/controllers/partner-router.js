@@ -120,7 +120,7 @@ async function updateGroupMember(memberId, member, bodyData, res) {
       return res.status(404).json({ error: "That member ID could not be updated with content." }).end()
     }
     if (bodyData.admitted !== undefined) {
-      result.message = "Only the organizer can update member admission status."
+      result.userMessage = "Only the organizer can update member admission status."
     }
   }
 
@@ -134,7 +134,7 @@ async function updateGroupMember(memberId, member, bodyData, res) {
       return res.status(404).json({ error: { userMessage: "That member ID could not be updated with admission status." } }).end()
     }
     if (bodyData.content) {
-      result.message = "Only the member can update their content."
+      result.userMessage = "Only the member can update their content."
     }
   }
 
@@ -528,15 +528,15 @@ export default express
         if (member) {
           const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
           if (memberChanges === 0) {
-            result.message = "Could not update your member content."
+            result.userMessage = "Could not update your member content."
             console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
           }
         } else {
-          result.message = "You were not found as a member of that group."
+          result.userMessage = "You were not found as a member of that group."
           console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
         }
       } else {
-        result.message = "Be sure to provide new 'content' if you change the meeting password."
+        result.userMessage = "Be sure to provide new 'content' if you change the meeting password."
       }
       res.status(200).json(result).end()
     } catch (err) {
@@ -1118,13 +1118,23 @@ export default express
 
       // if generateEmbedding flag is set, generate the new embedding and store it
       const embeddingResult = await partnerDbService.profileEmbeddingWithoutVector(res.locals.authTokenIssuer)
+      let responseMessage
       if (embeddingResult?.generateEmbedding) {
-        const vectorStr = await embeddingsService.generateEmbeddingStorageString(description)
-        const isForEmptyString = description === ''
-        await partnerDbService.profileEmbeddingInsertOrUpdate(res.locals.authTokenIssuer, vectorStr, isForEmptyString, true)
+        try {
+          const vectorStr = await embeddingsService.generateEmbeddingStorageString(description)
+          const isForEmptyString = description === ''
+          await partnerDbService.profileEmbeddingInsertOrUpdate(res.locals.authTokenIssuer, vectorStr, isForEmptyString, true)
+        } catch (embeddingErr) {
+          console.error('Error generating embedding for DID:', res.locals.authTokenIssuer, embeddingErr)
+          responseMessage = "Your profile was saved, but you are not yet eligible for matching with other profiles. Contact an admin to fix this."
+        }
       }
 
-      res.status(201).json({ success: { userProfileId } }).end()
+      const response = { success: { userProfileId } }
+      if (responseMessage) {
+        response.userMessage = responseMessage
+      }
+      res.status(201).json(response).end()
     } catch (err) {
       console.error('Error adding user profile for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
