@@ -315,6 +315,21 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
+  it("cannot update a room with expiration > 24h", () => {
+    return request(Server)
+      .put(`/api/partner/groupOnboard`)
+      .set("Authorization", "Bearer " + pushTokens[0])
+      .send({
+        expiresAt: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+      })
+      .then((r) => {
+        expect(r.status).to.equal(400);
+        expect(r.body.error.userMessage).to.include("24 hours");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
   it("can see their own room with new values", () => {
     return request(Server)
       .get("/api/partner/groupOnboard")

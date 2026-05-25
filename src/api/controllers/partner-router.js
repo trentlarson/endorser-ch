@@ -511,6 +511,18 @@ export default express
         return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
       }
 
+      if (expiresAt) {
+        const expireDate = new Date(expiresAt)
+        if (isNaN(expireDate.getTime())) {
+          return res.status(400).json({ error: { userMessage: "The expiration date is invalid." } }).end()
+        }
+        const maxExpireTime = new Date()
+        maxExpireTime.setHours(maxExpireTime.getHours() + 24)
+        if (expireDate > maxExpireTime) {
+          return res.status(400).json({ error: { userMessage: "The expiration time cannot be more than 24 hours in the future." } }).end()
+        }
+      }
+
       const changes = await partnerDbService.groupOnboardUpdate(
         room.groupId,
         res.locals.authTokenIssuer,
