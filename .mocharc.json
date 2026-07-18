@@ -1,0 +1,9 @@
+{
+  "require": [
+    "./test/.esm-guard.cjs"
+  ],
+  "ignore": [
+    "test/embeddings-generator.js",
+    "test/profile-similarity-visualizer.js"
+  ]
+}

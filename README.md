@@ -52,15 +52,19 @@ npm ci
 cp .env.example .env
 
 # setup/migrate DB
+
+## The easiest for testing is to run this that sets up the DB and some test data: `test/test.sh`
+
+## For production
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
-# note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
+## Note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
-# register ths first permissioned user by adding a DID thus:
+## Register the first permissioned user by adding a DID thus:
 echo "INSERT INTO registration (did, maxClaims, maxRegs, epoch) VALUES ('YOUR_DID', 100, 10000, 1719348718092);" | sqlite3 ../endorser-ch-dev.sqlite3
-# ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
-```
 
-If you just want to get running with initial test user, run `test/test.sh` (or do the "bare" setup below).
+## ... but as an alternative for more controlled test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
+## See also the 'bare' setup below.
+```
 
 Run
 

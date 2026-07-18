@@ -7,22 +7,21 @@ const ulid = ulidx.monotonicFactory()
 const logger = require('../../common/logger')
 const dbInfo = require('../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc, sqlite3.OPEN_READWRITE, (err) => {
-  // if (!err) {
+  if (err) {
+    console.log('Failed to open database:', err)
+  }
+
+  // Monitor database busy/lock states if error isn't handled by the statement
+  db.on('error', (err) => console.log('DB ERROR:', err.message, err.code, err.errno))
+
   //   // Enable all SQLite event monitoring
   //   db.on('trace', (sql) => console.log('DB TRACE:', sql))
   //   db.on('profile', (sql, time) => console.log('DB PROFILE:', sql, 'took', time, 'ms'))
-  //   db.on('error', (err) => console.log('DB ERROR:', err.message, err.code, err.errno))
   //   db.on('open', () => console.log('DB OPEN event'))
   //   db.on('close', () => console.log('DB CLOSE event'))
-    
-  //   // Monitor database busy/lock states
-  //   db.on('busy', () => console.log('DB BUSY: Database is locked'))
-    
-  //   // Set error handling mode
-  //   db.configure('busyTimeout', 5000) // 5 second timeout for busy database
-  // } else {
-  //   console.log('Failed to open database:', err)
-  // }
+
+  // Set error handling mode
+  db.configure('busyTimeout', 10000) // timeout for locked (very busy) database
 })
 const util = require('./util')
 

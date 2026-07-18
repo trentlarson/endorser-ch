@@ -1,7 +1,4 @@
 import chai from "chai";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
 
 const {
   dotProduct,
@@ -38,13 +35,10 @@ const expect = chai.expect;
 let testProfiles;
 let embeddingMeta = null;
 try {
-  const fs = await import('fs');
-  const path = await import('path');
-  const { fileURLToPath } = await import('url');
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
+  const fs = require('fs');
+  const path = require('path');
   const embeddingsPath = path.join(__dirname, 'embeddings.json');
-  
+
   if (fs.existsSync(embeddingsPath)) {
     const embeddingsJson = fs.readFileSync(embeddingsPath, 'utf8');
     const embeddingsFile = JSON.parse(embeddingsJson);
