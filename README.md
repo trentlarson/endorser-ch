@@ -53,9 +53,9 @@ cp .env.example .env
 
 # setup/migrate DB
 
-## The easiest for testing is to run this that sets up the DB and some test data: `test/test.sh`
+## The easiest DB setup for testing is at the end of this block.
 
-## For production
+## For production:
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
 ## Note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
