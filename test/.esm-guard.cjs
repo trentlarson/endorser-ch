@@ -26,8 +26,12 @@ const path = require('path');
 const { parse } = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 
-const TEST_DIR = path.join(__dirname);
 const REPO_ROOT = path.join(__dirname, '..');
+const TEST_DIR = path.join(__dirname);
+// scripts/*.js run through the same `mocha --require @babel/register` pipeline
+// (npm run reset-confirms / reset-claim-fields / set-3-visible), so they are
+// under the identical babel→CJS contract and get the same lint.
+const SCRIPTS_DIR = path.join(REPO_ROOT, 'scripts');
 
 // Single source of truth for what is NOT a spec: .mocharc.json's ignore list.
 function loadIgnoredPaths() {
@@ -97,7 +101,10 @@ function findViolations(file) {
 }
 
 const ignored = loadIgnoredPaths();
-const specs = listSpecFiles(TEST_DIR, ignored, []);
+const specs = [
+  ...listSpecFiles(TEST_DIR, ignored, []),
+  ...(fs.existsSync(SCRIPTS_DIR) ? listSpecFiles(SCRIPTS_DIR, ignored, []) : []),
+];
 const offenders = [];
 
 for (const file of specs) {
@@ -108,9 +115,9 @@ for (const file of specs) {
 if (offenders.length) {
   const lines = [
     '',
-    '  ✖ ESM-incompatibility detected in mocha spec file(s).',
+    '  ✖ ESM-incompatibility detected in mocha-loaded file(s).',
     '',
-    '  These tests run through @babel/register (transpiled to CommonJS). The',
+    '  These files run through @babel/register (transpiled to CommonJS). The',
     '  constructs below cannot survive that transpile, so mocha would fall back',
     '  to native-ESM loading and crash with a misleading error.',
     '',
