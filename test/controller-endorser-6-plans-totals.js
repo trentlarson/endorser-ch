@@ -3782,8 +3782,6 @@ describe('6 - Alert Search report', () => {
 
   //// Type & context changes on a handle chain for a cached type (PlanAction)
 
-  // This plan carries an external identifier because a bare Endorser identifier
-  // (without lastClaimId) is always rejected with "must have been sent earlier".
   const TYPE_CHANGE_PLAN_ID = 'scheme://from-somewhere/type-change-plan'
   let typeChangePlanClaimId, typeChangePlanHandleId
 
@@ -3870,6 +3868,88 @@ describe('6 - Alert Search report', () => {
       .then(r => {
         expect(r.status).that.equals(400)
         expect(r.body.error.message).that.contains('external identifier can only introduce')
+      })
+  }).timeout(5000)
+
+  //// Editing an Endorser-created handle via a bare identifier (no lastClaimId)
+
+  let bareIdPlanHandleId
+
+  it('bare-identifier: 1 creates a plan with no identifier', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.name = 'Bare-identifier plan'
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        bareIdPlanHandleId = r.body.success.handleId
+        expect(bareIdPlanHandleId).that.startsWith('http')
+      })
+  }).timeout(5000)
+
+  it('bare-identifier: 1 edits that plan by sending only its handle as the identifier', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = bareIdPlanHandleId
+    planObj.claim.name = 'Bare-identifier plan'
+    planObj.claim.description = ENTITY_NEW_DESC
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(bareIdPlanHandleId)
+      })
+  }).timeout(5000)
+
+  it('bare-identifier: the plan cache row carries that edit', () =>
+    request(Server)
+      .get('/api/plan/' + encodeURIComponent(bareIdPlanHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.description).that.equals(ENTITY_NEW_DESC)
+      })
+  ).timeout(3000)
+
+  it('bare-identifier: 2 cannot edit that plan', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = bareIdPlanHandleId
+    planObj.claim.name = 'Bare-identifier plan by 2'
+    planObj.iss = creds[2].did
+    const planJwtEnc = await credentials[2].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('did not create the original')
+      })
+  }).timeout(5000)
+
+  it('bare-identifier: 1 cannot turn that plan into an Offer', async () => {
+    const offerObj = R.clone(testUtil.jwtTemplate)
+    offerObj.claim = R.clone(testUtil.claimOffer)
+    offerObj.claim.identifier = bareIdPlanHandleId
+    offerObj.claim.offeredBy = { identifier: creds[1].did }
+    offerObj.iss = creds[1].did
+    const offerJwtEnc = await credentials[1].createVerification(offerObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: offerJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('cannot change the type of an existing PlanAction')
       })
   }).timeout(5000)
 

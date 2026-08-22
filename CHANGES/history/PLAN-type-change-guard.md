@@ -225,6 +225,21 @@ Several days server-side plus open-ended client work.
 
 ## Findings during implementation
 
+- **Replay protection is pinned by tests** (`test/controller-endorser-3-skills.js`,
+  "Replay protection" block): a JWT with a tampered `iat` and the original
+  signature → 400 `JWT_VERIFY_FAILED`; the identical JWT resent → 400 duplicate;
+  the issuer re-signing the same content with a new `iat` → 201 (deliberate:
+  a fresh assertion by the key holder, not a replay).
+- **`Credentials.createVerification` discards any supplied `iat`** and
+  did-jwt stamps the current second, so `jwtTemplate.iat` in `test/util.js` has
+  no effect anywhere in the suite. Tests that need a controlled `iat` must call
+  did-jwt's `createJWT` directly (payload `iat` overrides the default), as
+  the replay tests and `controller-endorser-1-basics.js:765` do. A duplicate test
+  built on `createVerification` is timing-dependent across a second boundary.
+- The suite-7 test "user 1 gets no results" failed once (run 7 of 8) with a 404
+  whose only source is the route-not-found catch-all; it passed on every other
+  run and touches no changed code path. Treated as transient.
+
 - **Production audit (step 12a) result:** the only handles not created by this
   server are `Person` records on DIDs — 11 with `http://schema.org`, 4 with
   `https://schema.org`. No `Offer`/`GiveAction`/other type carries an external
@@ -247,8 +262,10 @@ Several days server-side plus open-ended client work.
   it must have been sent earlier." The `identifier`-only edit path therefore
   runs only for external URIs and DIDs. This is consistent with
   `README.md` calling that usage deprecated, and nothing in the suite exercised
-  it. Left as is; test 7g uses an external-identifier plan instead. Decide
-  separately whether to delete the dead pre-check or restore the path.
+  it. Fixed: the pre-check looks up the top-level clause's own loaded info, so
+  bare-identifier edits of Endorser-created handles work as documented, subject
+  to the same issuer and type rules as `lastClaimId` edits. Five
+  "bare-identifier" tests in `controller-endorser-6-plans-totals.js` cover it.
 - The Phase 2 type restriction means a *new* DID handle with a misspelled
   `@type` is refused (the misspelling can no longer create a handle). Test 7b
   therefore creates a correct `Person`, edits it to `Persn`, and corrects it

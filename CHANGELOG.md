@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GiveAction and Offer cache rows are inserted or updated based on whether the row exists, not on whether the handle is new
 ### Fixed
 - A Person or Organization record stored with `http://schema.org` (or a misspelled type) can be corrected by its issuer
+- Editing an entry by sending only its Endorser `identifier` (no `lastClaimId`) works again; it had always been rejected with "must have been sent earlier"
+- Clearer message when someone other than the creator or agent tries to edit an entry by identifier
 
 
 ## [4.4.0] - 2026.03.15

@@ -2048,7 +2048,9 @@ class ClaimService {
       // so we need to run checks that they have permissions to replace a previous entry.
 
       // Check that the previous entry exists.
-      if (isGlobalEndorserHandleId(claimPayloadClaim.identifier) && !lastClaimInfo?.handleJwt) {
+      // (lastClaimInfo is only set when a lastClaimId was sent, so look up this clause's own loaded info.)
+      const handleInfo = R.find(x => x.clause === claimPayloadClaim, claimIdDataList)
+      if (isGlobalEndorserHandleId(claimPayloadClaim.identifier) && !handleInfo?.handleJwt) {
         return Promise.reject(
           {
             clientError: {
@@ -2097,7 +2099,7 @@ class ClaimService {
             // someday check other properties, eg 'member' in Organization (requiring a role check)
             return Promise.reject(
               { clientError: {
-                message: `You cannot use a local URI identifier if you did not create the original.`
+                message: `You cannot edit the entry for this identifier if you did not create the original or get assigned as an agent.`
               } }
             )
           }

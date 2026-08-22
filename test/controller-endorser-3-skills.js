@@ -1,6 +1,8 @@
 
 // Tests for Skills
 
+import { createJWT } from 'did-jwt'
+import base64url from "base64url";
 import chai from 'chai'
 import request from 'supertest'
 import { DateTime } from 'luxon'
@@ -478,5 +480,73 @@ describe('3 - Skills', () => {
       expect(r.body.error.message).that.contains('cannot change the type of an existing Offer')
     })
   ).timeout(5000)
+
+  //// Replay protection: the signature covers "iat", so only the issuer can change it
+
+  const fivePersonClaim = {
+    "@context": "https://schema.org", "@type": "Person", identifier: creds[5].did, name: "Five",
+  }
+  // Fixed, distinctive issue times so these tests do not depend on the second in which they run.
+  // (Credentials.createVerification drops any "iat" supplied and stamps the current second.)
+  const REPLAY_IAT = testUtil.nowEpoch - 100
+
+  function signedJwtFor5(iat) {
+    return createJWT(
+      { iat, exp: testUtil.nextMinuteEpoch, sub: creds[5].did, claim: fivePersonClaim },
+      { issuer: creds[5].did, signer: credentials[5].signer, alg: 'ES256K-R' }
+    )
+  }
+
+  it('5 submits a Person claim with a fixed iat', async () => {
+    const jwtEnc = await signedJwtFor5(REPLAY_IAT)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: jwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(creds[5].did)
+      })
+  }).timeout(5000)
+
+  it('the same JWT resent unchanged is rejected as a duplicate', async () => {
+    const jwtEnc = await signedJwtFor5(REPLAY_IAT)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: jwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('duplicate of one already sent')
+      })
+  }).timeout(5000)
+
+  it('a JWT with a tampered iat and the original signature is rejected', async () => {
+    const jwtEnc = await signedJwtFor5(REPLAY_IAT)
+    const [header, payloadEnc, signature] = jwtEnc.split('.')
+    const payload = JSON.parse(base64url.decode(payloadEnc))
+    payload.iat = REPLAY_IAT + 1
+    const tampered = header + '.' + base64url.encode(JSON.stringify(payload)) + '.' + signature
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: tampered})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.code).that.equals('JWT_VERIFY_FAILED')
+      })
+  }).timeout(5000)
+
+  it('the issuer re-signs the same content with a new iat and it is accepted as a new claim', async () => {
+    const jwtEnc = await signedJwtFor5(REPLAY_IAT + 1)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: jwtEnc})
+      .expect('Content-Type', /json/)
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(creds[5].did)
+      })
+  }).timeout(5000)
 
 })
