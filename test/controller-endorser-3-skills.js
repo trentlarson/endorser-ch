@@ -325,4 +325,158 @@ describe('3 - Skills', () => {
   it('confirm 4 with carpentry skills by 6', () => postClaim(6, confirm_Carpentry_For4_By6_JwtEnc)).timeout(5000)
   it('confirm 7 with carpentry skills by 4', () => postClaim(4, confirm_Carpentry_For7_By4_JwtEnc)).timeout(5000)
 
+
+  //// Type & context changes on a handle chain (where the handle is a DID)
+
+  async function postClaimV2(credNum, claim) {
+    const jwtObj = R.clone(testUtil.jwtTemplate)
+    jwtObj.claim = claim
+    jwtObj.iss = creds[credNum].did
+    jwtObj.sub = claim.identifier || creds[credNum].did
+    const jwtEnc = await credentials[credNum].createVerification(jwtObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: jwtEnc})
+      .expect('Content-Type', /json/)
+  }
+
+  it('5 creates a Person record with the http schema.org context', () =>
+    postClaimV2(5, {
+      "@context": "http://schema.org", "@type": "Person", identifier: creds[5].did, name: "Five",
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.handleId).that.equals(creds[5].did)
+      expect(r.body.success.embeddedRecordWarning).that.contains('https://schema.org')
+    })
+  ).timeout(5000)
+
+  it('5 corrects their Person record to the https schema.org context', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Person", identifier: creds[5].did, name: "Five",
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.handleId).that.equals(creds[5].did)
+      expect(r.body.success).that.does.not.have.property('embeddedRecordWarning')
+    })
+  ).timeout(5000)
+
+  it('latest record for 5 by handle has the https context', () =>
+    request(Server)
+    .get('/api/claim/byHandle/' + encodeURIComponent(creds[5].did))
+    .set('Authorization', 'Bearer ' + pushTokens[5])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(200)
+      expect(r.body.claimContext).that.equals('https://schema.org')
+      expect(r.body.claimType).that.equals('Person')
+      expect(r.body.claim.name).that.equals('Five')
+    })
+  ).timeout(3000)
+
+  it('8 cannot introduce a DID handle with a misspelled type', () =>
+    postClaimV2(8, {
+      "@context": "https://schema.org", "@type": "Persn", identifier: creds[8].did, name: "Eight",
+    }).then(r => {
+      expect(r.status).that.equals(400)
+      expect(r.body.error.message).that.contains('external identifier can only introduce')
+    })
+  ).timeout(5000)
+
+  it('6 creates a Person record', () =>
+    postClaimV2(6, {
+      "@context": "https://schema.org", "@type": "Person", identifier: creds[6].did, name: "Six",
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.handleId).that.equals(creds[6].did)
+    })
+  ).timeout(5000)
+
+  it('6 cannot edit their DID-handled record to a misspelled type', () =>
+    postClaimV2(6, {
+      "@context": "https://schema.org", "@type": "Persn", identifier: creds[6].did, name: "Six",
+    }).then(r => {
+      expect(r.status).that.equals(400)
+      expect(r.body.error.message).that.contains('external identifier can only carry')
+    })
+  ).timeout(5000)
+
+  it('2 cannot correct the Person record of 6', () =>
+    postClaimV2(2, {
+      "@context": "https://schema.org", "@type": "Person", identifier: creds[6].did, name: "Six by Two",
+    }).then(r => {
+      expect(r.status).that.equals(400)
+      expect(r.body.error.message).that.contains('did not create the original')
+    })
+  ).timeout(5000)
+
+  it('5 cannot change their DID-handled Person record into an Offer', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Offer", identifier: creds[5].did,
+      offeredBy: { identifier: creds[5].did },
+      includesObject: { description: "Five will help" },
+    }).then(r => {
+      expect(r.status).that.equals(400)
+      expect(r.body.error.message).that.contains('external identifier can only carry')
+    })
+  ).timeout(5000)
+
+  //// Type changes on a handle this server created (no identifier supplied)
+
+  let fiveChainClaimId, fiveChainHandleId
+
+  it('5 creates a record with a misspelled type and no identifier', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Persn", name: "Five, misspelled",
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      fiveChainClaimId = r.body.success.claimId
+      fiveChainHandleId = r.body.success.handleId
+    })
+  ).timeout(5000)
+
+  it('5 corrects that record to Person via lastClaimId', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Person", name: "Five, corrected", lastClaimId: fiveChainClaimId,
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.handleId).that.equals(fiveChainHandleId)
+      fiveChainClaimId = r.body.success.claimId
+    })
+  ).timeout(5000)
+
+  it('5 changes that record into an Offer via lastClaimId (non-cached to cached type)', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Offer", lastClaimId: fiveChainClaimId,
+      offeredBy: { identifier: creds[5].did },
+      includesObject: { description: "Five will help" },
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.handleId).that.equals(fiveChainHandleId)
+      expect(r.body.success.offerId).to.be.a('string')
+      fiveChainClaimId = r.body.success.claimId
+    })
+  ).timeout(5000)
+
+  it('that Offer has a row in the offer cache', () =>
+    request(Server)
+    .get('/api/v2/report/offers?handleId=' + encodeURIComponent(fiveChainHandleId))
+    .set('Authorization', 'Bearer ' + pushTokens[5])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(200)
+      expect(r.body.data).to.be.an('array').of.length(1)
+      expect(r.body.data[0].handleId).that.equals(fiveChainHandleId)
+      expect(r.body.data[0].objectDescription).that.equals("Five will help")
+    })
+  ).timeout(3000)
+
+  it('5 cannot change that Offer back into a Person (cached type may not change)', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Person", name: "Five again", lastClaimId: fiveChainClaimId,
+    }).then(r => {
+      expect(r.status).that.equals(400)
+      expect(r.body.error.message).that.contains('cannot change the type of an existing Offer')
+    })
+  ).timeout(5000)
+
 })

@@ -38,13 +38,15 @@ claimOffer_By0_JwtObj.sub = creds[1].did
 const claimOffer_OthersBy0_JwtObj = R.clone(testUtil.jwtTemplate)
 claimOffer_OthersBy0_JwtObj.sub = creds[1].did
 
+// Each offer gets a distinct description so that none is an exact duplicate of another.
+// (Offers cannot carry an external identifier, so that is not available for uniqueness.)
 const manyClaims =
   R.times(n =>
     R.set(
       R.lensProp('claim'),
       R.set(
-        R.lensProp('identifier'),
-        'abc:/xyz' + String(n),
+        R.lensPath(['includesObject', 'description']),
+        'offer number ' + String(n),
         R.set(
           R.lensProp('issuedAt'),
           new Date().toISOString(),
@@ -89,7 +91,8 @@ before(async () => {
   return Promise.resolve()
 })
 
-const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 159, NTH_IN_SECOND_BATCH = 9
+// TOTAL_CLAIMS counts every claim stored by the suites that run before this one.
+const RESULT_COUNT_LIMIT = 50, TOTAL_CLAIMS = 165, NTH_IN_SECOND_BATCH = 9
 let moreBeforeId, firstInList, startOfSecondBatchInList, nthInListInSecondBatch
 
 describe('4 - Load Claims Incrementally', () => {
@@ -317,7 +320,7 @@ describe('4 - Load Claims Incrementally', () => {
         expect(r.status).that.equals(200)
         expect(r.body).to.be.an('object')
         expect(r.body).that.has.a.property('data')
-        expect(r.body.data).to.be.an('array').of.length(9)
+        expect(r.body.data).to.be.an('array').of.length(15)
         expect(r.body).that.does.not.have.property('hitLimit')
       }).catch((err) => {
         return Promise.reject(err)

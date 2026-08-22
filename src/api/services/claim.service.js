@@ -52,6 +52,48 @@ const isContextSchemaOrg =
 // Claims inside AgreeAction may not have context if they're also in schema.org
 const isContextSchemaForConfirmation = (context) => isContextSchemaOrg(context)
 
+// Types that keep a row per handleId in a cache table and update it in place on edit.
+// Add a type here when adding a table keyed by handleId.
+const TYPES_WITH_HANDLE_CACHE = ['GiveAction', 'Offer', 'PlanAction', 'Project']
+
+// Types that may carry a handle from outside this system (an external global URI or a DID),
+// whether introducing the handle or changing the type of an existing one.
+// Editing such a handle without changing its type is always allowed, whatever the type.
+const TYPES_WITH_EXTERNAL_HANDLE = ['Organization', 'Person', 'PlanAction', 'Project']
+
+const DEPRECATED_SCHEMA_ORG_CONTEXT = 'http://schema.org'
+
+// Two contexts are the same if they're equal or if both are schema.org (either http or https).
+const sameContext = (a, b) =>
+  a === b || (isContextSchemaOrg(a) && isContextSchemaOrg(b))
+
+/**
+ * A handle chain may change @context or @type unless the previous entry's type
+ * holds handle-keyed cache rows (which would be left stale by the change),
+ * or the handle is from outside this system and the new type may not carry one.
+ *
+ * @param prevJwt the previous JWT record for this handle (with claimContext & claimType)
+ * @param claim the new claim payload
+ * @return an error message if `claim` may not replace `prevJwt`, otherwise null
+ */
+const typeChangeRejection = (prevJwt, claim) => {
+  if (sameContext(prevJwt.claimContext, claim['@context'])
+      && prevJwt.claimType === claim['@type']) {
+    return null
+  }
+  if (isContextSchemaOrg(prevJwt.claimContext)
+      && TYPES_WITH_HANDLE_CACHE.includes(prevJwt.claimType)) {
+    return `You cannot change the type of an existing ${prevJwt.claimType}`
+      + ` (from ${prevJwt.claimContext} & ${prevJwt.claimType}`
+      + ` to ${claim['@context']} & ${claim['@type']}).`
+  }
+  if (!isGlobalEndorserHandleId(prevJwt.handleId)
+      && !TYPES_WITH_EXTERNAL_HANDLE.includes(claim['@type'])) {
+    return `An external identifier can only carry a ${TYPES_WITH_EXTERNAL_HANDLE.join(', ')}, not a ${claim['@type']}.`
+  }
+  return null
+}
+
 const isEndorserRegistrationClaim = (claim) =>
       isContextSchemaOrg(claim['@context'])
       && claim['@type'] === 'RegisterAction'
@@ -775,7 +817,7 @@ class ClaimService {
     }
   }
 
-  async createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createGive(jwtId, issuerDid, issuedAt, handleId, claim, claimIdDataList) {
 
     const embeddedResults = {}
 
@@ -939,7 +981,8 @@ class ClaimService {
       fullClaim: canonicalize(claim),
     }
 
-    if (isFirstClaimForHandleId) {
+    const existingGive = await dbService.giveInfoByHandleId(handleId)
+    if (!existingGive) {
       // new record
       let giveId = await dbService.giveInsert(entry)
     } else {
@@ -992,7 +1035,7 @@ class ClaimService {
   }
 
 
-  async createEmbeddedClaimEntry(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createEmbeddedClaimEntry(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList) {
 
     if (isContextSchemaOrg(claim['@context'])
         && claim['@type'] === 'AgreeAction') {
@@ -1089,7 +1132,7 @@ class ClaimService {
                && claim['@type'] === 'GiveAction') {
 
       const newGive =
-            await this.createGive(jwtId, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
+            await this.createGive(jwtId, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList)
 
       // only update confirm totals if this is an update
       await this.checkOfferUpdate(
@@ -1211,7 +1254,8 @@ class ClaimService {
         validThrough: validTimeStr,
         fullClaim: canonicalize(claim),
       }
-      if (isFirstClaimForHandleId) {
+      const existingOffer = await dbService.offerInfoByHandleId(handleId)
+      if (!existingOffer) {
         // new record
         const offerId = await dbService.offerInsert(entry)
         l.trace(`${this.constructor.name} New offer ${jwtId} ${util.inspect(entry)}`)
@@ -1544,10 +1588,9 @@ class ClaimService {
    * @param handleId
    * @param claim
    * @param claimInfoList {ClaimInfo[]} list of objects for each claim referenced by claimId or handleId: {}
-   * @param isFirstClaimForHandleId {boolean} true if this is the first claim for this handleId, important for determining insert vs update
    * @return Promise<Record< claimId: string, handleId: string, networkResults: string >>
    */
-  async createEmbeddedClaimEntries(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId) {
+  async createEmbeddedClaimEntries(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList) {
 
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(${jwtId}, ${payloadIssuerDid}, ...)`);
     l.trace(`${this.constructor.name}.createEmbeddedClaimRecords(..., ${util.inspect(claim)})`);
@@ -1584,7 +1627,7 @@ class ClaimService {
     } else {
       // claim is not an array
       embeddedResults =
-        await this.createEmbeddedClaimEntry(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList, isFirstClaimForHandleId)
+        await this.createEmbeddedClaimEntry(jwtEncoded, jwtId, authIssuerDid, payloadIssuerDid, issuedAt, handleId, claim, claimIdDataList)
       l.trace(`${this.constructor.name} created an embedded claim record.`)
     }
 
@@ -1656,12 +1699,17 @@ class ClaimService {
           && (isGlobalEndorserHandleId(claimInfo.handleId) && !claimInfo.handleJwt)) {
         errors.push(`Without a lastClaimId, a handleId of ${claimInfo.handleId} for this system should be in the database but was not.`)
       }
-      if (claimInfo.suppliedType
+      // The top-level clause may change type under the rules in typeChangeRejection
+      // (checked in createWithClaimRecord); nested references must match exactly.
+      const isTopLevel = claimInfo.clause === claim
+      if (!isTopLevel
+          && claimInfo.suppliedType
           && claimInfo.lastClaimJwt?.claimType
           && claimInfo.suppliedType !== claimInfo.lastClaimJwt.claimType) {
         errors.push(`The lastClaimId of ${claimInfo.lastClaimId} has a claimType of ${claimInfo.lastClaimJwt.claimType} which does not match the given claimType of ${claimInfo.suppliedType}`)
       }
-      if (claimInfo.suppliedType
+      if (!isTopLevel
+          && claimInfo.suppliedType
           && claimInfo.handleJwt?.claimType
           && claimInfo.suppliedType !== claimInfo.handleJwt.claimType) {
         errors.push(`The handleId of ${claimInfo.handleId} has a claimType of ${claimInfo.handleJwt.claimType} which does not match the given claimType of ${claimInfo.suppliedType}`)
@@ -1947,7 +1995,6 @@ class ClaimService {
     const lastClaimJwt = lastClaimInfo?.lastClaimJwt
 
     let handleId
-    let isFirstClaimForHandleId = false // this is the first claim for this handleId, hard to derive because of handleIds from other systems
     if (lastClaimId) {
 
       // Check that the previous entry exists.
@@ -1962,16 +2009,10 @@ class ClaimService {
       }
 
       // The previous entry exists.
-      // Check if the new context & type matches the old.
-      if (claimPayloadClaim["@context"] != lastClaimJwt.claimContext
-          || claimPayloadClaim["@type"] != lastClaimJwt.claimType) {
-        return Promise.reject(
-            {
-              clientError: {
-                message: `You cannot change the context & type of an existing entry from ${lastClaimJwt.claimContext} & ${lastClaimJwt.claimType} to ${claimPayloadClaim["@context"]} & ${claimPayloadClaim["@type"]}.`
-              }
-            }
-        )
+      // Check whether the new context & type may replace the old.
+      const typeRejection = typeChangeRejection(lastClaimJwt, claimPayloadClaim)
+      if (typeRejection) {
+        return Promise.reject({ clientError: { message: typeRejection } })
       }
 
       // This handleId must have been set by the lastClaimId, so we can accept it because we've run checks for lastClaimId already.
@@ -2032,14 +2073,10 @@ class ClaimService {
         // use that entry handleId, just in case this was a lastClaimId and the handleId is different
         handleId = prevEntry.handleId
 
-        // check that the context nor type has changed
-        if (claimPayloadClaim["@context"] != prevEntry.claimContext
-            || claimPayloadClaim["@type"] != prevEntry.claimType) {
-          return Promise.reject(
-            { clientError: {
-                message: `You cannot change the type of an existing entry.`
-              } }
-          )
+        // check whether the new context & type may replace the old
+        const typeRejection = typeChangeRejection(prevEntry, claimPayloadClaim)
+        if (typeRejection) {
+          return Promise.reject({ clientError: { message: typeRejection } })
         }
 
         // check that the issuer matches
@@ -2088,9 +2125,18 @@ class ClaimService {
               }
             }
           )
+        } else if (!TYPES_WITH_EXTERNAL_HANDLE.includes(claimPayloadClaim['@type'])) {
+          // Only entity types may bring in a handle from outside this system.
+          return Promise.reject(
+            {
+              clientError: {
+                message:
+                `An external identifier can only introduce a ${TYPES_WITH_EXTERNAL_HANDLE.join(', ')}, not a ${claimPayloadClaim['@type']}.`
+              }
+            }
+          )
         } else {
-          // It's a non-Endorser global URI that doesn't already exist. That's fine.
-          isFirstClaimForHandleId = true
+          // It's a non-Endorser global URI that doesn't already exist, on a type that may carry one. That's fine.
         }
       }
 
@@ -2098,7 +2144,6 @@ class ClaimService {
       // There is no lastClaimId and no identifier.
       // Make the handleId from the jwtId.
       handleId = globalFromLocalEndorserIdentifier(jwtId)
-      isFirstClaimForHandleId = true
     }
 
     //// Insert the claim
@@ -2118,7 +2163,7 @@ class ClaimService {
     if (jwtEntry.claimType !== 'Emoji') {
       // guard against a duplicate claim -- but emoji reactions are different because repeats remove them
       const existingJwtIdAndRevoked =
-        await dbService.jwtUnrevokedClaimExists(jwtEntry.claimCanonHash, jwtEntry.issuer, jwtEntry.issuedAt)
+        await dbService.jwtClaimExists(jwtEntry.claimCanonHash, jwtEntry.issuer, jwtEntry.issuedAt)
       if (!!existingJwtIdAndRevoked.id) {
         return Promise.reject(
           {
@@ -2137,7 +2182,7 @@ class ClaimService {
 
     let embedded =
         await this.createEmbeddedClaimEntries(
-          jwtEncoded, jwtEntry.id, authIssuerDid, claimPayload.iss, jwtEntry.issuedAt, handleId, claimPayloadClaim, claimIdDataList, isFirstClaimForHandleId
+          jwtEncoded, jwtEntry.id, authIssuerDid, claimPayload.iss, jwtEntry.issuedAt, handleId, claimPayloadClaim, claimIdDataList
         )
         .catch(err => {
           l.error(err, `Failed to create embedded claim records for ${jwtEntry.id}`)
@@ -2145,6 +2190,11 @@ class ClaimService {
         })
 
     const result = R.mergeLeft({ claimId: jwtEntry.id, handleId: handleId, hashNonce: jwtEntry.hashNonce }, embedded)
+    if (claimPayloadClaim['@context'] === DEPRECATED_SCHEMA_ORG_CONTEXT) {
+      result.embeddedRecordWarning =
+        (result.embeddedRecordWarning ? result.embeddedRecordWarning + ' ' : '')
+        + `The @context "${DEPRECATED_SCHEMA_ORG_CONTEXT}" is deprecated; use "https://schema.org".`
+    }
     l.trace(`${this.constructor.name}.createWithClaimRecord`
             + ` resulted in ${util.inspect(result)}`)
     return result

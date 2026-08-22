@@ -230,6 +230,13 @@ any subsequent claims sent to the server should send a `lastClaimId` to refer to
 * An `identifier` can be supplied when submitting a claim if the client wants to use their own identifier
 (such as an identifier from another chain); in those cases, it is also used as the `handleId`.
 This is a full global URN. It may be a DID. When referring to preceding claims, use `lastClaimId` instead.
+An external `identifier` (one this server did not create, including a DID) is accepted only on a `PlanAction`,
+`Project`, `Person`, or `Organization`, both when it is introduced and when the type of its chain changes;
+an existing handle of any type may be edited without changing its type.
+The `@context` and `@type` of a handle chain may change on a later claim unless the previous entry is a
+`GiveAction`, `Offer`, `PlanAction`, or `Project` (those keep a cache row per handle that must stay consistent).
+`http://schema.org` and `https://schema.org` count as the same context; `https://schema.org` is canonical and
+the `http` form is deprecated.
 
 * A `lastClaimId` is the way to refer to a previous claim. (An `identifier` may still be accepted, but that use is deprecated.)
 It is typically a ULID, the short `id` reference to another internal claim that this should extend.

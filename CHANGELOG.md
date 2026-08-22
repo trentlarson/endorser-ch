@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.1] - 2026.08.22
+### Added
+- Warning in the claim response when `@context` is `http://schema.org` (deprecated; use `https://schema.org`)
+### Changed
+- A handle chain may change `@context` or `@type` unless the previous entry is a GiveAction, Offer, PlanAction, or Project; `http://schema.org` and `https://schema.org` count as the same context
+- An external identifier (global URI or DID not created by this server) is accepted only on a PlanAction, Project, Person, or Organization, both when introduced and when the chain changes type
+- GiveAction and Offer cache rows are inserted or updated based on whether the row exists, not on whether the handle is new
+### Fixed
+- A Person or Organization record stored with `http://schema.org` (or a misspelled type) can be corrected by its issuer
+
+
 ## [4.4.0] - 2026.03.15
 ### Added
 - /alertSearch for endorser & partner servers 

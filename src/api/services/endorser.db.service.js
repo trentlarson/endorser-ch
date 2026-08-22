@@ -1579,10 +1579,11 @@ class EndorserDatabase {
     })
   }
 
-  jwtUnrevokedClaimExists(claimCanonHash, issuerDid, issuedAt) {
+  jwtClaimExists(claimCanonHash, issuerDid, issuedAt) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT id, revoked FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?) and revoked = 0",
+        // don't check revoked status: they can send a revocation of a claim, but they can't replay a claim with the same issuedAt, active or revoked
+        "SELECT id, revoked FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?)",
         [claimCanonHash, issuerDid, issuedAt],
         function(err, row) {
           if (err) {

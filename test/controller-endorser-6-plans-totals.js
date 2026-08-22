@@ -562,6 +562,7 @@ describe('6 - Plans', () => {
       .send({jwtEncoded: planJwtEnc})
       .then(r => {
         expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('cannot change the type of an existing PlanAction')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -3777,5 +3778,116 @@ describe('6 - Alert Search report', () => {
       })
       .catch((err) => Promise.reject(err))
   })
+
+
+  //// Type & context changes on a handle chain for a cached type (PlanAction)
+
+  // This plan carries an external identifier because a bare Endorser identifier
+  // (without lastClaimId) is always rejected with "must have been sent earlier".
+  const TYPE_CHANGE_PLAN_ID = 'scheme://from-somewhere/type-change-plan'
+  let typeChangePlanClaimId, typeChangePlanHandleId
+
+  it('type-change: 1 creates a fresh plan with an external identifier', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = TYPE_CHANGE_PLAN_ID
+    planObj.claim.name = 'Type-change plan'
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(TYPE_CHANGE_PLAN_ID)
+        typeChangePlanClaimId = r.body.success.claimId
+        typeChangePlanHandleId = r.body.success.handleId
+      })
+  }).timeout(5000)
+
+  it('type-change: 1 edits the plan via lastClaimId with only the context flipped to http', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim['@context'] = 'http://schema.org'
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = TYPE_CHANGE_PLAN_ID
+    planObj.claim.name = 'Type-change plan'
+    planObj.claim.description = ENTITY_NEW_DESC
+    planObj.claim.lastClaimId = typeChangePlanClaimId
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(typeChangePlanHandleId)
+        expect(r.body.success.embeddedRecordWarning).that.contains('https://schema.org')
+        typeChangePlanClaimId = r.body.success.claimId
+      })
+  }).timeout(5000)
+
+  it('type-change: the plan cache row carries the edit', () =>
+    request(Server)
+      .get('/api/plan/' + encodeURIComponent(typeChangePlanHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.handleId).that.equals(typeChangePlanHandleId)
+        expect(r.body.description).that.equals(ENTITY_NEW_DESC)
+      })
+  ).timeout(3000)
+
+  it('type-change: 1 cannot turn the plan into an Offer via a bare identifier', async () => {
+    const offerObj = R.clone(testUtil.jwtTemplate)
+    offerObj.claim = R.clone(testUtil.claimOffer)
+    offerObj.claim.identifier = typeChangePlanHandleId
+    offerObj.claim.offeredBy = { identifier: creds[1].did }
+    offerObj.iss = creds[1].did
+    const offerJwtEnc = await credentials[1].createVerification(offerObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: offerJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('cannot change the type of an existing PlanAction')
+      })
+  }).timeout(5000)
+
+  //// External handles may only be introduced by entity types
+
+  it('external-handle: 1 cannot create an Offer with a new external identifier', async () => {
+    const offerObj = R.clone(testUtil.jwtTemplate)
+    offerObj.claim = R.clone(testUtil.claimOffer)
+    offerObj.claim.identifier = 'scheme://from-somewhere/some-offer'
+    offerObj.claim.offeredBy = { identifier: creds[1].did }
+    offerObj.iss = creds[1].did
+    const offerJwtEnc = await credentials[1].createVerification(offerObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: offerJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('external identifier can only introduce')
+      })
+  }).timeout(5000)
+
+  it('external-handle: 1 can create an Organization with a new external identifier', async () => {
+    const orgObj = R.clone(testUtil.jwtTemplate)
+    orgObj.claim = {
+      "@context": "https://schema.org", "@type": "Organization",
+      identifier: 'scheme://from-somewhere/some-org', name: 'Some Org',
+    }
+    orgObj.iss = creds[1].did
+    const orgJwtEnc = await credentials[1].createVerification(orgObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: orgJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals('scheme://from-somewhere/some-org')
+      })
+  }).timeout(5000)
 
 })
