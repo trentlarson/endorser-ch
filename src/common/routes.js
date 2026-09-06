@@ -3,6 +3,7 @@ import claimV1Router from '../api/controllers/claim-v1-router';
 import partnerRouter from  '../api/controllers/partner-router';
 import reportV2Router from '../api/controllers/report-router';
 import reportV1Router from '../api/controllers/report-v1-router';
+import serviceRouter from '../api/controllers/service-router';
 
 import actionRouter from '../api/controllers/storage-action-router';
 import eventRouter from '../api/controllers/storage-event-router';
@@ -20,6 +21,11 @@ export default function routes(app) {
   app.use('/api/report', reportV1Router)
   app.use('/api/util', utilRouter)
   app.use('/api/userUtil', utilUserRouter)
+
+  /**
+   * For other services, not for end users. Allowlisted callers only.
+   */
+  app.use('/api/service', serviceRouter)
 
   /**
    * These are for specific types of claims.

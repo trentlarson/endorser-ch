@@ -21,6 +21,8 @@ import {decodeAndVerifyJwt, ETHR_DID_PREFIX, PEER_DID_PREFIX} from "./vc";
 
 const SERVICE_ID = process.env.SERVICE_ID || "endorser.ch"
 
+// membership.service.js mirrors these two defaults for the service-to-service
+// membership endpoint. Change them together.
 const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
       process.env.DEFAULT_MAX_REGISTRATIONS_PER_MONTH || 31
 const DEFAULT_MAX_CLAIMS_PER_WEEK =
@@ -184,8 +186,12 @@ class ClaimService {
 
       const regCount = await dbService.registrationCountByAfter(requestorDid, startOfMonthEpoch)
       result.doneRegistrationsThisMonth = regCount
-      result.maxClaimsPerWeek = registered.maxClaims || DEFAULT_MAX_CLAIMS_PER_WEEK
-      result.maxRegistrationsPerMonth = registered.maxRegs || DEFAULT_MAX_REGISTRATIONS_PER_MONTH
+      // '??' and not '||': a zero allowance is meaningful and must survive.
+      // Enforcement below already honors zero, so reporting it as the default let
+      // a disabled user keep passing membership checks in other services.
+      // membership.service.js answers the same question for those services.
+      result.maxClaimsPerWeek = registered.maxClaims ?? DEFAULT_MAX_CLAIMS_PER_WEEK
+      result.maxRegistrationsPerMonth = registered.maxRegs ?? DEFAULT_MAX_REGISTRATIONS_PER_MONTH
       return result
     } else {
       // Note how some uses rely on an error, so beware if you stop returning an error result
@@ -1859,6 +1865,7 @@ class ClaimService {
       const claimedCount = await dbService.jwtCountByAfter(claimIssuerDid, startOfWeekString)
       // 0 shouldn't mean DEFAULT
       const maxAllowedClaims =
+        // a zero allowance is honored here; membership.service.js reads it as revoked
         registration.maxClaims != null ? registration.maxClaims : DEFAULT_MAX_CLAIMS_PER_WEEK
       if (claimedCount >= maxAllowedClaims) {
         return {

@@ -5,6 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Added
+- `/api/service/membership/:did` endpoint for other services to ask whether a DID is a registered member; the calling service authenticates as itself and names the subject, instead of forwarding the subject's credential
+- Optional `aud` (audience) binding on Authorization credentials, enforced only when `SERVICE_AUDIENCE_ID` is set, and required only when `SERVICE_AUDIENCE_REQUIRED` is set
+- Periodic summary at warn level of credentials that arrive without an `aud`, to show when `SERVICE_AUDIENCE_REQUIRED` can be turned on
+### Fixed
+- `/api/report/rateLimits` reported the default limits when `maxClaims` or `maxRegs` was 0, so a user disabled by setting `maxClaims` to 0 still looked like a member in good standing to other services
+- A credential carrying an `aud` was rejected outright, so a client could not adopt the field before a deployment enforced it
+### Changed
+- `decodeAndVerifyJwt` takes an options argument; the audience is checked only on the credential path, so claims stay portable and need no `aud`
+- The `aud` check also covers `did:peer` JWANT credentials, which bypass did-jwt
+### Changed in DB or environment
+- No Flyway migration
+- `MEMBERSHIP_SERVICE_DIDS` & `MEMBERSHIP_CACHE_SECONDS` for the membership endpoint; an empty allowlist means no service may ask
+- `SERVICE_AUDIENCE_ID` & `SERVICE_AUDIENCE_REQUIRED` & `UNAUDIENCED_LOG_INTERVAL_MS` for audience binding
+- `LOG_LEVEL=warn` (the default is `error`) to see the summary of credentials arriving without an `aud`
+
+
 ## [4.4.1] - 2026.08.22
 ### Added
 - Warning in the claim response when `@context` is `http://schema.org` (deprecated; use `https://schema.org`)
