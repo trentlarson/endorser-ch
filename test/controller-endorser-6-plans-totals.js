@@ -3725,6 +3725,50 @@ describe('6 - Alert Search report', () => {
       .catch((err) => Promise.reject(err))
   })
 
+  it('report alertSearch GET query beforeId is exclusive even with JSON Content-Type', async () => {
+    const authHeader = 'Bearer ' + pushTokens[1]
+    const first = await request(Server)
+      .get('/api/v2/report/alertSearch')
+      .set('Authorization', authHeader)
+    expect(first.status).to.equal(200)
+
+    const firstClaimIds = [
+      ...first.body.data.claims.map(c => c.id),
+      ...first.body.data.personalPlanContributions.map(c => c.id),
+    ]
+    expect(firstClaimIds.length, 'prior fixtures should yield claims or plan contributions').to.be.at.least(1)
+    const beforeId = firstClaimIds.reduce((a, b) => (a > b ? a : b))
+
+    const second = await request(Server)
+      .get('/api/v2/report/alertSearch')
+      .query({ beforeId })
+      .set('Authorization', authHeader)
+      .set('Content-Type', 'application/json')
+    expect(second.status).to.equal(200)
+    if (second.body.userMessage) {
+      expect(second.body.userMessage).to.not.include('ULID')
+    }
+
+    const secondClaimIds = [
+      ...second.body.data.claims.map(c => c.id),
+      ...second.body.data.personalPlanContributions.map(c => c.id),
+    ]
+    secondClaimIds.forEach((id) => {
+      expect(id < beforeId, `id ${id} should be < beforeId ${beforeId}`).to.be.true
+    })
+    second.body.data.trackedPlanClaims.forEach((c) => {
+      expect(c.id < beforeId, `trackedPlanClaims id ${c.id} should be < beforeId ${beforeId}`).to.be.true
+    })
+    second.body.data.trackedPlanUpdates.forEach((c) => {
+      expect(c.jwtId < beforeId, `trackedPlanUpdates jwtId ${c.jwtId} should be < beforeId ${beforeId}`).to.be.true
+    })
+    second.body.data.plansNearby.forEach((c) => {
+      expect(c.jwtId < beforeId, `plansNearby jwtId ${c.jwtId} should be < beforeId ${beforeId}`).to.be.true
+    })
+    expect(secondClaimIds).to.not.deep.equal(firstClaimIds)
+    expect(secondClaimIds).to.not.include(beforeId)
+  })
+
   it('report alertSearch with planHandleIds returns tracked plan updates and claims', () => {
     return request(Server)
       .post('/api/v2/report/alertSearch')

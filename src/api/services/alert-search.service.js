@@ -19,7 +19,8 @@ const ULID_REGEX = /^[0-9A-HJKMNP-TV-Z]{26}$/
  */
 export function alertSearchParamsFromRequest(req) {
   const isGet = req.method === 'GET'
-  const src = isGet ? (req.body || req.query) : req.body
+  // GET: query only. An empty JSON body `{}` must not hide req.query.beforeId.
+  const src = isGet ? req.query : req.body
   const afterId = src?.afterId
   const beforeId = src?.beforeId
   const afterDate = src?.afterDate
