@@ -13,6 +13,7 @@
 import l from '../../common/logger'
 import { dbService } from './endorser.db.service'
 import { isDid } from './util'
+import { decodeAndVerifyJwt } from './vc'
 
 // Kept in sync with claim.service.js, which enforces the same limits.
 const DEFAULT_MAX_REGISTRATIONS_PER_MONTH =
@@ -32,6 +33,13 @@ const ALLOWED_SERVICE_DIDS =
         .split(',')
         .map(did => did.trim())
         .filter(did => did.length > 0)
+
+// A subject token is the user's own credential to the calling service, reused as
+// evidence that the user authorized this service. It must expire, and soon: it is
+// a grant to ask, and the service can re-ask until it lapses. Step 4.3's
+// auth_token_seen table is what will make it single-use.
+const SUBJECT_TOKEN_MAX_SECONDS =
+      parseInt(process.env.MEMBERSHIP_SUBJECT_TOKEN_MAX_SECONDS || '300', 10)
 
 export const MEMBERSHIP_REASONS = {
   NOT_REGISTERED: 'NOT_REGISTERED',
@@ -85,11 +93,70 @@ export async function membershipForDid(subjectDid) {
 }
 
 /**
+ * Verify a subject token and return the DID it authorizes asking about.
+ *
+ * The token is signed by the user and audienced to the calling service, so it
+ * proves the user authorized this service. It names no audience for this server,
+ * which is what keeps it from working here as a credential.
+ *
+ * @returns { subjectDid } or { error } with a clientError-shaped object
+ */
+export async function subjectFromToken(callerDid, subjectToken) {
+  if (!subjectToken) {
+    return { error: { message: 'Supply the user\'s subjectToken.', code: 'SUBJECT_TOKEN_MISSING' } }
+  }
+
+  let payload
+  try {
+    // Verified without an audience check: this token's "aud" names the calling
+    // service, not this server, and is checked against the caller below.
+    const result = await decodeAndVerifyJwt(subjectToken)
+    if (!result.verified) {
+      return { error: { message: 'The subjectToken failed verification.', code: 'SUBJECT_TOKEN_INVALID' } }
+    }
+    payload = result.payload
+  } catch (e) {
+    const inner = e.clientError ? e.clientError.message : 'signature or format was rejected'
+    return { error: { message: `The subjectToken failed verification: ${inner}`, code: 'SUBJECT_TOKEN_INVALID' } }
+  }
+
+  // The consent is to this caller specifically, so a token given to one service
+  // cannot be used by another.
+  const audArray = payload.aud ? (Array.isArray(payload.aud) ? payload.aud : [payload.aud]) : []
+  if (!audArray.includes(callerDid)) {
+    return {
+      error: {
+        message: 'The subjectToken does not name this service in "aud", so the user did not authorize it to ask.',
+        code: 'SUBJECT_TOKEN_NOT_FOR_CALLER',
+      }
+    }
+  }
+
+  if (!payload.exp) {
+    return { error: { message: 'The subjectToken must carry an "exp".', code: 'SUBJECT_TOKEN_NOT_BOUNDED' } }
+  }
+  const issuedAt = payload.iat || payload.nbf
+  if (issuedAt && payload.exp - issuedAt > SUBJECT_TOKEN_MAX_SECONDS) {
+    return {
+      error: {
+        message: `The subjectToken lasts longer than the ${SUBJECT_TOKEN_MAX_SECONDS} seconds allowed.`,
+        code: 'SUBJECT_TOKEN_TOO_LONG',
+      }
+    }
+  }
+
+  if (!isDid(payload.iss)) {
+    return { error: { message: 'The subjectToken has no usable issuer.', code: 'SUBJECT_TOKEN_INVALID' } }
+  }
+  return { subjectDid: payload.iss }
+}
+
+/**
  * @param callerDid the authenticated DID of the calling service
- * @param subjectDid the DID being asked about
+ * @param subjectToken the user's credential to that service, naming it in "aud"
  * @returns {Promise<object>} { status, body } for the caller to send verbatim
  */
-export async function membershipResponse(callerDid, subjectDid) {
+export async function membershipResponse(callerDid, subjectToken) {
   if (!callerDid) {
     return {
       status: 401,
@@ -104,11 +171,10 @@ export async function membershipResponse(callerDid, subjectDid) {
       body: { error: { message: 'This DID is not permitted to ask about other DIDs.', code: 'SERVICE_NOT_ALLOWED' } },
     }
   }
-  if (!isDid(subjectDid)) {
-    return {
-      status: 400,
-      body: { error: { message: 'Supply a subject DID.', code: 'INVALID_SUBJECT_DID' } },
-    }
+
+  const { subjectDid, error } = await subjectFromToken(callerDid, subjectToken)
+  if (error) {
+    return { status: error.code === 'SUBJECT_TOKEN_NOT_FOR_CALLER' ? 403 : 400, body: { error } }
   }
 
   const result = await membershipForDid(subjectDid)

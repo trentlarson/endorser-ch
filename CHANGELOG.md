@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- `/api/service/membership/:did` endpoint for other services to ask whether a DID is a registered member; the calling service authenticates as itself and names the subject, instead of forwarding the subject's credential
+- `POST /api/service/membership` endpoint for other services to ask whether a user is a registered member; the calling service authenticates as itself and sends the user's own credential to it as `subjectToken`, which must name that service in `aud`, so the user's authorization is proven without the service holding a credential usable here
 - Optional `aud` (audience) binding on Authorization credentials, enforced only when `SERVICE_AUDIENCE_ID` is set, and required only when `SERVICE_AUDIENCE_REQUIRED` is set
 - Periodic summary at warn level of credentials that arrive without an `aud`, to show when `SERVICE_AUDIENCE_REQUIRED` can be turned on
 ### Fixed
@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `aud` check also covers `did:peer` JWANT credentials, which bypass did-jwt
 ### Changed in DB or environment
 - No Flyway migration
-- `MEMBERSHIP_SERVICE_DIDS` & `MEMBERSHIP_CACHE_SECONDS` for the membership endpoint; an empty allowlist means no service may ask
+- `MEMBERSHIP_SERVICE_DIDS` & `MEMBERSHIP_CACHE_SECONDS` & `MEMBERSHIP_SUBJECT_TOKEN_MAX_SECONDS` for the membership endpoint; an empty allowlist means no service may ask
 - `SERVICE_AUDIENCE_ID` & `SERVICE_AUDIENCE_REQUIRED` & `UNAUDIENCED_LOG_INTERVAL_MS` for audience binding
 - `LOG_LEVEL=warn` (the default is `error`) to see the summary of credentials arriving without an `aud`
 
