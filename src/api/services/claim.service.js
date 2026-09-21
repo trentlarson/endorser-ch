@@ -12,6 +12,7 @@ import {
   ERROR_CODES,
   findAllLastClaimIdsAndHandleIds,
   globalFromLocalEndorserIdentifier,
+  globalId,
   isGlobalEndorserHandleId,
   isGlobalUri,
   nonceHashChain,
@@ -377,9 +378,12 @@ class ClaimService {
         }
       }
     } else if (clause?.identifier) {
-      clauseHandleId = clause.identifier
+      // An identifier with no URI scheme names an entity on this system, so
+      // expand it before any lookup. See expandLocalHandleIdReferences.
+      const clauseIdentifier = globalId(clause.identifier)
+      clauseHandleId = clauseIdentifier
       // first look in already-cached JWT record list
-      const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.handleId === clause?.identifier)
+      const loadedFulfillsParentIdInfo = claimIdDataList.find(claimIdData => claimIdData.handleId === clauseIdentifier)
       if (loadedFulfillsParentIdInfo?.handleJwt) {
         clause = JSON.parse(loadedFulfillsParentIdInfo.handleJwt.claim)
         clauseHandleId = loadedFulfillsParentIdInfo.handleJwt.handleId
@@ -391,7 +395,7 @@ class ClaimService {
       // possibility that the "fulfills" clause loaded something new from the
       // DB and we may have to look this up.)
       if (!loadedFulfillsParentIdInfo) {
-        const loadedFulfillsParentJwt = await dbService.jwtLastByHandleId(clause.identifier)
+        const loadedFulfillsParentJwt = await dbService.jwtLastByHandleId(clauseIdentifier)
         if (loadedFulfillsParentJwt) {
           clause = JSON.parse(loadedFulfillsParentJwt.claim)
           clauseHandleId = loadedFulfillsParentJwt.handleId
@@ -845,7 +849,8 @@ class ClaimService {
 
     // first, record details about a direct "fulfills" link (loading from DB if necessary)
     const fulfillsLastClaimId = claimFulfills?.lastClaimId
-    let fulfillsHandleId = claimFulfills?.identifier
+    // expand a short, system-local identifier; see expandLocalHandleIdReferences
+    let fulfillsHandleId = globalId(claimFulfills?.identifier)
     let fulfillsType = claimFulfills?.['@type']
     let fulfillsLinkConfirmed = false
     if (fulfillsLastClaimId) {
@@ -1009,8 +1014,10 @@ class ClaimService {
         // find the right handle ID, and also check whether the link is confirmed because it's the same issuer
         let provHandleId, provJwt
         if (provider.identifier) {
+          // expand a short, system-local identifier; see expandLocalHandleIdReferences
+          const provIdentifier = globalId(provider.identifier)
           const provJwtInfo =
-            claimIdDataList.find(claimIdData => claimIdData.handleId === provider.identifier)
+            claimIdDataList.find(claimIdData => claimIdData.handleId === provIdentifier)
           if (provJwtInfo) {
             provHandleId = provJwtInfo.handleId
             provJwt = provJwtInfo.handleJwt
@@ -1023,7 +1030,11 @@ class ClaimService {
             provJwt = provJwtInfo.lastClaimJwt
           }
         }
-        if (provHandleId) {
+        // provJwt is absent when the reference resolves to no claim on this
+        // system, eg. an identifier carrying another system's URI scheme. Skip
+        // the insert and warn rather than dereferencing it: a provider row
+        // pointing at an entity we never saw is a link nothing can follow.
+        if (provHandleId && provJwt) {
           await dbService.giveProviderInsert({
             giveHandleId: handleId,
             providerId: provHandleId,
@@ -1651,6 +1662,51 @@ class ClaimService {
     return R.mergeLeft(embeddedResults, { networkResults: allNetRecords })
   }
 
+  /**
+   * Expand every reference that names an entity on this system by the short
+   * form of its handle, eg. "01D25AVGQG1N8E9JNGK7C7DZRD" for
+   * "https://endorser.ch/entity/01D25AVGQG1N8E9JNGK7C7DZRD". A client that
+   * reached an entity through a shortened link holds only that short form and
+   * may well send it back inside an "identifier".
+   *
+   * Expanding here means the reference resolves, and means the expanded form is
+   * what reaches give.fulfillsPlanHandleId, give_provider.providerId and the
+   * like. The report endpoints all query with globalId, so a short form stored
+   * raw is a link that nothing can ever follow again.
+   *
+   * Only a nested clause that names its own "@type" is expanded, because that
+   * is the shape of a reference to an entity, eg.
+   * { "@type": "PlanAction", identifier: "01D25AVGQG1N8E9JNGK7C7DZRD" }.
+   * Everything else keeps whatever it was sent with:
+   *
+   * - A claim's own top-level "identifier". createWithClaimEntry runs its own
+   *   expansion and permission checks on that one, and on an invite it is an
+   *   invitation code rather than a reference to anything.
+   * - An untyped clause, eg. a registration's "participant", whose identifier
+   *   is expected to be a DID and whose junk values should keep failing the way
+   *   they always have rather than turning into entity lookups.
+   * - An identifier that already carries a URI scheme, eg.
+   *   "external:some-project", which names no entity here.
+   *
+   * @param claimIdsList from findAllLastClaimIdsAndHandleIds, modified in place
+   * @param rootClaim the claim those references were found in
+   */
+  expandLocalHandleIdReferences(claimIdsList, rootClaim) {
+    for (const claimIdData of claimIdsList) {
+      if (claimIdData.clause === rootClaim
+          || !claimIdData.handleId
+          || !claimIdData.suppliedType) {
+        continue
+      }
+      const expanded = globalId(claimIdData.handleId)
+      if (expanded !== claimIdData.handleId) {
+        claimIdData.suppliedHandleId = claimIdData.handleId
+        claimIdData.handleId = expanded
+      }
+    }
+    return claimIdsList
+  }
+
   // see findAllLastClaimIdsAndHandleIds for the format of each claimInfo: { lastClaimId || handleId, suppliedType?, clause }
   //
   // return Promise of object with the lastClaimId's JWT loaded into the lastClaimJwt field,
@@ -1680,7 +1736,12 @@ class ClaimService {
     if (isGlobalEndorserHandleId(claimInfo.handleId)) {
       const handleJwt = await dbService.jwtLastByHandleIdRaw(claimInfo.handleId)
       if (!handleJwt) {
-        throw `No claim found with handleId ${claimInfo.handleId}`
+        // expandLocalHandleIdReferences may have expanded a short reference
+        const suppliedNote =
+          claimInfo.suppliedHandleId
+            ? ` (expanded from the supplied identifier of ${claimInfo.suppliedHandleId})`
+            : ''
+        throw `No claim found with handleId ${claimInfo.handleId}` + suppliedNote
       }
       claimInfo.handleJwt = handleJwt
     }
@@ -1698,7 +1759,7 @@ class ClaimService {
       }
       if (claimInfo.lastClaimId
           && claimInfo.clause.identifier
-          && claimInfo.lastClaimJwt.handleId !== claimInfo.clause.identifier) {
+          && claimInfo.lastClaimJwt.handleId !== globalId(claimInfo.clause.identifier)) {
         errors.push(`The lastClaimId of ${claimInfo.lastClaimId} has a handleId of ${claimInfo.lastClaimJwt.handleId} which doesn't match your supplied identifier of ${claimInfo.clause.identifier}.`)
       }
       if (!claimInfo.lastClaimId
@@ -1888,7 +1949,8 @@ class ClaimService {
     const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
     const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction')
     if (!planActionFulfills) return undefined
-    if (planActionFulfills.identifier) return planActionFulfills.identifier
+    // expand a short, system-local identifier; see expandLocalHandleIdReferences
+    if (planActionFulfills.identifier) return globalId(planActionFulfills.identifier)
     if (planActionFulfills.lastClaimId) {
       const info = await this.retrieveClauseClaimAndIssuer(planActionFulfills, claimIdDataList, 'PlanAction')
       return info?.clauseHandleId
@@ -1966,7 +2028,10 @@ class ClaimService {
     // We do this basic sanity check here because we want to fail before
     // storing the JWT and give the client an HTTP error code (rather than
     // a 201 result with an embeddedRecordError result).
-    const claimIdsList = findAllLastClaimIdsAndHandleIds(claimPayloadClaim)
+    const claimIdsList =
+        this.expandLocalHandleIdReferences(
+          findAllLastClaimIdsAndHandleIds(claimPayloadClaim), claimPayloadClaim
+        )
     let claimIdDataList
     try {
       claimIdDataList = await Promise.all(R.map(this.loadClaimJwt, claimIdsList))

@@ -1193,16 +1193,20 @@ class EndorserDatabase {
    * Give_Provider, a join table between gives & their providers
    **/
 
+  // linkConfirmed says the provider is the same party as the give's issuer, so
+  // the give's word that they provided something is their own word about
+  // themselves. It can also be raised later, by giveProviderMarkLinkAsConfirmed,
+  // when the provider confirms the give.
   giveProviderInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT INTO give_provider"
-        + " (giveHandleId, providerId)"
-        + " VALUES (?, ?)"
+        + " (giveHandleId, providerId, linkConfirmed)"
+        + " VALUES (?, ?, ?)"
       );
       db.run(
         stmt,
-        [entry.giveHandleId, entry.providerId],
+        [entry.giveHandleId, entry.providerId, !!entry.linkConfirmed],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
         })

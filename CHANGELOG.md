@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Fixed
+- Incorrect project ID accepted & saved when recording a recipient from a project
+### Changed in DB or environment
+- See `sql-by-hand/V20.2__expand_short_handle_id_references.sql` and follow instructions.
+
+
 ## [4.4.2] - 2026.09.08
 ### Added
 - `POST /api/service/membership` endpoint for other services to ask whether a user is a registered member; the calling service authenticates as itself and sends the user's own credential to it as `subjectToken`, which must name that service in `aud`, so the user's authorization is proven without the service holding a credential usable here

@@ -314,6 +314,10 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.issuer).that.equals(creds[1].did)
+        // A client reaches this endpoint holding whichever form of the ID a
+        // link handed it, and takes this handleId as the one to put in later
+        // claims and report queries, so it has to be the full handle.
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
         expect(r.body.claim.name).that.equals(planWithoutIdBy1JwtObj.claim.name)
         expect(r.body.claim.description).that.equals(testUtil.claimPlanAction.description)
@@ -3308,6 +3312,182 @@ describe('6 - Check plans as providers to gives', () => {
       return Promise.reject(err)
     })
   })
+})
+
+
+
+
+describe('6 - Check short, system-local IDs in references', () => {
+
+  // A client that reached a project through a shortened link, eg.
+  // .../deep-link/project/01ABC..., holds only the part of the handle after the
+  // entity prefix. When it sends that short form back inside an "identifier",
+  // the reference has to land on the same entity as the full handle: every
+  // report endpoint expands a short ID before querying, so a short ID stored
+  // raw would be a link nothing could follow.
+  //
+  // This plan is created here rather than reused from above so that the gives
+  // below cannot disturb any totals that other tests assert.
+
+  let shortPlanHandleId, shortPlanIdExternal
+  let providerGiveHandleId, fulfillsGiveHandleId
+
+  it('insert a plan to refer to', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimPlanAction)
+    credObj.claim.agent.identifier = creds[4].did
+    credObj.claim.name = credObj.claim.name + " - reachable by short ID"
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.error('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).to.be.a('string')
+        shortPlanIdExternal = r.body.success.handleId
+        shortPlanHandleId = localFromGlobalEndorserIdentifier(shortPlanIdExternal)
+        expect(globalId(shortPlanHandleId)).to.equal(shortPlanIdExternal)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('can add a plan as a provider by its short ID', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Lent the good saw, tracked by short ID"
+    credObj.claim.provider = {
+      "@type": "PlanAction", identifier: shortPlanHandleId
+    }
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.error('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        // before short IDs were expanded, the provider lookup found a cache
+        // entry with no JWT and threw, which surfaced here
+        expect(r.body.success.embeddedRecordError).to.be.undefined
+        expect(r.body.success.embeddedRecordWarning).to.be.undefined
+        expect(r.body.success.handleId).to.be.a('string')
+        providerGiveHandleId = r.body.success.handleId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('stores that provider under the full handle ID', () => {
+    return request(Server)
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(providerGiveHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        // The identifier says the short ID was stored expanded. linkConfirmed
+        // says more than that: it is only true when the provider plan's own
+        // JWT was read and found to carry this give's issuer, which cannot
+        // happen unless the short ID resolved to that plan.
+        expect(r.body.data).to.deep.equal([
+          { identifier: shortPlanIdExternal, linkConfirmed: true }
+        ])
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('finds that give from the provider, by either form of the ID', async () => {
+    for (const providerId of [shortPlanIdExternal, shortPlanHandleId]) {
+      await request(Server)
+        .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(providerId))
+        .set('Authorization', 'Bearer ' + pushTokens[4])
+        .then(r => {
+          expect(r.status).that.equals(200)
+          expect(r.body.data).to.be.an('array').of.length(1)
+          expect(r.body.data[0].handleId).to.equal(providerGiveHandleId)
+          expect(r.body.data[0].providerId).to.equal(shortPlanIdExternal)
+        })
+    }
+  }).timeout(5000)
+
+  it('can fulfill a plan by its short ID', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Hauled the gravel, tracked by short ID"
+    credObj.claim.fulfills = [
+      { "@type": "PlanAction", identifier: shortPlanHandleId },
+      { "@type": "DonateAction" },
+    ]
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.error('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.body.success.embeddedRecordError).to.be.undefined
+        expect(r.status).that.equals(201)
+        fulfillsGiveHandleId = r.body.success.handleId
+        // the give is recorded against the expanded handle, not the short ID
+        expect(r.body.success.fulfillsPlanHandleId).to.equal(shortPlanIdExternal)
+        expect(r.body.success.fulfillsLinkConfirmed).to.be.true
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('finds that give when reporting on the plan', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/givesToPlans?planIds='
+          + encodeURIComponent(JSON.stringify([shortPlanIdExternal]))
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].handleId).to.equal(fulfillsGiveHandleId)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('rejects a short ID that names nothing on this system', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Gave to a project that was never recorded"
+    credObj.claim.provider = {
+      "@type": "PlanAction", identifier: "01ZZZZZZZZZZZZZZZZZZZZZZZZ"
+    }
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        // a short ID that resolves to nothing is a client mistake, not a give
+        // to be recorded with a dangling reference
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).to.include('01ZZZZZZZZZZZZZZZZZZZZZZZZ')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
 })
 
 
