@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.6] - 2026.10.04
+### Fixed
+- GLIBC version error on startup
+
 ## [4.4.5] - 2026.10.04
 ### Added
 - Semantic matching of profiles and projects with an open-weight embedding model run on this server (Granite-Embedding-311M-Multilingual-R2, Apache-2.0), so clients can reproduce the vectors and no profile text goes to a third party
