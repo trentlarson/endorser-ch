@@ -142,6 +142,8 @@ describe('P8 - Embedding Engine: model output', function () {
     }
   })
 
+  // 0.9999 holds on the platform that generated the golden file (macOS/arm64);
+  // other CPUs differ by up to ~0.001 (see section 8 of the plan for the cross-platform criteria)
   it('reproduces the golden vectors', () => {
     golden.cases.forEach((c, i) => {
       const similarity = engine.dot(vectors[i], engine.base64ToVector(c.vector))

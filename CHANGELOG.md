@@ -16,13 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Meeting matching (`groupOnboardMatch`) uses the new vectors; members without profile text are paired after everyone else, with a null similarity (they used to share one "empty" vector and score 1.0 against each other)
 - `GET /api/partner/userProfileEmbeddingMetadata/:issuerDid` returns `embeddingSpecId` and `hasCurrentEmbedding`
 - `GET /api/partner/userProfileForIssuer/:issuerDid` no longer has `generateEmbedding`, and gives admins a 404 for a profile they cannot see, like everyone else
-- The Docker image is Debian-based (glibc) because onnxruntime has no Alpine (musl) build.
+- The Docker image is Debian 13 based (`node:22.23-trixie-slim`, glibc 2.41): onnxruntime has no Alpine (musl) build, and the sqlite3 prebuilt binary needs glibc 2.38 or later.
 ### Removed
 - `PUT /api/partner/userProfileGenerateEmbedding/:issuerDid` and the OpenAI embeddings
 - `OPENAI_API_KEY`
 ### Changed in DB or environment
 - Back up the partner DB, then run its Flyway migration as well as the main one (see README). V7 creates `embedding`, drops `user_profile_embedding` and the hand-made `empty_embedding_vector`, and clears `group_onboard.previousMatches`. Rolling back to an earlier version requires restoring that backup, since earlier versions read `user_profile_embedding`.
-- Manual step on each host, before starting the new image: fill the model directory (about 320 MB; it only verifies when the files are already there):
+- The server needs about 1 GB more memory on Linux (about 1.5 GB on macOS), for the embedding model (mostly its multilingual tokenizer and the ONNX session).
+- Manual step on each host, before starting the new image: fill the model directory (about 320 MB; it only verifies when the files are already there; add `-- --skip-test` to skip loading the model, which needs that memory):
   `sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=/mnt/models endorser-ch:amd-$ENDORSER_VERSION npm run embedding:fetch-model`
 - Run the container with `-v ~/endorser-ch-models:/mnt/models:ro -e EMBEDDING_MODEL_DIR=/mnt/models -e EMBEDDING_ALLOW_REMOTE_MODELS=false` (see README).
 - The first startup embeds every profile and plan; watch `GET /api/partner/embeddingSweep` (as an admin) until `lastFinishedAt` is set and `lastError` is null.

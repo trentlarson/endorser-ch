@@ -78,10 +78,24 @@ function modelDir(spec) {
 }
 
 /**
+ * sha256 of a file, read in chunks so a large model file isn't held in memory.
+ * @returns {Promise<string>} hex digest
+ */
+function fileSha256(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256')
+    fs.createReadStream(filePath)
+      .on('data', (chunk) => hash.update(chunk))
+      .on('end', () => resolve(hash.digest('hex')))
+      .on('error', reject)
+  })
+}
+
+/**
  * Check the downloaded or vendored model files against spec.fileSha256.
  * Files live under EMBEDDING_MODEL_DIR/<modelRepo>/<modelRevision>/.
  */
-function verifyModelFiles(spec, cacheDir) {
+async function verifyModelFiles(spec, cacheDir) {
   if (!spec.fileSha256) {
     return
   }
@@ -91,7 +105,7 @@ function verifyModelFiles(spec, cacheDir) {
     if (!fs.existsSync(filePath)) {
       throw new Error(`Embedding model file missing for ${spec.embeddingSpecId}: ${filePath}`)
     }
-    const actual = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
+    const actual = await fileSha256(filePath)
     if (actual !== expected) {
       throw new Error(`Embedding model file ${filePath} has sha256 ${actual} but spec ${spec.embeddingSpecId} requires ${expected}`)
     }
@@ -106,14 +120,14 @@ async function loadModel(spec) {
       // a repo ID with remote models disabled never finds the cached files.
       const localOnly = !lib.env.allowRemoteModels
       if (localOnly) {
-        verifyModelFiles(spec, lib.env.cacheDir)
+        await verifyModelFiles(spec, lib.env.cacheDir)
       }
       const source = localOnly ? modelDir(spec) : spec.modelRepo
       const options = localOnly ? {} : { revision: spec.modelRevision }
       const tokenizer = await lib.AutoTokenizer.from_pretrained(source, options)
       const model = await lib.AutoModel.from_pretrained(source, { ...options, dtype: spec.dtype })
       if (!localOnly) {
-        verifyModelFiles(spec, lib.env.cacheDir)
+        await verifyModelFiles(spec, lib.env.cacheDir)
       }
       return { tokenizer, model }
     })
@@ -261,6 +275,7 @@ function base64ToVector(str) {
 
 module.exports = {
   modelDir,
+  fileSha256,
   preprocessText,
   subjectText,
   contentHash,

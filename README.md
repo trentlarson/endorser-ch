@@ -118,7 +118,7 @@ cp endorser-ch-db/endorser-partner-$NODE_ENV.sqlite3 endorser-ch-db/endorser-par
 sudo docker run --rm -v ~/endorser-ch/sql-for-partner:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-partner-$NODE_ENV.sqlite3 -user=sa -password=... migrate
  ```
 
-* Put the embedding model in the host's model directory. This verifies the files that are there and downloads only what is missing, so it is quick when the spec hasn't changed; it also confirms the model runs in the image.
+* Put the embedding model in the host's model directory. This verifies the files that are there and downloads only what is missing, so it is quick when the spec hasn't changed; it also confirms the model runs in the image. That test loads the model, which takes about 1 GB of memory on Linux (as the server does), so the host needs that much free beside everything else running; add `--skip-test` to only download and verify (about 150 MB), eg. while the previous version is still running. A bare "Killed" means the host ran out of memory (check with `dmesg -T | grep -i -E 'out of memory|killed process'`).
 
 ```
 sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=/mnt/models endorser-ch:amd-$ENDORSER_VERSION npm run embedding:fetch-model
