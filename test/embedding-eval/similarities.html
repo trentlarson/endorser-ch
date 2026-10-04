@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Similarity Explorer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      overflow-x: hidden;
+    }
+    
+    .header {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 0;
+    }
+    
+    h1 {
+      color: #333;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    
+    .main-container {
+      display: flex;
+      height: calc(100vh - 120px);
+    }
+    
+    .viz-container {
+      flex: 1;
+      position: relative;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #canvas {
+      cursor: pointer;
+    }
+    
+    .side-panel {
+      width: 400px;
+      background: white;
+      border-left: 2px solid #e5e5e5;
+      padding: 30px;
+      overflow-y: auto;
+    }
+    
+    .profile-card {
+      margin-bottom: 30px;
+    }
+    
+    .profile-card h2 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .profile-letter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      width: auto;
+      padding: 0 6px;
+      height: 32px;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+    }
+    
+    .profile-text {
+      color: #555;
+      line-height: 1.6;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      border-left: 4px solid #4ade80;
+    }
+    
+    .hover-profile {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e5e5;
+    }
+    
+    .hover-profile h3 {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .hover-profile .profile-text {
+      border-left-color: #86efac;
+    }
+    
+    .similarity-badge {
+      display: inline-block;
+      background: #4ade80;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .instructions {
+      background: #fffbeb;
+      border: 2px solid #fbbf24;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #92400e;
+    }
+    
+    .instructions strong {
+      color: #78350f;
+    }
+    
+    .profile-point {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .profile-point:hover circle {
+      stroke-width: 4 !important;
+    }
+    
+    .connection-line {
+      transition: opacity 0.3s ease;
+    }
+    
+    .table-container {
+      background: white;
+      padding: 30px;
+      margin: 20px 40px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .table-scroll-wrapper {
+      overflow-x: auto;
+      margin-top: 20px;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+    }
+    
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+    
+    th {
+      background: #4ade80;
+      color: white;
+      font-weight: 600;
+    }
+    
+    /* Sticky first column so row headers stay visible when scrolling horizontally */
+    th:first-child,
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: white;
+      border-right: 2px solid #999;
+      min-width: 120px;
+    }
+    th:first-child {
+      background: #4ade80;
+      color: white;
+    }
+    
+    .legend {
+      display: flex;
+      gap: 15px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    
+    .legend-color {
+      width: 30px;
+      height: 20px;
+      border-radius: 4px;
+      border: 1px solid #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 Interactive Profile Similarity Explorer</h1>
+    <p class="subtitle">test-vectors.json, match-v1-granite311m-r2-q8-256 • Click any profile to explore its relationships • Hover to see details</p>
+  </div>
+  
+  <div class="main-container">
+    <div class="viz-container">
+      <svg id="canvas" width="800" height="700"></svg>
+    </div>
+    
+    <div class="side-panel">
+      <div class="instructions">
+        <strong>How to use:</strong><br>
+        • Click any profile (two-letter label) to center it<br>
+        • Other profiles arrange by similarity<br>
+        • Click the same profile again to reset to alphabetical view<br>
+        • Hover over any profile to see its details
+      </div>
+      
+      <div id="selected-profile">
+        <div style="text-align: center; color: #666; padding: 40px 20px;">
+          <h3 style="margin-bottom: 15px;">👆 Click any profile</h3>
+          <p>Click to explore similarities</p>
+          <p style="margin-top: 15px; font-size: 14px; color: #999;">Hover to preview</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="table-container">
+    <h2>Pairwise Cosine Similarity Matrix</h2>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background: #16a34a"></div>
+        <span>Very High (>0.9)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #4ade80"></div>
+        <span>High (>0.8)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #86efac"></div>
+        <span>Med-High (>0.7)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #bbf7d0"></div>
+        <span>Medium (>0.6)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #fde047"></div>
+        <span>Med-Low (>0.5)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #fb923c"></div>
+        <span>Low (>0.4)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #f97316"></div>
+        <span>Very Low (>0.3)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #f87171"></div>
+        <span>Minimal (≤0.3)</span>
+      </div>
+    </div>
+    <div class="table-scroll-wrapper">
+      <table>
+        <tr><th></th><th>A Alice</th><th>A Bob</th><th>A Carol</th><th>A Dave</th><th>A Eve</th><th>A Frank</th><th>A Grace</th><th>A Henry</th><th>A Iris</th><th>A Jack</th><th>A Kate</th><th>A Liam</th><th>A Maya</th><th>A Noah</th><th>A Olivia</th><th>A Paul</th><th>A Quinn</th><th>A Rachel</th><th>A Sam</th><th>A Tara</th><th>A Uma</th><th>A Victor</th><th>A Wendy</th><th>A Xavier</th><th>A Yara</th><th>A Zack</th></tr>
+        <tr><th>A Alice</th><td></td><td style="background: #16a34a">0.939</td><td style="background: #86efac">0.807</td><td style="background: #86efac">0.817</td><td style="background: #16a34a">0.869</td><td style="background: #86efac">0.807</td><td style="background: #4ade80">0.834</td><td style="background: #86efac">0.811</td><td style="background: #86efac">0.814</td><td style="background: #bbf7d0">0.789</td><td style="background: #4ade80">0.833</td><td style="background: #86efac">0.814</td><td style="background: #fde047">0.785</td><td style="background: #4ade80">0.823</td><td style="background: #bbf7d0">0.802</td><td style="background: #fb923c">0.776</td><td style="background: #fb923c">0.775</td><td style="background: #86efac">0.816</td><td style="background: #fde047">0.784</td><td style="background: #bbf7d0">0.801</td><td style="background: #4ade80">0.831</td><td style="background: #86efac">0.810</td><td style="background: #4ade80">0.826</td><td style="background: #fb923c">0.774</td><td style="background: #f97316">0.758</td><td style="background: #bbf7d0">0.798</td></tr>
+<tr><th>A Bob</th><td></td><td></td><td style="background: #86efac">0.816</td><td style="background: #bbf7d0">0.803</td><td style="background: #4ade80">0.833</td><td style="background: #fde047">0.784</td><td style="background: #16a34a">0.849</td><td style="background: #4ade80">0.822</td><td style="background: #86efac">0.816</td><td style="background: #bbf7d0">0.792</td><td style="background: #86efac">0.811</td><td style="background: #86efac">0.808</td><td style="background: #fb923c">0.773</td><td style="background: #4ade80">0.828</td><td style="background: #86efac">0.814</td><td style="background: #bbf7d0">0.797</td><td style="background: #fb923c">0.769</td><td style="background: #86efac">0.811</td><td style="background: #fde047">0.782</td><td style="background: #bbf7d0">0.801</td><td style="background: #16a34a">0.854</td><td style="background: #86efac">0.813</td><td style="background: #4ade80">0.834</td><td style="background: #fb923c">0.771</td><td style="background: #f97316">0.763</td><td style="background: #fde047">0.786</td></tr>
+<tr><th>A Carol</th><td></td><td></td><td></td><td style="background: #bbf7d0">0.800</td><td style="background: #fde047">0.785</td><td style="background: #4ade80">0.823</td><td style="background: #fb923c">0.768</td><td style="background: #f97316">0.761</td><td style="background: #86efac">0.811</td><td style="background: #86efac">0.817</td><td style="background: #fb923c">0.765</td><td style="background: #fb923c">0.768</td><td style="background: #bbf7d0">0.798</td><td style="background: #16a34a">0.865</td><td style="background: #16a34a">0.866</td><td style="background: #f97316">0.752</td><td style="background: #bbf7d0">0.802</td><td style="background: #fb923c">0.774</td><td style="background: #bbf7d0">0.798</td><td style="background: #f97316">0.750</td><td style="background: #fde047">0.779</td><td style="background: #f97316">0.759</td><td style="background: #86efac">0.809</td><td style="background: #f97316">0.749</td><td style="background: #f97316">0.748</td><td style="background: #4ade80">0.835</td></tr>
+<tr><th>A Dave</th><td></td><td></td><td></td><td></td><td style="background: #16a34a">0.848</td><td style="background: #16a34a">0.895</td><td style="background: #bbf7d0">0.795</td><td style="background: #bbf7d0">0.796</td><td style="background: #4ade80">0.827</td><td style="background: #f97316">0.764</td><td style="background: #fb923c">0.770</td><td style="background: #bbf7d0">0.789</td><td style="background: #f97316">0.756</td><td style="background: #fb923c">0.776</td><td style="background: #86efac">0.815</td><td style="background: #fb923c">0.766</td><td style="background: #f87171">0.747</td><td style="background: #86efac">0.808</td><td style="background: #fb923c">0.776</td><td style="background: #fb923c">0.768</td><td style="background: #fde047">0.782</td><td style="background: #fb923c">0.771</td><td style="background: #86efac">0.805</td><td style="background: #fb923c">0.776</td><td style="background: #f87171">0.722</td><td style="background: #fde047">0.777</td></tr>
+<tr><th>A Eve</th><td></td><td></td><td></td><td></td><td></td><td style="background: #4ade80">0.822</td><td style="background: #bbf7d0">0.796</td><td style="background: #bbf7d0">0.793</td><td style="background: #86efac">0.805</td><td style="background: #fb923c">0.766</td><td style="background: #fde047">0.779</td><td style="background: #f97316">0.759</td><td style="background: #bbf7d0">0.799</td><td style="background: #f97316">0.763</td><td style="background: #bbf7d0">0.792</td><td style="background: #f97316">0.755</td><td style="background: #f87171">0.720</td><td style="background: #bbf7d0">0.790</td><td style="background: #fb923c">0.775</td><td style="background: #fb923c">0.771</td><td style="background: #86efac">0.807</td><td style="background: #fb923c">0.775</td><td style="background: #fb923c">0.771</td><td style="background: #f87171">0.745</td><td style="background: #f97316">0.748</td><td style="background: #f97316">0.762</td></tr>
+<tr><th>A Frank</th><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #bbf7d0">0.791</td><td style="background: #bbf7d0">0.790</td><td style="background: #86efac">0.817</td><td style="background: #fde047">0.777</td><td style="background: #bbf7d0">0.789</td><td style="background: #fde047">0.782</td><td style="background: #fde047">0.785</td><td style="background: #bbf7d0">0.798</td><td style="background: #86efac">0.815</td><td style="background: #f97316">0.760</td><td style="background: #bbf7d0">0.802</td><td style="background: #fb923c">0.771</td><td style="background: #fb923c">0.767</td><td style="background: #fb923c">0.775</td><td style="background: #f97316">0.762</td><td style="background: #f97316">0.761</td><td style="background: #86efac">0.804</td><td style="background: #f97316">0.758</td><td style="background: #f87171">0.731</td><td style="background: #4ade80">0.834</td></tr>
+<tr><th>A Grace</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #4ade80">0.830</td><td style="background: #16a34a">0.848</td><td style="background: #fde047">0.786</td><td style="background: #86efac">0.810</td><td style="background: #86efac">0.811</td><td style="background: #f97316">0.761</td><td style="background: #fde047">0.785</td><td style="background: #f97316">0.762</td><td style="background: #bbf7d0">0.801</td><td style="background: #fb923c">0.772</td><td style="background: #4ade80">0.824</td><td style="background: #86efac">0.809</td><td style="background: #4ade80">0.818</td><td style="background: #16a34a">0.841</td><td style="background: #f97316">0.761</td><td style="background: #86efac">0.812</td><td style="background: #fb923c">0.766</td><td style="background: #4ade80">0.822</td><td style="background: #bbf7d0">0.790</td></tr>
+<tr><th>A Henry</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #16a34a">0.861</td><td style="background: #f87171">0.745</td><td style="background: #fb923c">0.776</td><td style="background: #f97316">0.756</td><td style="background: #f97316">0.750</td><td style="background: #f97316">0.762</td><td style="background: #f97316">0.749</td><td style="background: #fde047">0.778</td><td style="background: #f87171">0.727</td><td style="background: #fb923c">0.774</td><td style="background: #f87171">0.743</td><td style="background: #f87171">0.737</td><td style="background: #f87171">0.744</td><td style="background: #f97316">0.755</td><td style="background: #fb923c">0.767</td><td style="background: #fde047">0.786</td><td style="background: #f97316">0.755</td><td style="background: #f87171">0.748</td></tr>
+<tr><th>A Iris</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #f97316">0.761</td><td style="background: #fde047">0.777</td><td style="background: #fde047">0.778</td><td style="background: #fde047">0.786</td><td style="background: #86efac">0.812</td><td style="background: #bbf7d0">0.794</td><td style="background: #f97316">0.763</td><td style="background: #f97316">0.757</td><td style="background: #f97316">0.758</td><td style="background: #fb923c">0.773</td><td style="background: #f97316">0.753</td><td style="background: #fde047">0.778</td><td style="background: #f87171">0.743</td><td style="background: #bbf7d0">0.792</td><td style="background: #fde047">0.782</td><td style="background: #fde047">0.787</td><td style="background: #86efac">0.812</td></tr>
+<tr><th>A Jack</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #86efac">0.813</td><td style="background: #4ade80">0.838</td><td style="background: #86efac">0.806</td><td style="background: #86efac">0.816</td><td style="background: #4ade80">0.818</td><td style="background: #86efac">0.807</td><td style="background: #4ade80">0.836</td><td style="background: #bbf7d0">0.791</td><td style="background: #4ade80">0.829</td><td style="background: #bbf7d0">0.792</td><td style="background: #fde047">0.785</td><td style="background: #fb923c">0.766</td><td style="background: #fb923c">0.767</td><td style="background: #f87171">0.735</td><td style="background: #fb923c">0.773</td><td style="background: #4ade80">0.818</td></tr>
+<tr><th>A Kate</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #16a34a">0.846</td><td style="background: #fde047">0.776</td><td style="background: #bbf7d0">0.797</td><td style="background: #fde047">0.784</td><td style="background: #f87171">0.747</td><td style="background: #16a34a">0.844</td><td style="background: #86efac">0.815</td><td style="background: #bbf7d0">0.791</td><td style="background: #86efac">0.807</td><td style="background: #bbf7d0">0.802</td><td style="background: #bbf7d0">0.788</td><td style="background: #bbf7d0">0.787</td><td style="background: #fde047">0.781</td><td style="background: #f87171">0.709</td><td style="background: #fb923c">0.767</td></tr>
+<tr><th>A Liam</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #f87171">0.730</td><td style="background: #bbf7d0">0.800</td><td style="background: #fde047">0.783</td><td style="background: #fde047">0.781</td><td style="background: #4ade80">0.837</td><td style="background: #86efac">0.809</td><td style="background: #bbf7d0">0.797</td><td style="background: #fde047">0.785</td><td style="background: #86efac">0.804</td><td style="background: #f87171">0.737</td><td style="background: #fb923c">0.771</td><td style="background: #f97316">0.757</td><td style="background: #fb923c">0.765</td><td style="background: #86efac">0.813</td></tr>
+<tr><th>A Maya</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #fde047">0.785</td><td style="background: #86efac">0.807</td><td style="background: #f87171">0.727</td><td style="background: #f87171">0.736</td><td style="background: #f87171">0.736</td><td style="background: #fb923c">0.767</td><td style="background: #f87171">0.738</td><td style="background: #f87171">0.741</td><td style="background: #f87171">0.742</td><td style="background: #fde047">0.784</td><td style="background: #f87171">0.744</td><td style="background: #f97316">0.758</td><td style="background: #fb923c">0.765</td></tr>
+<tr><th>A Noah</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #4ade80">0.830</td><td style="background: #f97316">0.748</td><td style="background: #bbf7d0">0.789</td><td style="background: #f97316">0.763</td><td style="background: #bbf7d0">0.793</td><td style="background: #f97316">0.757</td><td style="background: #fb923c">0.766</td><td style="background: #f97316">0.756</td><td style="background: #fde047">0.783</td><td style="background: #f87171">0.731</td><td style="background: #f97316">0.764</td><td style="background: #86efac">0.816</td></tr>
+<tr><th>A Olivia</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #f87171">0.728</td><td style="background: #fb923c">0.767</td><td style="background: #fb923c">0.769</td><td style="background: #4ade80">0.819</td><td style="background: #fb923c">0.772</td><td style="background: #fde047">0.778</td><td style="background: #f97316">0.753</td><td style="background: #bbf7d0">0.796</td><td style="background: #f97316">0.759</td><td style="background: #fb923c">0.768</td><td style="background: #86efac">0.811</td></tr>
+<tr><th>A Paul</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #16a34a">0.853</td><td style="background: #86efac">0.804</td><td style="background: #fb923c">0.765</td><td style="background: #86efac">0.813</td><td style="background: #fb923c">0.769</td><td style="background: #fde047">0.777</td><td style="background: #f87171">0.742</td><td style="background: #f87171">0.720</td><td style="background: #86efac">0.808</td><td style="background: #fde047">0.776</td></tr>
+<tr><th>A Quinn</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #fde047">0.778</td><td style="background: #f97316">0.762</td><td style="background: #fde047">0.779</td><td style="background: #bbf7d0">0.787</td><td style="background: #bbf7d0">0.788</td><td style="background: #f97316">0.755</td><td style="background: #f97316">0.753</td><td style="background: #f87171">0.740</td><td style="background: #4ade80">0.817</td></tr>
+<tr><th>A Rachel</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #16a34a">0.844</td><td style="background: #16a34a">0.907</td><td style="background: #fde047">0.784</td><td style="background: #4ade80">0.825</td><td style="background: #4ade80">0.822</td><td style="background: #4ade80">0.829</td><td style="background: #fde047">0.779</td><td style="background: #fb923c">0.775</td></tr>
+<tr><th>A Sam</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #4ade80">0.835</td><td style="background: #bbf7d0">0.788</td><td style="background: #f97316">0.752</td><td style="background: #86efac">0.815</td><td style="background: #fb923c">0.772</td><td style="background: #fde047">0.779</td><td style="background: #fde047">0.782</td></tr>
+<tr><th>A Tara</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #fde047">0.785</td><td style="background: #fde047">0.780</td><td style="background: #bbf7d0">0.801</td><td style="background: #fde047">0.784</td><td style="background: #fde047">0.779</td><td style="background: #fde047">0.777</td></tr>
+<tr><th>A Uma</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #86efac">0.813</td><td style="background: #bbf7d0">0.802</td><td style="background: #f97316">0.756</td><td style="background: #f97316">0.763</td><td style="background: #fb923c">0.766</td></tr>
+<tr><th>A Victor</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #fde047">0.780</td><td style="background: #bbf7d0">0.787</td><td style="background: #f87171">0.691</td><td style="background: #f87171">0.744</td></tr>
+<tr><th>A Wendy</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #16a34a">0.862</td><td style="background: #f97316">0.762</td><td style="background: #bbf7d0">0.802</td></tr>
+<tr><th>A Xavier</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #f87171">0.743</td><td style="background: #bbf7d0">0.790</td></tr>
+<tr><th>A Yara</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background: #4ade80">0.819</td></tr>
+<tr><th>A Zack</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    // Data from Node.js
+    const profiles = [{"name":"A Alice","abbrev":"AA","profileText":"Passionate about sustainable agriculture, permaculture design, and regenerative farming practices","index":0,"color":"hsl(0, 70%, 60%)"},{"name":"A Bob","abbrev":"AB","profileText":"Interested in organic farming, permaculture, and sustainable food systems","index":1,"color":"hsl(13.846153846153847, 70%, 60%)"},{"name":"A Carol","abbrev":"AC","profileText":"Software developer passionate about open source, decentralization, and blockchain","index":2,"color":"hsl(27.692307692307693, 70%, 60%)"},{"name":"A Dave","abbrev":"AD","profileText":"Community organizer focused on local resilience, mutual aid, and grassroots movements","index":3,"color":"hsl(41.53846153846154, 70%, 60%)"},{"name":"A Eve","abbrev":"AE","profileText":"Environmental activist working on climate justice and ecosystem restoration","index":4,"color":"hsl(55.38461538461539, 70%, 60%)"},{"name":"A Frank","abbrev":"AF","profileText":"Building community tech platforms and digital tools for grassroots organizing","index":5,"color":"hsl(69.23076923076923, 70%, 60%)"},{"name":"A Grace","abbrev":"AG","profileText":"Homeschooling mom using Montessori and unschooling methods. Love nature-based learning, hands-on projects, and building community with other homeschool families. Always looking for co-op opportunities and field trip ideas.","index":6,"color":"hsl(83.07692307692308, 70%, 60%)"},{"name":"A Henry","abbrev":"AH","profileText":"Education reform and alternative schools","index":7,"color":"hsl(96.92307692307692, 70%, 60%)"},{"name":"A Iris","abbrev":"AI","profileText":"Former public school teacher now developing project-based curriculum for small learning communities. Interested in democratic education, Reggio Emilia approach, and helping kids develop critical thinking skills.","index":8,"color":"hsl(110.76923076923077, 70%, 60%)"},{"name":"A Jack","abbrev":"AJ","profileText":"Heavy equipment operator and mechanic. Love working on excavators, dozers, backhoes. Also into welding and metal fabrication.","index":9,"color":"hsl(124.61538461538461, 70%, 60%)"},{"name":"A Kate","abbrev":"AK","profileText":"Natural building techniques","index":10,"color":"hsl(138.46153846153845, 70%, 60%)"},{"name":"A Liam","abbrev":"AL","profileText":"Finish carpenter specializing in timber framing and traditional joinery. I build custom furniture using hand tools and teach workshops on woodworking skills. Looking to connect with other craftspeople who appreciate the old ways of building things that last.","index":11,"color":"hsl(152.30769230769232, 70%, 60%)"},{"name":"A Maya","abbrev":"AM","profileText":"Machine learning engineer working on natural language processing and ethical AI. Fascinated by large language models, alignment problems, and how we can build AI systems that actually benefit humanity rather than just optimize for engagement metrics.","index":12,"color":"hsl(166.15384615384616, 70%, 60%)"},{"name":"A Noah","abbrev":"AN","profileText":"Full-stack dev. React, Node, Python.","index":13,"color":"hsl(180, 70%, 60%)"},{"name":"A Olivia","abbrev":"AO","profileText":"Data scientist and visualization specialist interested in making complex information accessible to everyone","index":14,"color":"hsl(193.84615384615384, 70%, 60%)"},{"name":"A Paul","abbrev":"AP","profileText":"Competitive shooter and firearms instructor teaching safety and marksmanship. Focus on responsible gun ownership, hunting ethics, and Second Amendment rights. Also enjoy reloading ammunition and long-range precision shooting.","index":15,"color":"hsl(207.69230769230768, 70%, 60%)"},{"name":"A Quinn","abbrev":"AQ","profileText":"Gunsmithing and custom builds","index":16,"color":"hsl(221.53846153846155, 70%, 60%)"},{"name":"A Rachel","abbrev":"AR","profileText":"Backpacking and wilderness survival","index":17,"color":"hsl(235.3846153846154, 70%, 60%)"},{"name":"A Sam","abbrev":"AS","profileText":"Rock climbing, mountaineering, and alpine adventures. Love pushing my limits on technical routes and multi-day expeditions. Always planning the next big objective in the mountains and looking for climbing partners who are passionate about the vertical world.","index":18,"color":"hsl(249.23076923076923, 70%, 60%)"},{"name":"A Tara","abbrev":"AT","profileText":"Fly fishing, hunting, wilderness camping. Spend as much time as possible in the backcountry away from screens and crowds.","index":19,"color":"hsl(263.0769230769231, 70%, 60%)"},{"name":"A Uma","abbrev":"AU","profileText":"Mushroom cultivation and mycology enthusiast. Growing gourmet and medicinal mushrooms at home, experimenting with different substrates and species. Fascinated by the fungal kingdom and its role in ecosystem health. Also into foraging wild mushrooms and teaching others about identification.","index":20,"color":"hsl(276.9230769230769, 70%, 60%)"},{"name":"A Victor","abbrev":"AV","profileText":"Wild edibles and medicinal plants","index":21,"color":"hsl(290.7692307692308, 70%, 60%)"},{"name":"A Wendy","abbrev":"AW","profileText":"Digital nomad living in different countries every few months. Love immersing myself in local cultures, learning languages, and finding the best street food. Currently exploring Southeast Asia and always looking for off-the-beaten-path recommendations and travel buddies for the next adventure.","index":22,"color":"hsl(304.61538461538464, 70%, 60%)"},{"name":"A Xavier","abbrev":"AX","profileText":"Budget travel and cultural exchange","index":23,"color":"hsl(318.46153846153845, 70%, 60%)"},{"name":"A Yara","abbrev":"AY","profileText":"Basketball coach and player. Love pickup games, teaching kids, and watching college hoops.","index":24,"color":"hsl(332.3076923076923, 70%, 60%)"},{"name":"A Zack","abbrev":"AZ","profileText":"Board game designer and enthusiast with a collection of over 300 games. Host weekly game nights featuring everything from heavy euros to social deduction games. Also run a podcast reviewing new releases and interviewing designers. Looking to playtest prototypes and connect with other gamers in the area.","index":25,"color":"hsl(346.15384615384613, 70%, 60%)"}];
+    const similarities = [[1,0.9392706430202211,0.806870603325385,0.8167640236944289,0.8685303221344742,0.8070150429041419,0.8335601018897942,0.81081546027513,0.813709457998695,0.7887901257949703,0.8325910739778396,0.8135320839523179,0.7854118134067216,0.8227087700543085,0.8018761292509483,0.7759873338088605,0.7745682647258221,0.8160737431170135,0.7839890550000679,0.8010191644040581,0.8313227957739612,0.809530036195853,0.8257253853744633,0.7741709486875397,0.7579946684704495,0.7982389931701076],[0.9392706430202211,1,0.8156131358279564,0.8030345100345988,0.8325523069302632,0.7843610185277056,0.8485373212542355,0.8215954884344664,0.8164191790630334,0.7918577922408278,0.8109547527204565,0.8079640243751445,0.7728584193995505,0.8279533764595417,0.8138515033994839,0.7972487837781117,0.7692934178648758,0.8112054995577695,0.7821920681000927,0.8012802941730169,0.8540387141541892,0.8132013224495711,0.8335488551918862,0.7707944867899706,0.7629440160057224,0.7862444046718741],[0.806870603325385,0.8156131358279564,1,0.800074653221359,0.7854577424409475,0.8230703920345375,0.7682251790559328,0.7606928123743919,0.8110189630427138,0.8172084229100663,0.7653533199672038,0.7681167750195366,0.79809667738729,0.8646865143165202,0.8663158156442938,0.7522137264272662,0.8016762671543969,0.7735681332688851,0.7979434486718724,0.75040924468249,0.7789173911672408,0.7587627018998276,0.8085533847385383,0.7489501748191845,0.7484686480665803,0.83468235945159],[0.8167640236944289,0.8030345100345988,0.800074653221359,1,0.8476172004027017,0.8952749906397868,0.7953018628658621,0.7955824928788646,0.8265454336109462,0.763913620863282,0.7704040789109359,0.7890708894216408,0.7559287831417947,0.7756107010939375,0.8146338456385366,0.7661501387587196,0.7473623746456964,0.8081444826784925,0.7762049356448748,0.7679925160797528,0.7824915312838984,0.7708467954845745,0.8049293438953957,0.7756537271895093,0.7224211895593222,0.7768718875938863],[0.8685303221344742,0.8325523069302632,0.7854577424409475,0.8476172004027017,1,0.8217983234807293,0.7956019295522313,0.7931066993210214,0.8053425327102746,0.7659525283970283,0.7793179814485381,0.7587975934130015,0.7985527073836441,0.7630327250051929,0.7919089435827672,0.7554704265401,0.7203884935461281,0.7902053898880641,0.774703082081846,0.7713951073321419,0.8074077528345316,0.775374957836974,0.7710913021405218,0.7446863467244775,0.7477766366306864,0.761518180399204],[0.8070150429041419,0.7843610185277056,0.8230703920345375,0.8952749906397868,0.8217983234807293,1,0.7910829432141292,0.7895381979836711,0.8166558119317009,0.777345466313931,0.7890074423688603,0.782277909098805,0.7845306011498299,0.7982684159433081,0.8153256676505137,0.7595754658795368,0.8022862836522903,0.7714918120455825,0.7671439660523963,0.7753969959949144,0.762081122089033,0.7609498005898951,0.8041867248301567,0.7581327795084551,0.7314389906321022,0.8342565821155267],[0.8335601018897942,0.8485373212542355,0.7682251790559328,0.7953018628658621,0.7956019295522313,0.7910829432141292,1,0.8300824716156887,0.8478012670198909,0.7861443214815051,0.809545081605175,0.8110146831631073,0.7606167232975226,0.7850025155703608,0.7615445916020922,0.8014708488069372,0.7716686024329851,0.8240262296949592,0.8086694116957971,0.8180217703903307,0.8408687289668105,0.7608281298515177,0.8119324626016433,0.7655198886255383,0.8216745047700256,0.7902305630163934],[0.81081546027513,0.8215954884344664,0.7606928123743919,0.7955824928788646,0.7931066993210214,0.7895381979836711,0.8300824716156887,1,0.8612880212760962,0.7447027935293766,0.7758551963231931,0.7560890328395109,0.7495008102979451,0.7621902400185709,0.7485492028591998,0.7783231678193752,0.7274295113768097,0.774366279945177,0.7432367950421123,0.7370680615708123,0.7443843405299035,0.755059698948394,0.7674914481803325,0.7863266648605853,0.7554646397575833,0.7477439095757045],[0.813709457998695,0.8164191790630334,0.8110189630427138,0.8265454336109462,0.8053425327102746,0.8166558119317009,0.8478012670198909,0.8612880212760962,1,0.7606868976830322,0.7769459449159254,0.7775733787224153,0.7862145526515637,0.8123257591423335,0.7940082259237903,0.7631405128462203,0.7572519415089389,0.7584918212733482,0.7733172107744843,0.7533125297161617,0.7778045373340943,0.7425218540855917,0.7916397647702453,0.781661531702313,0.7866623181706887,0.8124327290222344],[0.7887901257949703,0.7918577922408278,0.8172084229100663,0.763913620863282,0.7659525283970283,0.777345466313931,0.7861443214815051,0.7447027935293766,0.7606868976830322,1,0.8128861630988136,0.8379032611672553,0.8060877994187389,0.8157090993665839,0.8181452061496478,0.8069851465505069,0.8360651393875214,0.7913242574779712,0.8285355873940291,0.7921062720052611,0.7850943086819653,0.7662475748666131,0.766706333174026,0.7346776645645832,0.7729125334756393,0.8177646939378432],[0.8325910739778396,0.8109547527204565,0.7653533199672038,0.7704040789109359,0.7793179814485381,0.7890074423688603,0.809545081605175,0.7758551963231931,0.7769459449159254,0.8128861630988136,1,0.8456684177654474,0.7764762637032099,0.7968400280692517,0.7838036444361726,0.7473587376091102,0.8436537026740534,0.8147355426614996,0.790805919556812,0.8072827712089824,0.8016819346727609,0.7877580836734751,0.7873996853957048,0.780634874379841,0.7093948516257572,0.7666685299072209],[0.8135320839523179,0.8079640243751445,0.7681167750195366,0.7890708894216408,0.7587975934130015,0.782277909098805,0.8110146831631073,0.7560890328395109,0.7775733787224153,0.8379032611672553,0.8456684177654474,1,0.7295151747102967,0.8001701477542696,0.7831680040964965,0.7810605617445451,0.837354322536383,0.8088282924746709,0.7969545499622432,0.7852159696594436,0.803735386228495,0.7368147981389914,0.7714910552579805,0.7574917466524398,0.7650955677463144,0.8131528865068561],[0.7854118134067216,0.7728584193995505,0.79809667738729,0.7559287831417947,0.7985527073836441,0.7845306011498299,0.7606167232975226,0.7495008102979451,0.7862145526515637,0.8060877994187389,0.7764762637032099,0.7295151747102967,1,0.7851598612839221,0.8074948059531166,0.7272733305745717,0.7360500545022914,0.7357061930324056,0.7666128651364985,0.7384535592193426,0.7413121370511631,0.741738993526183,0.7837306985722345,0.7439546966198587,0.7582802027261517,0.765459602143969],[0.8227087700543085,0.8279533764595417,0.8646865143165202,0.7756107010939375,0.7630327250051929,0.7982684159433081,0.7850025155703608,0.7621902400185709,0.8123257591423335,0.8157090993665839,0.7968400280692517,0.8001701477542696,0.7851598612839221,1,0.8300374302654432,0.7478186102594878,0.7893866643239307,0.7634440311826001,0.7928681183536039,0.7573431598691495,0.7655954821165013,0.7562143971486266,0.7828119213227567,0.730812733092561,0.7642764877002854,0.8156437794091267],[0.8018761292509483,0.8138515033994839,0.8663158156442938,0.8146338456385366,0.7919089435827672,0.8153256676505137,0.7615445916020922,0.7485492028591998,0.7940082259237903,0.8181452061496478,0.7838036444361726,0.7831680040964965,0.8074948059531166,0.8300374302654432,1,0.728477697780048,0.7672809226900754,0.7694083237733049,0.8189974625693441,0.7723461863942135,0.7784436919949685,0.753458419207298,0.7961099793607285,0.7588376706900758,0.7676673817016777,0.8108318445104576],[0.7759873338088605,0.7972487837781117,0.7522137264272662,0.7661501387587196,0.7554704265401,0.7595754658795368,0.8014708488069372,0.7783231678193752,0.7631405128462203,0.8069851465505069,0.7473587376091102,0.7810605617445451,0.7272733305745717,0.7478186102594878,0.728477697780048,1,0.8530165664015121,0.8041225642760814,0.7654573329308687,0.8127232646470735,0.7686407396122825,0.7767989524381147,0.7420409504441732,0.7195970915572119,0.807751021941397,0.7763941480354064],[0.7745682647258221,0.7692934178648758,0.8016762671543969,0.7473623746456964,0.7203884935461281,0.8022862836522903,0.7716686024329851,0.7274295113768097,0.7572519415089389,0.8360651393875214,0.8436537026740534,0.837354322536383,0.7360500545022914,0.7893866643239307,0.7672809226900754,0.8530165664015121,1,0.7776511496054624,0.7618296240812731,0.778808238459993,0.7872361846931502,0.7879944973043931,0.7552641297832671,0.7525613044540798,0.740463289391317,0.8172086558337102],[0.8160737431170135,0.8112054995577695,0.7735681332688851,0.8081444826784925,0.7902053898880641,0.7714918120455825,0.8240262296949592,0.774366279945177,0.7584918212733482,0.7913242574779712,0.8147355426614996,0.8088282924746709,0.7357061930324056,0.7634440311826001,0.7694083237733049,0.8041225642760814,0.7776511496054624,1,0.8436291740211274,0.9072102320500645,0.7838349771128066,0.8248797515485664,0.8221781966929465,0.8286584790601047,0.7793200404705147,0.7747605386051573],[0.7839890550000679,0.7821920681000927,0.7979434486718724,0.7762049356448748,0.774703082081846,0.7671439660523963,0.8086694116957971,0.7432367950421123,0.7733172107744843,0.8285355873940291,0.790805919556812,0.7969545499622432,0.7666128651364985,0.7928681183536039,0.8189974625693441,0.7654573329308687,0.7618296240812731,0.8436291740211274,1,0.8354604179795155,0.7884290976258763,0.7520767552459318,0.8151122944056334,0.7720439691529445,0.7794122114339359,0.782490462895249],[0.8010191644040581,0.8012802941730169,0.75040924468249,0.7679925160797528,0.7713951073321419,0.7753969959949144,0.8180217703903307,0.7370680615708123,0.7533125297161617,0.7921062720052611,0.8072827712089824,0.7852159696594436,0.7384535592193426,0.7573431598691495,0.7723461863942135,0.8127232646470735,0.778808238459993,0.9072102320500645,0.8354604179795155,1,0.7850119971119527,0.779657550523931,0.8012076546095659,0.784406933229205,0.7785681470966598,0.777293285544357],[0.8313227957739612,0.8540387141541892,0.7789173911672408,0.7824915312838984,0.8074077528345316,0.762081122089033,0.8408687289668105,0.7443843405299035,0.7778045373340943,0.7850943086819653,0.8016819346727609,0.803735386228495,0.7413121370511631,0.7655954821165013,0.7784436919949685,0.7686407396122825,0.7872361846931502,0.7838349771128066,0.7884290976258763,0.7850119971119527,1,0.8129331155641528,0.8024666715556231,0.7558804006882432,0.7625194258050707,0.7658625826752631],[0.809530036195853,0.8132013224495711,0.7587627018998276,0.7708467954845745,0.775374957836974,0.7609498005898951,0.7608281298515177,0.755059698948394,0.7425218540855917,0.7662475748666131,0.7877580836734751,0.7368147981389914,0.741738993526183,0.7562143971486266,0.753458419207298,0.7767989524381147,0.7879944973043931,0.8248797515485664,0.7520767552459318,0.779657550523931,0.8129331155641528,1,0.7800056942708589,0.7872040063633712,0.6909893920313952,0.7438342852388744],[0.8257253853744633,0.8335488551918862,0.8085533847385383,0.8049293438953957,0.7710913021405218,0.8041867248301567,0.8119324626016433,0.7674914481803325,0.7916397647702453,0.766706333174026,0.7873996853957048,0.7714910552579805,0.7837306985722345,0.7828119213227567,0.7961099793607285,0.7420409504441732,0.7552641297832671,0.8221781966929465,0.8151122944056334,0.8012076546095659,0.8024666715556231,0.7800056942708589,1,0.8615973805226923,0.7617846680562685,0.801538340386656],[0.7741709486875397,0.7707944867899706,0.7489501748191845,0.7756537271895093,0.7446863467244775,0.7581327795084551,0.7655198886255383,0.7863266648605853,0.781661531702313,0.7346776645645832,0.780634874379841,0.7574917466524398,0.7439546966198587,0.730812733092561,0.7588376706900758,0.7195970915572119,0.7525613044540798,0.8286584790601047,0.7720439691529445,0.784406933229205,0.7558804006882432,0.7872040063633712,0.8615973805226923,1,0.7432653792166644,0.7904672666445571],[0.7579946684704495,0.7629440160057224,0.7484686480665803,0.7224211895593222,0.7477766366306864,0.7314389906321022,0.8216745047700256,0.7554646397575833,0.7866623181706887,0.7729125334756393,0.7093948516257572,0.7650955677463144,0.7582802027261517,0.7642764877002854,0.7676673817016777,0.807751021941397,0.740463289391317,0.7793200404705147,0.7794122114339359,0.7785681470966598,0.7625194258050707,0.6909893920313952,0.7617846680562685,0.7432653792166644,1,0.8194608700583368],[0.7982389931701076,0.7862444046718741,0.83468235945159,0.7768718875938863,0.761518180399204,0.8342565821155267,0.7902305630163934,0.7477439095757045,0.8124327290222344,0.8177646939378432,0.7666685299072209,0.8131528865068561,0.765459602143969,0.8156437794091267,0.8108318445104576,0.7763941480354064,0.8172086558337102,0.7747605386051573,0.782490462895249,0.777293285544357,0.7658625826752631,0.7438342852388744,0.801538340386656,0.7904672666445571,0.8194608700583368,1]];
+    // similarity range shown, so distances spread over the radius whatever the model's baseline
+    const scale = {"lo":0.6909893920313952,"hi":0.9392706430202211};
+    const scaled = (sim) => (scale.hi > scale.lo ? (sim - scale.lo) / (scale.hi - scale.lo) : 1);
+    
+    // State
+    let currentCenter = 0;
+    let hoveredProfile = null;
+    let isAlphabeticalMode = true; // Start in alphabetical mode
+    
+    // Canvas setup
+    const svg = document.getElementById('canvas');
+    const centerX = 400;
+    const centerY = 350;
+    
+    // Calculate alphabetical layout (all profiles in a circle)
+    function calculateAlphabeticalLayout() {
+      const positions = [];
+      const radius = 220;
+      const angleStep = (2 * Math.PI) / profiles.length;
+      
+      profiles.forEach((profile, i) => {
+        const angle = i * angleStep - Math.PI / 2; // Start from top
+        positions[i] = {
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+          similarity: null
+        };
+      });
+      
+      return positions;
+    }
+    
+    // Calculate radial layout
+    function calculateLayout(centerIndex) {
+      const positions = [];
+      const others = [];
+      
+      // Collect all other profiles with their similarities
+      for (let i = 0; i < profiles.length; i++) {
+        if (i !== centerIndex) {
+          others.push({
+            index: i,
+            similarity: similarities[centerIndex][i]
+          });
+        }
+      }
+      
+      // Sort by similarity for better distribution
+      others.sort((a, b) => b.similarity - a.similarity);
+      
+      // Arrange in circle with distance based on similarity
+      const angleStep = (2 * Math.PI) / others.length;
+      const minRadius = 80;
+      const maxRadius = 250;
+      
+      others.forEach((other, i) => {
+        const angle = i * angleStep - Math.PI / 2; // Start from top
+        const distance = maxRadius - (scaled(other.similarity) * (maxRadius - minRadius));
+        
+        positions[other.index] = {
+          x: centerX + Math.cos(angle) * distance,
+          y: centerY + Math.sin(angle) * distance,
+          similarity: other.similarity
+        };
+      });
+      
+      // Center profile at origin
+      positions[centerIndex] = {
+        x: centerX,
+        y: centerY,
+        similarity: 1.0
+      };
+      
+      return positions;
+    }
+    
+    // Render the visualization
+    function render() {
+      const positions = isAlphabeticalMode ? calculateAlphabeticalLayout() : calculateLayout(currentCenter);
+      svg.innerHTML = '';
+      
+      // Draw connection lines first (so they're behind circles) - only in radial mode
+      if (!isAlphabeticalMode) {
+        for (let i = 0; i < profiles.length; i++) {
+          if (i !== currentCenter) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', positions[currentCenter].x);
+            line.setAttribute('y1', positions[currentCenter].y);
+            line.setAttribute('x2', positions[i].x);
+            line.setAttribute('y2', positions[i].y);
+            line.setAttribute('stroke', '#e5e5e5');
+            line.setAttribute('stroke-width', '1');
+            line.setAttribute('class', 'connection-line');
+            line.setAttribute('opacity', '0.5');
+            svg.appendChild(line);
+          }
+        }
+      }
+      
+      // Draw profile circles
+      profiles.forEach((profile, i) => {
+        const pos = positions[i];
+        const isCentered = !isAlphabeticalMode && i === currentCenter;
+        const size = isCentered ? 50 : 35;
+        
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'profile-point');
+        g.setAttribute('data-index', i);
+        
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', pos.x);
+        circle.setAttribute('cy', pos.y);
+        circle.setAttribute('r', size);
+        circle.setAttribute('fill', profile.color);
+        circle.setAttribute('stroke', isCentered ? '#333' : '#666');
+        circle.setAttribute('stroke-width', isCentered ? '4' : '2');
+        
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', pos.x);
+        text.setAttribute('y', pos.y);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('font-size', isCentered ? '18' : '14');
+        text.setAttribute('font-weight', 'bold');
+        text.setAttribute('fill', '#fff');
+        text.setAttribute('pointer-events', 'none');
+        text.textContent = profile.abbrev;
+        
+        g.appendChild(circle);
+        g.appendChild(text);
+        
+        // Event listeners
+        g.addEventListener('click', () => {
+          // Toggle alphabetical mode if clicking the same centered profile
+          if (!isAlphabeticalMode && i === currentCenter) {
+            isAlphabeticalMode = true;
+          } else {
+            isAlphabeticalMode = false;
+            currentCenter = i;
+          }
+          render();
+          updateSidePanel();
+        });
+        
+        g.addEventListener('mouseenter', () => {
+          hoveredProfile = i;
+          updateSidePanel();
+        });
+        
+        g.addEventListener('mouseleave', () => {
+          hoveredProfile = null;
+          updateSidePanel();
+        });
+        
+        svg.appendChild(g);
+        
+        // Add similarity label for non-centered profiles (only in radial mode)
+        if (!isAlphabeticalMode && !isCentered) {
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('x', pos.x);
+          label.setAttribute('y', pos.y + size + 20);
+          label.setAttribute('text-anchor', 'middle');
+          label.setAttribute('font-size', '12');
+          label.setAttribute('fill', '#666');
+          label.setAttribute('pointer-events', 'none');
+          label.textContent = pos.similarity.toFixed(3);
+          svg.appendChild(label);
+        }
+      });
+    }
+    
+    // Update side panel with selected and hovered profiles
+    function updateSidePanel() {
+      const panel = document.getElementById('selected-profile');
+      
+      let html = '';
+      
+      if (isAlphabeticalMode) {
+        // Alphabetical mode - show hoveredProfile or instructions
+        if (hoveredProfile !== null) {
+          const hovered = profiles[hoveredProfile];
+          html = `
+            <div class="profile-card">
+              <h2>
+                <span class="profile-letter" style="background: ${hovered.color}">
+                  ${hovered.abbrev}
+                </span>
+                ${hovered.name}
+              </h2>
+              <div class="profile-text">${hovered.profileText}</div>
+            </div>
+          `;
+        } else {
+          html = `
+            <div style="text-align: center; color: #666; padding: 40px 20px;">
+              <h3 style="margin-bottom: 15px;">📋 Alphabetical View</h3>
+              <p>All profiles arranged in alphabetical order.</p>
+              <p style="margin-top: 15px;">Hover over any profile to see details, or click to explore similarities.</p>
+            </div>
+          `;
+        }
+      } else {
+        // Radial mode - show centered profile and hovered
+        const centered = profiles[currentCenter];
+        
+        html = `
+          <div class="profile-card">
+            <h2>
+              <span class="profile-letter" style="background: ${centered.color}">
+                ${centered.abbrev}
+              </span>
+              ${centered.name}
+            </h2>
+            <div class="profile-text">${centered.profileText}</div>
+          </div>
+        `;
+        
+        if (hoveredProfile !== null && hoveredProfile !== currentCenter) {
+          const hovered = profiles[hoveredProfile];
+          const sim = similarities[currentCenter][hoveredProfile];
+          
+          html += `
+            <div class="hover-profile">
+              <h3>
+                <span class="profile-letter" style="background: ${hovered.color}; width: auto; min-width: 24px; height: 24px; font-size: 12px; padding: 0 4px;">
+                  ${hovered.abbrev}
+                </span>
+                ${hovered.name}
+                <span class="similarity-badge">
+                  ${(sim * 100).toFixed(1)}% similar
+                </span>
+              </h3>
+              <div class="profile-text">${hovered.profileText}</div>
+            </div>
+          `;
+        }
+      }
+      
+      panel.innerHTML = html;
+    }
+    
+    // Initial render
+    render();
+    updateSidePanel();
+  </script>
+</body>
+</html>

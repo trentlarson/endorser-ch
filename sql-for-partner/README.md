@@ -49,7 +49,7 @@ CREATE TABLE user_profile (
     issuerDid TEXT UNIQUE NOT NULL,
     updatedAt DATETIME NOT NULL,
 
-    -- may be '', ie. if admin triggered creation via generateEmbedding
+    -- may be ''
     description TEXT NOT NULL,
 
     locLat DOUBLE,
@@ -61,14 +61,19 @@ CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
 CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
 CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
 
--- embeddings for semantic profile matching (OpenAI text-embedding-3-small).
--- generateEmbedding: admin flag to always generate embedding when profile is edited.
-CREATE TABLE user_profile_embedding (
-    issuerDid TEXT PRIMARY KEY,
-    embeddingVector TEXT NOT NULL,  -- comma-separated vector values
-    isForEmptyString INTEGER NOT NULL,
+-- vector embeddings of profiles and plans, for semantic matching
+-- (see CHANGE/PLAN-interest-matching-architecture.md and src/api/services/embedding-specs.js)
+CREATE TABLE embedding (
+    subjectType TEXT NOT NULL,      -- 'profile' | 'plan'
+    subjectId TEXT NOT NULL,        -- profile: user_profile.rowid; plan: plan_claim.handleId (main DB)
+    embeddingSpecId TEXT NOT NULL,  -- vectors are comparable only within one spec
+    chunkIndex INTEGER NOT NULL DEFAULT 0, -- always 0 until subjects have multiple chunks
+    contentHash TEXT NOT NULL,      -- sha256 hex of the preprocessed input text; the vector is current iff it matches the source
+    vector BLOB NOT NULL,           -- float32 little-endian, L2-normalized
     updatedAt DATETIME NOT NULL,
-    generateEmbedding BOOLEAN DEFAULT 1,
-    FOREIGN KEY (issuerDid) REFERENCES user_profile(issuerDid)
+    PRIMARY KEY (subjectType, subjectId, embeddingSpecId, chunkIndex)
 );
+CREATE INDEX embedding_spec_type_updated ON embedding(embeddingSpecId, subjectType, updatedAt);
+-- A subject with empty text has no row.
+-- V6 created user_profile_embedding (OpenAI vectors); V7 dropped it.
 ```

@@ -6,6 +6,8 @@
 echo "Run tests without full Peer DID JWT validation."
 
 export NODE_ENV=test-local
+# tests start embedding sweeps themselves, through the admin endpoint
+export EMBEDDING_SWEEP_INTERVAL_MINUTES=0
 
 rm -f ../endorser-ch-$NODE_ENV.sqlite3
 rm -f ../endorser-partner-$NODE_ENV.sqlite3

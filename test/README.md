@@ -213,30 +213,19 @@ graph TD
 
 ---
 
-## AI Profile Matching Tests
+## Profile Matching Tests
 
-The `controller-partner-3-group-matching.js` test file validates the vector similarity and matching algorithms for pairing event attendees based on their profile descriptions.
+- `controller-partner-3-group-matching-funs.js` checks the vector math and the meeting pairing algorithm against stored vectors of 28 test profiles in `embedding-eval/test-vectors.json`, so it needs no model.
+- `controller-partner-8-embedding-engine.js` checks the embedding engine against golden vectors.
+- `controller-partner-9-similar.js` checks the embedding sweep, `/api/partner/similar`, and the vector export endpoints.
 
-### Generating Real Embeddings
+The last two (and the profile saves in the other partner tests) load the embedding model, which downloads on first use (see the main README).
 
-Generated `embeddings.json` from real 1536-dimensional embeddings from OpenAI:
-
-```bash
-# Generate real embeddings once (requires OpenAI API key)
-export OPENAI_API_KEY=your-key-here
-npm run test:generate-embeddings
-
-# This creates embeddings.json which is automatically loaded by tests
-```
-
-The `embeddings-generator.js` script will:
-1. Generate embeddings for 26 test profiles with diverse interests & lengths
-2. Save them to `embeddings.json` with metadata about the model used
-3. Display similarity analysis showing which profiles match best
-
-### Running the Tests
+After changing the test profiles or the default embedding spec, regenerate the stored vectors, and optionally view them:
 
 ```bash
-# Run all tests (uses cached embeddings if available)
-npm test test/controller-partner-3-group-matching.js
+npm run embedding:test-vectors
+npm run embedding:visualize   # writes embedding-eval/similarities.html
 ```
+
+See `embedding-eval/README.md` for the evaluation corpus and tools.

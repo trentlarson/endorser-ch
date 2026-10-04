@@ -185,20 +185,16 @@ describe('P6 - Alert Search partner', () => {
       .catch((err) => Promise.reject(err))
   })
 
-  it('partner alertSearch count increases by 1 after update to existing profile (which fails without OPENAI_API_KEY)', function () {
-    if (!process.env.OPENAI_API_KEY) {
-      console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
-      this.skip()
-    }
-
-    // profile1 (pushTokens[1]); no embedding row when P4 not run; use empty desc if 500
+  it('partner alertSearch count increases by 1 after update to existing profile', function () {
+    // profile1 (pushTokens[1]), which earlier tests may have updated moments ago
     const location = {
       minLocLat: 40.7120,
       maxLocLat: 40.7150,
       minLocLon: -74.0080,
       maxLocLon: -74.0050,
     }
-    const afterId = ulid(Date.now() - 2000)
+    // updatedAt has 1-second resolution, so start the window now and update after the next second
+    const afterId = ulid(Date.now())
     let countBefore
     return request(Server)
       .post('/api/partner/alertSearch')
@@ -208,6 +204,7 @@ describe('P6 - Alert Search partner', () => {
         expect(r.status).to.equal(200)
         countBefore = r.body.data.profilesNearby.length
       })
+      .then(() => new Promise((resolve) => setTimeout(resolve, 1100)))
       .then(() =>
         request(Server)
           .post('/api/partner/userProfile')
@@ -232,6 +229,6 @@ describe('P6 - Alert Search partner', () => {
         expect(r.body.data.profilesNearby.length).to.equal(countBefore + 1)
       })
       .catch((err) => Promise.reject(err))
-  })
+  }).timeout(5000)
 
 })

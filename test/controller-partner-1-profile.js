@@ -4,6 +4,8 @@ import request from "supertest";
 import { Credentials } from "uport-credentials";
 
 import Server from "../dist";
+import { dbService as partnerDbService } from "../dist/api/services/partner.db.service";
+import { activeEmbeddingSpec } from "../dist/api/services/embedding-specs";
 import { HIDDEN_TEXT, mergeTileCounts } from '../src/api/services/util';
 import testUtil from "./util";
 
@@ -113,8 +115,22 @@ describe('P1 - User Profiles', () => {
         }
         expect(r.body).to.have.property("success").that.is.an("object")
         expect(r.body.success).to.have.property("userProfileId").that.is.an("number")
+        // no message means the description was embedded
+        expect(r.body.userMessage).to.be.undefined
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(201)
+      })
+      .catch(err => Promise.reject(err))
+  }).timeout(30000) // the first save loads the embedding model
+
+  it('has a current embedding for a saved profile', () => {
+    return request(Server)
+      .get('/api/partner/userProfileEmbeddingMetadata/' + creds[0].did)
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.data.embeddingSpecId).to.equal(activeEmbeddingSpec().embeddingSpecId)
+        expect(r.body.data.hasCurrentEmbedding).to.be.true
       })
       .catch(err => Promise.reject(err))
   })
@@ -468,11 +484,15 @@ describe('P1 - User Profiles', () => {
       })
   })
 
-  it('can delete a profile', () => {
+  it('can delete a profile, along with its embedding', async () => {
+    const profile = await partnerDbService.profileByIssuerDid(creds[0].did)
+    const specId = activeEmbeddingSpec().embeddingSpecId
+    expect(await partnerDbService.embeddingsBySubjects('profile', specId, [String(profile.rowid)])).to.have.length(1)
     return request(Server)
       .delete('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
-      .then(r => {
+      .then(async r => {
+        expect(await partnerDbService.embeddingsBySubjects('profile', specId, [String(profile.rowid)])).to.have.length(0)
         // for some reason the response has a body of {} and no content type
         // expect(r.body).to.have.property("success", true)
         // expect(r.body).to.have.property("deletedCount", 1)

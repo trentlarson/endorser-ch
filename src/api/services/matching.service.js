@@ -1,9 +1,9 @@
 /**
- * Matching service - vector similarity and pairing algorithm for profile matching.
- * Uses cosine similarity and greedy pairing to maximize total similarity.
+ * Matching service - pairing algorithm for meeting (group onboarding) matching.
+ * Scores come from matching-engine.js; pairing is greedy by similarity.
  */
 
-const { storageStringToEmbedding } = require('./embeddings.service');
+const { compare } = require('./matching-engine');
 
 /**
  * Calculate dot product of two vectors
@@ -39,17 +39,26 @@ function cosineSimilarity(vec1, vec2) {
   return dot / (mag1 * mag2);
 }
 
+function samePair(p1, p2, [did1, did2]) {
+  return (did1 === p1.issuerDid && did2 === p2.issuerDid) || (did1 === p2.issuerDid && did2 === p1.issuerDid);
+}
+
 /**
  * Create pairs from participants based on similarity scores.
- * Uses greedy algorithm: sort all pairs by similarity descending, then pick non-overlapping pairs.
  *
- * @param {Array<{issuerDid: string, embedding: number[]}>} participants - Participants with embeddings
+ * Greedy: sort all allowed pairs of participants who have vectors by
+ * similarity descending, then pick non-overlapping pairs. Participants left
+ * over (those without vectors, and any the scored pass couldn't place) are
+ * then paired in order; a pair's similarity is null when either side has no vector.
+ *
+ * @param {Array<{issuerDid: string, vectors: Array<Float32Array|number[]>}>} participants - vectors may be empty
+ * @param {object} matchingSpec - the 'matching' object of the embedding spec
  * @param {string[]} excludedDids - issuerDids to exclude from matching
  * @param {Array<[string, string]>} excludedPairDids - Pairs of issuerDids to never match
  * @param {Array<[string, string]>} previousPairDids - Pairs of issuerDids from previous rounds (don't repeat)
- * @returns {{ pairs: Array<{participants: Array, similarity: number, pairNumber: number}> }}
+ * @returns {{ pairs: Array<{participants: Array, similarity: number|null, pairNumber: number}> }}
  */
-function matchParticipants(participants, excludedDids = [], excludedPairDids = [], previousPairDids = []) {
+function matchParticipants(participants, matchingSpec, excludedDids = [], excludedPairDids = [], previousPairDids = []) {
   const available = participants.filter((p) => !excludedDids.includes(p.issuerDid));
 
   if (available.length < 2) {
@@ -60,71 +69,54 @@ function matchParticipants(participants, excludedDids = [], excludedPairDids = [
     throw new Error('You need an even number of participants for matching.');
   }
 
+  const isAllowed = (p1, p2) =>
+    !excludedPairDids.some((pair) => samePair(p1, p2, pair))
+    && !previousPairDids.some((pair) => samePair(p1, p2, pair));
+
+  const scored = available.filter((p) => p.vectors && p.vectors.length > 0);
   const similarities = [];
-  for (let i = 0; i < available.length; i++) {
-    for (let j = i + 1; j < available.length; j++) {
-      const p1 = available[i];
-      const p2 = available[j];
-
-      const isExcluded = excludedPairDids.some(
-        ([did1, did2]) =>
-          (did1 === p1.issuerDid && did2 === p2.issuerDid) || (did1 === p2.issuerDid && did2 === p1.issuerDid)
-      );
-
-      const wasPreviouslyPaired = previousPairDids.some(
-        ([did1, did2]) =>
-          (did1 === p1.issuerDid && did2 === p2.issuerDid) || (did1 === p2.issuerDid && did2 === p1.issuerDid)
-      );
-
-      if (!isExcluded && !wasPreviouslyPaired) {
-        const similarity = cosineSimilarity(p1.embedding, p2.embedding);
-        similarities.push({ i, j, p1, p2, similarity });
+  for (let i = 0; i < scored.length; i++) {
+    for (let j = i + 1; j < scored.length; j++) {
+      const p1 = scored[i];
+      const p2 = scored[j];
+      if (isAllowed(p1, p2)) {
+        const similarity = compare(p1.vectors, p2.vectors, matchingSpec).score;
+        similarities.push({ p1, p2, similarity });
       }
     }
   }
-
-  if (similarities.length === 0) {
-    throw new Error('No more valid pairs are available. Erase previous matches and start over.');
-  }
-
   similarities.sort((a, b) => b.similarity - a.similarity);
 
   const pairs = [];
   const used = new Set();
+  const addPair = (p1, p2, similarity) => {
+    pairs.push({ participants: [p1, p2], similarity, pairNumber: pairs.length + 1 });
+    used.add(p1.issuerDid);
+    used.add(p2.issuerDid);
+  };
 
   for (const { p1, p2, similarity } of similarities) {
     if (!used.has(p1.issuerDid) && !used.has(p2.issuerDid)) {
-      pairs.push({
-        participants: [p1, p2],
-        similarity,
-        pairNumber: pairs.length + 1,
-      });
-      used.add(p1.issuerDid);
-      used.add(p2.issuerDid);
+      addPair(p1, p2, similarity);
     }
   }
 
-  return { pairs };
-}
-
-/**
- * Build participant objects with embeddings from DB rows.
- * @param {Array<{rowId: number, issuerDid: string, description: string, embeddingVector: string}>} rows
- * @returns {Array<{id: string, embedding: number[], issuerDid: string, description: string}>}
- */
-function buildParticipantsFromRows(rows) {
-  return rows.map((row) => {
-    const embedding = storageStringToEmbedding(row.embeddingVector);
-    if (!embedding || embedding.length === 0) {
-      throw new Error(`Invalid embedding for profile ${row.rowId}`);
+  const leftover = available.filter((p) => !used.has(p.issuerDid));
+  for (let i = 0; i < leftover.length; i++) {
+    for (let j = i + 1; j < leftover.length && !used.has(leftover[i].issuerDid); j++) {
+      const [p1, p2] = [leftover[i], leftover[j]];
+      if (!used.has(p2.issuerDid) && isAllowed(p1, p2)) {
+        const bothScored = p1.vectors && p1.vectors.length > 0 && p2.vectors && p2.vectors.length > 0;
+        addPair(p1, p2, bothScored ? compare(p1.vectors, p2.vectors, matchingSpec).score : null);
+      }
     }
-    return {
-      id: row.issuerDid,
-      issuerDid: row.issuerDid,
-      description: row.description,
-      embedding,
-    };
-  });
+  }
+
+  if (pairs.length === 0) {
+    throw new Error('No more valid pairs are available. Erase previous matches and start over.');
+  }
+
+  return { pairs };
 }
 
 module.exports = {
@@ -132,5 +124,4 @@ module.exports = {
   magnitude,
   cosineSimilarity,
   matchParticipants,
-  buildParticipantsFromRows,
 };

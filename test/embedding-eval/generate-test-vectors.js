@@ -1,24 +1,21 @@
 /**
- * Helper script to generate real embeddings for test profiles
- * 
- * Usage:
- *   export OPENAI_API_KEY=your-key-here
- *   node test/embeddings-generator.js
- * 
- * This will generate embeddings for all test profiles and save them to a JSON file
- * that can be loaded in tests to avoid repeated API calls.
+ * Embed the test profiles with the active embedding spec and write
+ * test/embedding-eval/test-vectors.json, which the group-matching tests
+ * (test/controller-partner-3-group-matching-funs.js) and
+ * similarity-visualizer.js read.
+ *
+ * Usage (from the repo root):
+ *   npm run embedding:test-vectors
+ *
+ * Regenerate after changing these profiles or the default spec, then rerun
+ * the group-matching tests; their similarity bounds are specific to the spec.
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs = require('fs')
+const path = require('path')
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-
-const modelId = 'text-embedding-3-small';
-// const modelId = 'text-embedding-3-large'; // not very different results
+const engine = require('../../src/api/services/embedding-engine')
+const { activeEmbeddingSpec } = require('../../src/api/services/embedding-specs')
 
 // Test profiles - diverse interests with varying description lengths
 const profileData = {
@@ -182,127 +179,30 @@ const profileData = {
   }
 };
 
-async function generateEmbedding(text) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY environment variable required');
-  }
-  
-  console.log(`Generating embedding for: "${text.substring(0, 50)}..."`);
-  
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: modelId,
-      input: text
-    })
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
-  }
-  
-  const data = await response.json();
-  return data.data[0].embedding;
-}
-
-async function generateAllEmbeddings() {
-  console.log('Generating embeddings for test profiles...\n');
-  
-  const profilesWithEmbeddings = {};
-  
+async function main() {
+  const spec = activeEmbeddingSpec()
+  const data = {}
   for (const [key, profile] of Object.entries(profileData)) {
-    try {
-      const embedding = await generateEmbedding(profile.profileText);
-      profilesWithEmbeddings[key] = {
-        ...profile,
-        embedding
-      };
-      console.log(`✓ ${profile.name} (${embedding.length} dimensions)\n`);
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
-    } catch (error) {
-      console.error(`✗ Failed to generate embedding for ${profile.name}:`, error.message);
-      throw error;
-    }
+    const input = engine.subjectText(spec, 'profile', { description: profile.profileText })
+    // empty text has no vector, as in production
+    const vector = input === '' ? null : engine.vectorToBase64((await engine.embedTexts(spec, [input]))[0])
+    data[key] = { ...profile, vector }
   }
-  
-  // Save to file with metadata
-  const outputPath = path.join(__dirname, 'embeddings.json');
-  const outputData = {
+  const output = {
     meta: {
-      modelProvider: 'api.openai.com',
-      model: modelId,
+      embeddingSpecId: spec.embeddingSpecId,
+      dimensions: spec.dimensions,
       generatedAt: new Date().toISOString(),
-      dimensions: Object.values(profilesWithEmbeddings)[0].embedding.length
     },
-    data: profilesWithEmbeddings
-  };
-  
-  fs.writeFileSync(
-    outputPath,
-    JSON.stringify(outputData, null, 2)
-  );
-  
-  console.log(`\n✓ All embeddings generated and saved to ${outputPath}`);
-  console.log(`✓ Model: ${outputData.meta.model} (${outputData.meta.dimensions} dimensions)`);
-  console.log(`✓ Provider: ${outputData.meta.modelProvider}`);
-  
-  // Display some statistics
-  console.log('\nSimilarity Analysis:');
-  const entries = Object.entries(profilesWithEmbeddings);
-  
-  function cosineSimilarity(vec1, vec2) {
-    const dot = vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
-    const mag1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
-    const mag2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
-    return dot / (mag1 * mag2);
+    data,
   }
-  
-  // Show most similar pairs
-  const similarities = [];
-  for (let i = 0; i < entries.length; i++) {
-    for (let j = i + 1; j < entries.length; j++) {
-      const [key1, profile1] = entries[i];
-      const [key2, profile2] = entries[j];
-      const sim = cosineSimilarity(profile1.embedding, profile2.embedding);
-      similarities.push({
-        pair: `${profile1.name} ↔ ${profile2.name}`,
-        similarity: sim
-      });
-    }
-  }
-  
-  similarities.sort((a, b) => b.similarity - a.similarity);
-  
-  console.log('\nTop 3 most similar:');
-  similarities.slice(0, 3).forEach(({ pair, similarity }) => {
-    console.log(`  ${pair}: ${similarity.toFixed(3)}`);
-  });
-  
-  console.log('\nTop 3 least similar:');
-  similarities.slice(-3).reverse().forEach(({ pair, similarity }) => {
-    console.log(`  ${pair}: ${similarity.toFixed(3)}`);
-  });
-
-  console.log('\nVisualize similarities:');
-  console.log(`  run: node test/profile-similarity-visualizer.js`);
+  const file = path.join(__dirname, 'test-vectors.json')
+  fs.writeFileSync(file, `${JSON.stringify(output, null, 2)}\n`)
+  console.log(`Wrote ${path.relative(process.cwd(), file)}: ${Object.keys(data).length} profiles, spec ${spec.embeddingSpecId}`)
+  console.log('Visualize: npm run embedding:visualize')
 }
 
-// Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  generateAllEmbeddings().catch(error => {
-    console.error('\nError:', error.message);
-    process.exit(1);
-  });
-}
-
-export { generateEmbedding, profileData };
-
+main().catch((e) => {
+  console.error(e)
+  process.exitCode = 1
+})

@@ -73,6 +73,11 @@ Run
 NODE_ENV=dev npm run dev
 ```
 
+Profile & project matching uses an embedding model (about 320 MB). It downloads into
+`~/.cache/endorser-embedding-models` on first use, or ahead of time with
+`npm run embedding:fetch-model`. See `test/embedding-eval/README.md` for the evaluation and
+visualization tools.
+
 
 
 
@@ -101,20 +106,30 @@ cd endorser-ch && git checkout master && git pull && git checkout $ENDORSER_VERS
 vi endorser-ch/.env # to add the version
 ```
 
-* Before deploying, ask yourself: do you need to run a migration? If so:
+* Before deploying, ask yourself: do you need to run a migration? If so (main DB from `sql`, partner DB from `sql-for-partner`):
 
 ```
 cp endorser-ch-db/endorser-ch-$NODE_ENV.sqlite3 endorser-ch-db/endorser-ch-$NODE_ENV-pre-$ENDORSER_VERSION.sqlite3.bak
 
 sudo docker run --rm -v ~/endorser-ch/sql:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-ch-$NODE_ENV.sqlite3 -user=sa -password=... migrate
+
+cp endorser-ch-db/endorser-partner-$NODE_ENV.sqlite3 endorser-ch-db/endorser-partner-$NODE_ENV-pre-$ENDORSER_VERSION.sqlite3.bak
+
+sudo docker run --rm -v ~/endorser-ch/sql-for-partner:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-partner-$NODE_ENV.sqlite3 -user=sa -password=... migrate
  ```
+
+* Put the embedding model in the host's model directory. This verifies the files that are there and downloads only what is missing, so it is quick when the spec hasn't changed; it also confirms the model runs in the image.
+
+```
+sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=/mnt/models endorser-ch:amd-$ENDORSER_VERSION npm run embedding:fetch-model
+```
 
 * See .env.example for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
 
 * Run it:
 
 ```
-sudo docker run -d -p 8001:8001 -v ~/endorser-ch-db:/mnt/database --name endorser-ch-$NODE_ENV --env-file ~/endorser-ch/.env -e APP_DB_FILE=/mnt/database/endorser-ch-$NODE_ENV.sqlite3 -e PARTNER_APP_DB_FILE=/mnt/database/endorser-partner-$NODE_ENV.sqlite3 -e NODE_ENV=$NODE_ENV -e ENDORSER_VERSION=$ENDORSER_VERSION endorser-ch:amd-$ENDORSER_VERSION
+sudo docker run -d -p 8001:8001 -v ~/endorser-ch-db:/mnt/database -v ~/endorser-ch-models:/mnt/models:ro --name endorser-ch-$NODE_ENV --env-file ~/endorser-ch/.env -e APP_DB_FILE=/mnt/database/endorser-ch-$NODE_ENV.sqlite3 -e PARTNER_APP_DB_FILE=/mnt/database/endorser-partner-$NODE_ENV.sqlite3 -e EMBEDDING_MODEL_DIR=/mnt/models -e EMBEDDING_ALLOW_REMOTE_MODELS=false -e NODE_ENV=$NODE_ENV -e ENDORSER_VERSION=$ENDORSER_VERSION endorser-ch:amd-$ENDORSER_VERSION
 ```
 
 * After deploying, increment the version & add "-beta" to the package.json and `npm install` and commit.
@@ -129,6 +144,73 @@ When running on another domain (other than endorser.ch):
   (Same note: doesn't break anything but is potentially confusing.)
 
 * ... and maybe the GLOBAL_ENTITY_ID_IRI_PREFIX if you want a different path after the domain. (These don't have to resolve, but it's a nice touch if they do.)
+
+
+### Hosting the Embedding Model Yourself
+
+`GET /api/partner/embeddingSpecs` tells clients where to download the model files for
+embedding text on the device. By default that is Hugging Face at the pinned revision, eg.
+`https://huggingface.co/onnx-community/granite-embedding-311m-multilingual-r2-ONNX/resolve/8f039f21d4181327268271bea4b11ddcc7eef88d/`.
+Hosting the files yourself removes the dependency on Hugging Face staying up and keeping the
+repository, and keeps Hugging Face from seeing which clients download the model. In exchange
+you pay for the bandwidth: about 330 MB per client the first time it embeds anything
+(`onnx/model_quantized.onnx` 298 MB, `tokenizer.json` 32 MB, plus two small JSON files).
+Clients that only compare vectors fetched from `/api/partner/embeddings` never download it.
+
+1. Get the files, verified against the spec's hashes. On a host that already ran
+   `npm run embedding:fetch-model` they are in its model directory (eg. `~/endorser-ch-models`).
+   The directory layout, `<modelRepo>/<modelRevision>/<file>`, is the layout to publish.
+   (For a server that should never contact Hugging Face, copy that directory over from another
+   host and run the fetch script there; with every file present it only verifies them.)
+
+2. Serve that directory as static files over HTTPS, from any web server, object store, or CDN,
+   with these response headers:
+   * `Access-Control-Allow-Origin: *` (or the app origins), since the apps run on other origins.
+   * `Cache-Control: public, max-age=31536000, immutable`; the revision is in the path, so a
+     URL's content never changes.
+   * gzip or brotli for `.json` files (`tokenizer.json` shrinks to a fraction of its size);
+     the `.onnx` file doesn't compress much.
+
+   For example, with Caddy (which also obtains the certificate):
+
+   ```
+   models.example.org {
+     root * /home/ubuntu/endorser-ch-models
+     file_server
+     encode gzip
+     header Access-Control-Allow-Origin "*"
+     header Cache-Control "public, max-age=31536000, immutable"
+   }
+   ```
+
+3. Check that every file arrives intact and with the CORS header; compare each digest with
+   `fileSha256` in `src/api/services/embedding-specs.js` (use `sha256sum` on Linux):
+
+   ```
+   BASE=https://models.example.org/onnx-community/granite-embedding-311m-multilingual-r2-ONNX/8f039f21d4181327268271bea4b11ddcc7eef88d
+   for f in onnx/model_quantized.onnx tokenizer.json tokenizer_config.json config.json; do
+     echo "$f $(curl -s $BASE/$f | shasum -a 256)"
+   done
+   curl -sI -H 'Origin: https://app.example.org' $BASE/config.json | grep -i 'access-control-allow-origin'
+   ```
+
+4. Set `EMBEDDING_ARTIFACT_BASE_URL=https://models.example.org` in the server's `.env` and
+   restart. `/api/partner/embeddingSpecs` then advertises
+   `https://models.example.org/<modelRepo>/<modelRevision>/` as `artifact.baseUrl`.
+
+5. In clients using transformers.js, point the library at the same host before loading the model,
+   then load it by repo and revision as usual; check the downloaded files against
+   `artifact.fileSha256` before trusting the vectors:
+
+   ```js
+   import { env } from '@huggingface/transformers'
+   env.remoteHost = 'https://models.example.org/'
+   env.remotePathTemplate = '{model}/{revision}/' // Hugging Face uses '{model}/resolve/{revision}/'
+   ```
+
+6. When a spec with a different model or revision is added, publish its directory beside the
+   existing one and keep both until no client uses the earlier spec; nothing at an existing
+   path changes.
 
 
 

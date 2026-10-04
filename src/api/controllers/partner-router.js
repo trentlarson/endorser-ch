@@ -16,11 +16,13 @@ import {
 } from '../services/alert-search.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
-import embeddingsService, { embeddingToStorageString } from "../services/embeddings.service";
-import { matchParticipants, buildParticipantsFromRows } from "../services/matching.service";
-import { EMBEDDING_FOR_EMPTY_STRING } from "../services/embedding-empty-string";
+import embeddingService from "../services/embedding.service";
+import { contentHash, subjectText } from "../services/embedding-engine";
+import { EMBEDDING_SPECS, activeEmbeddingSpec } from "../services/embedding-specs";
+import { rank } from "../services/matching-engine";
+import { matchParticipants } from "../services/matching.service";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
-import { hideDidsAndAddLinksToNetwork } from '../services/util-higher';
+import { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInDataKey } from '../services/util-higher';
 import { globalId, HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
 const ALERT_SEARCH_TIMEOUT_MS = 2000
@@ -140,6 +142,116 @@ async function updateGroupMember(memberId, member, bodyData, res) {
 
   result.success = true
   return res.status(200).json(result).end()
+}
+
+/**
+ * Hide the issuerDid of each profile the requester cannot see, adding the DIDs
+ * in the requester's network who can see it.
+ * This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
+ * (When we separate this into another service, this will have to be an API call.
+ * See the image-api server for an example of how to leverage JWTs to get
+ * permission to access data from the other service.)
+ * @param {string} requesterDid
+ * @param {Array} profiles - user_profile records
+ * @returns {Promise<Array>} the profiles, scrubbed
+ */
+async function hideProfileDids(requesterDid, profiles) {
+  const didsSeenByRequesterWhoSeeObject =
+    await getAllDidsBetweenRequesterAndObjects(requesterDid, profiles.map(profile => profile.issuerDid))
+  // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
+  const resultsScrubbed = []
+  for (let i = 0; i < profiles.length; i++) {
+    const profile = profiles[i]
+    const didOrDidsSeenByRequesterWhoSeeObject = didsSeenByRequesterWhoSeeObject[i]
+    if (didOrDidsSeenByRequesterWhoSeeObject === profile.issuerDid) {
+      // the issuerDid is visible to the requester
+      resultsScrubbed.push(profile)
+    } else {
+      // didOrDidsSeenByRequesterWhoSeeObject must be an array of DIDs who can see the target DID
+      const didsWhoSeeObject =
+        R.isEmpty(didOrDidsSeenByRequesterWhoSeeObject)
+          ? undefined
+          : didOrDidsSeenByRequesterWhoSeeObject
+      resultsScrubbed.push({
+        ...profile,
+        issuerDid: HIDDEN_TEXT,
+        issuerDidVisibleToDids: didsWhoSeeObject
+      })
+    }
+  }
+  return resultsScrubbed
+}
+
+const SIMILAR_TARGETS = ['profile', 'plan', 'both']
+const SIMILAR_DEFAULT_LIMIT = 25
+const SIMILAR_MAX_LIMIT = 50
+const EMBEDDINGS_PAGE_LIMIT = 500
+
+// issuerDid -> times (ms) of that issuer's recent text queries to /similar
+const recentTextQueries = new Map()
+
+/**
+ * Record a text query to /similar if the issuer is under
+ * EMBEDDING_QUERY_MAX_PER_MINUTE (default 20); embedding text costs CPU.
+ * @returns {boolean} whether the query is allowed
+ */
+function allowTextQuery(issuerDid) {
+  const maxPerMinute = Number(process.env.EMBEDDING_QUERY_MAX_PER_MINUTE || 20)
+  const now = Date.now()
+  const isRecent = (time) => now - time < 60 * 1000
+  if (recentTextQueries.size > 1000) {
+    for (const [did, times] of recentTextQueries) {
+      if (!times.some(isRecent)) {
+        recentTextQueries.delete(did)
+      }
+    }
+  }
+  const recent = (recentTextQueries.get(issuerDid) || []).filter(isRecent)
+  const allowed = recent.length < maxPerMinute
+  if (allowed) {
+    recent.push(now)
+  }
+  recentTextQueries.set(issuerDid, recent)
+  return allowed
+}
+
+/**
+ * Read an optional bounding box from query parameters.
+ * @returns {{ bbox: {minLat, minLon, maxLat, maxLon}|null, error?: string }}
+ */
+function bboxFromQuery(query) {
+  const keys = ['minLocLat', 'minLocLon', 'maxLocLat', 'maxLocLon']
+  const given = keys.filter((k) => query[k] != null && query[k] !== '')
+  if (given.length === 0) {
+    return { bbox: null }
+  }
+  if (given.length < keys.length) {
+    return { bbox: null, error: "Supply all of minLocLat, minLocLon, maxLocLat, maxLocLon, or none of them." }
+  }
+  const [minLat, minLon, maxLat, maxLon] = keys.map((k) => Number(query[k]))
+  if ([minLat, maxLat].some((v) => isNaN(v) || v < -90 || v > 90)) {
+    return { bbox: null, error: "Latitudes must be numbers between -90 and 90." }
+  }
+  if ([minLon, maxLon].some((v) => isNaN(v) || v < -180 || v > 180)) {
+    return { bbox: null, error: "Longitudes must be numbers between -180 and 180." }
+  }
+  return { bbox: { minLat, minLon, maxLat, maxLon } }
+}
+
+/**
+ * IDs (as stored in the embedding table) of subjects inside the bounding box.
+ * @returns {Promise<string[]|null>} null when there is no box, meaning all subjects
+ */
+async function subjectIdsInBBox(subjectType, bbox) {
+  if (!bbox) {
+    return null
+  }
+  const { minLat, minLon, maxLat, maxLon } = bbox
+  if (subjectType === 'profile') {
+    return (await partnerDbService.profileRowIdsByLocation(minLat, minLon, maxLat, maxLon)).map(String)
+  }
+  // When we separate this into another service, this will have to be an API call.
+  return endorserDbService.planHandleIdsByLocation(minLat, maxLat, minLon, maxLon)
 }
 
 /**
@@ -638,22 +750,23 @@ export default express
 
       const { excludedDids = [], excludedPairDids = [], previousPairDids = [] } = req.body || {}
 
-      const rows = await partnerDbService.groupMembersPlusEmbeddings(group.groupId)
+      const rows = await partnerDbService.groupMembersWithProfiles(group.groupId)
       if (rows.length < 2) {
         return res.status(400).json({
           error: { userMessage: "Need at least 2 admitted members to match." },
         }).end()
       }
 
-      const emptyEmbeddingStorage = embeddingToStorageString(EMBEDDING_FOR_EMPTY_STRING.data.empty.embedding)
-      const rowsWithEmbeddings = rows.map((row) => ({
-        ...row,
-        embeddingVector: row.embeddingVector != null && String(row.embeddingVector).trim() !== ''
-          ? row.embeddingVector
-          : emptyEmbeddingStorage,
+      // members without a vector (no profile or no text) are paired after everyone else
+      const profileRowIds = rows.filter((row) => row.rowId != null).map((row) => row.rowId)
+      const vectorsByRowId = await embeddingService.vectorsBySubject(embeddingService.SUBJECT_PROFILE, profileRowIds)
+      const participants = rows.map((row) => ({
+        issuerDid: row.issuerDid,
+        description: row.description,
+        vectors: (row.rowId != null && vectorsByRowId.get(String(row.rowId))) || [],
       }))
-      const participants = buildParticipantsFromRows(rowsWithEmbeddings)
-      const result = matchParticipants(participants, excludedDids, excludedPairDids, previousPairDids)
+      const matchingSpec = activeEmbeddingSpec().matching
+      const result = matchParticipants(participants, matchingSpec, excludedDids, excludedPairDids, previousPairDids)
 
       // create lookup from issuerDid to content from rows
       const issuerDidToContent = new Map(rows.map((row) => [row.issuerDid, row.content]))
@@ -1128,18 +1241,12 @@ export default express
 
       const userProfileId = await partnerDbService.profileInsertOrUpdate(entry)
 
-      // if generateEmbedding flag is set, generate the new embedding and store it
-      const embeddingResult = await partnerDbService.profileEmbeddingWithoutVector(res.locals.authTokenIssuer)
+      // embed the new description; on failure the profile stays saved and the sweep retries
+      const savedProfile = await partnerDbService.profileByIssuerDid(res.locals.authTokenIssuer)
+      const hasVector = await embeddingService.refreshProfileEmbedding(savedProfile.rowid, savedProfile.description)
       let responseMessage
-      if (embeddingResult?.generateEmbedding) {
-        try {
-          const vectorStr = await embeddingsService.generateEmbeddingStorageString(description)
-          const isForEmptyString = description === ''
-          await partnerDbService.profileEmbeddingInsertOrUpdate(res.locals.authTokenIssuer, vectorStr, isForEmptyString, true)
-        } catch (embeddingErr) {
-          console.error('Error generating embedding for DID:', res.locals.authTokenIssuer, embeddingErr)
-          responseMessage = "Your profile was saved, but you are not yet eligible for matching with other profiles. Contact an admin to fix this."
-        }
+      if (!hasVector && subjectText(activeEmbeddingSpec(), embeddingService.SUBJECT_PROFILE, { description: savedProfile.description }) !== '') {
+        responseMessage = "Your profile was saved, but it is not yet available for matching. That will be retried automatically."
       }
 
       const response = { success: { userProfileId } }
@@ -1262,36 +1369,8 @@ export default express
         afterId,
         claimContents
       )
-      const resultList = rawResult.data
       // Hide DIDs and add network links
-      // This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
-      // (When we separate this into another service, this will have to be an API call.
-      // See the image-api server for an example of how to leverage JWTs to get
-      // permission to access data from the other service.)
-      const didsSeenByRequesterWhoSeeObject =
-        await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, resultList.map(profile => profile.issuerDid))
-      // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
-      const resultsScrubbed = []
-      for (let i = 0; i < resultList.length; i++) {
-        const profile = resultList[i]
-        const didOrDidsSeenByRequesterWhoSeeObject = didsSeenByRequesterWhoSeeObject[i]
-        if (didOrDidsSeenByRequesterWhoSeeObject === profile.issuerDid) {
-          // the issuerDid is visible to the requester
-          resultsScrubbed.push(profile)
-        } else {
-          // the issuerDid is not visible to the requester
-          profile.issuerDid = HIDDEN_TEXT
-          // didOrDidsSeenByRequesterWhoSeeObject must be an array of DIDs who can see the target DID
-          const didsWhoSeeObject =
-            R.isEmpty(didOrDidsSeenByRequesterWhoSeeObject)
-              ? undefined
-              : didOrDidsSeenByRequesterWhoSeeObject
-          resultsScrubbed.push({
-            ...profile,
-            issuerDidVisibleToDids: didsWhoSeeObject
-          })
-        }
-      }
+      const resultsScrubbed = await hideProfileDids(res.locals.authTokenIssuer, rawResult.data)
       const fullResult = {
         data: resultsScrubbed,
         hitLimit: rawResult.hitLimit
@@ -1330,15 +1409,14 @@ export default express
 )
 
 /**
- * Get a user's profile embedding
+ * Report whether a user's profile has a current embedding under the active spec
  *
  * @group partner utils
  * @route GET /api/partner/userProfileEmbeddingMetadata/{issuerDid}
- * @param {string} issuerDid.path.required - the DID of the user whose profile embedding to retrieve
- * @returns {UserProfileEmbedding} 200 - success response with profile embedding
- * @returns {Error} 403 - unauthorized
- * @returns {Error} 404 - profile not found
- * @returns {Error} 400 - client error
+ * @param {string} issuerDid.path.required - the DID of the user whose profile embedding to check
+ * @returns {object} 200 - 'data' with embeddingSpecId and hasCurrentEmbedding (false when the profile text is empty or not yet embedded)
+ * @returns {Error} 401 - unauthenticated
+ * @returns {Error} 404 - no profile, or not visible to the requester
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
@@ -1350,13 +1428,8 @@ export default express
         return res.status(401).json({ error: "Authentication required" }).end()
       }
 
-      const result = await partnerDbService.profileEmbeddingWithoutVector(issuerDid)
-
-      // use a generic message so as to not leak whether an embedding exists for this DID
+      // use a generic message so as to not leak whether a profile exists for this DID
       const NOT_SEEN_MESSAGE = "There is no embedding for this issuer or it is not visible to you."
-      if (!result) {
-        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
-      }
 
       if (issuerDid !== res.locals.authTokenIssuer) {
         const didsSeenByRequesterWhoSeeObject =
@@ -1368,61 +1441,21 @@ export default express
         }
       }
 
-      res.status(200).json({ data: result }).end()
+      const profile = await partnerDbService.profileByIssuerDid(issuerDid)
+      if (!profile) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+      }
+
+      const spec = activeEmbeddingSpec()
+      const text = subjectText(spec, embeddingService.SUBJECT_PROFILE, { description: profile.description })
+      const stored = await partnerDbService.embeddingsBySubjects(
+        embeddingService.SUBJECT_PROFILE, spec.embeddingSpecId, [String(profile.rowid)]
+      )
+      const hasCurrentEmbedding = text !== '' && stored.length > 0 && stored[0].contentHash === contentHash(text)
+
+      res.status(200).json({ data: { embeddingSpecId: spec.embeddingSpecId, hasCurrentEmbedding } }).end()
     } catch (err) {
       console.error('Error getting user profile embedding for DID:', issuerDid, err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update the generateEmbedding flag for a user profile (permissioned users only)
- *
- * @group partner utils
- * @route PUT /api/partner/userProfileGenerateEmbedding/{issuerDid}
- * @param {string} issuerDid.path.required - the DID of the user whose profile to update
- * @returns 200 - success response
- * @returns {Error} 403 - unauthorized (not an admin)
- * @returns {Error} 404 - profile not found
- * @returns {Error} 400 - client error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.put(
-  '/userProfileGenerateEmbedding/:issuerDid',
-  async (req, res) => {
-    const { issuerDid } = req.params
-    try {
-      if (!res.locals.authTokenIssuer) {
-        return res.status(400).json({ error: "The request must include a valid Authorization JWT." }).end()
-      }
-
-      // Check if requester is an admin
-      if (!isAdminUser(res.locals.authTokenIssuer)) {
-        return res.status(403).json({ error: "Only permissioned users can update the generateEmbedding flag." }).end()
-      }
-
-      // We currently do not not check that the admin user can see this profile DID.
-      // We assume that permissioned users will not abuse this.
-      // (We considered checking visibility but that approach is quite the rabbit-hole.)
-      const generateEmbedding = req.body && typeof req.body.generateEmbedding === 'boolean'
-        ? req.body.generateEmbedding
-        : true
-
-      // Generate or remove embedding based on flag
-      if (generateEmbedding) {
-        const profile = await partnerDbService.profileByIssuerDid(issuerDid)
-        const description = profile?.description || ''
-        const vectorStr = await embeddingsService.generateEmbeddingStorageString(description)
-        const isForEmptyString = description === ''
-        await partnerDbService.profileEmbeddingInsertOrUpdate(issuerDid, vectorStr, isForEmptyString, true)
-      } else {
-        await partnerDbService.profileEmbeddingDeleteByIssuerDid(issuerDid)
-      }
-
-      res.status(200).json({ success: { generateEmbedding } }).end()
-    } catch (err) {
-      console.error('Error updating generateEmbedding flag for DID:', res.locals.authTokenIssuer, '... for params:', JSON.stringify({ issuerDid, generateEmbedding }), err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -1545,17 +1578,7 @@ export default express
         } else {
           // someone the issuer can see can see the profile,
           // but giving up all between would expose their full network
-
-          // If this is an admin user, they can see the generateEmbedding flag
-          if (isAdminUser(res.locals.authTokenIssuer)) {
-            // but they can't see the other info
-            result = {
-              issuerDid: result.issuerDid,
-              generateEmbedding: result.generateEmbedding,
-            }
-          } else {
-            return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
-          }
+          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
         }
       }
       res.status(200).json({ data: result }).end()
@@ -1609,4 +1632,296 @@ export default express
     }
   }
 )
+
+/******************************************************
+ * Semantic Matching
+ ******************************************************/
+
+/**
+ * Find profiles and projects (plans) whose text is semantically close to a profile, a plan, or free text
+ *
+ * @group partner utils
+ * @route GET /api/partner/similar
+ * @param {string} from.query.required - profile:<rowId> | plan:<handleId> | text:<query> (text requires registration and is rate limited)
+ * @param {string} to.query.optional - profile | plan | both (default both)
+ * @param {number} minLocLat.query.optional - bounding box (all four or none); profiles match on either location
+ * @param {number} minLocLon.query.optional
+ * @param {number} maxLocLat.query.optional
+ * @param {number} maxLocLon.query.optional
+ * @param {number} minSimilarity.query.optional - default from the embedding spec's matching config
+ * @param {number} limit.query.optional - default 25, max 50
+ * @returns {object} 200 - 'data' array of { subjectType, subjectId, similarity, record } best first, where record is the scrubbed profile or plan; plus embeddingSpecId
+ * @returns {Error} 400 - client error
+ * @returns {Error} 404 - the source subject has no embedding
+ * @returns {Error} 429 - too many text queries
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/similar',
+  async (req, res) => {
+    const issuerDid = res.locals.authTokenIssuer
+    try {
+      if (!issuerDid) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      const { from, to = 'both' } = req.query
+      const fromMatch = typeof from === 'string' && from.match(/^(profile|plan|text):([\s\S]+)$/)
+      if (!fromMatch) {
+        return res.status(400).json({ error: "Query parameter 'from' must be profile:<rowId>, plan:<handleId>, or text:<query>" }).end()
+      }
+      if (!SIMILAR_TARGETS.includes(to)) {
+        return res.status(400).json({ error: "Query parameter 'to' must be one of: " + SIMILAR_TARGETS.join(', ') }).end()
+      }
+      const { bbox, error: bboxError } = bboxFromQuery(req.query)
+      if (bboxError) {
+        return res.status(400).json({ error: bboxError }).end()
+      }
+      let minSimilarity
+      if (req.query.minSimilarity != null && req.query.minSimilarity !== '') {
+        minSimilarity = Number(req.query.minSimilarity)
+        if (isNaN(minSimilarity) || minSimilarity < -1 || minSimilarity > 1) {
+          return res.status(400).json({ error: "Query parameter 'minSimilarity' must be a number between -1 and 1" }).end()
+        }
+      }
+      let limit = SIMILAR_DEFAULT_LIMIT
+      if (req.query.limit != null && req.query.limit !== '') {
+        limit = parseInt(req.query.limit)
+        if (!(limit >= 1)) {
+          return res.status(400).json({ error: "Query parameter 'limit' must be a positive integer" }).end()
+        }
+        limit = Math.min(limit, SIMILAR_MAX_LIMIT)
+      }
+
+      const [, sourceType, sourceRef] = fromMatch
+      let sourceVectors
+      let sourceId = null
+      if (sourceType === 'text') {
+        try {
+          // When we separate this into another service, this will have to be an API call.
+          await ClaimService.getRateLimits(issuerDid)
+        } catch (e) {
+          return res.status(400).json({ error: { userMessage: "Must be registered to search by text" } }).end()
+        }
+        if (!allowTextQuery(issuerDid)) {
+          return res.status(429).json({ error: { userMessage: "Too many text searches. Try again in a minute." } }).end()
+        }
+        const vector = await embeddingService.embedQuery(sourceRef)
+        if (!vector) {
+          return res.status(400).json({ error: "The query text is empty." }).end()
+        }
+        sourceVectors = [vector]
+      } else {
+        if (sourceType === 'profile') {
+          if (!/^\d+$/.test(sourceRef)) {
+            return res.status(400).json({ error: "A profile source must be profile:<rowId>" }).end()
+          }
+          sourceId = String(parseInt(sourceRef))
+        } else {
+          sourceId = globalId(sourceRef)
+        }
+        sourceVectors = (await embeddingService.vectorsBySubject(sourceType, [sourceId])).get(sourceId)
+        if (!sourceVectors) {
+          return res.status(404).json({ error: "That " + sourceType + " has no embedding: it may not exist, may have no text, or may not be processed yet." }).end()
+        }
+      }
+
+      const candidates = []
+      for (const targetType of (to === 'both' ? ['profile', 'plan'] : [to])) {
+        const ids = await subjectIdsInBBox(targetType, bbox)
+        const vectorsById = await embeddingService.vectorsBySubject(targetType, ids)
+        for (const [subjectId, vectors] of vectorsById) {
+          if (!(targetType === sourceType && subjectId === sourceId)) {
+            candidates.push({ id: { subjectType: targetType, subjectId }, vectors })
+          }
+        }
+      }
+      const spec = activeEmbeddingSpec()
+      const ranked = rank(sourceVectors, candidates, spec.matching, { minSimilarity, limit })
+
+      // load the records and hide DIDs the same way the profile and plan searches do
+      const profileRowIds = ranked.filter((r) => r.id.subjectType === 'profile').map((r) => Number(r.id.subjectId))
+      const planHandleIds = ranked.filter((r) => r.id.subjectType === 'plan').map((r) => r.id.subjectId)
+      const profiles = profileRowIds.length === 0
+        ? []
+        : await hideProfileDids(issuerDid, await partnerDbService.profilesByRowIds(profileRowIds))
+      // When we separate this into another service, this will have to be an API call.
+      const planResult = planHandleIds.length === 0
+        ? { data: [] }
+        : await hideDidsAndAddLinksToNetworkInDataKey(issuerDid, await endorserDbService.planInfoByHandleIds(planHandleIds), [])
+      const records = new Map([
+        ...profiles.map((p) => ['profile:' + p.rowid, p]),
+        ...planResult.data.map((p) => ['plan:' + p.handleId, p]),
+      ])
+
+      const data = ranked
+        .map((r) => ({
+          subjectType: r.id.subjectType,
+          subjectId: r.id.subjectId,
+          similarity: r.score,
+          record: records.get(r.id.subjectType + ':' + r.id.subjectId),
+        }))
+        .filter((d) => d.record) // a subject may have been deleted since its vector was read
+      const result = { data, embeddingSpecId: spec.embeddingSpecId }
+      if (planResult.publicUrls) {
+        result.publicUrls = planResult.publicUrls
+      }
+      res.status(200).json(result).end()
+    } catch (err) {
+      console.error('Error finding similar subjects for params:', JSON.stringify(req.query), err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * The active embedding spec, for clients that compare or produce vectors
+ *
+ * @group partner utils
+ * @route GET /api/partner/embeddingSpecs
+ * @returns {object} 200 - 'data' array of specs, each with 'artifact' (baseUrl and fileSha256 of the model files), plus activeEmbeddingSpecId
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/embeddingSpecs',
+  (req, res) => {
+    const spec = activeEmbeddingSpec()
+    const artifactBase = process.env.EMBEDDING_ARTIFACT_BASE_URL
+    const baseUrl = artifactBase
+      ? `${artifactBase.replace(/\/+$/, '')}/${spec.modelRepo}/${spec.modelRevision}/`
+      : `https://huggingface.co/${spec.modelRepo}/resolve/${spec.modelRevision}/`
+    res.status(200).json({
+      data: [{ ...spec, artifact: { baseUrl, fileSha256: spec.fileSha256 } }],
+      activeEmbeddingSpecId: spec.embeddingSpecId,
+    }).end()
+  }
+)
+
+/**
+ * Stored vectors for profiles or plans, so clients can match locally. Carries
+ * no DIDs: join on subjectId with records from /userProfile or the plan endpoints.
+ *
+ * @group partner utils
+ * @route GET /api/partner/embeddings
+ * @param {string} subjectType.query.required - profile | plan
+ * @param {string} embeddingSpecId.query.optional - default is the active spec
+ * @param {number} minLocLat.query.optional - bounding box (all four or none); profiles match on either location
+ * @param {number} minLocLon.query.optional
+ * @param {number} maxLocLat.query.optional
+ * @param {number} maxLocLon.query.optional
+ * @param {string} afterId.query.optional - return subjects whose subjectId sorts (as text) after this one
+ * @param {number} limit.query.optional - default and max 500
+ * @returns {object} 200 - 'data' array of { subjectId, chunkIndex, contentHash, vector (base64 float32 little-endian) } ordered by subjectId as text, plus embeddingSpecId and hitLimit
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/embeddings',
+  async (req, res) => {
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      const { subjectType, afterId } = req.query
+      if (!['profile', 'plan'].includes(subjectType)) {
+        return res.status(400).json({ error: "Query parameter 'subjectType' must be profile or plan" }).end()
+      }
+      const embeddingSpecId = req.query.embeddingSpecId || activeEmbeddingSpec().embeddingSpecId
+      if (!EMBEDDING_SPECS[embeddingSpecId]) {
+        return res.status(400).json({ error: "Unknown embeddingSpecId: " + embeddingSpecId }).end()
+      }
+      const { bbox, error: bboxError } = bboxFromQuery(req.query)
+      if (bboxError) {
+        return res.status(400).json({ error: bboxError }).end()
+      }
+      let limit = EMBEDDINGS_PAGE_LIMIT
+      if (req.query.limit != null && req.query.limit !== '') {
+        limit = parseInt(req.query.limit)
+        if (!(limit >= 1)) {
+          return res.status(400).json({ error: "Query parameter 'limit' must be a positive integer" }).end()
+        }
+        limit = Math.min(limit, EMBEDDINGS_PAGE_LIMIT)
+      }
+
+      const ids = await subjectIdsInBBox(subjectType, bbox)
+      const page = await partnerDbService.embeddingsPaged(subjectType, embeddingSpecId, ids, afterId, limit)
+      res.status(200).json({
+        data: page.data.map((row) => ({
+          subjectId: row.subjectId,
+          chunkIndex: row.chunkIndex,
+          contentHash: row.contentHash,
+          vector: Buffer.from(row.vector).toString('base64'),
+        })),
+        embeddingSpecId,
+        hitLimit: page.hitLimit,
+      }).end()
+    } catch (err) {
+      console.error('Error getting embeddings for params:', JSON.stringify(req.query), err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Status of the embedding sweep, and vector counts for the active spec (admins only)
+ *
+ * @group partner utils
+ * @route GET /api/partner/embeddingSweep
+ * @returns {object} 200 - 'data' with running, lastStartedAt, lastFinishedAt, lastResult, lastError, counts
+ * @returns {Error} 403 - not an admin
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/embeddingSweep',
+  async (req, res) => {
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      if (!isAdminUser(res.locals.authTokenIssuer)) {
+        return res.status(403).json({ error: "Only permissioned users can see the embedding sweep." }).end()
+      }
+      const embeddingSpecId = activeEmbeddingSpec().embeddingSpecId
+      const counts = await partnerDbService.embeddingCounts(embeddingSpecId)
+      res.status(200).json({ data: { ...embeddingService.getSweepStatus(), embeddingSpecId, counts } }).end()
+    } catch (err) {
+      console.error('Error getting embedding sweep status:', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Start an embedding sweep now (admins only); joins one already running
+ *
+ * @group partner utils
+ * @route POST /api/partner/embeddingSweep
+ * @param {string} wait.query.optional - 'true' to respond when the sweep finishes
+ * @returns {object} 200 - 'data' with the sweep status, when wait=true
+ * @returns {object} 202 - 'data' with the sweep status, while it runs
+ * @returns {Error} 403 - not an admin
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.post(
+  '/embeddingSweep',
+  async (req, res) => {
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      if (!isAdminUser(res.locals.authTokenIssuer)) {
+        return res.status(403).json({ error: "Only permissioned users can start an embedding sweep." }).end()
+      }
+      const finished = embeddingService.sweep()
+      if (req.query.wait === 'true') {
+        res.status(200).json({ data: await finished }).end()
+      } else {
+        res.status(202).json({ data: embeddingService.getSweepStatus() }).end()
+      }
+    } catch (err) {
+      console.error('Error starting embedding sweep:', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
 

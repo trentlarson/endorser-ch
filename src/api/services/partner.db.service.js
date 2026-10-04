@@ -6,6 +6,29 @@ const util = require('./util')
 
 const DEFAULT_LIMIT = 50
 
+// stays under SQLite's limit on bound parameters
+const IN_CHUNK_SIZE = 500
+
+/**
+ * Run a SELECT ... IN (...) over many IDs, in chunks.
+ * @param {Array} ids
+ * @param {function(string): string} sqlForPlaceholders - builds the SQL given the '?,?,...' list
+ * @param {Array} leadingParams - parameters that precede the IDs
+ * @returns {Promise<Array>} all rows
+ */
+async function allInChunks(ids, sqlForPlaceholders, leadingParams = []) {
+  const rows = []
+  for (let i = 0; i < ids.length; i += IN_CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + IN_CHUNK_SIZE)
+    const sql = sqlForPlaceholders(chunk.map(() => '?').join(','))
+    const chunkRows = await new Promise((resolve, reject) => {
+      partnerDb.all(sql, [...leadingParams, ...chunk], (err, result) => (err ? reject(err) : resolve(result)))
+    })
+    rows.push(...chunkRows)
+  }
+  return rows
+}
+
 class PartnerDatabase {
 
   /****************************************************************
@@ -339,10 +362,9 @@ class PartnerDatabase {
   profileById(rowid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        `SELECT p.rowid, p.issuerDid, p.updatedAt, p.description, p.locLat, p.locLon, p.locLat2, p.locLon2, e.generateEmbedding
-         FROM user_profile p
-         LEFT JOIN user_profile_embedding e ON p.issuerDid = e.issuerDid
-         WHERE p.rowid = ?`,
+        `SELECT rowid, issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2
+         FROM user_profile
+         WHERE rowid = ?`,
         [rowid],
         function(err, row) {
           if (err) {
@@ -350,7 +372,6 @@ class PartnerDatabase {
           } else {
             if (row) {
               row.updatedAt = util.isoAndZonify(row.updatedAt)
-              row.generateEmbedding = util.booleanify(row.generateEmbedding)
             }
             resolve(row)
           }
@@ -362,10 +383,9 @@ class PartnerDatabase {
   profileByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        `SELECT p.rowid, p.issuerDid, p.updatedAt, p.description, p.locLat, p.locLon, p.locLat2, p.locLon2, e.generateEmbedding
-         FROM user_profile p
-         LEFT JOIN user_profile_embedding e ON p.issuerDid = e.issuerDid
-         WHERE p.issuerDid = ?`,
+        `SELECT rowid, issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2
+         FROM user_profile
+         WHERE issuerDid = ?`,
         [issuerDid],
         function(err, row) {
           if (err) {
@@ -374,7 +394,6 @@ class PartnerDatabase {
             if (row) {
               row.rowId = row.rowid
               row.updatedAt = util.isoAndZonify(row.updatedAt)
-              row.generateEmbedding = util.booleanify(row.generateEmbedding)
             }
             resolve(row)
           }
@@ -568,53 +587,17 @@ class PartnerDatabase {
     )
   }
 
-  profileDelete(issuerDid) {
-    return new Promise((resolve, reject) => {
-      // Delete embedding first (user_profile_embedding keyed by issuerDid)
-      partnerDb.run(
-        "DELETE FROM user_profile_embedding WHERE issuerDid = ?",
-        [issuerDid],
-        function(err1) {
-          if (err1) {
-            reject(err1)
-            return
-          }
-          partnerDb.run("DELETE FROM user_profile WHERE issuerDid = ?", [issuerDid], function(err2) {
-            if (err2) {
-              reject(err2)
-            } else {
-              resolve(this.changes)
-            }
-          })
-        }
-      )
-    })
-  }
-
-  /****************************************************************
-   * Profile Embedding (for semantic matching)
-   **/
-
   /**
-   * Insert or update embedding for a profile
-   * @param {string} issuerDid - user_profile.issuerDid
-   * @param {string} embeddingVector - comma-separated vector string
-   * @param {boolean} isForEmptyString - whether the embedding is for an empty string
-   * @param {boolean} generateEmbedding - whether the embedding was generated
-   * @returns {Promise<number>} number of rows inserted or updated
+   * Delete a profile and its embeddings.
+   * @returns {Promise<number>} number of profiles deleted
    */
-  profileEmbeddingInsertOrUpdate(issuerDid, embeddingVector, isForEmptyString, generateEmbedding) {
+  async profileDelete(issuerDid) {
+    const profile = await this.profileByIssuerDid(issuerDid)
+    if (profile) {
+      await this.embeddingDeleteBySubject('profile', String(profile.rowid))
+    }
     return new Promise((resolve, reject) => {
-      const stmt = `
-        INSERT INTO user_profile_embedding (issuerDid, embeddingVector, isForEmptyString, generateEmbedding, updatedAt)
-        VALUES (?, ?, ?, ?, datetime())
-        ON CONFLICT(issuerDid) DO UPDATE SET
-          embeddingVector = excluded.embeddingVector,
-          isForEmptyString = excluded.isForEmptyString,
-          generateEmbedding = excluded.generateEmbedding,
-          updatedAt = datetime()
-        WHERE issuerDid = ?`
-      partnerDb.run(stmt, [issuerDid, embeddingVector, isForEmptyString ? 1 : 0, generateEmbedding ? 1 : 0, issuerDid], function(err) {
+      partnerDb.run("DELETE FROM user_profile WHERE issuerDid = ?", [issuerDid], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -625,56 +608,37 @@ class PartnerDatabase {
   }
 
   /**
-   * Check whether a user profile has an embedding generated, and whether it's for an empty string.
-   * @param {string} issuerDid - user_profile.issuerDid
-   * @returns {Promise<{hasEmbedding: boolean, isForEmptyString: boolean|null}>}
+   * Text of every profile, for computing embeddings.
+   * @returns {Promise<Array<{rowid: number, description: string}>>}
    */
-  profileEmbeddingWithoutVector(issuerDid) {
+  profilesAllDescriptions() {
     return new Promise((resolve, reject) => {
-      partnerDb.get(
-        "SELECT generateEmbedding, isForEmptyString FROM user_profile_embedding WHERE issuerDid = ? LIMIT 1",
-        [issuerDid],
-        function(err, row) {
-          if (err) {
-            reject(err)
-          } else {
-            if (row) {
-              row.generateEmbedding = util.booleanify(row.generateEmbedding)
-              row.isForEmptyString = util.booleanify(row.isForEmptyString)
-            }
-            resolve(row)
-          }
+      partnerDb.all("SELECT rowid, description FROM user_profile", [], function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
         }
-      )
+      })
     })
   }
 
-
-
   /**
-   * Get embeddings for multiple profiles
-   * @param {string[]} issuerDids - array of user_profile.issuerDid
-   * @returns {Promise<Array<{issuerDid: string, embeddingVector: string}>>}
+   * All profile IDs with either location inside the bounding box.
+   * @returns {Promise<number[]>}
    */
-  profileEmbeddingsGetByIssuerDids(issuerDids) {
-    if (!issuerDids || issuerDids.length === 0) {
-      return Promise.resolve([])
-    }
-    const placeholders = issuerDids.map(() => '?').join(',')
+  profileRowIdsByLocation(minLat, minLon, maxLat, maxLon) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        `SELECT issuerDid, embeddingVector, isForEmptyString, updatedAt FROM user_profile_embedding WHERE issuerDid IN (${placeholders})`,
-        issuerDids,
+        `SELECT rowid FROM user_profile
+         WHERE (locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?)
+            OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?)`,
+        [minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon],
         function(err, rows) {
           if (err) {
             reject(err)
           } else {
-            rows = rows.map(row => {
-              row.isForEmptyString = util.booleanify(row.isForEmptyString)
-              row.updatedAt = util.isoAndZonify(row.updatedAt)
-              return row
-            })
-            resolve(rows || [])
+            resolve(rows.map(row => row.rowid))
           }
         }
       )
@@ -682,14 +646,42 @@ class PartnerDatabase {
   }
 
   /**
-   * Delete embedding when profile has generateEmbedding set to false or profile is deleted
-   * @param {string} issuerDid - user_profile.issuerDid
-   * @returns {Promise<number>} number of rows deleted
+   * @param {number[]} rowIds
+   * @returns {Promise<Array>} profiles, in no particular order
    */
-  profileEmbeddingDeleteByIssuerDid(issuerDid) {
+  async profilesByRowIds(rowIds) {
+    const rows = await allInChunks(
+      rowIds,
+      (placeholders) => `SELECT rowid, issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2
+                         FROM user_profile WHERE rowid IN (${placeholders})`
+    )
+    return rows.map(row => {
+      row.rowId = row.rowid
+      row.updatedAt = util.isoAndZonify(row.updatedAt)
+      return row
+    })
+  }
+
+  /****************************************************************
+   * Embeddings (for semantic matching)
+   *
+   * subjectType is 'profile' (subjectId = user_profile.rowid as text)
+   * or 'plan' (subjectId = plan_claim.handleId in the main DB).
+   **/
+
+  /**
+   * @param {Buffer} vector - float32 little-endian bytes
+   */
+  embeddingUpsert(subjectType, subjectId, embeddingSpecId, contentHash, vector) {
     return new Promise((resolve, reject) => {
-      const stmt = "DELETE FROM user_profile_embedding WHERE issuerDid = ?"
-      partnerDb.run(stmt, [issuerDid], function(err) {
+      const stmt = `
+        INSERT INTO embedding (subjectType, subjectId, embeddingSpecId, chunkIndex, contentHash, vector, updatedAt)
+        VALUES (?, ?, ?, 0, ?, ?, datetime())
+        ON CONFLICT(subjectType, subjectId, embeddingSpecId, chunkIndex) DO UPDATE SET
+          contentHash = excluded.contentHash,
+          vector = excluded.vector,
+          updatedAt = datetime()`
+      partnerDb.run(stmt, [subjectType, String(subjectId), embeddingSpecId, contentHash, vector], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -700,29 +692,144 @@ class PartnerDatabase {
   }
 
   /**
-   * Get admitted group members with profiles for matching; uses left-outer-join on
-   * user_profile_embedding so members without an embedding row are included with
-   * embeddingVector null.
-   * @param {number} groupId - group_onboard.rowid
-   * @returns {Promise<Array<{rowId: number, issuerDid: string, content: string, description: string, embeddingVector: string|null, isForEmptyString: boolean}>>}
+   * Delete a subject's vectors under every spec.
+   * @returns {Promise<number>} number of rows deleted
    */
-  groupMembersPlusEmbeddings(groupId) {
+  embeddingDeleteBySubject(subjectType, subjectId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.run(
+        "DELETE FROM embedding WHERE subjectType = ? AND subjectId = ?",
+        [subjectType, String(subjectId)],
+        function(err) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(this.changes)
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * @returns {Promise<Map<string, string>>} subjectId -> contentHash
+   */
+  embeddingHashes(subjectType, embeddingSpecId) {
     return new Promise((resolve, reject) => {
       partnerDb.all(
-        `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description, e.embeddingVector, e.isForEmptyString
+        "SELECT subjectId, contentHash FROM embedding WHERE subjectType = ? AND embeddingSpecId = ? AND chunkIndex = 0",
+        [subjectType, embeddingSpecId],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(new Map(rows.map(row => [row.subjectId, row.contentHash])))
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * Vectors for the given subjects, or for all subjects of the type when subjectIds is null.
+   * @param {string[]|null} subjectIds
+   * @returns {Promise<Array<{subjectId: string, chunkIndex: number, contentHash: string, vector: Buffer}>>}
+   */
+  embeddingsBySubjects(subjectType, embeddingSpecId, subjectIds) {
+    const columns = "subjectId, chunkIndex, contentHash, vector"
+    if (subjectIds == null) {
+      return new Promise((resolve, reject) => {
+        partnerDb.all(
+          `SELECT ${columns} FROM embedding WHERE subjectType = ? AND embeddingSpecId = ?`,
+          [subjectType, embeddingSpecId],
+          function(err, rows) {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(rows)
+            }
+          }
+        )
+      })
+    }
+    return allInChunks(
+      subjectIds.map(String),
+      (placeholders) => `SELECT ${columns} FROM embedding
+                         WHERE subjectType = ? AND embeddingSpecId = ? AND subjectId IN (${placeholders})`,
+      [subjectType, embeddingSpecId]
+    )
+  }
+
+  /**
+   * One page of vectors ordered by subjectId (text order).
+   * @param {string[]|null} subjectIds - restrict to these, or null for all
+   * @param {string} afterId - return only subjectIds after this one
+   * @returns {Promise<{data: Array<{subjectId, chunkIndex, contentHash, vector}>, hitLimit: boolean}>}
+   */
+  async embeddingsPaged(subjectType, embeddingSpecId, subjectIds, afterId, limit) {
+    let rows
+    if (subjectIds == null) {
+      rows = await new Promise((resolve, reject) => {
+        partnerDb.all(
+          `SELECT subjectId, chunkIndex, contentHash, vector FROM embedding
+           WHERE subjectType = ? AND embeddingSpecId = ? AND subjectId > ?
+           ORDER BY subjectId, chunkIndex LIMIT ${limit}`,
+          [subjectType, embeddingSpecId, afterId || ''],
+          function(err, result) {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(result)
+            }
+          }
+        )
+      })
+    } else {
+      // compare as text, like the SQL above, so paging works the same either way
+      const pageIds = subjectIds.map(String).filter(id => id > (afterId || '')).sort().slice(0, limit)
+      rows = await this.embeddingsBySubjects(subjectType, embeddingSpecId, pageIds)
+      rows.sort((a, b) => (a.subjectId < b.subjectId ? -1 : a.subjectId > b.subjectId ? 1 : a.chunkIndex - b.chunkIndex))
+    }
+    return { data: rows, hitLimit: rows.length === limit }
+  }
+
+  /**
+   * @returns {Promise<Array<{subjectType: string, count: number}>>}
+   */
+  embeddingCounts(embeddingSpecId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        "SELECT subjectType, COUNT(*) AS count FROM embedding WHERE embeddingSpecId = ? GROUP BY subjectType",
+        [embeddingSpecId],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows)
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * Admitted group members with their profiles, for matching. Members without a
+   * profile have null rowId and description.
+   * @param {number} groupId - group_onboard.rowid
+   * @returns {Promise<Array<{rowId: number|null, issuerDid: string, content: string, description: string|null}>>}
+   */
+  groupMembersWithProfiles(groupId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description
          FROM group_onboard_member m
          LEFT JOIN user_profile p ON m.issuerDid = p.issuerDid
-         LEFT JOIN user_profile_embedding e ON p.issuerDid = e.issuerDid
          WHERE m.groupId = ? AND m.admitted = 1`,
         [groupId],
         function(err, rows) {
           if (err) {
             reject(err)
           } else {
-            rows = rows.map(row => {
-              row.isForEmptyString = util.booleanify(row.isForEmptyString)
-              return row
-            })
             resolve(rows || [])
           }
         }

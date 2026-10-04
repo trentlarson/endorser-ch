@@ -5,6 +5,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.5] - unreleased
+### Added
+- Semantic matching of profiles and projects with an open-weight embedding model run on this server (Granite-Embedding-311M-Multilingual-R2, Apache-2.0), so clients can reproduce the vectors and no profile text goes to a third party
+- Every profile is embedded when saved; a periodic sweep embeds plans, and retries anything that failed
+- `GET /api/partner/similar` to find profiles and projects close to a profile, a project, or free text, optionally within a bounding box
+- `GET /api/partner/embeddingSpecs` and `GET /api/partner/embeddings` so clients can fetch vectors and match on the device
+- `GET` and `POST /api/partner/embeddingSweep` for admins to see and start the sweep
+### Changed
+- Meeting matching (`groupOnboardMatch`) uses the new vectors; members without profile text are paired after everyone else, with a null similarity (they used to share one "empty" vector and score 1.0 against each other)
+- `GET /api/partner/userProfileEmbeddingMetadata/:issuerDid` returns `embeddingSpecId` and `hasCurrentEmbedding`
+- `GET /api/partner/userProfileForIssuer/:issuerDid` no longer has `generateEmbedding`, and gives admins a 404 for a profile they cannot see, like everyone else
+### Removed
+- `PUT /api/partner/userProfileGenerateEmbedding/:issuerDid` and the OpenAI embeddings
+### Changed in DB or environment
+- Back up the partner DB, then run its Flyway migration as well as the main one (see README). V7 creates `embedding`, drops `user_profile_embedding` and the hand-made `empty_embedding_vector`, and clears `group_onboard.previousMatches`. Rolling back to an earlier version requires restoring that backup, since earlier versions read `user_profile_embedding`.
+- The Docker image is Debian-based (glibc) because onnxruntime has no Alpine (musl) build.
+- Manual step on each host, before starting the new image: fill the model directory (about 320 MB; it only verifies when the files are already there):
+  `sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=/mnt/models endorser-ch:amd-$ENDORSER_VERSION npm run embedding:fetch-model`
+- Run the container with `-v ~/endorser-ch-models:/mnt/models:ro -e EMBEDDING_MODEL_DIR=/mnt/models -e EMBEDDING_ALLOW_REMOTE_MODELS=false` (see README).
+- The first startup embeds every profile and plan; watch `GET /api/partner/embeddingSweep` (as an admin) until `lastFinishedAt` is set and `lastError` is null.
+- Optional: `EMBEDDING_SWEEP_INTERVAL_MINUTES` (default 60), `EMBEDDING_QUERY_MAX_PER_MINUTE` (default 20), `EMBEDDING_ARTIFACT_BASE_URL`, `EMBEDDING_SPEC_ID`
+- `OPENAI_API_KEY` is no longer used.
+
+
 ## [4.4.3] - 2026.09.21
 ### Fixed
 - Incorrect project ID accepted & saved when recording a recipient from a project

@@ -18,48 +18,35 @@ const expect = chai.expect;
  */
 
 // ============================================================================
-// Test Data - Sample Profile Embeddings
+// Test Data - Sample Profile Vectors
 // ============================================================================
-// Note: These are simplified 10-dimensional vectors for quick testing.
-// Real embeddings are 1536 dimensions from OpenAI's text-embedding-3-small model.
-// 
-// To generate real embeddings:
-//   1. Set OPENAI_API_KEY environment variable
-//   2. Run: node test/embeddings-generator.js
-//   3. Real embeddings will be loaded from embeddings.json
+// test/embedding-eval/test-vectors.json holds the production engine's vectors
+// for the test profiles (regenerate with: npm run embedding:test-vectors).
+// Profiles with empty text have no vector, as in production.
 //
-// Or generate on-the-fly in tests:
-//   const embedding = await generateEmbedding(profile.Text);
+// Similarity bounds below are specific to the default spec, whose scores sit in
+// a narrow band (unrelated pairs ~0.77, strong ~0.87), so they are anchored to
+// two measured cuts rather than to round numbers.
 
-// Try to load real embeddings if available
-let testProfiles;
-let embeddingMeta = null;
-try {
-  const fs = require('fs');
-  const path = require('path');
-  const embeddingsPath = path.join(__dirname, 'embeddings.json');
+const { base64ToVector } = require("../src/api/services/embedding-engine.js");
+const { activeEmbeddingSpec } = require("../src/api/services/embedding-specs.js");
 
-  if (fs.existsSync(embeddingsPath)) {
-    const embeddingsJson = fs.readFileSync(embeddingsPath, 'utf8');
-    const embeddingsFile = JSON.parse(embeddingsJson);
-    
-    // Extract metadata and data
-    embeddingMeta = embeddingsFile.meta;
-    const raw = embeddingsFile.data;
-    // Ensure each profile has issuerDid (matching.service uses issuerDid)
-    testProfiles = Object.fromEntries(
-      Object.entries(raw).map(([k, v]) => [k, { ...v, issuerDid: v.issuerDid ?? v.id }])
-    );
-    
-    console.log(`✓ Using real embeddings from ${embeddingMeta.model} (${embeddingMeta.dimensions}D) via ${embeddingMeta.modelProvider}`);
-  } else {
-    throw new Error('File not found');
-  }
-} catch (e) {
-  // Fall back to simplified embeddings
-  console.log('⚠️ Embeddings file not found so tests will fail');
-  throw e;
-}
+const vectorsFile = require("./embedding-eval/test-vectors.json");
+const embeddingMeta = vectorsFile.meta;
+const testProfiles = Object.fromEntries(
+  Object.entries(vectorsFile.data).map(([k, v]) => {
+    const embedding = v.vector ? base64ToVector(v.vector) : null;
+    return [k, { ...v, issuerDid: v.id, embedding, vectors: embedding ? [embedding] : [] }];
+  })
+);
+
+const MATCHING_SPEC = activeEmbeddingSpec().matching;
+// best cut between strong and unrelated pairs on the evaluation corpus (results.md)
+const STRONG_CUT = 0.82;
+// matching default: most unrelated pairs fall below it
+const MINIMUM = MATCHING_SPEC.minimumSimilarity;
+
+const match = (participants, ...constraints) => matchParticipants(participants, MATCHING_SPEC, ...constraints);
 
 // ============================================================================
 // Unit Tests
@@ -69,14 +56,10 @@ describe('P3 - Vector Similarity Foundation', () => {
   
   describe('Embedding Metadata', () => {
     
-    it('should have loaded embedding metadata', () => {
-      if (embeddingMeta) {
-        expect(embeddingMeta).to.have.property('modelProvider');
-        expect(embeddingMeta).to.have.property('model');
-        console.log(`    ✓ Using embeddings from: ${embeddingMeta.model} (${embeddingMeta.dimensions}D)`);
-      } else {
-        console.log('    ⚠️ No embedding metadata found (using fallback embeddings)');
-      }
+    it('should have vectors from the active embedding spec', () => {
+      expect(embeddingMeta.embeddingSpecId).to.equal(activeEmbeddingSpec().embeddingSpecId);
+      expect(testProfiles.agriculture1.embedding).to.have.length(embeddingMeta.dimensions);
+      expect(testProfiles.empty1?.embedding ?? null).to.equal(null);
     });
   });
   
@@ -141,15 +124,16 @@ describe('P3 - Vector Similarity Foundation', () => {
       console.log('\n  === MATCHING ROUND 1 (Highest Similarity Pairings) ===');
       console.log(`  Total participants: ${allParticipants.length}\n`);
       
-      const result = matchParticipants(allParticipants);
+      const result = match(allParticipants);
       
       // Display all pairs sorted by similarity (highest first)
-      const sortedPairs = [...result.pairs].sort((a, b) => b.similarity - a.similarity);
+      // pairs without a similarity (members with no vector) come last
+      const sortedPairs = [...result.pairs].sort((a, b) => (b.similarity ?? -2) - (a.similarity ?? -2));
       
       sortedPairs.forEach((pair, index) => {
         const [p1, p2] = pair.participants;
         console.log(`  Pair ${pair.pairNumber}: ${p1.name} ↔ ${p2.name}`);
-        console.log(`    Similarity: ${pair.similarity.toFixed(3)}`);
+        console.log(`    Similarity: ${pair.similarity == null ? 'none (no vector)' : pair.similarity.toFixed(3)}`);
         console.log(`    ${p1.name}: "${p1.profileText.substring(0, 60)}${p1.profileText.length > 60 ? '...' : ''}"`);
         console.log(`    ${p2.name}: "${p2.profileText.substring(0, 60)}${p2.profileText.length > 60 ? '...' : ''}"`);
         console.log('');
@@ -161,11 +145,11 @@ describe('P3 - Vector Similarity Foundation', () => {
       
       // The highest similarity pair should be quite high
       const highestPair = sortedPairs[0];
-      expect(highestPair.similarity).to.be.above(0.7);
+      expect(highestPair.similarity).to.be.above(STRONG_CUT);
       console.log(`  ✓ Highest similarity: ${highestPair.similarity.toFixed(3)} (${highestPair.participants[0].name} ↔ ${highestPair.participants[1].name})`);
       
       // The lowest should still be reasonable (algorithm picked best available)
-      const lowestPair = sortedPairs[sortedPairs.length - 1];
+      const lowestPair = sortedPairs.filter((pair) => pair.similarity != null).pop();
       console.log(`  ✓ Lowest similarity: ${lowestPair.similarity.toFixed(3)} (${lowestPair.participants[0].name} ↔ ${lowestPair.participants[1].name})`);
       console.log('  === END ROUND 1 ===\n');
     });
@@ -175,7 +159,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.agriculture1.embedding,
         testProfiles.agriculture2.embedding
       );
-      expect(sim).to.be.above(0.79); // Very similar
+      expect(sim).to.be.above(0.9); // Very similar
     });
     
     it('should show high similarity between education profiles', () => {
@@ -183,7 +167,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.homeschool1.embedding,
         testProfiles.teacher1.embedding
       );
-      expect(sim).to.be.above(0.6); // Education-related
+      expect(sim).to.be.above(STRONG_CUT); // Education-related
     });
     
     it('should show high similarity between construction profiles', () => {
@@ -191,7 +175,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.construction1.embedding,
         testProfiles.carpenter1.embedding
       );
-      expect(sim).to.be.above(0.4); // Building-related
+      expect(sim).to.be.above(STRONG_CUT); // Building-related
     });
     
     it('should show high similarity between outdoor adventure profiles', () => {
@@ -199,7 +183,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.hiking1.embedding,
         testProfiles.climber1.embedding
       );
-      expect(sim).to.be.above(0.4); // Outdoor activities
+      expect(sim).to.be.above(STRONG_CUT); // Outdoor activities
     });
     
     it('should show high similarity between tech/software profiles', () => {
@@ -207,7 +191,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.tech.embedding,
         testProfiles.developer1.embedding
       );
-      expect(sim).to.be.above(0.5); // Software development
+      expect(sim).to.be.above(STRONG_CUT); // Software development
     });
     
     it('should show medium similarity between agriculture and environment', () => {
@@ -216,7 +200,8 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.agriculture1.embedding,
         testProfiles.environment.embedding
       );
-      expect(sim).to.be.above(0.4).and.below(0.9);
+      // related, but below the near-duplicate agriculture pair
+      expect(sim).to.be.above(MINIMUM).and.below(0.92);
     });
     
     it('should show medium similarity between community organizing and tech community', () => {
@@ -225,7 +210,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.community.embedding,
         testProfiles.techCommunity.embedding
       );
-      expect(sim).to.be.above(0.5).and.below(0.8);
+      expect(sim).to.be.above(MINIMUM).and.below(0.92);
     });
     
     it('should show low similarity between tech and agriculture', () => {
@@ -234,7 +219,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.agriculture1.embedding,
         testProfiles.tech.embedding
       );
-      expect(sim).to.be.below(0.7);
+      expect(sim).to.be.below(STRONG_CUT);
     });
     
     it('should show low similarity between board games and firearms', () => {
@@ -243,7 +228,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.boardgames1.embedding,
         testProfiles.firearms1.embedding
       );
-      expect(sim).to.be.below(0.6);
+      expect(sim).to.be.below(MINIMUM);
     });
     
     it('should show low similarity between AI research and mushroom cultivation', () => {
@@ -252,7 +237,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.aiResearcher1.embedding,
         testProfiles.mycology1.embedding
       );
-      expect(sim).to.be.below(0.6);
+      expect(sim).to.be.below(MINIMUM);
     });
     
     it('should work with short tech profiles matching longer tech profiles', () => {
@@ -262,7 +247,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.developer1.embedding,
         testProfiles.aiResearcher1.embedding
       );
-      expect(sim).to.be.above(0.35); // Both are software/tech
+      expect(sim).to.be.above(MINIMUM); // Both are software/tech
     });
     
     it('should work with short education profiles matching longer education profiles', () => {
@@ -271,7 +256,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.education1.embedding,
         testProfiles.homeschool1.embedding
       );
-      expect(sim).to.be.above(0.35);
+      expect(sim).to.be.above(MINIMUM);
     });
   });
   
@@ -285,7 +270,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.techCommunity
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       expect(result.pairs).to.have.length(2);
       
@@ -305,7 +290,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.techCommunity
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       // Find the pair with agriculture1
       const agriculturePair = result.pairs.find(pair =>
@@ -333,13 +318,13 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.community
       ];
       
-      expect(() => matchParticipants(participants)).to.throw('You need an even number of participants');
+      expect(() => match(participants)).to.throw('You need an even number of participants');
     });
     
     it('should handle 28 people with 14 pairs', () => {
       const participants = Object.values(testProfiles);
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       expect(result.pairs).to.have.length(14);
       
@@ -352,6 +337,28 @@ describe('P3 - Vector Similarity Foundation', () => {
         });
       });
       expect(usedDids.size).to.equal(28);
+
+      // the two profiles with no text (no vector) are paired with each other, last
+      const lastPair = result.pairs[result.pairs.length - 1];
+      expect(lastPair.participants.map(p => p.name).sort()).to.deep.equal(['Bold Alice', 'Bold Bob']);
+      expect(lastPair.similarity).to.equal(null);
+      result.pairs.slice(0, -1).forEach(pair => expect(pair.similarity).to.be.a('number'));
+    });
+
+    it('should pair a member without a vector with whoever is left over', () => {
+      const participants = [
+        testProfiles.agriculture1,
+        testProfiles.agriculture2,
+        testProfiles.tech,
+        testProfiles.empty1
+      ];
+
+      const result = match(participants);
+
+      expect(result.pairs).to.have.length(2);
+      expect(result.pairs[0].participants.map(p => p.issuerDid).sort()).to.deep.equal(['user-001', 'user-002']);
+      expect(result.pairs[1].participants.map(p => p.name).sort()).to.deep.equal(['A Carol', 'Bold Alice']);
+      expect(result.pairs[1].similarity).to.equal(null);
     });
     
     it('should assign pair numbers sequentially', () => {
@@ -362,7 +369,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.techCommunity
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       const pairNumbers = result.pairs.map(p => p.pairNumber).sort();
       expect(pairNumbers).to.deep.equal([1, 2]);
@@ -382,7 +389,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       // Exclude agriculture1 and agriculture2 from being paired
       const excludedPairDids = [['user-001', 'user-002']];
       
-      const result = matchParticipants(participants, [], excludedPairDids);
+      const result = match(participants, [], excludedPairDids);
       
       // Verify agriculture1 and agriculture2 are NOT paired together
       const hasForbiddenPair = result.pairs.some(pair => {
@@ -404,7 +411,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       // Exclude agriculture1 and agriculture2 from matching (e.g., they're organizers)
       const excludedDids = ['user-001', 'user-002'];
       
-      const result = matchParticipants(participants, excludedDids);
+      const result = match(participants, excludedDids);
       
       // Should only have 2 people in matching (even number)
       const allParticipants = result.pairs.flatMap(pair => pair.participants);
@@ -423,7 +430,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       ];
       
       // First round
-      const round1 = matchParticipants(participants);
+      const round1 = match(participants);
       
       // Extract previous pairs (issuerDids)
       const previousPairDids = round1.pairs.map(pair =>
@@ -431,7 +438,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       );
       
       // Second round - should not repeat any pairs
-      const round2 = matchParticipants(participants, [], [], previousPairDids);
+      const round2 = match(participants, [], [], previousPairDids);
       
       // Verify no pairs are repeated
       round2.pairs.forEach(pair => {
@@ -453,7 +460,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.tech
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       expect(result.pairs).to.have.length(1);
       expect(result.pairs[0].participants).to.have.length(2);
@@ -466,13 +473,13 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.community
       ];
       
-      expect(() => matchParticipants(participants)).to.throw('You need an even number of participants');
+      expect(() => match(participants)).to.throw('You need an even number of participants');
     });
     
     it('should throw error with less than 2 people', () => {
       const participants = [testProfiles.agriculture1];
       
-      expect(() => matchParticipants(participants)).to.throw('You need at least 2 participants');
+      expect(() => match(participants)).to.throw('You need at least 2 participants');
     });
     
     it('should throw error when all pairs are excluded', () => {
@@ -483,7 +490,7 @@ describe('P3 - Vector Similarity Foundation', () => {
       
       const excludedPairDids = [['user-001', 'user-003']];
       
-      expect(() => matchParticipants(participants, [], excludedPairDids))
+      expect(() => match(participants, [], excludedPairDids))
         .to.throw('No more valid pairs');
     });
     
@@ -497,7 +504,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         { ...identicalProfile, id: 'dup-004', issuerDid: 'dup-004' }
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       expect(result.pairs).to.have.length(2);
       // All similarities should be ~1.0
@@ -517,7 +524,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.techCommunity
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       // Calculate average similarity within pairs
       const pairSimilarities = result.pairs.map(pair => pair.similarity);
@@ -554,7 +561,7 @@ describe('P3 - Vector Similarity Foundation', () => {
         testProfiles.tech // Different domain
       ];
       
-      const result = matchParticipants(participants);
+      const result = match(participants);
       
       // Should have 2 pairs
       expect(result.pairs).to.have.length(2);

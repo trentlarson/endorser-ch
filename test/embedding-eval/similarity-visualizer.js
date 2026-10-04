@@ -1,38 +1,26 @@
 /**
- * Interactive Profile Similarity Visualizer
- * 
- * This script:
- * 1. Loads test profile embeddings
- * 2. Calculates pairwise cosine similarities
- * 3. Generates an interactive radial visualization
- * 4. Click any profile to center it and see similarities
- * 
- * Usage:
- *   node test/profile-similarity-visualizer.js
+ * Interactive Similarity Visualizer
+ *
+ * Shows how the active embedding spec relates subjects:
+ * 1. Loads vectors (test-vectors.json, or the whole evaluation corpus with --corpus)
+ * 2. Calculates pairwise similarities
+ * 3. Writes an interactive radial visualization; click a subject to center it
+ *
+ * Usage (from the repo root):
+ *   npm run embedding:visualize                                    # test profiles -> similarities.html
+ *   pkgx node test/embedding-eval/similarity-visualizer.js --corpus  # corpus -> corpus-similarities.html
+ *
+ * Radial distances and table colors are scaled to the range of similarities
+ * shown, since each model has its own baseline (see results.md).
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs = require('fs')
+const path = require('path')
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const engine = require('../../src/api/services/embedding-engine')
+const { activeEmbeddingSpec } = require('../../src/api/services/embedding-specs')
 
-const EMBEDDINGS_FILE = 'embeddings.json';
 const PRINT_SIMILARITIES = false;
-
-// ============================================================================
-// Vector Math Functions
-// ============================================================================
-
-function cosineSimilarity(vec1, vec2) {
-  const dot = vec1.reduce((sum, val, i) => sum + val * vec2[i], 0);
-  const mag1 = Math.sqrt(vec1.reduce((sum, val) => sum + val * val, 0));
-  const mag2 = Math.sqrt(vec2.reduce((sum, val) => sum + val * val, 0));
-  
-  if (mag1 === 0 || mag2 === 0) return 0;
-  return dot / (mag1 * mag2);
-}
 
 /**
  * Two-letter abbreviation for a name: first letter of first two words, or first two chars if one word.
@@ -49,62 +37,27 @@ function twoLetterAbbrev(name) {
 }
 
 // ============================================================================
-// Radial Layout Calculation
-// ============================================================================
-
-/**
- * Calculate radial positions around a center profile based on similarity
- * @param {number} centerIndex - Index of the profile in the center
- * @param {number[][]} similarities - Similarity matrix
- * @param {number} maxRadius - Maximum radius for the least similar profile
- * @returns {Array} - Array of {x, y, similarity} coordinates
- */
-function calculateRadialLayout(centerIndex, similarities, maxRadius = 180) {
-  const n = similarities.length;
-  const positions = [];
-  
-  // Get similarities for all other profiles
-  const others = [];
-  for (let i = 0; i < n; i++) {
-    if (i !== centerIndex) {
-      others.push({
-        index: i,
-        similarity: similarities[centerIndex][i]
-      });
-    }
-  }
-  
-  // Sort by similarity (most similar first) for better visual distribution
-  others.sort((a, b) => b.similarity - a.similarity);
-  
-  // Distribute profiles evenly in a circle, with distance based on similarity
-  const angleStep = (2 * Math.PI) / others.length;
-  
-  others.forEach((other, i) => {
-    const angle = i * angleStep;
-    // Distance inversely proportional to similarity
-    // similarity 1.0 = minRadius (60px), similarity 0.0 = maxRadius (180px)
-    const minRadius = 60;
-    const distance = maxRadius - (other.similarity * (maxRadius - minRadius));
-    
-    positions[other.index] = {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-      similarity: other.similarity
-    };
-  });
-  
-  // Center profile at origin
-  positions[centerIndex] = { x: 0, y: 0, similarity: 1.0 };
-  
-  return positions;
-}
-
-// ============================================================================
 // Visualization Functions
 // ============================================================================
 
-function generateInteractiveHTML(profiles, similarities) {
+/**
+ * @param {Array<{name, profileText}>} profiles
+ * @param {number[][]} similarities
+ * @param {string} title
+ */
+function generateInteractiveHTML(profiles, similarities, title) {
+  // off-diagonal range and quantiles, for scaling distances and colors
+  const offDiagonal = [];
+  for (let i = 0; i < similarities.length; i++) {
+    for (let j = i + 1; j < similarities.length; j++) {
+      offDiagonal.push(similarities[i][j]);
+    }
+  }
+  offDiagonal.sort((a, b) => a - b);
+  const quantile = (q) => offDiagonal[Math.min(offDiagonal.length - 1, Math.floor(q * offDiagonal.length))];
+  const scale = { lo: offDiagonal[0], hi: offDiagonal[offDiagonal.length - 1] };
+  const [q95, q85, q70, q55, q40, q25, q10] = [0.95, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1].map(quantile);
+
   // Serialize the data for JavaScript (include two-letter abbrev for labels)
   const profilesData = JSON.stringify(profiles.map((p, i) => ({
     name: p.name,
@@ -121,13 +74,14 @@ function generateInteractiveHTML(profiles, similarities) {
     const cells = profiles.map((p2, j) => {
       if (i >= j) return '<td></td>';
       const sim = similarities[i][j];
-      const color = sim > 0.9 ? '#16a34a' :  // Dark green
-                    sim > 0.8 ? '#4ade80' :  // Medium green
-                    sim > 0.7 ? '#86efac' :  // Light green
-                    sim > 0.6 ? '#bbf7d0' :  // Very light green
-                    sim > 0.5 ? '#fde047' :  // Light yellow
-                    sim > 0.4 ? '#fb923c' :  // Orange
-                    sim > 0.3 ? '#f97316' :  // Dark orange
+      // colored by rank among all pairs shown: top 5% dark green ... bottom 10% red
+      const color = sim >= q95 ? '#16a34a' :  // Dark green
+                    sim >= q85 ? '#4ade80' :  // Medium green
+                    sim >= q70 ? '#86efac' :  // Light green
+                    sim >= q55 ? '#bbf7d0' :  // Very light green
+                    sim >= q40 ? '#fde047' :  // Light yellow
+                    sim >= q25 ? '#fb923c' :  // Orange
+                    sim >= q10 ? '#f97316' :  // Dark orange
                     '#f87171';               // Red
       return `<td style="background: ${color}">${sim.toFixed(3)}</td>`;
     }).join('');
@@ -142,7 +96,7 @@ function generateInteractiveHTML(profiles, similarities) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Interactive Profile Similarity Visualization</title>
+  <title>Similarity Explorer</title>
   <style>
     * {
       margin: 0;
@@ -365,7 +319,7 @@ function generateInteractiveHTML(profiles, similarities) {
 <body>
   <div class="header">
     <h1>🔍 Interactive Profile Similarity Explorer</h1>
-    <p class="subtitle">Click any profile to explore its relationships • Hover to see details</p>
+    <p class="subtitle">${title} • Click any profile to explore its relationships • Hover to see details</p>
   </div>
   
   <div class="main-container">
@@ -440,6 +394,9 @@ function generateInteractiveHTML(profiles, similarities) {
     // Data from Node.js
     const profiles = ${profilesData};
     const similarities = ${similaritiesData};
+    // similarity range shown, so distances spread over the radius whatever the model's baseline
+    const scale = ${JSON.stringify(scale)};
+    const scaled = (sim) => (scale.hi > scale.lo ? (sim - scale.lo) / (scale.hi - scale.lo) : 1);
     
     // State
     let currentCenter = 0;
@@ -494,7 +451,7 @@ function generateInteractiveHTML(profiles, similarities) {
       
       others.forEach((other, i) => {
         const angle = i * angleStep - Math.PI / 2; // Start from top
-        const distance = maxRadius - (other.similarity * (maxRadius - minRadius));
+        const distance = maxRadius - (scaled(other.similarity) * (maxRadius - minRadius));
         
         positions[other.index] = {
           x: centerX + Math.cos(angle) * distance,
@@ -690,34 +647,51 @@ function generateInteractiveHTML(profiles, similarities) {
 // Main Execution
 // ============================================================================
 
-async function main() {
-  // Load embeddings
-  const embeddingsPath = path.join(__dirname, EMBEDDINGS_FILE);
-  
-  if (!fs.existsSync(embeddingsPath)) {
-    console.error('❌ ${EMBEDDINGS_FILE} not found!');
-    console.error('   Run: node test/embeddings-generator.js');
-    process.exit(1);
+/**
+ * @returns {Promise<{subjects: Array<{name, profileText, vector}>, label: string, outputFile: string}>}
+ */
+async function loadSubjects(useCorpus) {
+  const spec = activeEmbeddingSpec();
+  if (useCorpus) {
+    const corpus = JSON.parse(fs.readFileSync(path.join(__dirname, 'corpus.json'), 'utf8'));
+    const subjects = [];
+    for (const subject of corpus.subjects) {
+      const input = engine.subjectText(spec, subject.type, subject);
+      const [vector] = await engine.embedTexts(spec, [input]);
+      // drop the type prefix (eg. 'profile:') so the two-letter labels differ
+      subjects.push({ name: subject.id.replace(/^[a-z]+:/, ''), profileText: input, vector });
+    }
+    return { subjects, label: `corpus.json, ${spec.embeddingSpecId}`, outputFile: 'corpus-similarities.html' };
   }
-  
-  const embeddingsFile = JSON.parse(fs.readFileSync(embeddingsPath, 'utf8'));
-  const profiles = Object.values(embeddingsFile.data);
-  
-  console.log(`\n📊 Analyzing ${profiles.length} profiles...\n`);
-  
-  // Step 1: Calculate all pairwise similarities
+  const file = path.join(__dirname, 'test-vectors.json');
+  if (!fs.existsSync(file)) {
+    throw new Error('test-vectors.json not found; run: npm run embedding:test-vectors');
+  }
+  const vectorsFile = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const all = Object.values(vectorsFile.data);
+  const withoutVectors = all.filter((p) => !p.vector).map((p) => p.name);
+  if (withoutVectors.length > 0) {
+    console.log(`Skipping profiles with no text (no vector): ${withoutVectors.join(', ')}`);
+  }
+  const subjects = all.filter((p) => p.vector).map((p) => ({ ...p, vector: engine.base64ToVector(p.vector) }));
+  return { subjects, label: `test-vectors.json, ${vectorsFile.meta.embeddingSpecId}`, outputFile: 'similarities.html' };
+}
+
+async function main() {
+  const { subjects: profiles, label, outputFile } = await loadSubjects(process.argv.includes('--corpus'));
+
+  console.log(`\n📊 Analyzing ${profiles.length} subjects (${label})...\n`);
+
+  // Step 1: Calculate all pairwise similarities (vectors are normalized, so dot = cosine)
   const n = profiles.length;
   const similarities = Array(n).fill().map(() => Array(n).fill(0));
-  
-  console.log('Pairwise Cosine Similarities:');
-  console.log('─'.repeat(60));
-  
+
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       if (i === j) {
         similarities[i][j] = 1.0;
       } else if (i < j) {
-        const sim = cosineSimilarity(profiles[i].embedding, profiles[j].embedding);
+        const sim = engine.dot(profiles[i].vector, profiles[j].vector);
         similarities[i][j] = sim;
         similarities[j][i] = sim;
         if (PRINT_SIMILARITIES) {
@@ -726,19 +700,15 @@ async function main() {
       }
     }
   }
-  
-  console.log('─'.repeat(60));
-  
+
   // Step 2: Generate interactive HTML visualization
-  console.log('\n📊 Generating interactive visualization...\n');
-  const htmlViz = generateInteractiveHTML(profiles, similarities);
-  
-  const outputPath = path.join(__dirname, 'profile-similarities.html');
+  const htmlViz = generateInteractiveHTML(profiles, similarities, label);
+  const outputPath = path.join(__dirname, outputFile);
   fs.writeFileSync(outputPath, htmlViz);
-  
-  console.log(`\n✅ Interactive visualization saved to: ${outputPath}`);
+
+  console.log(`✅ Interactive visualization saved to: ${path.relative(process.cwd(), outputPath)}`);
   console.log(`   Open it in your browser and click any profile to explore!\n`);
-  
+
   // Summary statistics
   const allSimilarities = [];
   for (let i = 0; i < n; i++) {
@@ -746,11 +716,11 @@ async function main() {
       allSimilarities.push(similarities[i][j]);
     }
   }
-  
+
   const avgSim = allSimilarities.reduce((a, b) => a + b, 0) / allSimilarities.length;
   const maxSim = Math.max(...allSimilarities);
   const minSim = Math.min(...allSimilarities);
-  
+
   console.log('📈 Similarity Statistics:');
   console.log('─'.repeat(60));
   console.log(`  Average: ${avgSim.toFixed(3)}`);
@@ -760,14 +730,8 @@ async function main() {
   console.log('─'.repeat(60));
 }
 
-// Run
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
-    console.error('\n❌ Error:', error.message);
-    console.error(error.stack);
-    process.exit(1);
-  });
-}
-
-export { cosineSimilarity, calculateRadialLayout, twoLetterAbbrev };
-
+main().catch((error) => {
+  console.error('\n❌ Error:', error.message);
+  console.error(error.stack);
+  process.exitCode = 1;
+});

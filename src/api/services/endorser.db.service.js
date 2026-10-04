@@ -2649,6 +2649,42 @@ class EndorserDatabase {
   }
 
   /**
+   * Name and description of every plan, for computing embeddings (partner service).
+   * @returns {Promise<Array<{handleId: string, name: string, description: string}>>}
+   */
+  plansAllNamesDescriptions() {
+    return new Promise((resolve, reject) => {
+      db.all("SELECT handleId, name, description FROM plan_claim WHERE handleId IS NOT NULL", [], function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
+        }
+      })
+    })
+  }
+
+  /**
+   * All plan handle IDs located inside the bounding box.
+   * @returns {Promise<string[]>}
+   */
+  planHandleIdsByLocation(minLat, maxLat, minLon, maxLon) {
+    return new Promise((resolve, reject) => {
+      db.all(
+        "SELECT handleId FROM plan_claim WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?) AND handleId IS NOT NULL",
+        [minLat, maxLat, minLon, maxLon],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows.map(row => row.handleId))
+          }
+        }
+      )
+    })
+  }
+
+  /**
    See tableEntriesByParamsPaged
    Returns Promise of { data: [], hitLimit: true|false }
    **/

@@ -33,7 +33,7 @@ describe('P4 - Group Onboard Matching API', () => {
   let groupId;
   let member1Id, member2Id, member3Id, member4Id;
 
-  // Set up admin user for embedding generation
+  // Set up admin user
   const adminDid = creds[0].did;
   
   before(() => {
@@ -62,27 +62,7 @@ describe('P4 - Group Onboard Matching API', () => {
         });
     });
 
-    it('should enable embedding generation for test users (which fails without OPENAI_API_KEY)', async function () {
-      if (!process.env.OPENAI_API_KEY) {
-        console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
-        this.skip()
-      }
-
-      // Enable embeddings for users 1-4
-      for (let i = 1; i <= 4; i++) {
-        const response = await request(Server)
-          .put(`/api/partner/userProfileGenerateEmbedding/${creds[i].did}`)
-          .set('Authorization', 'Bearer ' + pushTokens[0]);
-        expect(response.status).to.equal(200);
-      }
-    }).timeout(5000);
-
-    it('should create profiles for users 1-4 (which fails without OPENAI_API_KEY)', async function () {
-      if (!process.env.OPENAI_API_KEY) {
-        console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
-        this.skip()
-      }
-
+    it('should create profiles for users 1-4, which embeds them', async function () {
       const profiles = [
         { index: 1, description: 'Passionate about organic farming and sustainable agriculture. Love growing vegetables and teaching others about permaculture.' },
         { index: 2, description: 'Small-scale farmer focusing on regenerative agriculture practices. Interested in composting and soil health.' },
@@ -106,8 +86,9 @@ describe('P4 - Group Onboard Matching API', () => {
             locLon: existingProfile?.locLon ?? null
           });
         expect(response.status).to.equal(201);
+        expect(response.body.userMessage).to.be.undefined; // embedded
       }
-    }).timeout(5000);
+    }).timeout(30000);
 
     it('should join group and admit members', async () => {
       // Member 1 joins
@@ -418,10 +399,18 @@ describe('P4 - Group Onboard Matching API', () => {
           const pairs = r.body.data.pairs;
           
           pairs.forEach(pair => {
-            // Cosine similarity should be between -1 and 1
-            expect(pair.similarity).to.be.at.least(-1);
-            expect(pair.similarity).to.be.at.most(1);
+            if (pair.participants.every(p => p.description)) {
+              // Cosine similarity should be between -1 and 1
+              expect(pair.similarity).to.be.at.least(-1);
+              expect(pair.similarity).to.be.at.most(1);
+            } else {
+              // someone without a profile (here the organizer) has no vector, so no score
+              expect(pair.similarity).to.equal(null);
+            }
           });
+          // the organizer has no profile at this point, so is paired last
+          const organizerPair = pairs.find(pair => pair.participants.some(p => p.issuerDid === creds[0].did));
+          expect(organizerPair.pairNumber).to.equal(pairs.length);
         });
     });
 

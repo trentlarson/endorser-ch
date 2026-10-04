@@ -626,129 +626,73 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
-  describe('P2 - Generate Embeddings Flag (Admin Only)', () => {
-    // Set up admin user for these tests
-    // Use creds[0] as admin, creds[1] as user with profile, creds[4] as user without profile
+  describe('P2 - Profile Embedding Metadata', () => {
+    // creds[0] is admin, creds[1] has a profile, creds[4] has none, creds[5] cannot see creds[1]
     const adminDid = creds[0].did
     const userWithProfileDid = creds[1].did
     const userWithoutProfileDid = creds[4].did
-    const nonAdminDid = creds[2].did
 
-    // Set ADMIN_USERS environment variable before tests
     before(() => {
-      // Store original value
       process.env.ADMIN_DIDS = JSON.stringify([adminDid])
     })
 
     after(() => {
-      // Clean up
       delete process.env.ADMIN_DIDS
     })
 
     it('should reject request without valid JWT', () => {
       return request(Server)
-        .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
-        // No Authorization header
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
         .then(r => {
-          expect(r.status).to.equal(400) // Bad request - missing auth token
-          expect(r.body.error).to.contain("must include a valid Authorization JWT")
+          expect(r.status).to.equal(401)
         })
     })
 
-    it('should reject non-admin user attempting to set generateEmbeddings flag', () => {
+    it('shows the owner that their profile has a current embedding', () => {
       return request(Server)
-        .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
-        .set('Authorization', 'Bearer ' + pushTokens[2]) // non-admin user
-        .then(r => {
-          expect(r.status).to.equal(403)
-          expect(r.body.error).to.contain("Only permissioned users can update the generateEmbedding flag")
-        })
-    })
-
-    it('should allow admin to set generateEmbeddings flag for user without profile', () => {
-      // First verify the user does not have a profile
-      return request(Server)
-        .get('/api/partner/userProfileForIssuer/' + userWithoutProfileDid)
-        .set('Authorization', 'Bearer ' + pushTokens[4])
-        .then(r => {
-          expect(r.status).to.equal(404) // No profile exists
-          
-          // Now set the flag as admin - this should create a profile
-          return request(Server)
-            .put('/api/partner/userProfileGenerateEmbedding/' + userWithoutProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin user
-        })
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.success).to.exist
-          expect(r.body.success.generateEmbedding).to.equal(true)
-          
-          // admin can see the metadata for the profile embedding
-          return request(Server)
-            .get('/api/partner/userProfileEmbeddingMetadata/' + userWithoutProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[0])
-        })
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.data.generateEmbedding).to.equal(true)
-          expect(r.body.data.isForEmptyString).to.equal(true)
-
-          // even though the metadata exists, the profile still does not exist
-          return request(Server)
-            .get('/api/partner/userProfileForIssuer/' + userWithoutProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[4])
-        })
-        .then(r => {
-          expect(r.status).to.equal(404)
-        })
-        .catch(err => {
-          return Promise.reject(err)
-        });
-    })
-
-    it('should allow admin to set generateEmbeddings flag for user with profile (which fails without OPENAI_API_KEY)', function () {
-      if (!process.env.OPENAI_API_KEY) {
-        console.log('SKIPPED: OPENAI_API_KEY is not set; skipping embedding-related test.')
-        this.skip()
-      }
-
-      // First verify the user has a profile
-      return request(Server)
-        .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
         .set('Authorization', 'Bearer ' + pushTokens[1])
         .then(r => {
           expect(r.status).to.equal(200)
-          expect(r.body.data).to.exist
-          expect(r.body.data.generateEmbedding).to.equal(false)
-          
-          // Now set the flag as admin
-          return request(Server)
-            .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin user
+          expect(r.body.data.hasCurrentEmbedding).to.equal(true)
+          expect(r.body.data.embeddingSpecId).to.be.a('string')
         })
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.success).to.exist
-          
-          // Verify the flag was set by retrieving the profile
-          return request(Server)
-            .get('/api/partner/userProfileForIssuer/' + userWithProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[0]) // admin can see it
-        })
-        .then(r => {
-          expect(r.status).to.equal(200)
-          expect(r.body.data.generateEmbedding).to.equal(true)
+    })
 
-          // Admin can see the metadata for the profile embedding
-          return request(Server)
-            .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
-            .set('Authorization', 'Bearer ' + pushTokens[0])
+    it('hides the metadata from a user who cannot see the profile owner', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[5])
+        .then(r => {
+          expect(r.status).to.equal(404)
         })
+    })
+
+    it('shows the metadata to an admin', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
         .then(r => {
           expect(r.status).to.equal(200)
-          expect(r.body.data.generateEmbedding).to.equal(true)
-          expect(r.body.data.isForEmptyString).to.equal(false)
+          expect(r.body.data.hasCurrentEmbedding).to.equal(true)
+        })
+    })
 
+    it('returns 404 for a user without a profile, even to an admin', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithoutProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(404)
+        })
+    })
+
+    it('no longer offers the admin flag endpoint', () => {
+      return request(Server)
+        .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(404)
         })
     })
   })
