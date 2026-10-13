@@ -617,17 +617,25 @@ reference and the 0.9999 drift check runs where the vectors are made.
 
 ### Phase 6 — Client availability
 - [x] `GET /embeddingSpecs` advertises the artifact: Hugging Face at `modelRevision` by default, or `EMBEDDING_ARTIFACT_BASE_URL` for a self-hosted copy.
-- [ ] Decide whether to self-host the artifact rather than depend on Hugging Face (steps in README, "Hosting the Embedding Model Yourself").
 - [x] `GET /embeddingSpecs` and `GET /embeddings` with tests.
-- [ ] In `crowd-funder-for-time-pwa`: vector cache in client SQLite, shared `matching-engine.js`, a "similar nearby" view.
-
-### Phase 7 — On-device embedding (optional download)
-- [ ] PWA: embed with onnxruntime-web from the pinned artifact; pass conformance.
-- [ ] Native builds: evaluate native ONNX Runtime Mobile against conformance; separate spec IDs for any that fail.
 
 ---
 
 ## 10. Future Work
+
+### Client availability
+
+- Decide whether to self-host the artifact rather than depend on Hugging Face
+  (steps in README, "Hosting the Embedding Model Yourself").
+- In `crowd-funder-for-time-pwa`: vector cache in client SQLite, shared
+  `matching-engine.js`, a "similar nearby" view.
+
+### On-device embedding (optional download)
+
+- PWA: embed with onnxruntime-web from the pinned artifact; pass conformance
+  (section 8).
+- Native builds: evaluate native ONNX Runtime Mobile against conformance;
+  separate spec IDs for any that fail.
 
 ### Peer-to-peer matching
 

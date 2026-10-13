@@ -137,22 +137,23 @@ cursors are the counter read before the lists, so a client can move to the
 cursor path from any ID-path response (`afterCursor` for what comes next,
 `beforeCursor` to scroll back by change); rows saved during the request may
 come again on the next call. `hasMore` is `true` when a list hit its limit; the
-client pages with `beforeId`/`beforeDate` as before, and takes
+client pages with `beforeId`/`beforeDate`, and takes
 `nextAfterCursor` from the first page.
 
 ### Clients
 
 - **notification-wakeup-service** stores one cursor per server per channel
   (`endorser_after_cursor`, `partner_after_cursor` in both cursor tables).
-  When a cursor is empty, it makes one ID-path run from the stored
-  `endorser_after_id` / `partner_after_at` (none on a first run) and stores
-  that run's `nextAfterCursor`. Afterwards it sends `afterCursor`, looping while
-  `hasMore` (up to its page limit; the rest comes on the next run), and stores
-  the last `nextAfterCursor` after a run that succeeds or finds nothing. It
-  keeps the cursor when a list timed out ("Some data was not available" in
-  `userMessage`), and treats a response without `nextAfterCursor` to an
-  `afterCursor` request as an error, since only a server that ignores
-  `afterCursor` sends one. It does not scroll back.
+  When a cursor is empty (a user's first run), it makes one request without
+  any cursor or ID, which returns the most recent rows, and stores that
+  response's `nextAfterCursor`. Afterwards it sends `afterCursor`, looping
+  while `hasMore` (up to its page limit; the rest comes on the next run), and
+  stores the last `nextAfterCursor` after a run that succeeds or finds
+  nothing. It keeps the cursor when a list timed out ("Some data was not
+  available" in `userMessage`), and treats a response without
+  `nextAfterCursor` as an error, since only a server without cursors sends
+  one. It sends no `afterId`, `beforeId`, `afterDate`, or `beforeDate`, and
+  does not scroll back.
 - **crowd-funder-for-time-pwa**
   - Its `alertSearch` types carry `afterCursor`, `beforeCursor`,
     `nextAfterCursor`, `nextBeforeCursor`, `hasMore`, and `changeSeq`, all
@@ -168,20 +169,29 @@ client pages with `beforeId`/`beforeDate` as before, and takes
 
 ## 3. Rollout
 
-1. **endorser-ch**: main migration V22 and partner migration V9 (counter,
-   columns, backfill in `jwtId` / `updatedAt` order, triggers, indexes); the
-   cursor path (both directions) and the returned cursors on both endpoints. All additive:
-   deployed clients keep working.
-2. **notification-wakeup-service**: cursor columns (added on startup when
-   missing), the one-time ID-path handoff, the cursor-path loop. Its max-ID
-   cursors and before-ID paging remain only for the handoff and for a server
-   without `nextAfterCursor`.
-3. **crowd-funder-for-time-pwa**: types only.
-4. **crowd-funder-for-time-pwa**, with its `alertSearch` client: the two
-   `settings` columns.
+- [ ] **1. endorser-ch**: main migration V22 and partner migration V9 (counter,
+  columns, backfill in `jwtId` / `updatedAt` order, triggers, indexes); the
+  cursor path (both directions) and the returned cursors on both endpoints.
+  All additive: deployed clients keep working.
+  - [x] Committed; ships in the release after 4.4.6.
+  - [ ] In production (production runs 4.4.4).
+- [ ] **2. notification-wakeup-service**: the cursor-path loop and the first
+  run above. On startup it drops cursor tables that have the columns
+  `endorser_after_id` / `partner_after_at` (0.2.3 and earlier) and creates
+  them with the cursor columns, so each user's next run is a first run.
+  - [x] Committed; ships in the release after 0.2.3.
+  - [ ] In production (production runs 0.2.2).
+- [ ] **3. crowd-funder-for-time-pwa**: types only.
+  - [x] Committed; ships in the release after 1.4.9.
+  - [ ] Released.
+- [ ] **4. crowd-funder-for-time-pwa**, with its `alertSearch` client: the two
+  `settings` columns. Not started; waits on the app feature that uses it.
 
-Steps 1–3 need no coordination with app releases; step 4 ships with the app
-feature that uses it.
+Step 2 deploys after step 1 is in production, since it fails against a
+server without cursors; until then, the deployed notification-wakeup-service
+keeps using the ID path, which step 1 leaves in place. Steps 1 and 3 need no
+coordination with any other release; step 4 ships with the app feature that
+uses it.
 
 V21 and V22 together took 7 seconds on a copy of a database inflated to 543,000
 `jwt` rows (1 GB), numbering every row.
@@ -189,31 +199,30 @@ V21 and V22 together took 7 seconds on a copy of a database inflated to 543,000
 ## 4. Next Improvements
 
 Each is a session of one or two prompts with this plan as background. Some wait
-on a condition in production first.
+on a condition in production first; the status line of each names it.
 
-- **Native fetchers on the cursor path**: both fetchers make one
+- [ ] **Native fetchers on the cursor path**: both fetchers make one
   `plansLastUpdatedBetween` request a day and store the newest `jwtId` it
   returns, which keeps the ULID race and drops changes past its 50-row limit.
   Sending `afterCursor` with `planHandleIds` to `alertSearch` and reading
   `trackedPlanUpdates` removes both. Ships with an app release.
-- **Similar lists past 50**: page by similarity within a fixed window. Worth
+  *Status:* the fetchers call `plansLastUpdatedBetween`. The app release that
+  carries this waits until rollout step 1 is in production.
+- [ ] **Similar lists past 50**: page by similarity within a fixed window. Worth
   doing only when 50 per window proves too few.
-- **Retire the ID path** on `alertSearch` (`afterId`, `beforeId`, `afterDate`,
-  `beforeDate`). The deployed notification-wakeup-service pages profiles with
-  `afterDate` / `beforeDate`, and its handoff to cursors sends its stored
-  `partner_after_at` as `afterDate`, so this waits until its cursor-path
-  version is deployed and every row of both cursor tables has
-  `endorser_after_cursor` and `partner_after_cursor`.
-- **Drop** notification-wakeup-service's `endorser_after_id` and
-  `partner_after_at` columns, its max-ID cursors, and its before-ID paging. Same
-  condition as retiring the ID path, plus every server it calls returning
-  `nextAfterCursor`.
-- **Offers and starred-plan changes on the cursor path**: move the app's "New
-  Activity" screen to `alertSearch` with `changeSeq` bookmarks, then retire the
-  ID-path endpoints and the `lastAcked*JwtId` settings. The largest of these:
-  it spans the server, the app's screens and settings, and an app release; the
-  endpoints and settings can go only once no app version in use calls them.
-  Decide first which shape the screen reads:
+  *Status:* waits for evidence that 50 is too few.
+- [ ] **Retire the ID path** on `alertSearch` (`afterId`, `beforeId`,
+  `afterDate`, `beforeDate`). notification-wakeup-service 0.2.3 and earlier
+  page with them, and no app calls `alertSearch` (1.4.9 carries only its
+  types). A request with no cursor stays: it returns the most recent rows and
+  the cursors, which is how a client starts.
+  *Status:* waits until rollout step 2 is in production.
+- [ ] **Offers and starred-plan changes on the cursor path**: move the app's
+  "New Activity" screen to `alertSearch` with `changeSeq` bookmarks, then
+  retire the ID-path endpoints and the `lastAcked*JwtId` settings. The largest
+  of these: it spans the server, the app's screens and settings, and an app
+  release; the endpoints and settings can go only once no app version in use
+  calls them. Decide first which shape the screen reads:
   - **Offer summaries** (amounts, fulfilment), as `/report/offers` and
     `/offersToPlansOwnedByMe` return: `alertSearch` gains lists for them, and
     `offer_claim` is stamped with `changeSeq`.
@@ -224,6 +233,9 @@ on a condition in production first.
   Starred-plan changes need the claim before each change (`wrappedClaimBefore`
   in `/plansLastUpdatedBetween`) for the screen's comparison; `alertSearch`'s
   `trackedPlanUpdates` holds only the current plan.
+
+  *Status:* the shape is undecided. Server work for offer summaries is
+  additive and needs no release first; the app work comes with rollout step 4.
 
 ## 5. Future Improvements
 
@@ -256,6 +268,10 @@ on a condition in production first.
 
 - 2026-10-13: written after `alertSearch` gained similarity matches, whose
   vectors are saved by the sweep at many per second.
+- 2026-10-13: notification-wakeup-service sends only cursors, dropping its
+  ID-path handoff, max-ID cursors, and before-ID paging before any release
+  shipped them: existing users' cursors could be reset, so it starts every
+  user afresh rather than carry the handoff until each had made the switch.
 - 2026-10-13: notification-wakeup-service labels a 400 as an authorization
   failure only when its error says so; the native fetchers store the newest
   `jwtId` of a response instead of the last item, which was the oldest.
