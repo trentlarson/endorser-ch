@@ -24,6 +24,7 @@ const db = new sqlite3.Database(dbInfo.fileLoc, sqlite3.OPEN_READWRITE, (err) =>
   db.configure('busyTimeout', 10000) // timeout for locked (very busy) database
 })
 const util = require('./util')
+const { EmbeddingStore } = require('./embedding-store')
 
 const DEFAULT_LIMIT = 50
 
@@ -242,6 +243,9 @@ class EndorserDatabase {
   }
 
   constructor() {
+    // vectors of plans (subjectType 'plan', subjectId = plan_claim.handleId)
+    this.embeddings = new EmbeddingStore(db)
+
     /** I feel like we should stop the DB, but this gets run twice on a kill and throws an error for some reason.
         Well, it doesn't look like it hurts anything to CTRL-C.
         We just have to find a better way on the server because a process kill leaves things hanging around.
@@ -2649,7 +2653,7 @@ class EndorserDatabase {
   }
 
   /**
-   * Name and description of every plan, for computing embeddings (partner service).
+   * Name and description of every plan, for computing embeddings.
    * @returns {Promise<Array<{handleId: string, name: string, description: string}>>}
    */
   plansAllNamesDescriptions() {

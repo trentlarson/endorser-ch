@@ -3,6 +3,7 @@ const sqlite3 = require('sqlite3').verbose()
 const partnerDbInfo = require('../../conf/flyway-partner.js')
 const partnerDb = new sqlite3.Database(partnerDbInfo.fileLoc)
 const util = require('./util')
+const { EmbeddingStore } = require('./embedding-store')
 
 const DEFAULT_LIMIT = 50
 
@@ -30,6 +31,11 @@ async function allInChunks(ids, sqlForPlaceholders, leadingParams = []) {
 }
 
 class PartnerDatabase {
+
+  constructor() {
+    // vectors of profiles (subjectType 'profile', subjectId = user_profile.rowid as text)
+    this.embeddings = new EmbeddingStore(partnerDb)
+  }
 
   /****************************************************************
    * Partner System
@@ -594,7 +600,7 @@ class PartnerDatabase {
   async profileDelete(issuerDid) {
     const profile = await this.profileByIssuerDid(issuerDid)
     if (profile) {
-      await this.embeddingDeleteBySubject('profile', String(profile.rowid))
+      await this.embeddings.deleteBySubject('profile', String(profile.rowid))
     }
     return new Promise((resolve, reject) => {
       partnerDb.run("DELETE FROM user_profile WHERE issuerDid = ?", [issuerDid], function(err) {
@@ -659,156 +665,6 @@ class PartnerDatabase {
       row.rowId = row.rowid
       row.updatedAt = util.isoAndZonify(row.updatedAt)
       return row
-    })
-  }
-
-  /****************************************************************
-   * Embeddings (for semantic matching)
-   *
-   * subjectType is 'profile' (subjectId = user_profile.rowid as text)
-   * or 'plan' (subjectId = plan_claim.handleId in the main DB).
-   **/
-
-  /**
-   * @param {Buffer} vector - float32 little-endian bytes
-   */
-  embeddingUpsert(subjectType, subjectId, embeddingSpecId, contentHash, vector) {
-    return new Promise((resolve, reject) => {
-      const stmt = `
-        INSERT INTO embedding (subjectType, subjectId, embeddingSpecId, chunkIndex, contentHash, vector, updatedAt)
-        VALUES (?, ?, ?, 0, ?, ?, datetime())
-        ON CONFLICT(subjectType, subjectId, embeddingSpecId, chunkIndex) DO UPDATE SET
-          contentHash = excluded.contentHash,
-          vector = excluded.vector,
-          updatedAt = datetime()`
-      partnerDb.run(stmt, [subjectType, String(subjectId), embeddingSpecId, contentHash, vector], function(err) {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(this.changes)
-        }
-      })
-    })
-  }
-
-  /**
-   * Delete a subject's vectors under every spec.
-   * @returns {Promise<number>} number of rows deleted
-   */
-  embeddingDeleteBySubject(subjectType, subjectId) {
-    return new Promise((resolve, reject) => {
-      partnerDb.run(
-        "DELETE FROM embedding WHERE subjectType = ? AND subjectId = ?",
-        [subjectType, String(subjectId)],
-        function(err) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this.changes)
-          }
-        }
-      )
-    })
-  }
-
-  /**
-   * @returns {Promise<Map<string, string>>} subjectId -> contentHash
-   */
-  embeddingHashes(subjectType, embeddingSpecId) {
-    return new Promise((resolve, reject) => {
-      partnerDb.all(
-        "SELECT subjectId, contentHash FROM embedding WHERE subjectType = ? AND embeddingSpecId = ? AND chunkIndex = 0",
-        [subjectType, embeddingSpecId],
-        function(err, rows) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(new Map(rows.map(row => [row.subjectId, row.contentHash])))
-          }
-        }
-      )
-    })
-  }
-
-  /**
-   * Vectors for the given subjects, or for all subjects of the type when subjectIds is null.
-   * @param {string[]|null} subjectIds
-   * @returns {Promise<Array<{subjectId: string, chunkIndex: number, contentHash: string, vector: Buffer}>>}
-   */
-  embeddingsBySubjects(subjectType, embeddingSpecId, subjectIds) {
-    const columns = "subjectId, chunkIndex, contentHash, vector"
-    if (subjectIds == null) {
-      return new Promise((resolve, reject) => {
-        partnerDb.all(
-          `SELECT ${columns} FROM embedding WHERE subjectType = ? AND embeddingSpecId = ?`,
-          [subjectType, embeddingSpecId],
-          function(err, rows) {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(rows)
-            }
-          }
-        )
-      })
-    }
-    return allInChunks(
-      subjectIds.map(String),
-      (placeholders) => `SELECT ${columns} FROM embedding
-                         WHERE subjectType = ? AND embeddingSpecId = ? AND subjectId IN (${placeholders})`,
-      [subjectType, embeddingSpecId]
-    )
-  }
-
-  /**
-   * One page of vectors ordered by subjectId (text order).
-   * @param {string[]|null} subjectIds - restrict to these, or null for all
-   * @param {string} afterId - return only subjectIds after this one
-   * @returns {Promise<{data: Array<{subjectId, chunkIndex, contentHash, vector}>, hitLimit: boolean}>}
-   */
-  async embeddingsPaged(subjectType, embeddingSpecId, subjectIds, afterId, limit) {
-    let rows
-    if (subjectIds == null) {
-      rows = await new Promise((resolve, reject) => {
-        partnerDb.all(
-          `SELECT subjectId, chunkIndex, contentHash, vector FROM embedding
-           WHERE subjectType = ? AND embeddingSpecId = ? AND subjectId > ?
-           ORDER BY subjectId, chunkIndex LIMIT ${limit}`,
-          [subjectType, embeddingSpecId, afterId || ''],
-          function(err, result) {
-            if (err) {
-              reject(err)
-            } else {
-              resolve(result)
-            }
-          }
-        )
-      })
-    } else {
-      // compare as text, like the SQL above, so paging works the same either way
-      const pageIds = subjectIds.map(String).filter(id => id > (afterId || '')).sort().slice(0, limit)
-      rows = await this.embeddingsBySubjects(subjectType, embeddingSpecId, pageIds)
-      rows.sort((a, b) => (a.subjectId < b.subjectId ? -1 : a.subjectId > b.subjectId ? 1 : a.chunkIndex - b.chunkIndex))
-    }
-    return { data: rows, hitLimit: rows.length === limit }
-  }
-
-  /**
-   * @returns {Promise<Array<{subjectType: string, count: number}>>}
-   */
-  embeddingCounts(embeddingSpecId) {
-    return new Promise((resolve, reject) => {
-      partnerDb.all(
-        "SELECT subjectType, COUNT(*) AS count FROM embedding WHERE embeddingSpecId = ? GROUP BY subjectType",
-        [embeddingSpecId],
-        function(err, rows) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(rows)
-          }
-        }
-      )
     })
   }
 

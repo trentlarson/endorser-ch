@@ -40,9 +40,16 @@ const GRANITE_311M_R2_Q8_256 = {
   // strong ones; a 0.78 cut drops 64% of unrelated pairs and keeps 96% of
   // moderate and 99% of strong ones. Tune against real profiles. Changing
   // these values does not change vectors, so it needs no new spec ID.
+  //
+  // alertMinimumSimilarity is the cut for matches nobody searched for (alertSearch),
+  // where a wrong match costs more than a missed one. On the same corpus no
+  // unrelated pair scores 0.85 (the highest is 0.846), and that cut keeps 68% of
+  // strong pairs (82% of profile-to-profile, 62% of profile-to-plan) and 15% of
+  // moderate ones.
   matching: {
     algorithm: 'match-v1',
     minimumSimilarity: 0.78,
+    alertMinimumSimilarity: 0.85,
     maxMatchesPerChunk: 1,
     topMatchCount: 5,
     weights: { meanTopMatches: 0.5, coverage: 0.3, strongestMatch: 0.2 },

@@ -6,6 +6,9 @@
  * the backfill, the retry for failed saves, and the only path for plans (so
  * claim submission does no embedding work).
  *
+ * Each subject's vectors are stored in the DB that holds the subject: profiles
+ * in the partner DB, plans in the main DB.
+ *
  * See CHANGE/PLAN-interest-matching-architecture.md section 5.
  */
 
@@ -17,6 +20,21 @@ const l = require('../../common/logger')
 
 const SUBJECT_PROFILE = 'profile'
 const SUBJECT_PLAN = 'plan'
+
+/**
+ * @param {string} subjectType - SUBJECT_PROFILE or SUBJECT_PLAN
+ * @returns {EmbeddingStore} the store in the DB that holds subjects of that type
+ */
+function storeFor(subjectType) {
+  if (subjectType === SUBJECT_PROFILE) {
+    return partnerDbService.embeddings
+  }
+  if (subjectType === SUBJECT_PLAN) {
+    // When we separate the partner service, this will have to be an API call.
+    return endorserDbService.embeddings
+  }
+  throw new Error('No embedding store for subject type: ' + subjectType)
+}
 
 // One inference at a time keeps CPU use bounded and the API responsive.
 let inferenceQueue = Promise.resolve()
@@ -57,17 +75,17 @@ async function refreshProfileEmbedding(rowId, description) {
   const text = profileText(spec, description)
   try {
     if (text === '') {
-      await partnerDbService.embeddingDeleteBySubject(SUBJECT_PROFILE, rowId)
+      await storeFor(SUBJECT_PROFILE).deleteBySubject(SUBJECT_PROFILE, rowId)
       return false
     }
     const vector = await embedOne(spec, text)
-    await partnerDbService.embeddingUpsert(
+    await storeFor(SUBJECT_PROFILE).upsert(
       SUBJECT_PROFILE, rowId, spec.embeddingSpecId, engine.contentHash(text), engine.vectorToBlob(vector)
     )
     return true
   } catch (err) {
     l.error('Error embedding profile ' + rowId + ' (the sweep will retry): ' + err)
-    await partnerDbService.embeddingDeleteBySubject(SUBJECT_PROFILE, rowId)
+    await storeFor(SUBJECT_PROFILE).deleteBySubject(SUBJECT_PROFILE, rowId)
       .catch((delErr) => l.error('Also failed to delete stale embedding for profile ' + rowId + ': ' + delErr))
     return false
   }
@@ -91,7 +109,7 @@ async function embedQuery(text) {
  */
 async function vectorsBySubject(subjectType, subjectIds) {
   const spec = activeEmbeddingSpec()
-  const rows = await partnerDbService.embeddingsBySubjects(subjectType, spec.embeddingSpecId, subjectIds)
+  const rows = await storeFor(subjectType).bySubjects(subjectType, spec.embeddingSpecId, subjectIds)
   rows.sort((a, b) => a.chunkIndex - b.chunkIndex)
   const result = new Map()
   for (const row of rows) {
@@ -99,6 +117,34 @@ async function vectorsBySubject(subjectType, subjectIds) {
       result.set(row.subjectId, [])
     }
     result.get(row.subjectId).push(engine.blobToVector(row.vector))
+  }
+  return result
+}
+
+/**
+ * Vectors stored inside a time window, grouped by subject. A vector is stored
+ * when its subject's text is first embedded or embedded again, so the window
+ * selects subjects that are new to matching, whenever their records were saved.
+ * @param {string} subjectType
+ * @param {string} afterDateIso - only vectors stored after this
+ * @param {string} [beforeDateIso] - only vectors stored before this
+ * @returns {Promise<Map<string, {vectors: Float32Array[], updatedAt: string}>>} subjectId -> vectors
+ *   ordered by chunkIndex, and the latest time one was stored
+ */
+async function vectorsBySubjectStoredBetween(subjectType, afterDateIso, beforeDateIso) {
+  const spec = activeEmbeddingSpec()
+  const rows = await storeFor(subjectType).updatedBetween(subjectType, spec.embeddingSpecId, afterDateIso, beforeDateIso)
+  rows.sort((a, b) => a.chunkIndex - b.chunkIndex)
+  const result = new Map()
+  for (const row of rows) {
+    if (!result.has(row.subjectId)) {
+      result.set(row.subjectId, { vectors: [], updatedAt: row.updatedAt })
+    }
+    const subject = result.get(row.subjectId)
+    subject.vectors.push(engine.blobToVector(row.vector))
+    if (row.updatedAt > subject.updatedAt) {
+      subject.updatedAt = row.updatedAt
+    }
   }
   return result
 }
@@ -128,7 +174,8 @@ let runningSweep = null
  */
 async function sweepSubjects(spec, subjectType, subjects, currentText) {
   const counts = { current: 0, embedded: 0, deleted: 0 }
-  const storedHashes = await partnerDbService.embeddingHashes(subjectType, spec.embeddingSpecId)
+  const store = storeFor(subjectType)
+  const storedHashes = await store.hashes(subjectType, spec.embeddingSpecId)
   const liveIds = new Set()
   for (const { id, text } of subjects) {
     if (text === '') {
@@ -142,13 +189,13 @@ async function sweepSubjects(spec, subjectType, subjects, currentText) {
     }
     const vector = await embedOne(spec, text)
     if ((await currentText(id)) === text) {
-      await partnerDbService.embeddingUpsert(subjectType, id, spec.embeddingSpecId, hash, engine.vectorToBlob(vector))
+      await store.upsert(subjectType, id, spec.embeddingSpecId, hash, engine.vectorToBlob(vector))
       counts.embedded++
     }
   }
   for (const id of storedHashes.keys()) {
     if (!liveIds.has(id)) {
-      await partnerDbService.embeddingDeleteBySubject(subjectType, id)
+      await store.deleteBySubject(subjectType, id)
       counts.deleted++
     }
   }
@@ -223,6 +270,17 @@ function getSweepStatus() {
 }
 
 /**
+ * @returns {Promise<Array<{subjectType: string, count: number}>>} vector counts under the spec, across all stores
+ */
+async function embeddingCounts(embeddingSpecId) {
+  const counts = []
+  for (const subjectType of [SUBJECT_PROFILE, SUBJECT_PLAN]) {
+    counts.push(...(await storeFor(subjectType).counts(embeddingSpecId)).filter((c) => c.subjectType === subjectType))
+  }
+  return counts
+}
+
+/**
  * Sweep once now and then every EMBEDDING_SWEEP_INTERVAL_MINUTES (default 60);
  * a value of 0 disables both.
  */
@@ -238,9 +296,12 @@ function startSweepSchedule() {
 module.exports = {
   SUBJECT_PROFILE,
   SUBJECT_PLAN,
+  storeFor,
+  embeddingCounts,
   refreshProfileEmbedding,
   embedQuery,
   vectorsBySubject,
+  vectorsBySubjectStoredBetween,
   sweep,
   getSweepStatus,
   startSweepSchedule,

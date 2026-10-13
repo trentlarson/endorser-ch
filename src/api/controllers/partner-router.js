@@ -44,12 +44,112 @@ async function withTimeout(promise, fallback, functionName) {
   ])
 }
 
+const ALERT_SIMILAR_LIMIT = 50
+
+/**
+ * Read the optional area for alertSearch's similarity matches.
+ * @param {object|string} similarLocation - minLocLat, maxLocLat, minLocLon, maxLocLon, as an object or its JSON
+ * @returns {{ bbox: {minLat, minLon, maxLat, maxLon}|null, error?: string }} bbox is null when no area is given
+ */
+function similarBBoxFromParam(similarLocation) {
+  if (similarLocation == null || similarLocation === '') {
+    return { bbox: null }
+  }
+  let box = similarLocation
+  if (typeof box === 'string') {
+    try {
+      box = JSON.parse(box)
+    } catch (e) {
+      box = null
+    }
+  }
+  if (box == null || typeof box !== 'object' || Array.isArray(box)) {
+    return { bbox: null, error: "Parameter 'similarLocation' must be an object with minLocLat, maxLocLat, minLocLon, maxLocLon." }
+  }
+  const result = bboxFromQuery(box)
+  return result.error ? { bbox: null, error: "Parameter 'similarLocation' is not valid: " + result.error } : result
+}
+
+/**
+ * Profiles and plans that are close to the requester's profile, among those
+ * whose vectors were stored inside the time window. Matches anywhere in the
+ * world unless given an area. Empty when the requester's profile has no vector.
+ *
+ * Leaves out the requester's own profile and plans.
+ *
+ * @param {string} did - requester DID
+ * @param {string} afterDateIso
+ * @param {string} [beforeDateIso]
+ * @param {{minLat, minLon, maxLat, maxLon}|null} bbox - null to match everywhere
+ * @returns {Promise<{ profilesSimilar: Array, plansSimilar: Array }>} each best first, at most ALERT_SIMILAR_LIMIT,
+ *   of { similarity, embeddingUpdatedAt, profile } or { similarity, embeddingUpdatedAt, plan } with DIDs hidden
+ */
+async function alertSearchSimilar(did, afterDateIso, beforeDateIso, bbox) {
+  const result = { profilesSimilar: [], plansSimilar: [] }
+  const ownProfile = await partnerDbService.profileByIssuerDid(did)
+  if (!ownProfile) {
+    return result
+  }
+  const ownProfileId = String(ownProfile.rowid)
+  const sourceVectors =
+    (await embeddingService.vectorsBySubject(embeddingService.SUBJECT_PROFILE, [ownProfileId])).get(ownProfileId)
+  if (!sourceVectors) {
+    return result
+  }
+  const spec = activeEmbeddingSpec()
+
+  const rankStored = async (subjectType) => {
+    const stored = await embeddingService.vectorsBySubjectStoredBetween(subjectType, afterDateIso, beforeDateIso)
+    if (stored.size === 0) {
+      return []
+    }
+    const idsInBBox = await subjectIdsInBBox(subjectType, bbox)
+    const inArea = idsInBBox && new Set(idsInBBox)
+    const candidates = []
+    for (const [subjectId, { vectors }] of stored) {
+      const isOwnProfile = subjectType === embeddingService.SUBJECT_PROFILE && subjectId === ownProfileId
+      if (!isOwnProfile && (!inArea || inArea.has(subjectId))) {
+        candidates.push({ id: subjectId, vectors })
+      }
+    }
+    return rank(sourceVectors, candidates, spec.matching, {
+      minSimilarity: spec.matching.alertMinimumSimilarity,
+      limit: ALERT_SIMILAR_LIMIT,
+    }).map((r) => ({ subjectId: r.id, similarity: r.score, embeddingUpdatedAt: stored.get(r.id).updatedAt }))
+  }
+
+  const rankedProfiles = await rankStored(embeddingService.SUBJECT_PROFILE)
+  if (rankedProfiles.length > 0) {
+    const profiles = await hideDidsAndAddLinksToNetwork(
+      did, await partnerDbService.profilesByRowIds(rankedProfiles.map((r) => Number(r.subjectId))), []
+    )
+    const profileById = new Map(profiles.map((p) => [String(p.rowid), p]))
+    result.profilesSimilar = rankedProfiles
+      .map((r) => ({ similarity: r.similarity, embeddingUpdatedAt: r.embeddingUpdatedAt, profile: profileById.get(r.subjectId) }))
+      .filter((r) => r.profile) // a profile may have been deleted since its vector was read
+  }
+
+  const rankedPlans = await rankStored(embeddingService.SUBJECT_PLAN)
+  if (rankedPlans.length > 0) {
+    // When we separate this into another service, this will have to be an API call.
+    const plansFound = await endorserDbService.planInfoByHandleIds(rankedPlans.map((r) => r.subjectId))
+    const plans = await hideDidsAndAddLinksToNetwork(
+      did, plansFound.data.filter((p) => p.issuerDid !== did && p.agentDid !== did), []
+    )
+    const planById = new Map(plans.map((p) => [p.handleId, p]))
+    result.plansSimilar = rankedPlans
+      .map((r) => ({ similarity: r.similarity, embeddingUpdatedAt: r.embeddingUpdatedAt, plan: planById.get(r.subjectId) }))
+      .filter((r) => r.plan)
+  }
+  return result
+}
+
 async function alertSearchHandler(req, res) {
   if (!res.locals.authTokenIssuer) {
     return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
   }
   const paramsResult = alertSearchParamsFromRequest(req)
-  let { afterId, beforeId, afterDate, beforeDate, location, planHandleIds, paramErrors } = paramsResult
+  let { afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors } = paramsResult
   const { afterDateIso, beforeDateIso, paramErrors: resolvedParamErrors } = resolveAlertSearchDateBoundsForPartner(afterId, beforeId, afterDate, beforeDate, paramErrors)
 
   try {
@@ -63,9 +163,20 @@ async function alertSearchHandler(req, res) {
 
     const profilesData = await hideDidsAndAddLinksToNetwork(did, profilesNearbyRaw.data, [])
 
+    // with an area that cannot be read, matching everywhere would return results from outside it
+    const { bbox: similarBBox, error: similarLocationError } = similarBBoxFromParam(similarLocation)
+    if (similarLocationError) {
+      resolvedParamErrors.push(similarLocationError)
+    }
+    const similar = similarLocationError
+      ? { profilesSimilar: [], plansSimilar: [] }
+      : await alertSearchSimilar(did, afterDateIso, beforeDateIso, similarBBox)
+
     const response = {
       data: {
         profilesNearby: profilesData,
+        profilesSimilar: similar.profilesSimilar,
+        plansSimilar: similar.plansSimilar,
       },
     }
 
@@ -446,20 +557,45 @@ export default express
  */
 
 /**
- * Alert search: claims, plan contributions, and optionally location-based profiles/plans since afterId.
+ * @typedef SimilarProfile
+ * @property {number} similarity - similarity of this profile to the requester's profile, up to 1
+ * @property {string} embeddingUpdatedAt - date this profile's text was embedded, which is what afterDate and beforeDate bound
+ * @property {UserProfile} profile
+ */
+
+/**
+ * @typedef SimilarPlan
+ * @property {number} similarity - similarity of this plan to the requester's profile, up to 1
+ * @property {string} embeddingUpdatedAt - date this plan's text was embedded, which is what afterDate and beforeDate bound
+ * @property {object} plan - the plan summary
+ */
+
+/**
+ * Alert search: profiles updated in an area, and profiles and plans anywhere whose text is close to the requester's profile
+ *
+ * profilesSimilar and plansSimilar hold subjects whose text was embedded inside the time window,
+ * with a similarity to the requester's profile of at least the embedding spec's alertMinimumSimilarity,
+ * best first, at most 50 each. They are empty when the requester's profile has no text.
+ * Plans are embedded by a periodic sweep, so a plan appears after the sweep that follows its claim;
+ * a client that keeps the latest embeddingUpdatedAt it has seen as its next afterDate misses none.
  *
  * @group partner utils
  * @route GET /api/partner/alertSearch
  * @route POST /api/partner/alertSearch
  * @param {string} afterId.body.optional - JWT ULID to return items after (GET, POST)
  * @param {string} beforeId.body.optional - JWT ULID to return items before (GET, POST)
- * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {string} afterDate.body.optional - ISO date to return items after; takes precedence over afterId (GET, POST)
+ * @param {string} beforeDate.body.optional - ISO date to return items before; takes precedence over beforeId (GET, POST)
+ * @param {object} location.body.optional - bounding box for profilesNearby: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
  * @param {number} minLocLat.body.optional - min latitude (GET)
  * @param {number} maxLocLat.body.optional - max latitude (GET)
  * @param {number} minLocLon.body.optional - min longitude (GET)
  * @param {number} maxLocLon.body.optional - max longitude (GET)
+ * @param {object} similarLocation.body.optional - bounding box for profilesSimilar and plansSimilar, which match everywhere without it: minLocLat, maxLocLat, minLocLon, maxLocLon (POST as an object, GET as JSON)
  * @returns {object} 200 - { data: {
  *   profilesNearby: UserProfile[],
+ *   profilesSimilar: SimilarProfile[],
+ *   plansSimilar: SimilarPlan[],
  *  }
  * }
  */
@@ -1448,7 +1584,7 @@ export default express
 
       const spec = activeEmbeddingSpec()
       const text = subjectText(spec, embeddingService.SUBJECT_PROFILE, { description: profile.description })
-      const stored = await partnerDbService.embeddingsBySubjects(
+      const stored = await partnerDbService.embeddings.bySubjects(
         embeddingService.SUBJECT_PROFILE, spec.embeddingSpecId, [String(profile.rowid)]
       )
       const hasCurrentEmbedding = text !== '' && stored.length > 0 && stored[0].contentHash === contentHash(text)
@@ -1843,7 +1979,7 @@ export default express
       }
 
       const ids = await subjectIdsInBBox(subjectType, bbox)
-      const page = await partnerDbService.embeddingsPaged(subjectType, embeddingSpecId, ids, afterId, limit)
+      const page = await embeddingService.storeFor(subjectType).paged(subjectType, embeddingSpecId, ids, afterId, limit)
       res.status(200).json({
         data: page.data.map((row) => ({
           subjectId: row.subjectId,
@@ -1881,7 +2017,7 @@ export default express
         return res.status(403).json({ error: "Only permissioned users can see the embedding sweep." }).end()
       }
       const embeddingSpecId = activeEmbeddingSpec().embeddingSpecId
-      const counts = await partnerDbService.embeddingCounts(embeddingSpecId)
+      const counts = await embeddingService.embeddingCounts(embeddingSpecId)
       res.status(200).json({ data: { ...embeddingService.getSweepStatus(), embeddingSpecId, counts } }).end()
     } catch (err) {
       console.error('Error getting embedding sweep status:', err)

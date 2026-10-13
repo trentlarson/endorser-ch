@@ -1,4 +1,4 @@
-// Tests for semantic matching: the embedding sweep, /similar, and the vector export endpoints.
+// Tests for semantic matching: the embedding sweep, /similar, the vector export endpoints, and alertSearch's similar matches.
 // Depends on the endorser tests for registrations, and on controller-partner-1 for creds[1]'s profile.
 
 import chai from "chai";
@@ -7,6 +7,7 @@ import request from "supertest";
 import { Credentials } from "uport-credentials";
 
 import Server from "../dist";
+import { dbService as endorserDbService } from "../dist/api/services/endorser.db.service";
 import { dbService as partnerDbService } from "../dist/api/services/partner.db.service";
 import { activeEmbeddingSpec } from "../dist/api/services/embedding-specs";
 import { base64ToVector, contentHash, dot, subjectText } from "../dist/api/services/embedding-engine";
@@ -99,7 +100,7 @@ describe('P9 - Semantic Matching', () => {
           codingHandleId = r.body.success.handleId
         }
       }
-      const stored = await partnerDbService.embeddingsBySubjects('plan', activeEmbeddingSpec().embeddingSpecId, [gardenHandleId])
+      const stored = await endorserDbService.embeddings.bySubjects('plan', activeEmbeddingSpec().embeddingSpecId, [gardenHandleId])
       expect(stored).to.have.length(0)
     }).timeout(10000)
 
@@ -126,8 +127,8 @@ describe('P9 - Semantic Matching', () => {
     it('embeds the plans in a sweep, and fixes missing and orphaned vectors', async () => {
       const specId = activeEmbeddingSpec().embeddingSpecId
       // a vector for a profile that doesn't exist, and a missing vector for one that does
-      await partnerDbService.embeddingUpsert('profile', '999999', specId, 'not-a-real-hash', Buffer.alloc(4 * 256))
-      await partnerDbService.embeddingDeleteBySubject('profile', String(gardenerRowId))
+      await partnerDbService.embeddings.upsert('profile', '999999', specId, 'not-a-real-hash', Buffer.alloc(4 * 256))
+      await partnerDbService.embeddings.deleteBySubject('profile', String(gardenerRowId))
 
       const r = await request(Server)
         .post('/api/partner/embeddingSweep')
@@ -142,9 +143,9 @@ describe('P9 - Semantic Matching', () => {
       expect(result.profile.embedded).to.be.at.least(1)
       expect(result.profile.deleted).to.be.at.least(1)
 
-      expect(await partnerDbService.embeddingsBySubjects('profile', specId, ['999999'])).to.have.length(0)
-      expect(await partnerDbService.embeddingsBySubjects('profile', specId, [String(gardenerRowId)])).to.have.length(1)
-      expect(await partnerDbService.embeddingsBySubjects('plan', specId, [gardenHandleId, codingHandleId])).to.have.length(2)
+      expect(await partnerDbService.embeddings.bySubjects('profile', specId, ['999999'])).to.have.length(0)
+      expect(await partnerDbService.embeddings.bySubjects('profile', specId, [String(gardenerRowId)])).to.have.length(1)
+      expect(await endorserDbService.embeddings.bySubjects('plan', specId, [gardenHandleId, codingHandleId])).to.have.length(2)
     }).timeout(60000)
 
     it('finds nothing to change in a second sweep', async () => {
@@ -355,6 +356,178 @@ describe('P9 - Semantic Matching', () => {
       expect(ids).to.include.members([gardenHandleId, codingHandleId])
       expect([...ids].sort()).to.deep.equal(ids)
     })
+  })
+
+  describe('alertSearch similar matches', () => {
+
+    // outside BBOX, so the tests above see the same subjects in it
+    const FAR_BBOX = { minLocLat: 30, minLocLon: 30, maxLocLat: 30.3, maxLocLon: 30.3 }
+    const GARDENER_2_PROFILE = {
+      description: 'I grow tomatoes, squash, and beans in my backyard garden and enjoy trading seeds with my neighbors.',
+      locLat: 30.2,
+      locLon: 30.2,
+    }
+    const SEED_PLAN = {
+      name: 'Backyard Seed Swap',
+      description: 'Neighbors who grow tomatoes, squash, and other vegetables in their backyards meet to swap seeds.',
+      latitude: 30.1,
+      longitude: 30.1,
+    }
+    const threshold = activeEmbeddingSpec().matching.alertMinimumSimilarity
+    let gardener2RowId, seedHandleId
+
+    function alertSearch(token, body) {
+      return request(Server).post('/api/partner/alertSearch').set('Authorization', 'Bearer ' + token).send(body)
+    }
+    const planIds = (r) => r.body.data.plansSimilar.map((s) => s.plan.handleId)
+    const profileIds = (r) => r.body.data.profilesSimilar.map((s) => s.profile.rowId)
+
+    function expectBestFirstOverThreshold(similar) {
+      similar.forEach((s, i) => {
+        expect(s.similarity).to.be.at.least(threshold)
+        expect(new Date(s.embeddingUpdatedAt).getTime()).to.be.above(0)
+        if (i > 0) {
+          expect(s.similarity).to.be.at.most(similar[i - 1].similarity)
+        }
+      })
+    }
+
+    it('returns nothing similar to a user without a profile', async () => {
+      const r = await alertSearch(pushTokens[15], {})
+      expect(r.status).to.equal(200)
+      expect(r.body.data.profilesSimilar).to.deep.equal([])
+      expect(r.body.data.plansSimilar).to.deep.equal([])
+    })
+
+    it('matches plans to the profile without any location', async () => {
+      let r = await alertSearch(pushTokens[7], {})
+      expect(r.status).to.equal(200)
+      expect(r.body.userMessage).to.be.undefined
+      expect(planIds(r)).to.include(gardenHandleId).and.not.include(codingHandleId)
+      expectBestFirstOverThreshold(r.body.data.plansSimilar)
+      const garden = r.body.data.plansSimilar.find((s) => s.plan.handleId === gardenHandleId)
+      expect(garden.plan.name).to.equal(GARDEN_PLAN.name)
+
+      r = await alertSearch(pushTokens[8], {})
+      expect(planIds(r)).to.include(codingHandleId).and.not.include(gardenHandleId)
+      expectBestFirstOverThreshold(r.body.data.plansSimilar)
+    })
+
+    it('hides DIDs the requester cannot see', async () => {
+      // the same scrubbed record that /similar gives
+      const r = await alertSearch(pushTokens[7], {})
+      const garden = r.body.data.plansSimilar.find((s) => s.plan.handleId === gardenHandleId)
+      const viaSimilar = await similar(pushTokens[7], { from: 'profile:' + gardenerRowId, to: 'plan', ...BBOX })
+      expect(garden.plan).to.deep.equal(viaSimilar.body.data.find((d) => d.subjectId === gardenHandleId).record)
+      expect(garden.similarity).to.be.closeTo(viaSimilar.body.data[0].similarity, 1e-6)
+    })
+
+    it('matches a new profile, and never the requester\'s own', async () => {
+      // updatedAt has 1-second resolution
+      const afterDate = new Date(Date.now() - 1000).toISOString()
+      const r0 = await request(Server)
+        .post('/api/partner/userProfile')
+        .set('Authorization', 'Bearer ' + pushTokens[9])
+        .send(GARDENER_2_PROFILE)
+      expect(r0.status).to.equal(201)
+      gardener2RowId = (await partnerDbService.profileByIssuerDid(creds[9].did)).rowid
+
+      let r = await alertSearch(pushTokens[7], { afterDate })
+      expect(profileIds(r)).to.include(gardener2RowId).and.not.include(gardenerRowId).and.not.include(coderRowId)
+      expectBestFirstOverThreshold(r.body.data.profilesSimilar)
+      expect(r.body.data.profilesSimilar[0].profile.description).to.equal(GARDENER_2_PROFILE.description)
+
+      r = await alertSearch(pushTokens[9], {})
+      expect(profileIds(r)).to.include(gardenerRowId).and.not.include(gardener2RowId).and.not.include(coderRowId)
+      expect(planIds(r)).to.include(gardenHandleId)
+
+      r = await alertSearch(pushTokens[8], { afterDate })
+      expect(profileIds(r)).to.not.include(gardener2RowId)
+    }).timeout(10000)
+
+    it('bounds matches by the time their vectors were stored', async () => {
+      const tomorrow = new Date(Date.now() + 86400000).toISOString()
+      const lastYear = new Date(Date.now() - 365 * 86400000).toISOString()
+      let r = await alertSearch(pushTokens[7], { afterDate: tomorrow })
+      expect(r.body.data.profilesSimilar).to.deep.equal([])
+      expect(r.body.data.plansSimilar).to.deep.equal([])
+      r = await alertSearch(pushTokens[7], { beforeDate: lastYear })
+      expect(r.body.data.profilesSimilar).to.deep.equal([])
+      expect(r.body.data.plansSimilar).to.deep.equal([])
+      r = await alertSearch(pushTokens[7], { afterDate: lastYear, beforeDate: tomorrow })
+      expect(profileIds(r)).to.include(gardener2RowId)
+      expect(planIds(r)).to.include(gardenHandleId)
+    })
+
+    it('restricts matches to similarLocation, apart from the location for profilesNearby', async () => {
+      let r = await alertSearch(pushTokens[7], { similarLocation: BBOX })
+      expect(r.status).to.equal(200)
+      expect(planIds(r)).to.deep.equal([gardenHandleId])
+      expect(profileIds(r)).to.deep.equal([])
+
+      r = await alertSearch(pushTokens[7], { similarLocation: FAR_BBOX, location: BBOX })
+      expect(planIds(r)).to.deep.equal([])
+      expect(profileIds(r)).to.deep.equal([gardener2RowId])
+      // the gardener and coder profiles are in BBOX
+      expect(r.body.data.profilesNearby.map((p) => p.rowId)).to.have.members([gardenerRowId, coderRowId])
+
+      // GET takes the area as JSON
+      r = await request(Server)
+        .get('/api/partner/alertSearch')
+        .set('Authorization', 'Bearer ' + pushTokens[7])
+        .query({ similarLocation: JSON.stringify(BBOX) })
+      expect(r.status).to.equal(200)
+      expect(planIds(r)).to.deep.equal([gardenHandleId])
+      expect(profileIds(r)).to.deep.equal([])
+    })
+
+    it('gives a message and no matches for a similarLocation it cannot read', async () => {
+      for (const similarLocation of [{ minLocLat: 10 }, { ...BBOX, maxLocLat: 100 }, 'somewhere', [1, 2, 3, 4]]) {
+        const r = await alertSearch(pushTokens[7], { similarLocation })
+        expect(r.status).to.equal(200)
+        expect(r.body.userMessage).to.include('similarLocation')
+        expect(r.body.data.profilesSimilar).to.deep.equal([])
+        expect(r.body.data.plansSimilar).to.deep.equal([])
+      }
+    })
+
+    it('matches a plan once a sweep embeds it, but not for its agent', async () => {
+      // so that the vectors stored earlier are outside the window
+      await new Promise((resolve) => setTimeout(resolve, 1100))
+      const afterDate = new Date(Date.now() - 1000).toISOString()
+
+      // issued by creds[1] with the gardener as the agent
+      const claim = R.clone(testUtil.claimPlanAction)
+      claim.agent.identifier = creds[7].did
+      claim.name = SEED_PLAN.name
+      claim.description = SEED_PLAN.description
+      claim.location = { geo: { "@type": "GeoCoordinates", latitude: SEED_PLAN.latitude, longitude: SEED_PLAN.longitude } }
+      const jwtObj = R.clone(testUtil.jwtTemplate)
+      jwtObj.claim = claim
+      jwtObj.sub = creds[1].did
+      jwtObj.iss = creds[1].did
+      const claimed = await request(Server)
+        .post('/api/v2/claim')
+        .send({ jwtEncoded: await credentials[1].createVerification(jwtObj) })
+      expect(claimed.status).to.equal(201)
+      seedHandleId = claimed.body.success.handleId
+
+      let r = await alertSearch(pushTokens[9], { afterDate })
+      expect(planIds(r)).to.deep.equal([])
+
+      const swept = await request(Server)
+        .post('/api/partner/embeddingSweep')
+        .query({ wait: 'true' })
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+      expect(swept.body.data.lastResult.plan.embedded).to.equal(1)
+
+      r = await alertSearch(pushTokens[9], { afterDate })
+      expect(planIds(r)).to.deep.equal([seedHandleId])
+      expect(r.body.data.plansSimilar[0].embeddingUpdatedAt > afterDate.substring(0, 19)).to.equal(true)
+
+      r = await alertSearch(pushTokens[7], {})
+      expect(planIds(r)).to.include(gardenHandleId).and.not.include(seedHandleId)
+    }).timeout(60000)
   })
 
 })

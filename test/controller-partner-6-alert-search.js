@@ -1,4 +1,5 @@
-// Tests for partner alertSearch (profiles only)
+// Tests for partner alertSearch: profiles by location
+// (controller-partner-9-similar has the tests for its matches by similarity)
 // Depends on controller-partner-1-profile creating profiles with location
 
 import chai from 'chai'
@@ -42,6 +43,8 @@ describe('P6 - Alert Search partner', () => {
         expect(r.status).to.equal(200)
         expect(r.body).to.have.property('data')
         expect(r.body.data).to.have.property('profilesNearby').that.is.an('array')
+        expect(r.body.data).to.have.property('profilesSimilar').that.is.an('array')
+        expect(r.body.data).to.have.property('plansSimilar').that.is.an('array')
       })
       .catch((err) => Promise.reject(err))
   })

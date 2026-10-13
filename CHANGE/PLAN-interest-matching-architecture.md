@@ -29,9 +29,12 @@ defined independently of the server, SQLite, and any vendor API.
    vector is released to exactly those who can already read its source text,
    and never alongside a DID the requester cannot see.
 4. **Partner segregation.** Per `README-context.md`, partner features are meant
-   to split into a separate service. Embedding storage and generation live in
-   the partner DB and partner code paths, and do not add work to the claim
-   submission path in `claim.service.js`.
+   to split into a separate service. Each subject's vectors are stored in the
+   DB that holds the subject: profile vectors in the partner DB, plan vectors
+   in the main DB. Matching runs in partner code paths, and embedding adds no
+   work to the claim submission path in `claim.service.js`. The engine
+   (`embedding-engine.js`, `matching-engine.js`) and the storage code
+   (`embedding-store.js`) are shared libraries.
 
 ---
 
@@ -234,12 +237,16 @@ into atomic interests needs UI support and is future work. The schema carries a
 
 ## 4. Data Model
 
-Partner migration `sql-for-partner/V7__embedding.sqlite3`, with the matching
-section of `sql-for-partner/README.md` updated in the same commit:
+An `embedding` table with one schema in each DB: the partner DB's
+(`sql-for-partner/V7__embedding.sqlite3`) holds profile vectors, and the main
+DB's (`sql/V21__embedding.sqlite3`) holds plan vectors. Both are documented in
+their directory's `README.md`. `EmbeddingStore` in
+`src/api/services/embedding-store.js` reads and writes either, and
+`embedding.service.js` picks the store by subject type.
 
 ```sql
 CREATE TABLE embedding (
-  subjectType TEXT NOT NULL,         -- 'profile' | 'plan'
+  subjectType TEXT NOT NULL,         -- 'profile' (partner DB) | 'plan' (main DB)
   subjectId TEXT NOT NULL,           -- profile: user_profile.rowid; plan: plan_claim.handleId
   embeddingSpecId TEXT NOT NULL,
   chunkIndex INTEGER NOT NULL DEFAULT 0,
@@ -264,8 +271,14 @@ Design decisions:
   preprocessed text. Empty text produces no row.
 - **No location columns.** Location stays in `user_profile` and `plan_claim`;
   bounding-box filtering selects IDs there, then fetches vectors by ID.
-- **Plan vectors in the partner DB** even though plans live in the main DB,
-  because of constraint 4. Nothing joins across the two databases in SQL.
+- **Vectors live with their subjects** (constraint 4). A partner service split
+  off later owns profile vectors outright and reads plan vectors from the main
+  service, as it reads plan records. The plan sweep then belongs to the main
+  service, which needs the model loaded to run it. Nothing joins across the two
+  databases in SQL.
+- **`subjectType` stays in the main DB's table** although it holds only plans,
+  so one store serves both DBs and other main-DB subjects (offers, projects)
+  can be added without a schema change.
 
 The same migration removes everything from the OpenAI design, since no deployment
 depends on it:
@@ -380,6 +393,7 @@ to the dot product. With multiple chunks per subject it becomes:
 {
   "algorithm": "match-v1",
   "minimumSimilarity": 0.78,
+  "alertMinimumSimilarity": 0.85,
   "maxMatchesPerChunk": 1,
   "topMatchCount": 5,
   "weights": { "meanTopMatches": 0.5, "coverage": 0.3, "strongestMatch": 0.2 }
@@ -395,6 +409,63 @@ profiles (phase 0).
 Group matching (`groupOnboardMatch`) calls the same engine. Members without a
 vector are paired among themselves after all scored pairs are placed, which is
 the explicit form of what the shared empty vector did by accident.
+
+### Alert search matches
+
+`GET` and `POST /api/partner/alertSearch` return, beside `profilesNearby`, two
+lists scored against the requester's own profile vector:
+
+```text
+profilesSimilar: [{ similarity, embeddingUpdatedAt, profile }]
+plansSimilar:    [{ similarity, embeddingUpdatedAt, plan }]
+```
+
+1. Source: the requester's stored profile vector. Both lists are empty when
+   there is none (no profile, or a profile without text).
+2. Candidates: vectors whose `updatedAt` is inside the request's time window
+   (`afterDate` / `beforeDate`, or the times inside `afterId` / `beforeId`),
+   read through the `embedding_spec_type_updated` index. The window bounds the
+   vector's time and not the record's because plans get their vectors from the
+   sweep: a plan claimed before a client's poll and embedded after it has a
+   vector time later than everything that poll returned. A client that sends
+   the latest `embeddingUpdatedAt` it has seen as its next `afterDate` misses
+   no match.
+3. Area: everywhere, unless `similarLocation` gives a bounding box (same shape
+   as `location`, which only selects `profilesNearby`). An unreadable
+   `similarLocation` yields a `userMessage` and empty lists, so a request meant
+   for one area never gets matches from outside it.
+4. Cut at `matching.alertMinimumSimilarity`, best first, 50 per list. The
+   requester's own profile, and plans they issued or are the agent of, are
+   left out.
+5. Records are scrubbed like the other alertSearch lists.
+
+`alertMinimumSimilarity` is higher than `minimumSimilarity` because nobody
+asked for these matches: a wrong one costs more than a missed one. Share of
+the section 7 corpus pairs kept at each cut:
+
+| Cut | Unrelated | Moderate | Strong | Strong, profile↔profile | Strong, profile↔plan |
+|---|---|---|---|---|---|
+| 0.78 | 36% | 96% | 99% | 100% | 96% |
+| 0.82 | 12% | 62% | 88% | 86% | 85% |
+| 0.83 | 10% | 40% | 84% | 86% | 85% |
+| 0.84 | 6% | 23% | 73% | 86% | 65% |
+| 0.85 | 0% | 15% | 68% | 82% | 62% |
+| 0.86 | 0% | 9% | 59% | 73% | 58% |
+| 0.87 | 0% | 2% | 45% | 50% | 50% |
+
+The highest-scoring unrelated pairs are hard negatives at 0.846 (a gold miner
+and a crypto miner; a glue-gun crafter and a gunsmith).
+
+Two effects of windowing on the vector's time:
+
+- Saving a profile stores its vector again even when the text is unchanged, so
+  the profile re-enters the window, as it does for `profilesNearby`.
+- Switching to another embedding spec embeds every subject again, so every
+  match re-enters the window once.
+
+`/api/v2/report/alertSearch` has no similarity lists: profiles and vectors are
+in the partner DB, which the endorser side does not read; the requester's profile
+vector is the source of every match.
 
 ### Vector export for clients
 
@@ -664,8 +735,8 @@ matching policy are separate layers.
   the vectors and every profile goes to a third party (constraint 2).
 - **Full-precision server "reference" vectors** — no client runs the fp32 model,
   so the reference would disagree with every client; see section 3.
-- **Plan vectors in the main DB** — would put partner work into the claim path
-  (constraint 4).
+- **All vectors in the partner DB** — puts data derived from plans in a DB
+  that does not hold plans; see constraint 4.
 - **Vectors keyed by `issuerDid`** — exports would leak DIDs.
 - **Comma-separated text storage** — 18× larger and needs parsing.
 - **A SQLite vector extension's format as the storage format** — ties the
@@ -695,3 +766,8 @@ matching policy are separate layers.
   after reading its license; the evaluation in section 3 selected Granite 311M R2.
   The OpenAI-era tables are dropped outright rather than migrated because no
   deployment uses them.
+- 2026-10-12: plan vectors moved from the partner DB to the main DB (partner V8
+  deletes them; main V21 creates the table; the next sweep embeds every plan
+  again). An earlier entry in Rejected had kept them out of the main DB because
+  that "would put partner work into the claim path", but the sweep, not claim
+  submission, embeds plans, so the location of the table never affected that path.

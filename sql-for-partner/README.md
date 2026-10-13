@@ -61,11 +61,12 @@ CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
 CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
 CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
 
--- vector embeddings of profiles and plans, for semantic matching
+-- vector embeddings of profiles, for semantic matching; plan vectors are in the
+-- main DB's table of the same schema (see sql/README.md)
 -- (see CHANGE/PLAN-interest-matching-architecture.md and src/api/services/embedding-specs.js)
 CREATE TABLE embedding (
-    subjectType TEXT NOT NULL,      -- 'profile' | 'plan'
-    subjectId TEXT NOT NULL,        -- profile: user_profile.rowid; plan: plan_claim.handleId (main DB)
+    subjectType TEXT NOT NULL,      -- 'profile'
+    subjectId TEXT NOT NULL,        -- user_profile.rowid
     embeddingSpecId TEXT NOT NULL,  -- vectors are comparable only within one spec
     chunkIndex INTEGER NOT NULL DEFAULT 0, -- always 0 until subjects have multiple chunks
     contentHash TEXT NOT NULL,      -- sha256 hex of the preprocessed input text; the vector is current iff it matches the source
@@ -76,4 +77,5 @@ CREATE TABLE embedding (
 CREATE INDEX embedding_spec_type_updated ON embedding(embeddingSpecId, subjectType, updatedAt);
 -- A subject with empty text has no row.
 -- V6 created user_profile_embedding (OpenAI vectors); V7 dropped it.
+-- V7 held plan vectors here too; V8 deleted them, for the main DB (V21) to hold.
 ```

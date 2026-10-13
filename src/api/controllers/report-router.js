@@ -835,7 +835,7 @@ export default express
 
 /**
  * Alert search: claims, plan contributions, tracked plan updates/claims, plans by location.
- * Does not include profiles (see partner /alertSearch for profiles).
+ * Does not include profiles, or plans matched to the user's profile by meaning (see partner /alertSearch for both).
  *
  * @group reports
  * @route GET /api/v2/report/alertSearch

@@ -51,6 +51,22 @@ CREATE TABLE confirmation (
     planHandleId TEXT
 );
 
+-- vector embeddings of plans, for semantic matching; profile vectors are in the
+-- partner DB's table of the same schema (see sql-for-partner/README.md)
+-- (see CHANGE/PLAN-interest-matching-architecture.md and src/api/services/embedding-specs.js)
+CREATE TABLE embedding (
+    subjectType TEXT NOT NULL,      -- 'plan'
+    subjectId TEXT NOT NULL,        -- plan_claim.handleId
+    embeddingSpecId TEXT NOT NULL,  -- vectors are comparable only within one spec
+    chunkIndex INTEGER NOT NULL DEFAULT 0, -- always 0 until subjects have multiple chunks
+    contentHash TEXT NOT NULL,      -- sha256 hex of the preprocessed input text; the vector is current iff it matches the source
+    vector BLOB NOT NULL,           -- float32 little-endian, L2-normalized
+    updatedAt DATETIME NOT NULL,
+    PRIMARY KEY (subjectType, subjectId, embeddingSpecId, chunkIndex)
+);
+CREATE INDEX embedding_spec_type_updated ON embedding(embeddingSpecId, subjectType, updatedAt);
+-- A plan with no name or description has no row.
+
 -- cache table, for quick retrieval of claims with type Emoji
 CREATE TABLE emoji_claim (
     jwtId CHARACTER(26),

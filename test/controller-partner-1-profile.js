@@ -487,12 +487,12 @@ describe('P1 - User Profiles', () => {
   it('can delete a profile, along with its embedding', async () => {
     const profile = await partnerDbService.profileByIssuerDid(creds[0].did)
     const specId = activeEmbeddingSpec().embeddingSpecId
-    expect(await partnerDbService.embeddingsBySubjects('profile', specId, [String(profile.rowid)])).to.have.length(1)
+    expect(await partnerDbService.embeddings.bySubjects('profile', specId, [String(profile.rowid)])).to.have.length(1)
     return request(Server)
       .delete('/api/partner/userProfile')
       .set('Authorization', 'Bearer ' + pushTokens[0])
       .then(async r => {
-        expect(await partnerDbService.embeddingsBySubjects('profile', specId, [String(profile.rowid)])).to.have.length(0)
+        expect(await partnerDbService.embeddings.bySubjects('profile', specId, [String(profile.rowid)])).to.have.length(0)
         // for some reason the response has a body of {} and no content type
         // expect(r.body).to.have.property("success", true)
         // expect(r.body).to.have.property("deletedCount", 1)

@@ -15,7 +15,8 @@ const ULID_REGEX = /^[0-9A-HJKMNP-TV-Z]{26}$/
 
 /**
  * Normalize alertSearch params from either POST body or GET query.
- * Returns { afterId, beforeId, afterDate, beforeDate, location, planHandleIds, paramErrors }.
+ * Returns { afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors }.
+ * similarLocation is passed through as given, for the partner router to validate.
  */
 export function alertSearchParamsFromRequest(req) {
   const isGet = req.method === 'GET'
@@ -25,6 +26,7 @@ export function alertSearchParamsFromRequest(req) {
   const beforeId = src?.beforeId
   const afterDate = src?.afterDate
   const beforeDate = src?.beforeDate
+  const similarLocation = src?.similarLocation
   const paramErrors = []
   let location = null
   if (src?.location && typeof src.location === 'object') {
@@ -55,7 +57,7 @@ export function alertSearchParamsFromRequest(req) {
       paramErrors.push("Parameter 'planIds' or 'planHandleIds' or 'handleIds' must be valid JSON array: " + e.message)
     }
   }
-  return { afterId, beforeId, afterDate, beforeDate, location, planHandleIds, paramErrors }
+  return { afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors }
 }
 
 /**

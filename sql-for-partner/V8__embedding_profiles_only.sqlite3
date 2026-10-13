@@ -1,0 +1,4 @@
+-- see README.md in this directory for explanations
+
+-- Plan vectors are stored in the main DB, with the plans (main DB migration V21).
+DELETE FROM embedding WHERE subjectType = 'plan';
