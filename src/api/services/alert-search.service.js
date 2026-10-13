@@ -15,13 +15,15 @@ const ULID_REGEX = /^[0-9A-HJKMNP-TV-Z]{26}$/
 
 /**
  * Normalize alertSearch params from either POST body or GET query.
- * Returns { afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors }.
- * similarLocation is passed through as given, for the partner router to validate.
+ * Returns { afterCursor, beforeCursor, afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors }.
+ * The cursors and similarLocation are passed through as given, for the routers to validate.
  */
 export function alertSearchParamsFromRequest(req) {
   const isGet = req.method === 'GET'
   // GET: query only. An empty JSON body `{}` must not hide req.query.beforeId.
   const src = isGet ? req.query : req.body
+  const afterCursor = src?.afterCursor
+  const beforeCursor = src?.beforeCursor
   const afterId = src?.afterId
   const beforeId = src?.beforeId
   const afterDate = src?.afterDate
@@ -57,7 +59,118 @@ export function alertSearchParamsFromRequest(req) {
       paramErrors.push("Parameter 'planIds' or 'planHandleIds' or 'handleIds' must be valid JSON array: " + e.message)
     }
   }
-  return { afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors }
+  return { afterCursor, beforeCursor, afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors }
+}
+
+/****************************************************************
+ * Change-sequence cursors. See CHANGE/PLAN-accurate-cursors.md
+ *
+ * A cursor is a position between changes: the value p sits right after the
+ * change numbered p. afterCursor selects changes after it (changeSeq > p),
+ * beforeCursor selects changes before it (changeSeq <= p).
+ **/
+
+const ENDORSER_CURSOR_REGEX = /^\d{1,15}$/
+const PARTNER_CURSOR_REGEX = /^(\d{1,15})-(\d{1,15})$/
+
+function badCursorMessage(paramName) {
+  return `Parameter '${paramName}' must be the 'nextAfterCursor' or 'nextBeforeCursor' value of an earlier response.`
+}
+
+/**
+ * Read an endorser cursor: a position in the main DB's changes.
+ * @param {string|number|undefined} value
+ * @param {string} paramName - for the error message
+ * @returns {{ cursor: number|null, error?: string }} cursor is null when none was given
+ */
+export function parseEndorserCursor(value, paramName) {
+  if (value == null || value === '') {
+    return { cursor: null }
+  }
+  if (!ENDORSER_CURSOR_REGEX.test(String(value))) {
+    return { cursor: null, error: badCursorMessage(paramName) }
+  }
+  return { cursor: Number(value) }
+}
+
+/**
+ * Read a partner cursor: a position in the partner DB's changes, then in the main DB's.
+ * @param {string|undefined} value
+ * @param {string} paramName - for the error message
+ * @returns {{ cursor: {partner: number, main: number}|null, error?: string }} cursor is null when none was given
+ */
+export function parsePartnerCursor(value, paramName) {
+  if (value == null || value === '') {
+    return { cursor: null }
+  }
+  const match = String(value).match(PARTNER_CURSOR_REGEX)
+  if (!match) {
+    return { cursor: null, error: badCursorMessage(paramName) }
+  }
+  return { cursor: { partner: Number(match[1]), main: Number(match[2]) } }
+}
+
+/**
+ * @returns {string} the cursor for the given positions, as a client sends it back
+ */
+export function partnerCursor(partnerSeq, mainSeq) {
+  return partnerSeq + '-' + mainSeq
+}
+
+/** @returns {string|undefined} a message when ID or date bounds are sent along with a cursor */
+export function ignoredWithCursorMessage(params) {
+  const ignored = ['afterId', 'beforeId', 'afterDate', 'beforeDate'].filter((key) => params[key] != null && params[key] !== '')
+  return ignored.length === 0
+    ? undefined
+    : "With 'afterCursor' or 'beforeCursor', these parameters are ignored: " + ignored.join(', ') + "."
+}
+
+export const CURSOR_RESET_MESSAGE = "The 'afterCursor' is beyond this server's latest change (perhaps it came from another server, or the data was restored), so it was reset to the latest change."
+
+/**
+ * The change-sequence window for a request with cursors, clamped to the counter.
+ * @param {number|null} after - afterCursor position, or null
+ * @param {number|null} before - beforeCursor position, or null
+ * @param {number} counter - the latest change
+ * @returns {{ after: number, upTo: number, descending: boolean }} changes after < changeSeq <= upTo;
+ *   descending (newest first) when paging back with beforeCursor
+ */
+export function cursorWindow(after, before, counter) {
+  const lower = after ?? 0
+  return before == null
+    ? { after: lower, upTo: counter, descending: false }
+    : { after: lower, upTo: Math.max(lower, Math.min(before, counter)), descending: true }
+}
+
+/**
+ * Cut lists that were each read inside one change-sequence window, so that
+ * together they cover one contiguous range of changes. A list that hit its
+ * limit may have more rows; every list is trimmed to match the one that
+ * reaches least far.
+ *
+ * @param {Object<string, {data: Array<{changeSeq: number}>, hitLimit: boolean}>} lists - each ordered by
+ *   changeSeq, ascending or (when window.descending) descending
+ * @param {{after: number, upTo: number, descending: boolean}} window - the window the lists were read in
+ * @returns {{ lists: Object<string, Array>, next: number, hasMore: boolean }} lists hold the trimmed rows;
+ *   next is the cursor to continue from in the same direction: the next afterCursor when ascending,
+ *   the next beforeCursor when descending
+ */
+export function cutListsAtLimit(lists, window) {
+  let reach = window.descending ? window.after : window.upTo
+  let hasMore = false
+  for (const { data, hitLimit } of Object.values(lists)) {
+    if (hitLimit && data.length > 0) {
+      hasMore = true
+      const last = data[data.length - 1].changeSeq
+      // descending: keep only down to the highest of the lowest rows; ascending, up to the lowest of the highest
+      reach = window.descending ? Math.max(reach, last - 1) : Math.min(reach, last)
+    }
+  }
+  const trimmed = {}
+  for (const [key, { data }] of Object.entries(lists)) {
+    trimmed[key] = data.filter((row) => (window.descending ? row.changeSeq > reach : row.changeSeq <= reach))
+  }
+  return { lists: trimmed, next: reach, hasMore }
 }
 
 /**
@@ -148,21 +261,28 @@ async function withTimeout(promise, fallback, functionName) {
  * Fetch endorser data for alert search: claims, plan contributions, tracked plan updates,
  * tracked plan claims, and plans by location.
  *
+ * With a seqWindow, each list holds rows changed inside it, oldest change first
+ * (newest first when descending), all cut to one cursor (see cutListsAtLimit).
+ * Otherwise the lists are bounded by the JWT IDs, newest first.
+ *
  * @param {string} did - requester DID
- * @param {object} params - { effectiveAfterId, effectiveBeforeId, location, planHandleIds }
- * @returns {Promise<{ claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby, anyTruncated }>}
+ * @param {object} params - { effectiveAfterId, effectiveBeforeId, seqWindow, location, planHandleIds },
+ *   where seqWindow is from cursorWindow and replaces the IDs
+ * @returns {Promise<{ claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby,
+ *   anyTruncated, hasMore, next }>} hasMore is whether a list hit its limit; with a seqWindow, next is the
+ *   cursor to continue from in the window's direction
  */
 export async function fetchAlertSearchEndorserData(did, params) {
-  const { effectiveAfterId, effectiveBeforeId, location, planHandleIds } = params
+  const { effectiveAfterId, effectiveBeforeId, seqWindow, location, planHandleIds } = params
 
   const basePromises = [
-    endorserDbService.jwtsWithDidAfterId(did, effectiveAfterId, effectiveBeforeId),
-    endorserDbService.jwtsForUserPlanContributions(did, effectiveAfterId, effectiveBeforeId),
+    endorserDbService.jwtsWithDidAfterId(did, effectiveAfterId, effectiveBeforeId, seqWindow),
+    endorserDbService.jwtsForUserPlanContributions(did, effectiveAfterId, effectiveBeforeId, seqWindow),
   ]
   const trackedPlanPromises = planHandleIds?.length
     ? [
-        endorserDbService.plansLastUpdatedBetween(planHandleIds, effectiveAfterId || undefined, effectiveBeforeId),
-        endorserDbService.jwtsGiveActionOfferForPlanHandleIds(planHandleIds, effectiveAfterId, effectiveBeforeId),
+        endorserDbService.plansLastUpdatedBetween(planHandleIds, effectiveAfterId || undefined, effectiveBeforeId, seqWindow),
+        endorserDbService.jwtsGiveActionOfferForPlanHandleIds(planHandleIds, effectiveAfterId, effectiveBeforeId, seqWindow),
       ]
     : []
   const [claimsResult, planContributionsResult, trackedPlanUpdatesResult, trackedPlanClaimsResult] = await Promise.all([
@@ -173,20 +293,33 @@ export async function fetchAlertSearchEndorserData(did, params) {
     ]),
   ])
 
-  let trackedPlanUpdates = trackedPlanUpdatesResult?.data ?? []
-  let trackedPlanClaims = trackedPlanClaimsResult?.data ?? []
-  let plansNearby = { data: [], hitLimit: false }
+  let plansNearbyResult = { data: [], hitLimit: false }
   if (location) {
     const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
-    plansNearby = await endorserDbService.plansByLocationAfterId(minLocLat, maxLocLat, minLocLon, maxLocLon, effectiveAfterId, effectiveBeforeId)
+    plansNearbyResult = await endorserDbService.plansByLocationAfterId(minLocLat, maxLocLat, minLocLon, maxLocLon, effectiveAfterId, effectiveBeforeId, seqWindow)
+  }
+
+  const results = {
+    claims: claimsResult,
+    personalPlanContributions: planContributionsResult,
+    trackedPlanUpdates: trackedPlanUpdatesResult,
+    trackedPlanClaims: trackedPlanClaimsResult,
+    plansNearby: plansNearbyResult,
+  }
+  let lists, hasMore, next
+  if (seqWindow) {
+    ({ lists, hasMore, next } = cutListsAtLimit(results, seqWindow))
+  } else {
+    lists = Object.fromEntries(Object.entries(results).map(([key, result]) => [key, result.data]))
+    hasMore = Object.values(results).some((result) => result.hitLimit)
   }
 
   const [claimsOut, planContributionsOut, trackedPlanUpdatesOut, trackedPlanClaimsOut, plansOut] = await Promise.all([
-    withTimeout(hideDidsAndAddLinksToNetwork(did, claimsResult.data, []), [], 'claims'),
-    withTimeout(hideDidsAndAddLinksToNetwork(did, planContributionsResult.data, []), [], 'personal plan contributions'),
-    withTimeout(hideDidsAndAddLinksToNetwork(did, trackedPlanUpdates, planHandleIds ?? []), [], 'tracked plan updates'),
-    withTimeout(hideDidsAndAddLinksToNetwork(did, trackedPlanClaims, planHandleIds ?? []), [], 'tracked plan claims'),
-    withTimeout(hideDidsAndAddLinksToNetwork(did, plansNearby.data, []), [], 'plans'),
+    withTimeout(hideDidsAndAddLinksToNetwork(did, lists.claims, []), [], 'claims'),
+    withTimeout(hideDidsAndAddLinksToNetwork(did, lists.personalPlanContributions, []), [], 'personal plan contributions'),
+    withTimeout(hideDidsAndAddLinksToNetwork(did, lists.trackedPlanUpdates, planHandleIds ?? []), [], 'tracked plan updates'),
+    withTimeout(hideDidsAndAddLinksToNetwork(did, lists.trackedPlanClaims, planHandleIds ?? []), [], 'tracked plan claims'),
+    withTimeout(hideDidsAndAddLinksToNetwork(did, lists.plansNearby, []), [], 'plans'),
   ])
 
   const anyTruncated = claimsOut.timedOut || planContributionsOut.timedOut || trackedPlanUpdatesOut.timedOut ||
@@ -199,5 +332,7 @@ export async function fetchAlertSearchEndorserData(did, params) {
     trackedPlanClaims: trackedPlanClaimsOut.result,
     plansNearby: plansOut.result,
     anyTruncated,
+    hasMore,
+    next,
   }
 }

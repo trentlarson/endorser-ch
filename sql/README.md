@@ -22,6 +22,14 @@ CREATE TABLE action_claim (
     eventStartTime DATETIME
 );
 
+-- change sequence for alert-search cursors (see CHANGE/PLAN-accurate-cursors.md):
+-- one row, the number of the last change to a table that alert searches read
+CREATE TABLE change_counter (seq INTEGER NOT NULL);
+-- jwt, plan_claim, and embedding each have a changeSeq INTEGER column (indexed), set by triggers
+-- from this counter when a row is inserted or changes as an alert reports it: a jwt
+-- row only when inserted; a plan_claim row when its jwtId changes (an edit); an
+-- embedding row when its contentHash changes
+
 -- cache table, for quick retrieval of claims with type AgreeAction (or, in olden times, Confirmation)
 CREATE TABLE confirmation (
     jwtId CHARACTER(26),

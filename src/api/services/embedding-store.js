@@ -6,8 +6,6 @@
  * See CHANGE/PLAN-interest-matching-architecture.md section 4.
  */
 
-const util = require('./util')
-
 // stays under SQLite's limit on bound parameters
 const IN_CHUNK_SIZE = 500
 
@@ -112,24 +110,15 @@ class EmbeddingStore {
   }
 
   /**
-   * Vectors stored inside a time window.
-   * @param {string} afterDateIso - only vectors with updatedAt after this
-   * @param {string} [beforeDateIso] - only vectors with updatedAt before this
-   * @returns {Promise<Array<{subjectId: string, chunkIndex: number, vector: Buffer, updatedAt: string}>>}
+   * Vectors stamped inside a change-sequence window: afterSeq < changeSeq <= upToSeq.
+   * @returns {Promise<Array<{subjectId: string, chunkIndex: number, vector: Buffer}>>}
    */
-  async updatedBetween(subjectType, embeddingSpecId, afterDateIso, beforeDateIso) {
-    let sql = `SELECT subjectId, chunkIndex, vector, updatedAt FROM embedding
-               WHERE embeddingSpecId = ? AND subjectType = ? AND updatedAt > datetime(?)`
-    const params = [embeddingSpecId, subjectType, afterDateIso]
-    if (beforeDateIso) {
-      sql += " AND updatedAt < datetime(?)"
-      params.push(beforeDateIso)
-    }
-    const rows = await this.all(sql, params)
-    rows.forEach(row => {
-      row.updatedAt = util.isoAndZonify(row.updatedAt)
-    })
-    return rows
+  changedBetween(subjectType, embeddingSpecId, afterSeq, upToSeq) {
+    return this.all(
+      `SELECT subjectId, chunkIndex, vector FROM embedding
+       WHERE embeddingSpecId = ? AND subjectType = ? AND changeSeq > ? AND changeSeq <= ?`,
+      [embeddingSpecId, subjectType, afterSeq, upToSeq]
+    )
   }
 
   /**

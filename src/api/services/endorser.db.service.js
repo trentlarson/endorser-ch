@@ -28,6 +28,40 @@ const { EmbeddingStore } = require('./embedding-store')
 
 const DEFAULT_LIMIT = 50
 
+/**
+ * SQL for the rows a list returns: a change-sequence window when one is given
+ * (oldest change first), or else bounds on a JWT ID column (newest first).
+ * See CHANGE/PLAN-accurate-cursors.md
+ *
+ * @param {string} prefix - table alias with its dot, or ''
+ * @param {string} idColumn - the ULID column the ID bounds apply to
+ * @param {string} [afterId] - only IDs after this
+ * @param {string} [beforeId] - only IDs before this
+ * @param {{after: number, upTo: number, descending?: boolean}} [seqWindow] - only rows with after < changeSeq <= upTo,
+ *   newest change first when descending; replaces the ID bounds
+ * @returns {{ clause: string, params: Array, orderBy: string }} clause is empty or starts with ' AND'; orderBy uses result column names
+ */
+function listWindow(prefix, idColumn, afterId, beforeId, seqWindow) {
+  if (seqWindow) {
+    return {
+      clause: ` AND ${prefix}changeSeq > ? AND ${prefix}changeSeq <= ?`,
+      params: [seqWindow.after, seqWindow.upTo],
+      orderBy: seqWindow.descending ? 'changeSeq DESC' : 'changeSeq ASC',
+    }
+  }
+  let clause = ''
+  const params = []
+  if (afterId) {
+    clause += ` AND ${prefix}${idColumn} > ?`
+    params.push(afterId)
+  }
+  if (beforeId) {
+    clause += ` AND ${prefix}${idColumn} < ?`
+    params.push(beforeId)
+  }
+  return { clause, params, orderBy: `${idColumn} DESC` }
+}
+
 const GREATER_THAN = "_greaterThan"
 const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
@@ -260,6 +294,17 @@ class EndorserDatabase {
 
   newUlid() {
     return ulid()
+  }
+
+  /**
+   * The change sequence of the last change to a table that alert searches read.
+   * See CHANGE/PLAN-accurate-cursors.md
+   * @returns {Promise<number>}
+   */
+  changeCounter() {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT seq FROM change_counter", [], (err, row) => (err ? reject(err) : resolve(row.seq)))
+    })
   }
 
 
@@ -1666,18 +1711,17 @@ class EndorserDatabase {
    * @param {string} beforeId - optional; only return claims with id < beforeId
    * @return Promise of { data: [], hitLimit: true|false }
    */
-  jwtsWithDidAfterId(did, afterId, beforeId) {
+  jwtsWithDidAfterId(did, afterId, beforeId, seqWindow) {
     return new Promise((resolve, reject) => {
-      const beforeClause = beforeId ? " AND id < ?" : ""
-      const beforeParams = beforeId ? [beforeId] : []
+      const window = listWindow('', 'id', afterId, beforeId, seqWindow)
       const sql =
-        "SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity"
-        + " FROM jwt WHERE toEntity = ? AND issuer != ? AND id > ?" + beforeClause
+        "SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity, changeSeq"
+        + " FROM jwt WHERE toEntity = ? AND issuer != ?" + window.clause
         + " UNION"
-        + " SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity"
-        + " FROM jwt WHERE fromEntity = ? AND issuer != ? AND id > ?" + beforeClause
-        + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
-      const params = [did, did, afterId, ...beforeParams, did, did, afterId, ...beforeParams]
+        + " SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity, changeSeq"
+        + " FROM jwt WHERE fromEntity = ? AND issuer != ?" + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
+      const params = [did, did, ...window.params, did, did, ...window.params]
       const data = []
       let rowErr
       db.each(sql, params, function (err, row) {
@@ -1709,25 +1753,24 @@ class EndorserDatabase {
    * @param {string} beforeId - optional; only return claims with id < beforeId
    * @return Promise of { data: [], hitLimit: true|false }
    */
-  jwtsGiveActionOfferForPlanHandleIds(planHandleIds, afterId, beforeId) {
+  jwtsGiveActionOfferForPlanHandleIds(planHandleIds, afterId, beforeId, seqWindow) {
     return new Promise((resolve, reject) => {
       if (!planHandleIds || planHandleIds.length === 0) {
         resolve({ data: [], hitLimit: false })
         return
       }
-      const beforeClause = beforeId ? " AND j.id < ?" : ""
+      const window = listWindow('j.', 'id', afterId, beforeId, seqWindow)
       const inListStr = planHandleIds.map(() => '?').join(',')
       const sql =
-        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
         + " FROM jwt j WHERE j.claimType IN ('GiveAction', 'Offer')"
-        + " AND j.toEntity IN (" + inListStr + ") AND j.id > ?" + beforeClause
+        + " AND j.toEntity IN (" + inListStr + ")" + window.clause
         + " UNION"
-        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
         + " FROM jwt j WHERE j.claimType IN ('GiveAction', 'Offer')"
-        + " AND j.fromEntity IN (" + inListStr + ") AND j.id > ?" + beforeClause
-        + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
-      const beforeParams = beforeId ? [beforeId] : []
-      const params = [...planHandleIds, afterId, ...beforeParams, ...planHandleIds, afterId, ...beforeParams]
+        + " AND j.fromEntity IN (" + inListStr + ")" + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
+      const params = [...planHandleIds, ...window.params, ...planHandleIds, ...window.params]
       const data = []
       let rowErr
       db.each(sql, params, function (err, row) {
@@ -1755,22 +1798,22 @@ class EndorserDatabase {
    * @param {string} beforeId - optional; only return claims with id < beforeId
    * @return Promise of { data: [], hitLimit: true|false }
    */
-  jwtsForUserPlanContributions(did, afterId, beforeId) {
+  jwtsForUserPlanContributions(did, afterId, beforeId, seqWindow) {
     return new Promise((resolve, reject) => {
-      const beforeClause = beforeId ? " AND j.id < ?" : ""
+      // the contribution (the jwt row) is the event, not the plan it points to
+      const window = listWindow('j.', 'id', afterId, beforeId, seqWindow)
       const sql =
-        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
         + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.toEntity"
         + " WHERE j.claimType IN ('GiveAction', 'Offer')"
-        + " AND ? in (p.issuerDid, p.agentDid) AND j.id > ?" + beforeClause
+        + " AND ? in (p.issuerDid, p.agentDid)" + window.clause
         + " UNION"
-        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity"
+        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
         + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.fromEntity"
         + " WHERE j.claimType IN ('GiveAction', 'Offer')"
-        + " AND ? in (p.issuerDid, p.agentDid) AND j.id > ?" + beforeClause
-        + " ORDER BY id DESC LIMIT " + DEFAULT_LIMIT
-      const beforeParams = beforeId ? [beforeId] : []
-      const params = [did, afterId, ...beforeParams, did, afterId, ...beforeParams]
+        + " AND ? in (p.issuerDid, p.agentDid)" + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
+      const params = [did, ...window.params, did, ...window.params]
       const data = []
       let rowErr
       db.each(sql, params, function (err, row) {
@@ -2793,15 +2836,15 @@ class EndorserDatabase {
    * @param {string} beforeId - optional; only return plans with jwtId < beforeId
    * Returns Promise of { data: [], hitLimit: true|false }
    */
-  plansByLocationAfterId(minLat, maxLat, minLon, maxLon, afterId, beforeId) {
+  plansByLocationAfterId(minLat, maxLat, minLon, maxLon, afterId, beforeId, seqWindow) {
     return new Promise((resolve, reject) => {
-      const beforeClause = beforeId ? " AND jwtId < ?" : ""
+      const window = listWindow('', 'jwtId', afterId, beforeId, seqWindow)
       const sql =
         "SELECT * FROM plan_claim"
         + " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
-        + " AND jwtId > ?" + beforeClause
-        + " ORDER BY rowid DESC LIMIT " + DEFAULT_LIMIT
-      const params = beforeId ? [minLat, maxLat, minLon, maxLon, afterId, beforeId] : [minLat, maxLat, minLon, maxLon, afterId]
+        + window.clause
+        + " ORDER BY " + (seqWindow ? window.orderBy : "rowid DESC") + " LIMIT " + DEFAULT_LIMIT
+      const params = [minLat, maxLat, minLon, maxLon, ...window.params]
       const data = []
       db.each(sql, params, function (err, row) {
         if (err) {
@@ -3036,9 +3079,10 @@ class EndorserDatabase {
    * @param planIds Array of plan handle IDs to check (resulting in [] if empty)
    * @param afterIdInput Optional pagination parameter
    * @param beforeIdInput Optional pagination parameter
+   * @param seqWindow Optional { after, upTo, descending } change-sequence window, which replaces the ID bounds
    * @returns Promise of { data: [], hitLimit: boolean }
    */
-  plansLastUpdatedBetween(planIds, afterIdInput, beforeIdInput) {
+  plansLastUpdatedBetween(planIds, afterIdInput, beforeIdInput, seqWindow) {
     return new Promise((resolve, reject) => {
       if (!planIds || planIds.length === 0) {
         resolve({ data: [], hitLimit: false })
@@ -3046,23 +3090,13 @@ class EndorserDatabase {
       }
 
       const inListStr = planIds.map(() => "?").join(',')
-      let whereClause = " handleId IN (" + inListStr + ")"
-      let allParams = [...planIds]
-
-      // Add pagination
-      if (afterIdInput) {
-        whereClause += " AND jwtId > ?"
-        allParams.push(afterIdInput)
-      }
-      if (beforeIdInput) {
-        whereClause += " AND jwtId < ?"
-        allParams.push(beforeIdInput)
-      }
+      const window = listWindow('', 'jwtId', afterIdInput, beforeIdInput, seqWindow)
+      const allParams = [...planIds, ...window.params]
 
       const sql =
-        "SELECT * FROM plan_claim WHERE"
-        + whereClause
-        + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+        "SELECT * FROM plan_claim WHERE handleId IN (" + inListStr + ")"
+        + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
 
       db.all(sql, allParams, (err, rows) => {
         if (err) {

@@ -12,6 +12,12 @@ import { dbService as endorserDbService } from "../services/endorser.db.service"
 
 import {
   alertSearchParamsFromRequest,
+  CURSOR_RESET_MESSAGE,
+  cursorWindow,
+  cutListsAtLimit,
+  ignoredWithCursorMessage,
+  parsePartnerCursor,
+  partnerCursor,
   resolveAlertSearchDateBoundsForPartner,
 } from '../services/alert-search.service'
 import { sendAndStoreLink } from "../services/partner-link.service";
@@ -72,19 +78,19 @@ function similarBBoxFromParam(similarLocation) {
 
 /**
  * Profiles and plans that are close to the requester's profile, among those
- * whose vectors were stored inside the time window. Matches anywhere in the
- * world unless given an area. Empty when the requester's profile has no vector.
+ * whose vectors were stamped inside the change-sequence windows. Matches anywhere
+ * in the world unless given an area. Empty when the requester's profile has no vector.
  *
  * Leaves out the requester's own profile and plans.
  *
  * @param {string} did - requester DID
- * @param {string} afterDateIso
- * @param {string} [beforeDateIso]
+ * @param {{profile: {afterSeq, upToSeq}, plan: {afterSeq, upToSeq}}} windows - for each subject type,
+ *   afterSeq < changeSeq <= upToSeq, from that type's DB
  * @param {{minLat, minLon, maxLat, maxLon}|null} bbox - null to match everywhere
  * @returns {Promise<{ profilesSimilar: Array, plansSimilar: Array }>} each best first, at most ALERT_SIMILAR_LIMIT,
- *   of { similarity, embeddingUpdatedAt, profile } or { similarity, embeddingUpdatedAt, plan } with DIDs hidden
+ *   of { similarity, profile } or { similarity, plan } with DIDs hidden
  */
-async function alertSearchSimilar(did, afterDateIso, beforeDateIso, bbox) {
+async function alertSearchSimilar(did, windows, bbox) {
   const result = { profilesSimilar: [], plansSimilar: [] }
   const ownProfile = await partnerDbService.profileByIssuerDid(did)
   if (!ownProfile) {
@@ -99,14 +105,15 @@ async function alertSearchSimilar(did, afterDateIso, beforeDateIso, bbox) {
   const spec = activeEmbeddingSpec()
 
   const rankStored = async (subjectType) => {
-    const stored = await embeddingService.vectorsBySubjectStoredBetween(subjectType, afterDateIso, beforeDateIso)
+    const { afterSeq, upToSeq } = windows[subjectType]
+    const stored = await embeddingService.vectorsBySubjectChangedBetween(subjectType, afterSeq, upToSeq)
     if (stored.size === 0) {
       return []
     }
     const idsInBBox = await subjectIdsInBBox(subjectType, bbox)
     const inArea = idsInBBox && new Set(idsInBBox)
     const candidates = []
-    for (const [subjectId, { vectors }] of stored) {
+    for (const [subjectId, vectors] of stored) {
       const isOwnProfile = subjectType === embeddingService.SUBJECT_PROFILE && subjectId === ownProfileId
       if (!isOwnProfile && (!inArea || inArea.has(subjectId))) {
         candidates.push({ id: subjectId, vectors })
@@ -115,7 +122,7 @@ async function alertSearchSimilar(did, afterDateIso, beforeDateIso, bbox) {
     return rank(sourceVectors, candidates, spec.matching, {
       minSimilarity: spec.matching.alertMinimumSimilarity,
       limit: ALERT_SIMILAR_LIMIT,
-    }).map((r) => ({ subjectId: r.id, similarity: r.score, embeddingUpdatedAt: stored.get(r.id).updatedAt }))
+    }).map((r) => ({ subjectId: r.id, similarity: r.score }))
   }
 
   const rankedProfiles = await rankStored(embeddingService.SUBJECT_PROFILE)
@@ -125,7 +132,7 @@ async function alertSearchSimilar(did, afterDateIso, beforeDateIso, bbox) {
     )
     const profileById = new Map(profiles.map((p) => [String(p.rowid), p]))
     result.profilesSimilar = rankedProfiles
-      .map((r) => ({ similarity: r.similarity, embeddingUpdatedAt: r.embeddingUpdatedAt, profile: profileById.get(r.subjectId) }))
+      .map((r) => ({ similarity: r.similarity, profile: profileById.get(r.subjectId) }))
       .filter((r) => r.profile) // a profile may have been deleted since its vector was read
   }
 
@@ -138,7 +145,7 @@ async function alertSearchSimilar(did, afterDateIso, beforeDateIso, bbox) {
     )
     const planById = new Map(plans.map((p) => [p.handleId, p]))
     result.plansSimilar = rankedPlans
-      .map((r) => ({ similarity: r.similarity, embeddingUpdatedAt: r.embeddingUpdatedAt, plan: planById.get(r.subjectId) }))
+      .map((r) => ({ similarity: r.similarity, plan: planById.get(r.subjectId) }))
       .filter((r) => r.plan)
   }
   return result
@@ -149,28 +156,92 @@ async function alertSearchHandler(req, res) {
     return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
   }
   const paramsResult = alertSearchParamsFromRequest(req)
-  let { afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors } = paramsResult
-  const { afterDateIso, beforeDateIso, paramErrors: resolvedParamErrors } = resolveAlertSearchDateBoundsForPartner(afterId, beforeId, afterDate, beforeDate, paramErrors)
+  let { afterCursor, beforeCursor, afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors } = paramsResult
+  const afterParsed = parsePartnerCursor(afterCursor, 'afterCursor')
+  const beforeParsed = parsePartnerCursor(beforeCursor, 'beforeCursor')
+  const cursorError = afterParsed.error || beforeParsed.error
+  if (cursorError) {
+    return res.status(400).json({ error: cursorError }).end()
+  }
+  const after = afterParsed.cursor
+  const before = beforeParsed.cursor
+  const usesCursors = after != null || before != null
+  let afterDateIso, beforeDateIso, resolvedParamErrors
+  if (!usesCursors) {
+    ({ afterDateIso, beforeDateIso, paramErrors: resolvedParamErrors } = resolveAlertSearchDateBoundsForPartner(afterId, beforeId, afterDate, beforeDate, paramErrors))
+  } else {
+    resolvedParamErrors = paramErrors
+    const ignoredMessage = ignoredWithCursorMessage(paramsResult)
+    if (ignoredMessage) {
+      resolvedParamErrors.push(ignoredMessage)
+    }
+  }
 
   try {
     const did = res.locals.authTokenIssuer
 
-    let profilesNearbyRaw = { data: [], hitLimit: false }
-    if (location) {
-      const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
-      profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(minLocLat, minLocLon, maxLocLat, maxLocLon, afterDateIso, beforeDateIso)
+    // read before the lists, so rows changed while they are read fall into the next window
+    const counterPartner = await partnerDbService.changeCounter()
+    // plan vectors are in the main DB; when we separate this into another service, this will have to be an API call
+    const counterMain = await endorserDbService.changeCounter()
+    const cursorIsAhead = after != null && (after.partner > counterPartner || after.main > counterMain)
+    if (cursorIsAhead) {
+      resolvedParamErrors.push(CURSOR_RESET_MESSAGE)
     }
-
-    const profilesData = await hideDidsAndAddLinksToNetwork(did, profilesNearbyRaw.data, [])
 
     // with an area that cannot be read, matching everywhere would return results from outside it
     const { bbox: similarBBox, error: similarLocationError } = similarBBoxFromParam(similarLocation)
     if (similarLocationError) {
       resolvedParamErrors.push(similarLocationError)
     }
-    const similar = similarLocationError
+
+    let profilesNearbyRaw = { data: [], hitLimit: false }
+    let windows = null
+    // without cursors, either one starts from the latest changes
+    let nextAfterCursor = partnerCursor(counterPartner, counterMain)
+    let nextBeforeCursor = nextAfterCursor
+    let hasMore = false
+    if (!usesCursors) {
+      if (location) {
+        const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
+        profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(minLocLat, minLocLon, maxLocLat, maxLocLon, afterDateIso, beforeDateIso)
+      }
+      hasMore = profilesNearbyRaw.hitLimit
+      // without a cursor, the best matches overall
+      windows = {
+        profile: { afterSeq: 0, upToSeq: counterPartner },
+        plan: { afterSeq: 0, upToSeq: counterMain },
+      }
+    } else if (!cursorIsAhead) {
+      const partnerWindow = cursorWindow(after?.partner ?? null, before?.partner ?? null, counterPartner)
+      const mainWindow = cursorWindow(after?.main ?? null, before?.main ?? null, counterMain)
+      if (location) {
+        const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
+        profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(
+          minLocLat, minLocLon, maxLocLat, maxLocLon, null, null, partnerWindow
+        )
+      }
+      const cutResult = cutListsAtLimit({ profilesNearby: profilesNearbyRaw }, partnerWindow)
+      profilesNearbyRaw = { data: cutResult.lists.profilesNearby }
+      hasMore = cutResult.hasMore
+      // plan matches aren't paged, so the whole main window is on this page
+      const planWindow = { afterSeq: mainWindow.after, upToSeq: mainWindow.upTo }
+      if (!partnerWindow.descending) {
+        windows = { profile: { afterSeq: partnerWindow.after, upToSeq: cutResult.next }, plan: planWindow }
+        nextAfterCursor = partnerCursor(cutResult.next, mainWindow.upTo)
+        nextBeforeCursor = partnerCursor(partnerWindow.after, mainWindow.after)
+      } else {
+        windows = { profile: { afterSeq: cutResult.next, upToSeq: partnerWindow.upTo }, plan: planWindow }
+        nextAfterCursor = partnerCursor(partnerWindow.upTo, mainWindow.upTo)
+        // the main part moves to its lower bound: this page held all of its plan matches
+        nextBeforeCursor = partnerCursor(cutResult.next, mainWindow.after)
+      }
+    }
+
+    const profilesData = await hideDidsAndAddLinksToNetwork(did, profilesNearbyRaw.data, [])
+    const similar = similarLocationError || !windows
       ? { profilesSimilar: [], plansSimilar: [] }
-      : await alertSearchSimilar(did, afterDateIso, beforeDateIso, similarBBox)
+      : await alertSearchSimilar(did, windows, similarBBox)
 
     const response = {
       data: {
@@ -178,6 +249,9 @@ async function alertSearchHandler(req, res) {
         profilesSimilar: similar.profilesSimilar,
         plansSimilar: similar.plansSimilar,
       },
+      nextAfterCursor,
+      nextBeforeCursor,
+      hasMore,
     }
 
     const userMessages = []
@@ -559,29 +633,39 @@ export default express
 /**
  * @typedef SimilarProfile
  * @property {number} similarity - similarity of this profile to the requester's profile, up to 1
- * @property {string} embeddingUpdatedAt - date this profile's text was embedded, which is what afterDate and beforeDate bound
  * @property {UserProfile} profile
  */
 
 /**
  * @typedef SimilarPlan
  * @property {number} similarity - similarity of this plan to the requester's profile, up to 1
- * @property {string} embeddingUpdatedAt - date this plan's text was embedded, which is what afterDate and beforeDate bound
  * @property {object} plan - the plan summary
  */
 
 /**
  * Alert search: profiles updated in an area, and profiles and plans anywhere whose text is close to the requester's profile
  *
- * profilesSimilar and plansSimilar hold subjects whose text was embedded inside the time window,
- * with a similarity to the requester's profile of at least the embedding spec's alertMinimumSimilarity,
- * best first, at most 50 each. They are empty when the requester's profile has no text.
- * Plans are embedded by a periodic sweep, so a plan appears after the sweep that follows its claim;
- * a client that keeps the latest embeddingUpdatedAt it has seen as its next afterDate misses none.
+ * profilesSimilar and plansSimilar hold subjects whose text was embedded (first, or after it changed)
+ * inside the window, with a similarity to the requester's profile of at least the embedding spec's
+ * alertMinimumSimilarity, best first, at most 50 each. They are empty when the requester's profile has no text.
+ * Plans are embedded by a periodic sweep, so a plan appears after the sweep that follows its claim.
+ *
+ * Cursors are opaque positions between changes; store them as text and send them back unchanged.
+ * With 'afterCursor' only, profilesNearby holds profiles changed after it, oldest change first, at most 50;
+ * when 'hasMore' is true, call again with 'afterCursor' set to 'nextAfterCursor'.
+ * With 'beforeCursor', profilesNearby holds profiles changed before it (and after 'afterCursor', if given),
+ * newest change first, at most 50; to scroll further back, call again with 'beforeCursor' set to
+ * 'nextBeforeCursor' while 'hasMore' is true. The similar lists hold matches changed inside the page's
+ * window; plan matches come on the first page of a backward scroll.
+ * Without cursors, profilesNearby is bounded by the dates (or the times inside afterId and beforeId),
+ * the similar lists are the best matches overall, and both returned cursors are at the latest changes.
+ * See CHANGE/PLAN-accurate-cursors.md
  *
  * @group partner utils
  * @route GET /api/partner/alertSearch
  * @route POST /api/partner/alertSearch
+ * @param {string} afterCursor.body.optional - a cursor from an earlier response: return changes after it; the ID and date bounds are then ignored (GET, POST)
+ * @param {string} beforeCursor.body.optional - a cursor from an earlier response: return changes before it, newest first (GET, POST)
  * @param {string} afterId.body.optional - JWT ULID to return items after (GET, POST)
  * @param {string} beforeId.body.optional - JWT ULID to return items before (GET, POST)
  * @param {string} afterDate.body.optional - ISO date to return items after; takes precedence over afterId (GET, POST)
@@ -596,8 +680,13 @@ export default express
  *   profilesNearby: UserProfile[],
  *   profilesSimilar: SimilarProfile[],
  *   plansSimilar: SimilarPlan[],
- *  }
+ *  },
+ *  nextAfterCursor: string,
+ *  nextBeforeCursor: string,
+ *  hasMore: boolean,
  * }
+ * where each profilesNearby row has 'changeSeq'
+ * @returns {Error} 400 - a cursor is not one from this endpoint
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/alertSearch', alertSearchHandler)

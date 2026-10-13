@@ -13,6 +13,7 @@ import {
   globalId,
   localFromGlobalEndorserIdentifier,
 } from '../src/api/services/util';
+import { cutListsAtLimit } from '../dist/api/services/alert-search.service'
 import testUtil from './util'
 
 const expect = chai.expect
@@ -4001,6 +4002,183 @@ describe('6 - Alert Search report', () => {
         expect(r.body.userMessage).to.include('ULID')
       })
       .catch((err) => Promise.reject(err))
+  })
+
+  //// Change-sequence cursors (see CHANGE/PLAN-accurate-cursors.md)
+
+  const WORLD = { minLocLat: -90, maxLocLat: 90, minLocLon: -180, maxLocLon: 180 }
+  const CURSOR_LISTS = ['claims', 'personalPlanContributions', 'trackedPlanUpdates', 'trackedPlanClaims', 'plansNearby']
+
+  function alertSearchAfter(body) {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send(body)
+  }
+
+  it('cutListsAtLimit trims every list to the list at its limit that reaches least far', () => {
+    const rows = (...seqs) => seqs.map((changeSeq) => ({ changeSeq }))
+    const seqs = (list) => list.map((r) => r.changeSeq)
+    const forward = { after: 0, upTo: 20, descending: false }
+    let result = cutListsAtLimit({ a: { data: rows(3, 9), hitLimit: true }, b: { data: rows(1, 5, 12), hitLimit: false } }, forward)
+    expect(result.next).to.equal(9)
+    expect(result.hasMore).to.be.true
+    expect(seqs(result.lists.a)).to.deep.equal([3, 9])
+    expect(seqs(result.lists.b)).to.deep.equal([1, 5])
+    result = cutListsAtLimit({ a: { data: rows(3, 9), hitLimit: true }, b: { data: rows(1, 6), hitLimit: true } }, forward)
+    expect(result.next).to.equal(6)
+    expect(seqs(result.lists.a)).to.deep.equal([3])
+    result = cutListsAtLimit({ a: { data: rows(3), hitLimit: false }, b: { data: [], hitLimit: false } }, forward)
+    expect(result).to.deep.equal({ lists: { a: rows(3), b: [] }, next: 20, hasMore: false })
+
+    // backward: newest first; the next beforeCursor sits just below the lowest change kept
+    const backward = { after: 2, upTo: 20, descending: true }
+    result = cutListsAtLimit({ a: { data: rows(18, 11), hitLimit: true }, b: { data: rows(19, 14, 4), hitLimit: false } }, backward)
+    expect(result.next).to.equal(10)
+    expect(result.hasMore).to.be.true
+    expect(seqs(result.lists.a)).to.deep.equal([18, 11])
+    expect(seqs(result.lists.b)).to.deep.equal([19, 14])
+    result = cutListsAtLimit({ a: { data: rows(18, 11), hitLimit: true }, b: { data: rows(19, 15), hitLimit: true } }, backward)
+    expect(result.next).to.equal(14)
+    expect(seqs(result.lists.a)).to.deep.equal([18])
+    result = cutListsAtLimit({ a: { data: rows(7), hitLimit: false } }, backward)
+    expect(result).to.deep.equal({ lists: { a: rows(7) }, next: 2, hasMore: false })
+  })
+
+  it('report alertSearch returns cursors without one sent, and nothing new after them', async () => {
+    const first = await alertSearchAfter({ location: WORLD })
+    expect(first.status).to.equal(200)
+    expect(first.body.nextAfterCursor).to.match(/^\d+$/)
+    expect(first.body.hasMore).to.be.a('boolean')
+    first.body.data.claims.forEach((c) => expect(c.changeSeq).to.be.a('number'))
+    first.body.data.plansNearby.forEach((p) => expect(p.changeSeq).to.be.a('number'))
+
+    const second = await alertSearchAfter({ afterCursor: first.body.nextAfterCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })
+    expect(second.status).to.equal(200)
+    expect(second.body.nextAfterCursor).to.equal(first.body.nextAfterCursor)
+    expect(second.body.hasMore).to.be.false
+    CURSOR_LISTS.forEach((list) => expect(second.body.data[list], list).to.deep.equal([]))
+    expect(second.body.userMessage).to.be.undefined
+  })
+
+  it('report alertSearch pages every list by change sequence, with no repeats', async () => {
+    const latest = (await alertSearchAfter({})).body.nextAfterCursor
+    const seen = Object.fromEntries(CURSOR_LISTS.map((list) => [list, new Set()]))
+    let after = '0'
+    let pages = 0
+    let anyPageHadMore = false
+    let body
+    do {
+      const r = await alertSearchAfter({ afterCursor: after, location: WORLD, planHandleIds: [firstPlanIdExternal] })
+      expect(r.status).to.equal(200)
+      body = r.body
+      pages++
+      for (const list of CURSOR_LISTS) {
+        const seqs = body.data[list].map((row) => row.changeSeq)
+        expect([...seqs].sort((a, b) => a - b), list + ' ascending').to.deep.equal(seqs)
+        for (const row of body.data[list]) {
+          expect(row.changeSeq, list).to.be.above(Number(after)).and.at.most(Number(body.nextAfterCursor))
+          const key = row.id || row.jwtId
+          expect(seen[list].has(key), list + ' repeats ' + key).to.be.false
+          seen[list].add(key)
+        }
+      }
+      anyPageHadMore = anyPageHadMore || body.hasMore
+      expect(Number(body.nextAfterCursor)).to.be.above(Number(after))
+      after = body.nextAfterCursor
+    } while (body.hasMore && pages < 100)
+    expect(body.hasMore).to.be.false
+    expect(body.nextAfterCursor).to.equal(latest)
+    // earlier tests create more than 50 rows for some list, so at least one page was cut
+    expect(anyPageHadMore).to.be.true
+    expect(Math.max(...CURSOR_LISTS.map((list) => seen[list].size))).to.be.above(50)
+
+    // the newest rows found without a cursor are among those paged
+    const newest = await alertSearchAfter({ location: WORLD })
+    newest.body.data.claims.forEach((c) => expect(seen.claims.has(c.id)).to.be.true)
+    newest.body.data.plansNearby.forEach((p) => expect(seen.plansNearby.has(p.jwtId)).to.be.true)
+  }).timeout(20000)
+
+  it('report alertSearch scrolls back by change sequence, newest first, to the same rows', async () => {
+    const latest = (await alertSearchAfter({})).body.nextBeforeCursor
+    const seen = Object.fromEntries(CURSOR_LISTS.map((list) => [list, []]))
+    let beforeCursor = latest
+    let pages = 0
+    let body
+    do {
+      const r = await alertSearchAfter({ beforeCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })
+      expect(r.status).to.equal(200)
+      body = r.body
+      pages++
+      // a backward page covers changes up to its beforeCursor
+      expect(body.nextAfterCursor).to.equal(beforeCursor)
+      for (const list of CURSOR_LISTS) {
+        const pageSeqs = body.data[list].map((row) => row.changeSeq)
+        expect([...pageSeqs].sort((a, b) => b - a), list + ' descending').to.deep.equal(pageSeqs)
+        for (const row of body.data[list]) {
+          expect(row.changeSeq, list).to.be.at.most(Number(beforeCursor)).and.above(Number(body.nextBeforeCursor))
+          seen[list].push(row.id || row.jwtId)
+        }
+      }
+      beforeCursor = body.nextBeforeCursor
+    } while (body.hasMore && pages < 100)
+    expect(body.hasMore).to.be.false
+    expect(pages).to.be.above(1)
+
+    // the same rows as paging forward from the start, in reverse, with no repeats
+    let afterCursor = '0'
+    const forward = Object.fromEntries(CURSOR_LISTS.map((list) => [list, []]))
+    do {
+      body = (await alertSearchAfter({ afterCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })).body
+      for (const list of CURSOR_LISTS) {
+        forward[list].push(...body.data[list].map((row) => row.id || row.jwtId))
+      }
+      afterCursor = body.nextAfterCursor
+    } while (body.hasMore)
+    for (const list of CURSOR_LISTS) {
+      expect(seen[list], list).to.deep.equal([...forward[list]].reverse())
+    }
+  }).timeout(20000)
+
+  it('report alertSearch scrolls back only as far as afterCursor, and starts back from a forward page', async () => {
+    const latest = Number((await alertSearchAfter({})).body.nextBeforeCursor)
+    const after = String(latest - 30)
+    let r = await alertSearchAfter({ afterCursor: after, beforeCursor: String(latest), location: WORLD })
+    expect(r.status).to.equal(200)
+    CURSOR_LISTS.forEach((list) => r.body.data[list].forEach((row) => {
+      expect(row.changeSeq).to.be.above(Number(after)).and.at.most(latest)
+    }))
+    expect(r.body.hasMore).to.be.false
+    expect(r.body.nextBeforeCursor).to.equal(after)
+
+    // a forward page's nextBeforeCursor scrolls back from where that page began
+    r = await alertSearchAfter({ afterCursor: after, location: WORLD })
+    expect(r.body.nextBeforeCursor).to.equal(after)
+    r = await alertSearchAfter({ beforeCursor: after, location: WORLD })
+    CURSOR_LISTS.forEach((list) => r.body.data[list].forEach((row) => expect(row.changeSeq).to.be.at.most(Number(after))))
+  })
+
+  it('report alertSearch rejects a malformed cursor', async () => {
+    for (const after of ['abc', '12-34', '-1', '1.5']) {
+      let r = await alertSearchAfter({ afterCursor: after })
+      expect(r.status, after).to.equal(400)
+      expect(r.body.error).to.include('afterCursor')
+      r = await alertSearchAfter({ beforeCursor: after })
+      expect(r.status, after).to.equal(400)
+      expect(r.body.error).to.include('beforeCursor')
+    }
+  })
+
+  it('report alertSearch ignores ID bounds with a cursor, and resets a cursor that is ahead', async () => {
+    const latest = (await alertSearchAfter({})).body.nextAfterCursor
+    let r = await alertSearchAfter({ afterCursor: latest, afterId: firstPlanIdInternal, beforeId: firstPlanClaim2IdInternal })
+    expect(r.status).to.equal(200)
+    expect(r.body.userMessage).to.include('afterId, beforeId')
+    r = await alertSearchAfter({ afterCursor: String(Number(latest) + 1000) })
+    expect(r.status).to.equal(200)
+    expect(r.body.nextAfterCursor).to.equal(latest)
+    expect(r.body.userMessage).to.include('reset')
+    CURSOR_LISTS.forEach((list) => expect(r.body.data[list]).to.deep.equal([]))
   })
 
 

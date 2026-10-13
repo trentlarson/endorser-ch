@@ -61,6 +61,14 @@ CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
 CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
 CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
 
+-- change sequence for alert-search cursors (see CHANGE/PLAN-accurate-cursors.md):
+-- one row, the number of the last change to a table that alert searches read
+CREATE TABLE change_counter (seq INTEGER NOT NULL);
+-- user_profile and embedding each have a changeSeq INTEGER column (indexed), set by triggers
+-- from this counter when a row is inserted or changes as an alert reports it: a
+-- user_profile row when its description or a location changes; an embedding
+-- row when its contentHash changes
+
 -- vector embeddings of profiles, for semantic matching; plan vectors are in the
 -- main DB's table of the same schema (see sql/README.md)
 -- (see CHANGE/PLAN-interest-matching-architecture.md and src/api/services/embedding-specs.js)

@@ -409,24 +409,36 @@ class PartnerDatabase {
   }
 
   /**
-   * Profiles in bounding box updated after the given ISO date.
+   * Profiles in bounding box updated after the given ISO date (newest first),
+   * or changed inside a change-sequence window (oldest change first).
    * user_profile has no JWT; caller decodes afterId to ISO and passes here.
    * @param {string} beforeDateIso - optional; only return profiles with updatedAt < beforeDateIso
+   * @param {{after: number, upTo: number, descending?: boolean}} [seqWindow] - only profiles with after < changeSeq <= upTo,
+   *   newest change first when descending; replaces the dates
    * Returns Promise of { data: [], hitLimit: boolean }
    */
-  profilesByLocationAfterDate(minLat, minLon, maxLat, maxLon, afterDateIso, beforeDateIso) {
+  profilesByLocationAfterDate(minLat, minLon, maxLat, maxLon, afterDateIso, beforeDateIso, seqWindow) {
     return new Promise((resolve, reject) => {
       if (minLat == null || minLon == null || maxLat == null || maxLon == null) {
         resolve({ data: [], hitLimit: false })
         return
       }
-      let whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?)) AND updatedAt > datetime(?)"
-      const params = [minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon, afterDateIso]
-      if (beforeDateIso) {
-        whereClause += " AND updatedAt < datetime(?)"
-        params.push(beforeDateIso)
+      let whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?))"
+      const params = [minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon]
+      let orderBy = "updatedAt DESC"
+      if (seqWindow) {
+        whereClause += " AND changeSeq > ? AND changeSeq <= ?"
+        params.push(seqWindow.after, seqWindow.upTo)
+        orderBy = seqWindow.descending ? "changeSeq DESC" : "changeSeq ASC"
+      } else {
+        whereClause += " AND updatedAt > datetime(?)"
+        params.push(afterDateIso)
+        if (beforeDateIso) {
+          whereClause += " AND updatedAt < datetime(?)"
+          params.push(beforeDateIso)
+        }
       }
-      const sql = `SELECT rowid as rowid, * FROM user_profile WHERE ${whereClause} ORDER BY updatedAt DESC LIMIT ${DEFAULT_LIMIT}`
+      const sql = `SELECT rowid as rowid, * FROM user_profile WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${DEFAULT_LIMIT}`
 
       partnerDb.all(sql, params, function (err, rows) {
         if (err) {
@@ -591,6 +603,17 @@ class PartnerDatabase {
         )
       }
     )
+  }
+
+  /**
+   * The change sequence of the last change to a table that alert searches read.
+   * See CHANGE/PLAN-accurate-cursors.md
+   * @returns {Promise<number>}
+   */
+  changeCounter() {
+    return new Promise((resolve, reject) => {
+      partnerDb.get("SELECT seq FROM change_counter", [], (err, row) => (err ? reject(err) : resolve(row.seq)))
+    })
   }
 
   /**

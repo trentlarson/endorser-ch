@@ -109,7 +109,27 @@ async function embedQuery(text) {
  */
 async function vectorsBySubject(subjectType, subjectIds) {
   const spec = activeEmbeddingSpec()
-  const rows = await storeFor(subjectType).bySubjects(subjectType, spec.embeddingSpecId, subjectIds)
+  return groupBySubject(await storeFor(subjectType).bySubjects(subjectType, spec.embeddingSpecId, subjectIds))
+}
+
+/**
+ * Vectors stamped inside a change-sequence window (afterSeq < changeSeq <= upToSeq),
+ * grouped by subject. A vector is stamped when its subject's text is first
+ * embedded or changes, so the window selects subjects whose text is new to
+ * matching, whenever their records were saved.
+ * @param {string} subjectType
+ * @returns {Promise<Map<string, Float32Array[]>>} subjectId -> vectors ordered by chunkIndex
+ */
+async function vectorsBySubjectChangedBetween(subjectType, afterSeq, upToSeq) {
+  const spec = activeEmbeddingSpec()
+  return groupBySubject(await storeFor(subjectType).changedBetween(subjectType, spec.embeddingSpecId, afterSeq, upToSeq))
+}
+
+/**
+ * @param {Array<{subjectId: string, chunkIndex: number, vector: Buffer}>} rows
+ * @returns {Map<string, Float32Array[]>} subjectId -> vectors ordered by chunkIndex
+ */
+function groupBySubject(rows) {
   rows.sort((a, b) => a.chunkIndex - b.chunkIndex)
   const result = new Map()
   for (const row of rows) {
@@ -117,34 +137,6 @@ async function vectorsBySubject(subjectType, subjectIds) {
       result.set(row.subjectId, [])
     }
     result.get(row.subjectId).push(engine.blobToVector(row.vector))
-  }
-  return result
-}
-
-/**
- * Vectors stored inside a time window, grouped by subject. A vector is stored
- * when its subject's text is first embedded or embedded again, so the window
- * selects subjects that are new to matching, whenever their records were saved.
- * @param {string} subjectType
- * @param {string} afterDateIso - only vectors stored after this
- * @param {string} [beforeDateIso] - only vectors stored before this
- * @returns {Promise<Map<string, {vectors: Float32Array[], updatedAt: string}>>} subjectId -> vectors
- *   ordered by chunkIndex, and the latest time one was stored
- */
-async function vectorsBySubjectStoredBetween(subjectType, afterDateIso, beforeDateIso) {
-  const spec = activeEmbeddingSpec()
-  const rows = await storeFor(subjectType).updatedBetween(subjectType, spec.embeddingSpecId, afterDateIso, beforeDateIso)
-  rows.sort((a, b) => a.chunkIndex - b.chunkIndex)
-  const result = new Map()
-  for (const row of rows) {
-    if (!result.has(row.subjectId)) {
-      result.set(row.subjectId, { vectors: [], updatedAt: row.updatedAt })
-    }
-    const subject = result.get(row.subjectId)
-    subject.vectors.push(engine.blobToVector(row.vector))
-    if (row.updatedAt > subject.updatedAt) {
-      subject.updatedAt = row.updatedAt
-    }
   }
   return result
 }
@@ -301,7 +293,7 @@ module.exports = {
   refreshProfileEmbedding,
   embedQuery,
   vectorsBySubject,
-  vectorsBySubjectStoredBetween,
+  vectorsBySubjectChangedBetween,
   sweep,
   getSweepStatus,
   startSweepSchedule,

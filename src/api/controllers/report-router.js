@@ -10,9 +10,13 @@ import ClaimService from '../services/claim.service'
 import { dbService } from '../services/endorser.db.service';
 import {
   alertSearchParamsFromRequest,
+  CURSOR_RESET_MESSAGE,
+  cursorWindow,
+  fetchAlertSearchEndorserData,
+  ignoredWithCursorMessage,
+  parseEndorserCursor,
   resolveAlertSearchAfterId,
   resolveAlertSearchBeforeId,
-  fetchAlertSearchEndorserData,
 } from '../services/alert-search.service';
 import { planService } from '../services/project.service';
 import { globalId, latLonFromTile, latWidthToTileWidth } from "../services/util";
@@ -100,19 +104,62 @@ async function alertSearchReportHandler(req, res) {
     return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
   }
   const paramsResult = alertSearchParamsFromRequest(req)
-  let { afterId, beforeId, location, planHandleIds, paramErrors } = paramsResult
-  const { effectiveAfterId, paramErrors: afterParamErrors } = resolveAlertSearchAfterId(afterId, paramErrors)
-  const { effectiveBeforeId, paramErrors: resolvedParamErrors } = resolveAlertSearchBeforeId(beforeId, afterParamErrors)
+  let { afterCursor, beforeCursor, afterId, beforeId, location, planHandleIds, paramErrors } = paramsResult
+  const afterParsed = parseEndorserCursor(afterCursor, 'afterCursor')
+  const beforeParsed = parseEndorserCursor(beforeCursor, 'beforeCursor')
+  const cursorError = afterParsed.error || beforeParsed.error
+  if (cursorError) {
+    return res.status(400).json({ error: cursorError }).end()
+  }
+  const after = afterParsed.cursor
+  const before = beforeParsed.cursor
+  const usesCursors = after != null || before != null
+  let effectiveAfterId, effectiveBeforeId, resolvedParamErrors
+  if (!usesCursors) {
+    let afterParamErrors
+    ({ effectiveAfterId, paramErrors: afterParamErrors } = resolveAlertSearchAfterId(afterId, paramErrors));
+    ({ effectiveBeforeId, paramErrors: resolvedParamErrors } = resolveAlertSearchBeforeId(beforeId, afterParamErrors))
+  } else {
+    resolvedParamErrors = paramErrors
+    const ignoredMessage = ignoredWithCursorMessage(paramsResult)
+    if (ignoredMessage) {
+      resolvedParamErrors.push(ignoredMessage)
+    }
+  }
 
   try {
     const did = res.locals.authTokenIssuer
-    const endorserData = await fetchAlertSearchEndorserData(did, {
-      effectiveAfterId,
-      effectiveBeforeId,
-      location,
-      planHandleIds,
-    })
+    // read before the lists, so rows changed while they are read fall into the next window
+    const counter = await dbService.changeCounter()
+    const cursorIsAhead = after != null && after > counter
+    if (cursorIsAhead) {
+      resolvedParamErrors.push(CURSOR_RESET_MESSAGE)
+    }
+    const seqWindow = usesCursors && !cursorIsAhead ? cursorWindow(after, before, counter) : undefined
+    const endorserData = cursorIsAhead
+      ? { claims: [], personalPlanContributions: [], trackedPlanUpdates: [], trackedPlanClaims: [], plansNearby: [], hasMore: false }
+      : await fetchAlertSearchEndorserData(did, {
+          effectiveAfterId,
+          effectiveBeforeId,
+          seqWindow,
+          location,
+          planHandleIds,
+        })
 
+    // without cursors, either one starts from the latest change
+    let nextAfterCursor = counter
+    let nextBeforeCursor = counter
+    let hasMore = endorserData.hasMore
+    if (seqWindow && !seqWindow.descending) {
+      // a list that timed out came back empty, so the same window must be searched again
+      nextAfterCursor = endorserData.anyTruncated ? seqWindow.after : endorserData.next
+      nextBeforeCursor = seqWindow.after
+      hasMore = hasMore && !endorserData.anyTruncated
+    } else if (seqWindow) {
+      nextAfterCursor = seqWindow.upTo
+      nextBeforeCursor = endorserData.anyTruncated ? seqWindow.upTo : endorserData.next
+      hasMore = hasMore && !endorserData.anyTruncated
+    }
     const response = {
       data: {
         claims: endorserData.claims,
@@ -121,6 +168,9 @@ async function alertSearchReportHandler(req, res) {
         trackedPlanClaims: endorserData.trackedPlanClaims,
         plansNearby: endorserData.plansNearby,
       },
+      nextAfterCursor: String(nextAfterCursor),
+      nextBeforeCursor: String(nextBeforeCursor),
+      hasMore,
     }
     const userMessages = []
     if (resolvedParamErrors?.length) {
@@ -837,9 +887,20 @@ export default express
  * Alert search: claims, plan contributions, tracked plan updates/claims, plans by location.
  * Does not include profiles, or plans matched to the user's profile by meaning (see partner /alertSearch for both).
  *
+ * Cursors are opaque positions between changes; store them as text and send them back unchanged.
+ * With 'afterCursor' only, each list holds rows changed after it, oldest change first, at most 50;
+ * when 'hasMore' is true, call again with 'afterCursor' set to 'nextAfterCursor'.
+ * With 'beforeCursor', each list holds rows changed before it (and after 'afterCursor', if given),
+ * newest change first, at most 50; to scroll further back, call again with 'beforeCursor' set to
+ * 'nextBeforeCursor' while 'hasMore' is true. Without cursors, the lists hold the newest rows inside
+ * the afterId and beforeId bounds, and both returned cursors are at the latest change.
+ * See CHANGE/PLAN-accurate-cursors.md
+ *
  * @group reports
  * @route GET /api/v2/report/alertSearch
  * @route POST /api/v2/report/alertSearch
+ * @param {string} afterCursor.query.optional - a cursor from an earlier response: return rows changed after it; afterId and beforeId are then ignored (GET, POST)
+ * @param {string} beforeCursor.query.optional - a cursor from an earlier response: return rows changed before it, newest first (GET, POST)
  * @param {string} afterId.query.optional - JWT ULID to return items after (GET, POST)
  * @param {string} beforeId.query.optional - JWT ULID to return items before (GET, POST)
  * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
@@ -850,7 +911,8 @@ export default express
  * @param {string[]} planHandleIds.query.optional - plan handle IDs to track (GET, POST)
  * @param {string[]} planIds.query.optional - plan IDs to track (GET, POST)
  * @param {string[]} handleIds.query.optional - handle IDs to track (GET, POST)
- * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby } }
+ * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby }, nextAfterCursor, nextBeforeCursor, hasMore }, where each row has 'changeSeq'
+ * @returns {Error} 400 - a cursor is not one from this endpoint
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/alertSearch', alertSearchReportHandler)

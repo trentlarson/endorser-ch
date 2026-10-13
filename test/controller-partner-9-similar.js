@@ -385,7 +385,6 @@ describe('P9 - Semantic Matching', () => {
     function expectBestFirstOverThreshold(similar) {
       similar.forEach((s, i) => {
         expect(s.similarity).to.be.at.least(threshold)
-        expect(new Date(s.embeddingUpdatedAt).getTime()).to.be.above(0)
         if (i > 0) {
           expect(s.similarity).to.be.at.most(similar[i - 1].similarity)
         }
@@ -423,8 +422,8 @@ describe('P9 - Semantic Matching', () => {
     })
 
     it('matches a new profile, and never the requester\'s own', async () => {
-      // updatedAt has 1-second resolution
-      const afterDate = new Date(Date.now() - 1000).toISOString()
+      const after7 = (await alertSearch(pushTokens[7], {})).body.nextAfterCursor
+      const after8 = (await alertSearch(pushTokens[8], {})).body.nextAfterCursor
       const r0 = await request(Server)
         .post('/api/partner/userProfile')
         .set('Authorization', 'Bearer ' + pushTokens[9])
@@ -432,7 +431,7 @@ describe('P9 - Semantic Matching', () => {
       expect(r0.status).to.equal(201)
       gardener2RowId = (await partnerDbService.profileByIssuerDid(creds[9].did)).rowid
 
-      let r = await alertSearch(pushTokens[7], { afterDate })
+      let r = await alertSearch(pushTokens[7], { afterCursor: after7 })
       expect(profileIds(r)).to.include(gardener2RowId).and.not.include(gardenerRowId).and.not.include(coderRowId)
       expectBestFirstOverThreshold(r.body.data.profilesSimilar)
       expect(r.body.data.profilesSimilar[0].profile.description).to.equal(GARDENER_2_PROFILE.description)
@@ -441,22 +440,16 @@ describe('P9 - Semantic Matching', () => {
       expect(profileIds(r)).to.include(gardenerRowId).and.not.include(gardener2RowId).and.not.include(coderRowId)
       expect(planIds(r)).to.include(gardenHandleId)
 
-      r = await alertSearch(pushTokens[8], { afterDate })
+      r = await alertSearch(pushTokens[8], { afterCursor: after8 })
       expect(profileIds(r)).to.not.include(gardener2RowId)
     }).timeout(10000)
 
-    it('bounds matches by the time their vectors were stored', async () => {
+    it('returns the best matches overall without a cursor, whatever the dates', async () => {
       const tomorrow = new Date(Date.now() + 86400000).toISOString()
-      const lastYear = new Date(Date.now() - 365 * 86400000).toISOString()
-      let r = await alertSearch(pushTokens[7], { afterDate: tomorrow })
-      expect(r.body.data.profilesSimilar).to.deep.equal([])
-      expect(r.body.data.plansSimilar).to.deep.equal([])
-      r = await alertSearch(pushTokens[7], { beforeDate: lastYear })
-      expect(r.body.data.profilesSimilar).to.deep.equal([])
-      expect(r.body.data.plansSimilar).to.deep.equal([])
-      r = await alertSearch(pushTokens[7], { afterDate: lastYear, beforeDate: tomorrow })
+      const r = await alertSearch(pushTokens[7], { afterDate: tomorrow })
       expect(profileIds(r)).to.include(gardener2RowId)
       expect(planIds(r)).to.include(gardenHandleId)
+      expectBestFirstOverThreshold(r.body.data.profilesSimilar)
     })
 
     it('restricts matches to similarLocation, apart from the location for profilesNearby', async () => {
@@ -492,9 +485,11 @@ describe('P9 - Semantic Matching', () => {
     })
 
     it('matches a plan once a sweep embeds it, but not for its agent', async () => {
-      // so that the vectors stored earlier are outside the window
-      await new Promise((resolve) => setTimeout(resolve, 1100))
-      const afterDate = new Date(Date.now() - 1000).toISOString()
+      const partnerAfter = (await alertSearch(pushTokens[9], {})).body.nextAfterCursor
+      const endorserAfter = (await request(Server)
+        .post('/api/v2/report/alertSearch')
+        .set('Authorization', 'Bearer ' + pushTokens[9])
+        .send({})).body.nextAfterCursor
 
       // issued by creds[1] with the gardener as the agent
       const claim = R.clone(testUtil.claimPlanAction)
@@ -512,7 +507,7 @@ describe('P9 - Semantic Matching', () => {
       expect(claimed.status).to.equal(201)
       seedHandleId = claimed.body.success.handleId
 
-      let r = await alertSearch(pushTokens[9], { afterDate })
+      let r = await alertSearch(pushTokens[9], { afterCursor: partnerAfter })
       expect(planIds(r)).to.deep.equal([])
 
       const swept = await request(Server)
@@ -521,13 +516,128 @@ describe('P9 - Semantic Matching', () => {
         .set('Authorization', 'Bearer ' + pushTokens[0])
       expect(swept.body.data.lastResult.plan.embedded).to.equal(1)
 
-      r = await alertSearch(pushTokens[9], { afterDate })
+      // once
+      r = await alertSearch(pushTokens[9], { afterCursor: partnerAfter })
       expect(planIds(r)).to.deep.equal([seedHandleId])
-      expect(r.body.data.plansSimilar[0].embeddingUpdatedAt > afterDate.substring(0, 19)).to.equal(true)
+      r = await alertSearch(pushTokens[9], { afterCursor: r.body.nextAfterCursor })
+      expect(planIds(r)).to.deep.equal([])
+
+      // the plan, by cursor, from the endorser
+      const nearby = await request(Server)
+        .post('/api/v2/report/alertSearch')
+        .set('Authorization', 'Bearer ' + pushTokens[9])
+        .send({ afterCursor: endorserAfter, location: FAR_BBOX })
+      expect(nearby.body.data.plansNearby.map((p) => p.handleId)).to.deep.equal([seedHandleId])
 
       r = await alertSearch(pushTokens[7], {})
       expect(planIds(r)).to.include(gardenHandleId).and.not.include(seedHandleId)
     }).timeout(60000)
+  })
+
+  describe('alertSearch cursors', () => {
+
+    // an area no other test uses
+    const CURSOR_BBOX = { minLocLat: -30.3, minLocLon: -30.3, maxLocLat: -30, maxLocLon: -30 }
+    const BEEKEEPER = {
+      description: 'I keep bees and grow tomatoes and squash in my backyard, and trade seeds with neighbors.',
+      locLat: -30.1,
+      locLon: -30.1,
+    }
+    let beekeeperRowId
+
+    function alertSearch(token, body) {
+      return request(Server).post('/api/partner/alertSearch').set('Authorization', 'Bearer ' + token).send(body)
+    }
+    function saveProfile(profile) {
+      return request(Server)
+        .post('/api/partner/userProfile')
+        .set('Authorization', 'Bearer ' + pushTokens[11])
+        .send(profile)
+    }
+    const nearbyIds = (r) => r.body.data.profilesNearby.map((p) => p.rowId)
+    const similarIds = (r) => r.body.data.profilesSimilar.map((s) => s.profile.rowId)
+
+    it('returns cursors with both counters, without one sent', async () => {
+      const r = await alertSearch(pushTokens[7], {})
+      expect(r.status).to.equal(200)
+      expect(r.body.nextAfterCursor).to.match(/^\d+-\d+$/)
+      expect(r.body.nextBeforeCursor).to.equal(r.body.nextAfterCursor)
+      expect(r.body.hasMore).to.equal(false)
+    })
+
+    it('rejects a malformed cursor', async () => {
+      for (const after of ['5', 'a-b', '1-2-3', '-5']) {
+        let r = await alertSearch(pushTokens[7], { afterCursor: after })
+        expect(r.status, after).to.equal(400)
+        expect(r.body.error).to.include('afterCursor')
+        r = await alertSearch(pushTokens[7], { beforeCursor: after })
+        expect(r.status, after).to.equal(400)
+        expect(r.body.error).to.include('beforeCursor')
+      }
+    })
+
+    it('finds a changed profile once, and again only when its content changes', async () => {
+      const after = (await alertSearch(pushTokens[7], {})).body.nextAfterCursor
+      expect((await saveProfile(BEEKEEPER)).status).to.equal(201)
+      beekeeperRowId = (await partnerDbService.profileByIssuerDid(creds[11].did)).rowid
+
+      let r = await alertSearch(pushTokens[7], { afterCursor: after, location: CURSOR_BBOX })
+      expect(r.status).to.equal(200)
+      expect(nearbyIds(r)).to.deep.equal([beekeeperRowId])
+      expect(r.body.data.profilesNearby[0].changeSeq).to.be.a('number')
+      expect(similarIds(r)).to.deep.equal([beekeeperRowId])
+      expect(r.body.hasMore).to.equal(false)
+
+      const next = r.body.nextAfterCursor
+      expect(next).to.not.equal(after)
+      r = await alertSearch(pushTokens[7], { afterCursor: next, location: CURSOR_BBOX })
+      expect(nearbyIds(r)).to.deep.equal([])
+      expect(similarIds(r)).to.deep.equal([])
+      expect(r.body.nextAfterCursor).to.equal(next)
+
+      // saving the same content again is not a change
+      expect((await saveProfile(BEEKEEPER)).status).to.equal(201)
+      r = await alertSearch(pushTokens[7], { afterCursor: next, location: CURSOR_BBOX })
+      expect(nearbyIds(r)).to.deep.equal([])
+      expect(similarIds(r)).to.deep.equal([])
+
+      // a new description is
+      expect((await saveProfile({ ...BEEKEEPER, description: BEEKEEPER.description + ' I also sell honey.' })).status).to.equal(201)
+      r = await alertSearch(pushTokens[7], { afterCursor: next, location: CURSOR_BBOX })
+      expect(nearbyIds(r)).to.deep.equal([beekeeperRowId])
+      expect(similarIds(r)).to.deep.equal([beekeeperRowId])
+    }).timeout(10000)
+
+    it('scrolls back through changed profiles, newest first, with plan matches on the first page only', async () => {
+      const before = (await alertSearch(pushTokens[7], {})).body.nextBeforeCursor
+      let r = await alertSearch(pushTokens[7], { beforeCursor: before, location: CURSOR_BBOX })
+      expect(r.status).to.equal(200)
+      expect(nearbyIds(r)).to.deep.equal([beekeeperRowId])
+      // matches for the gardener from anywhere before the cursor
+      expect(similarIds(r)).to.include(beekeeperRowId)
+      expect(r.body.data.plansSimilar.length).to.be.above(0)
+      expect(r.body.hasMore).to.equal(false)
+
+      // the next page back holds nothing more for this area, and no plan matches again
+      r = await alertSearch(pushTokens[7], { beforeCursor: r.body.nextBeforeCursor, location: CURSOR_BBOX })
+      expect(nearbyIds(r)).to.deep.equal([])
+      expect(r.body.data.plansSimilar).to.deep.equal([])
+    })
+
+    it('ignores date bounds with a cursor, and resets a cursor that is ahead', async () => {
+      const latest = (await alertSearch(pushTokens[7], {})).body.nextAfterCursor
+      let r = await alertSearch(pushTokens[7], { afterCursor: latest, afterDate: new Date().toISOString() })
+      expect(r.status).to.equal(200)
+      expect(r.body.userMessage).to.include('afterDate')
+
+      const [partnerSeq, mainSeq] = latest.split('-').map(Number)
+      r = await alertSearch(pushTokens[7], { afterCursor: partnerSeq + '-' + (mainSeq + 1000), location: CURSOR_BBOX })
+      expect(r.status).to.equal(200)
+      expect(r.body.nextAfterCursor).to.equal(latest)
+      expect(r.body.userMessage).to.include('reset')
+      expect(nearbyIds(r)).to.deep.equal([])
+      expect(r.body.data.plansSimilar).to.deep.equal([])
+    })
   })
 
 })

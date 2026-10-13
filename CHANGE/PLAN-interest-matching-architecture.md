@@ -416,20 +416,19 @@ the explicit form of what the shared empty vector did by accident.
 lists scored against the requester's own profile vector:
 
 ```text
-profilesSimilar: [{ similarity, embeddingUpdatedAt, profile }]
-plansSimilar:    [{ similarity, embeddingUpdatedAt, plan }]
+profilesSimilar: [{ similarity, profile }]
+plansSimilar:    [{ similarity, plan }]
 ```
 
 1. Source: the requester's stored profile vector. Both lists are empty when
    there is none (no profile, or a profile without text).
-2. Candidates: vectors whose `updatedAt` is inside the request's time window
-   (`afterDate` / `beforeDate`, or the times inside `afterId` / `beforeId`),
-   read through the `embedding_spec_type_updated` index. The window bounds the
-   vector's time and not the record's because plans get their vectors from the
-   sweep: a plan claimed before a client's poll and embedded after it has a
-   vector time later than everything that poll returned. A client that sends
-   the latest `embeddingUpdatedAt` it has seen as its next `afterDate` misses
-   no match.
+2. Candidates: with a cursor, vectors whose `changeSeq` is inside the page's window
+   (partner part of the cursor for profiles, main part for plans; see
+   `CHANGE/PLAN-accurate-cursors.md`); without one, every vector, so the lists
+   are the best matches overall. The window bounds the vector and not the record
+   because plans get their vectors from the sweep: a plan claimed before a
+   client's poll and embedded after it is stamped after everything that poll
+   returned.
 3. Area: everywhere, unless `similarLocation` gives a bounding box (same shape
    as `location`, which only selects `profilesNearby`). An unreadable
    `similarLocation` yields a `userMessage` and empty lists, so a request meant
@@ -456,10 +455,10 @@ the section 7 corpus pairs kept at each cut:
 The highest-scoring unrelated pairs are hard negatives at 0.846 (a gold miner
 and a crypto miner; a glue-gun crafter and a gunsmith).
 
-Two effects of windowing on the vector's time:
+Two effects of windowing on the vector:
 
-- Saving a profile stores its vector again even when the text is unchanged, so
-  the profile re-enters the window, as it does for `profilesNearby`.
+- A vector is stamped when its subject is first embedded or its text changes;
+  saving unchanged text does not bring a match back.
 - Switching to another embedding spec embeds every subject again, so every
   match re-enters the window once.
 

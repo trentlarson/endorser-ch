@@ -9,10 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `profilesSimilar` and `plansSimilar` in `/api/partner/alertSearch`: profiles and plans anywhere in the world whose text is close to the requester's profile (similarity of 0.85 or more, the embedding spec's `alertMinimumSimilarity`), among those embedded inside the time window; each entry has `similarity`, `embeddingUpdatedAt`, and the `profile` or `plan`
 - Optional `similarLocation` bounding box in `/api/partner/alertSearch` to restrict those matches to an area
+- Cursors for both `alertSearch` endpoints that miss and repeat nothing: every response has `nextAfterCursor`, `nextBeforeCursor`, and `hasMore`. Send `afterCursor` to get what changed since, oldest change first, or `beforeCursor` to scroll back, newest first; page while `hasMore`. Rows have `changeSeq`. A malformed cursor is a 400. See CHANGE/PLAN-accurate-cursors.md
 ### Changed
 - Plan vectors are stored in the main DB, with the plans; profile vectors stay in the partner DB
 ### Changed in DB or environment
-- Run Flyway migrations for both DBs: main V21 creates `embedding`; partner V8 deletes the plan vectors from its `embedding`. The first sweep after startup embeds every plan again (about 12 ms each). Rolling back needs no restore: the previous version's sweep embeds the plans into the partner DB again.
+- Run Flyway migrations for both DBs: main V21 creates `embedding`; partner V8 deletes the plan vectors from its `embedding`; main V22 and partner V9 add `change_counter`, `changeSeq` columns (numbering existing rows), and the triggers that stamp them. The first sweep after startup embeds every plan again (about 12 ms each). Rolling back needs no restore: the previous version's sweep embeds the plans into the partner DB again.
 
 
 ## [4.4.6] - 2026.10.04
