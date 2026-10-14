@@ -49,18 +49,22 @@ Add Dependencies
 npm ci
 
 # set up the environment (optional)
-cp .env.local .env
+cp .env.example .env
 
 # setup/migrate DB
+
+## The easiest DB setup for testing is at the end of this block.
+
+## For production:
 NODE_ENV=dev DBUSER=sa DBPASS=sasa npm run flyway migrate
-# note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
+## Note that it fails if you don't run `npm ci`; `npm install` isn't enough (Ug!)
 
-# register ths first permissioned user by adding a DID thus:
+## Register the first permissioned user by adding a DID thus:
 echo "INSERT INTO registration (did, maxClaims, maxRegs, epoch) VALUES ('YOUR_DID', 100, 10000, 1719348718092);" | sqlite3 ../endorser-ch-dev.sqlite3
-# ... but as an alternative for test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
-```
 
-If you just want to get running with initial test user, run `test/test.sh` (or do the "bare" setup below).
+## ... but as an alternative for more controlled test DB & user setup: run a local test with instructions below to generate sample data, then: `cp ../endorser-ch-test-local.sqlite3 ../endorser-ch-dev.sqlite3` and rerun `npm run dev` and you'll have user #0 and others from the CREDS in [this file](./test/util.js)
+## See also the 'bare' setup below.
+```
 
 Run
 
@@ -68,6 +72,11 @@ Run
 # run in development mode
 NODE_ENV=dev npm run dev
 ```
+
+Profile & project matching uses an embedding model (about 320 MB). It downloads into
+`~/.cache/endorser-embedding-models` on first use, or ahead of time with
+`npm run embedding:fetch-model`. See `test/embedding-eval/README.md` for the evaluation and
+visualization tools.
 
 
 
@@ -97,20 +106,30 @@ cd endorser-ch && git checkout master && git pull && git checkout $ENDORSER_VERS
 vi endorser-ch/.env # to add the version
 ```
 
-* Before deploying, ask yourself: do you need to run a migration? If so:
+* Before deploying, ask yourself: do you need to run a migration? If so (main DB from `sql`, partner DB from `sql-for-partner`):
 
 ```
 cp endorser-ch-db/endorser-ch-$NODE_ENV.sqlite3 endorser-ch-db/endorser-ch-$NODE_ENV-pre-$ENDORSER_VERSION.sqlite3.bak
 
 sudo docker run --rm -v ~/endorser-ch/sql:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-ch-$NODE_ENV.sqlite3 -user=sa -password=... migrate
+
+cp endorser-ch-db/endorser-partner-$NODE_ENV.sqlite3 endorser-ch-db/endorser-partner-$NODE_ENV-pre-$ENDORSER_VERSION.sqlite3.bak
+
+sudo docker run --rm -v ~/endorser-ch/sql-for-partner:/flyway/sql -v ~/endorser-ch-db:/flyway/db flyway/flyway -sqlMigrationSuffixes=.sqlite3 -url=jdbc:sqlite:/flyway/db/endorser-partner-$NODE_ENV.sqlite3 -user=sa -password=... migrate
  ```
 
-* See .env.local for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
+* Put the embedding model in the host's model directory. This verifies the files that are there and downloads only what is missing, so it is quick when the spec hasn't changed; it also confirms the model runs in the image. That test loads the model, which takes about 1 GB of memory on Linux (as the server does), so the host needs that much free beside everything else running; add `--skip-test` to only download and verify (about 150 MB), eg. while the previous version is still running. A bare "Killed" means the host ran out of memory (check with `dmesg -T | grep -i -E 'out of memory|killed process'`).
+
+```
+sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=/mnt/models endorser-ch:amd-$ENDORSER_VERSION npm run embedding:fetch-model
+```
+
+* See .env.example for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
 
 * Run it:
 
 ```
-sudo docker run -d -p 8001:8001 -v ~/endorser-ch-db:/mnt/database --name endorser-ch-$NODE_ENV --env-file ~/endorser-ch/.env -e APP_DB_FILE=/mnt/database/endorser-ch-$NODE_ENV.sqlite3 -e PARTNER_APP_DB_FILE=/mnt/database/endorser-partner-$NODE_ENV.sqlite3 -e NODE_ENV=$NODE_ENV -e ENDORSER_VERSION=$ENDORSER_VERSION endorser-ch:amd-$ENDORSER_VERSION
+sudo docker run -d -p 8001:8001 -v ~/endorser-ch-db:/mnt/database -v ~/endorser-ch-models:/mnt/models:ro --name endorser-ch-$NODE_ENV --env-file ~/endorser-ch/.env -e APP_DB_FILE=/mnt/database/endorser-ch-$NODE_ENV.sqlite3 -e PARTNER_APP_DB_FILE=/mnt/database/endorser-partner-$NODE_ENV.sqlite3 -e EMBEDDING_MODEL_DIR=/mnt/models -e EMBEDDING_ALLOW_REMOTE_MODELS=false -e NODE_ENV=$NODE_ENV -e ENDORSER_VERSION=$ENDORSER_VERSION endorser-ch:amd-$ENDORSER_VERSION
 ```
 
 * After deploying, increment the version & add "-beta" to the package.json and `npm install` and commit.
@@ -125,6 +144,73 @@ When running on another domain (other than endorser.ch):
   (Same note: doesn't break anything but is potentially confusing.)
 
 * ... and maybe the GLOBAL_ENTITY_ID_IRI_PREFIX if you want a different path after the domain. (These don't have to resolve, but it's a nice touch if they do.)
+
+
+### Hosting the Embedding Model Yourself
+
+`GET /api/partner/embeddingSpecs` tells clients where to download the model files for
+embedding text on the device. By default that is Hugging Face at the pinned revision, eg.
+`https://huggingface.co/onnx-community/granite-embedding-311m-multilingual-r2-ONNX/resolve/8f039f21d4181327268271bea4b11ddcc7eef88d/`.
+Hosting the files yourself removes the dependency on Hugging Face staying up and keeping the
+repository, and keeps Hugging Face from seeing which clients download the model. In exchange
+you pay for the bandwidth: about 330 MB per client the first time it embeds anything
+(`onnx/model_quantized.onnx` 298 MB, `tokenizer.json` 32 MB, plus two small JSON files).
+Clients that only compare vectors fetched from `/api/partner/embeddings` never download it.
+
+1. Get the files, verified against the spec's hashes. On a host that already ran
+   `npm run embedding:fetch-model` they are in its model directory (eg. `~/endorser-ch-models`).
+   The directory layout, `<modelRepo>/<modelRevision>/<file>`, is the layout to publish.
+   (For a server that should never contact Hugging Face, copy that directory over from another
+   host and run the fetch script there; with every file present it only verifies them.)
+
+2. Serve that directory as static files over HTTPS, from any web server, object store, or CDN,
+   with these response headers:
+   * `Access-Control-Allow-Origin: *` (or the app origins), since the apps run on other origins.
+   * `Cache-Control: public, max-age=31536000, immutable`; the revision is in the path, so a
+     URL's content never changes.
+   * gzip or brotli for `.json` files (`tokenizer.json` shrinks to a fraction of its size);
+     the `.onnx` file doesn't compress much.
+
+   For example, with Caddy (which also obtains the certificate):
+
+   ```
+   models.example.org {
+     root * /home/ubuntu/endorser-ch-models
+     file_server
+     encode gzip
+     header Access-Control-Allow-Origin "*"
+     header Cache-Control "public, max-age=31536000, immutable"
+   }
+   ```
+
+3. Check that every file arrives intact and with the CORS header; compare each digest with
+   `fileSha256` in `src/api/services/embedding-specs.js` (use `sha256sum` on Linux):
+
+   ```
+   BASE=https://models.example.org/onnx-community/granite-embedding-311m-multilingual-r2-ONNX/8f039f21d4181327268271bea4b11ddcc7eef88d
+   for f in onnx/model_quantized.onnx tokenizer.json tokenizer_config.json config.json; do
+     echo "$f $(curl -s $BASE/$f | shasum -a 256)"
+   done
+   curl -sI -H 'Origin: https://app.example.org' $BASE/config.json | grep -i 'access-control-allow-origin'
+   ```
+
+4. Set `EMBEDDING_ARTIFACT_BASE_URL=https://models.example.org` in the server's `.env` and
+   restart. `/api/partner/embeddingSpecs` then advertises
+   `https://models.example.org/<modelRepo>/<modelRevision>/` as `artifact.baseUrl`.
+
+5. In clients using transformers.js, point the library at the same host before loading the model,
+   then load it by repo and revision as usual; check the downloaded files against
+   `artifact.fileSha256` before trusting the vectors:
+
+   ```js
+   import { env } from '@huggingface/transformers'
+   env.remoteHost = 'https://models.example.org/'
+   env.remotePathTemplate = '{model}/{revision}/' // Hugging Face uses '{model}/resolve/{revision}/'
+   ```
+
+6. When a spec with a different model or revision is added, publish its directory beside the
+   existing one and keep both until no client uses the earlier spec; nothing at an existing
+   path changes.
 
 
 
@@ -226,6 +312,13 @@ any subsequent claims sent to the server should send a `lastClaimId` to refer to
 * An `identifier` can be supplied when submitting a claim if the client wants to use their own identifier
 (such as an identifier from another chain); in those cases, it is also used as the `handleId`.
 This is a full global URN. It may be a DID. When referring to preceding claims, use `lastClaimId` instead.
+An external `identifier` (one this server did not create, including a DID) is accepted only on a `PlanAction`,
+`Project`, `Person`, or `Organization`, both when it is introduced and when the type of its chain changes;
+an existing handle of any type may be edited without changing its type.
+The `@context` and `@type` of a handle chain may change on a later claim unless the previous entry is a
+`GiveAction`, `Offer`, `PlanAction`, or `Project` (those keep a cache row per handle that must stay consistent).
+`http://schema.org` and `https://schema.org` count as the same context; `https://schema.org` is canonical and
+the `http` form is deprecated.
 
 * A `lastClaimId` is the way to refer to a previous claim. (An `identifier` may still be accepted, but that use is deprecated.)
 It is typically a ULID, the short `id` reference to another internal claim that this should extend.
@@ -626,13 +719,33 @@ let count = async (moreBefore, ownerDid, ownerPrivateKeyHex) => {
 
 let fillAll = async (ownerDid, ownerPrivateKeyHex) => {
   let moreBefore = 'Z'
-  let all = []
+  let allOrig = [] // all in reverse-chronological order
   do {
     const result = await count(moreBefore, ownerDid, ownerPrivateKeyHex)
-    all = R.concat(all, result.data)
+    allOrig = R.concat(allOrig, result.data)
     moreBefore = result.hitLimit ? result.data[result.data.length - 1].id : ''
-    console.log(all.length, moreBefore, '...')
+    console.log(allOrig.length, moreBefore, '...')
   } while (moreBefore)
+
+  let lastEdit = {}
+  let allUnedited = [] // all not edited
+  for (let index = 0; index < allOrig.length; index++) {
+    const record = allOrig[index]
+    if (lastEdit[record.handleId]) {
+      // current record was edited later so ignore it
+      //console.log("skipped", record.id)
+    } else {
+      allUnedited.push(record)
+      //console.log("pushed", record.id)
+      if (!record.handleId.endsWith(record.id)) {
+        // this is an edit that isn't edited later, so it's the latest edit
+        lastEdit[record.handleId] = record.id
+        //console.log("added edit", record.handleId, record.id)
+      }
+    }
+  }
+  let all = allUnedited.reverse()
+
   console.log('Grand total:', all.length)
   const totalSum = R.map(i => R.set(R.lensProp('month'), i.issuedAt.substring(0, 7), i), all)
   const grouped = R.groupBy(i => i.month, totalSum)
@@ -654,6 +767,8 @@ let all = await fillAll()
 // Read them from a previous session:
 //all = require('./metrics.json')
 
+// Remember to remove the current month from results you paste elsewhere.
+
 // write all claims with months & issuer & types to CSV
 fs.writeFileSync('metrics.csv', 'month,issuedAt,claimType\n')
 all.map(record => fs.appendFileSync('metrics.csv', record.issuedAt.substring(0, 7) + ',' + record.issuedAt + ',' + record.claimType + '\n'))
@@ -669,8 +784,7 @@ R.map(key => fs.appendFileSync('metrics-count.csv', key + ',' + monthClaims[key]
 let selectedTypes = ['GiveAction', 'Offer', 'PlanAction', 'AgreeAction']
 //let selectedTypes = ['RegisterAction']
 let now = new Date()
-let nonEdits = R.filter(record => record.handleId.substring(27) === record.id, all)
-let monthClaimsTypes = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, nonEdits))
+let monthClaimsTypes = R.countBy(R.identity, R.map(record => record.issuedAt.substring(0, 7) + ',' + record.claimType, all))
 fs.writeFileSync('metrics-claims-by-month-filtered.csv', 'date,' + selectedTypes.join(',') + ',total' + '\n')
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
@@ -688,24 +802,38 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
   }
 }
 
-// sum hours given to CSV
-let now = new Date()
+//// sum hours given to CSV
+
+// filter for hours
 let givenHours = R.filter(
   record =>
     record.claimType === 'GiveAction'
     && record.claim.object?.unitCode === 'HUR'
-    && record.claim.fulfills?.[0]?.['@type'] !== 'TradeAction',
+    && record.claim.fulfills?.[0]?.['@type'] !== 'TradeAction'
+    // for a specific project, eg. Time Safari MVP
+    && record.claim.fulfills?.[0]?.identifier === 'https://endorser.ch/entity/01H90SQKQZGKHVBXVRVVEX0Z0X'
+    ,
   all
 )
+
+// save all, mainly for debugging
+fs.writeFileSync('metrics-given-hours-all.csv', 'id,date,amount,unit\n')
+for (let index = 0; index < givenHours.length; index++) {
+  const record = givenHours[index]
+  fs.appendFileSync('metrics-given-hours-all.csv', record.id + ',' + record.issuedAt + ',' + record.claim.object?.amountOfThisGood + ',' + record.claim.object?.unitCode + '\n')
+}
+
+// save aggregate data
 let monthGives = R.groupBy(record => record.issuedAt.substring(0, 7), givenHours)
-fs.writeFileSync('metrics-given-hours.csv', 'month,total\n')
+fs.writeFileSync('metrics-given-hours-sum.csv', 'month,total\n')
+let now = new Date()
 for (let year = 2019; year <= now.getFullYear(); year++) {
   const highMonth = year === now.getFullYear() ? now.getMonth() : 11
   for (let month = 0; month <= highMonth; month++) {
     const monthNum = month + 1 // since getMonth is 0-based
     const monthStr = year + '-' + (monthNum < 10 ? '0' : '') + monthNum
     const monthSum = R.sum((monthGives[monthStr] || []).map(r => r.claim.object?.amountOfThisGood || 0))
-    fs.appendFileSync('metrics-given-hours.csv', monthStr + ',' + monthSum + '\n')
+    fs.appendFileSync('metrics-given-hours-sum.csv', monthStr + ',' + monthSum + '\n')
   }
 }
 
@@ -754,8 +882,6 @@ for (let year = 2019; year <= now.getFullYear(); year++) {
 }
 
 ```
-
-- Remember to remove the current month from results.
 
 
 

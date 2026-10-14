@@ -7,34 +7,76 @@ const ulid = ulidx.monotonicFactory()
 const logger = require('../../common/logger')
 const dbInfo = require('../../conf/flyway.js')
 const db = new sqlite3.Database(dbInfo.fileLoc, sqlite3.OPEN_READWRITE, (err) => {
-  // if (!err) {
+  if (err) {
+    console.log('Failed to open database:', err)
+  }
+
+  // Monitor database busy/lock states if error isn't handled by the statement
+  db.on('error', (err) => console.log('DB ERROR:', err.message, err.code, err.errno))
+
   //   // Enable all SQLite event monitoring
   //   db.on('trace', (sql) => console.log('DB TRACE:', sql))
   //   db.on('profile', (sql, time) => console.log('DB PROFILE:', sql, 'took', time, 'ms'))
-  //   db.on('error', (err) => console.log('DB ERROR:', err.message, err.code, err.errno))
   //   db.on('open', () => console.log('DB OPEN event'))
   //   db.on('close', () => console.log('DB CLOSE event'))
-    
-  //   // Monitor database busy/lock states
-  //   db.on('busy', () => console.log('DB BUSY: Database is locked'))
-    
-  //   // Set error handling mode
-  //   db.configure('busyTimeout', 5000) // 5 second timeout for busy database
-  // } else {
-  //   console.log('Failed to open database:', err)
-  // }
+
+  // Set error handling mode
+  db.configure('busyTimeout', 10000) // timeout for locked (very busy) database
 })
 const util = require('./util')
+const { EmbeddingStore } = require('./embedding-store')
 
 const DEFAULT_LIMIT = 50
+
+/**
+ * SQL for the rows a list returns: a change-sequence window when one is given
+ * (oldest change first), or else bounds on a JWT ID column (newest first).
+ * See CHANGE/PLAN-accurate-cursors.md
+ *
+ * @param {string} prefix - table alias with its dot, or ''
+ * @param {string} idColumn - the ULID column the ID bounds apply to
+ * @param {string} [afterId] - only IDs after this
+ * @param {string} [beforeId] - only IDs before this
+ * @param {{after: number, upTo: number, descending?: boolean}} [seqWindow] - only rows with after < changeSeq <= upTo,
+ *   newest change first when descending; replaces the ID bounds
+ * @returns {{ clause: string, params: Array, orderBy: string }} clause is empty or starts with ' AND'; orderBy uses result column names
+ */
+function listWindow(prefix, idColumn, afterId, beforeId, seqWindow) {
+  if (seqWindow) {
+    return {
+      clause: ` AND ${prefix}changeSeq > ? AND ${prefix}changeSeq <= ?`,
+      params: [seqWindow.after, seqWindow.upTo],
+      orderBy: seqWindow.descending ? 'changeSeq DESC' : 'changeSeq ASC',
+    }
+  }
+  let clause = ''
+  const params = []
+  if (afterId) {
+    clause += ` AND ${prefix}${idColumn} > ?`
+    params.push(afterId)
+  }
+  if (beforeId) {
+    clause += ` AND ${prefix}${idColumn} < ?`
+    params.push(beforeId)
+  }
+  return { clause, params, orderBy: `${idColumn} DESC` }
+}
 
 const GREATER_THAN = "_greaterThan"
 const GREATER_THAN_OR_EQUAL_TO = "_greaterThanOrEqualTo"
 const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
-
-
+/**
+ * Extract toEntity from claim: recipient identifier, or first fulfills element of type PlanAction with an identifier.
+ * The fulfills array may have Offer/PlanAction in any position; only PlanAction entries contribute to toEntity.
+ */
+function toEntityFromClaim(claim) {
+  if (claim.recipient?.identifier) return claim.recipient.identifier
+  const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
+  const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction' && f?.identifier)
+  return planActionFulfills?.identifier
+}
 
 function constructWhereConditions(params, allowedColumns, claimContents, contentColumns, booleanColumns = [], excludeConfirmations) {
 
@@ -235,6 +277,9 @@ class EndorserDatabase {
   }
 
   constructor() {
+    // vectors of plans (subjectType 'plan', subjectId = plan_claim.handleId)
+    this.embeddings = new EmbeddingStore(db)
+
     /** I feel like we should stop the DB, but this gets run twice on a kill and throws an error for some reason.
         Well, it doesn't look like it hurts anything to CTRL-C.
         We just have to find a better way on the server because a process kill leaves things hanging around.
@@ -249,6 +294,17 @@ class EndorserDatabase {
 
   newUlid() {
     return ulid()
+  }
+
+  /**
+   * The change sequence of the last change to a table that alert searches read.
+   * See CHANGE/PLAN-accurate-cursors.md
+   * @returns {Promise<number>}
+   */
+  changeCounter() {
+    return new Promise((resolve, reject) => {
+      db.get("SELECT seq FROM change_counter", [], (err, row) => (err ? reject(err) : resolve(row.seq)))
+    })
   }
 
 
@@ -1186,16 +1242,20 @@ class EndorserDatabase {
    * Give_Provider, a join table between gives & their providers
    **/
 
+  // linkConfirmed says the provider is the same party as the give's issuer, so
+  // the give's word that they provided something is their own word about
+  // themselves. It can also be raised later, by giveProviderMarkLinkAsConfirmed,
+  // when the provider confirms the give.
   giveProviderInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt = (
         "INSERT INTO give_provider"
-        + " (giveHandleId, providerId)"
-        + " VALUES (?, ?)"
+        + " (giveHandleId, providerId, linkConfirmed)"
+        + " VALUES (?, ?, ?)"
       );
       db.run(
         stmt,
-        [entry.giveHandleId, entry.providerId],
+        [entry.giveHandleId, entry.providerId, !!entry.linkConfirmed],
         function(err) {
           if (err) { reject(err) } else { resolve(this.lastID) }
         })
@@ -1476,7 +1536,7 @@ class EndorserDatabase {
    * @param jwtEncoded
    * @returns {{claim: string, claimContext: string, claimCanonHash: string, claimType: string, handleId: string, hashNonce: string, id: string, issuedAt: ISO-date-string, issuer: string, jwtEncoded: string, noncedHash: string, subject: string}}
    */
-  buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, jwtEncoded) {
+  buildJwtEntry(payload, id, lastClaimId, handleId, claim, claimStr, jwtEncoded, fromEntityOverride, toEntityOverride) {
     const claimCanonHash =
       crypto.createHash('sha256').update(claimStr).digest('base64url')
     const claimContext = claim['@context']
@@ -1495,11 +1555,26 @@ class EndorserDatabase {
       iss: payload.iss,
     })
     const subject = payload.sub
+
+    let fromEntity = fromEntityOverride
+    let toEntity = toEntityOverride
+    if (fromEntity === undefined && toEntity === undefined) {
+      if (claim['@type'] === 'GiveAction') {
+        fromEntity = claim.agent?.identifier
+        toEntity = toEntityFromClaim(claim)
+      } else if (claim['@type'] === 'Offer') {
+        fromEntity = claim.offeredBy?.identifier ?? payload.iss
+        toEntity = toEntityFromClaim(claim)
+      }
+    }
+
     return {
       claim: claimStr,
       claimContext: claimContext,
       claimCanonHash: claimCanonHash,
       claimType: claimType,
+      fromEntity: fromEntity,
+      toEntity: toEntity,
       handleId: handleId,
       hashNonce: hashNonce,
       id: id,
@@ -1520,7 +1595,7 @@ class EndorserDatabase {
         [id],
         function(err, row) {
           row.issuedAt = util.isoAndZonify(row.issuedAt)
-          data = {
+            data = {
             id: row.id, issuedAt: row.issuedAt, issuer: row.issuer, subject: row.subject,
             claimContext: row.claimContext, claimType: row.claimType, claim: row.claim,
             handleId: row.handleId, lastClaimId: row.lastClaimId,
@@ -1557,10 +1632,11 @@ class EndorserDatabase {
     })
   }
 
-  jwtUnrevokedClaimExists(claimCanonHash, issuerDid, issuedAt) {
+  jwtClaimExists(claimCanonHash, issuerDid, issuedAt) {
     return new Promise((resolve, reject) => {
       db.get(
-        "SELECT id, revoked FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?) and revoked = 0",
+        // don't check revoked status: they can send a revocation of a claim, but they can't replay a claim with the same issuedAt, active or revoked
+        "SELECT id, revoked FROM jwt WHERE claimCanonHash = ? AND issuer = ? and issuedAt = datetime(?)",
         [claimCanonHash, issuerDid, issuedAt],
         function(err, row) {
           if (err) {
@@ -1630,6 +1706,136 @@ class EndorserDatabase {
   }
 
   /**
+   * JWTs where user appears as toEntity or fromEntity but not as issuer, after given JWT ID.
+   * Uses UNION for index-friendly queries on idx_jwt_toEntity and idx_jwt_fromEntity.
+   * @param {string} beforeId - optional; only return claims with id < beforeId
+   * @return Promise of { data: [], hitLimit: true|false }
+   */
+  jwtsWithDidAfterId(did, afterId, beforeId, seqWindow) {
+    return new Promise((resolve, reject) => {
+      const window = listWindow('', 'id', afterId, beforeId, seqWindow)
+      const sql =
+        "SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity, changeSeq"
+        + " FROM jwt WHERE toEntity = ? AND issuer != ?" + window.clause
+        + " UNION"
+        + " SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity, changeSeq"
+        + " FROM jwt WHERE fromEntity = ? AND issuer != ?" + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
+      const params = [did, did, ...window.params, did, did, ...window.params]
+      const data = []
+      let rowErr
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          if (row) {
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push(row)
+          }
+        }
+      }, function (allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
+   * JWTs for GiveAction and Offer claims where toEntity or fromEntity is in the given plan handle IDs.
+   * Used for alert search when user tracks specific plans. No ownership check—returns any such claims.
+   * Uses UNION for index-friendly queries on idx_jwt_toEntity and idx_jwt_fromEntity.
+   *
+   * @param {string[]} planHandleIds - plan handle IDs to match against toEntity/fromEntity
+   * @param {string} afterId - only return claims with id > afterId
+   * @param {string} beforeId - optional; only return claims with id < beforeId
+   * @return Promise of { data: [], hitLimit: true|false }
+   */
+  jwtsGiveActionOfferForPlanHandleIds(planHandleIds, afterId, beforeId, seqWindow) {
+    return new Promise((resolve, reject) => {
+      if (!planHandleIds || planHandleIds.length === 0) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+      const window = listWindow('j.', 'id', afterId, beforeId, seqWindow)
+      const inListStr = planHandleIds.map(() => '?').join(',')
+      const sql =
+        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
+        + " FROM jwt j WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND j.toEntity IN (" + inListStr + ")" + window.clause
+        + " UNION"
+        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
+        + " FROM jwt j WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND j.fromEntity IN (" + inListStr + ")" + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
+      const params = [...planHandleIds, ...window.params, ...planHandleIds, ...window.params]
+      const data = []
+      let rowErr
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          if (row) {
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push(row)
+          }
+        }
+      }, function (allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
+   * JWTs for GiveAction and Offer claims associated with plans owned by user (issuer or agent).
+   * Joins jwt to plan_claim on toEntity or fromEntity via UNION for index-friendly queries.
+   * @param {string} beforeId - optional; only return claims with id < beforeId
+   * @return Promise of { data: [], hitLimit: true|false }
+   */
+  jwtsForUserPlanContributions(did, afterId, beforeId, seqWindow) {
+    return new Promise((resolve, reject) => {
+      // the contribution (the jwt row) is the event, not the plan it points to
+      const window = listWindow('j.', 'id', afterId, beforeId, seqWindow)
+      const sql =
+        "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
+        + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.toEntity"
+        + " WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND ? in (p.issuerDid, p.agentDid)" + window.clause
+        + " UNION"
+        + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
+        + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.fromEntity"
+        + " WHERE j.claimType IN ('GiveAction', 'Offer')"
+        + " AND ? in (p.issuerDid, p.agentDid)" + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
+      const params = [did, ...window.params, did, ...window.params]
+      const data = []
+      let rowErr
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          rowErr = err
+        } else {
+          if (row) {
+            row.issuedAt = util.isoAndZonify(row.issuedAt)
+            data.push(row)
+          }
+        }
+      }, function (allErr, num) {
+        if (rowErr || allErr) {
+          reject(rowErr || allErr)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
      See tableEntriesByParamsPaged
      Returns Promise of { data: [], hitLimit: true|false }
    **/
@@ -1673,13 +1879,14 @@ class EndorserDatabase {
   jwtInsert(entry) {
     return new Promise((resolve, reject) => {
       var stmt =
-        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHash, claimType, handleId, lastClaimId, noncedHash, hashNonce, jwtEncoded)"
-        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO jwt (id, issuedAt, issuer, subject, claim, claimContext, claimCanonHash, claimType, fromEntity, toEntity, handleId, lastClaimId, noncedHash, hashNonce, jwtEncoded)"
+        + " VALUES (?, datetime(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       db.run(
         stmt,
         [
           entry.id, entry.issuedAt, entry.issuer, entry.subject,
           entry.claim, entry.claimContext, entry.claimCanonHash, entry.claimType,
+          entry.fromEntity ?? null, entry.toEntity ?? null,
           entry.handleId, entry.lastClaimId, entry.noncedHash, entry.hashNonce, entry.jwtEncoded
         ],
         function(err) {
@@ -2489,6 +2696,42 @@ class EndorserDatabase {
   }
 
   /**
+   * Name and description of every plan, for computing embeddings.
+   * @returns {Promise<Array<{handleId: string, name: string, description: string}>>}
+   */
+  plansAllNamesDescriptions() {
+    return new Promise((resolve, reject) => {
+      db.all("SELECT handleId, name, description FROM plan_claim WHERE handleId IS NOT NULL", [], function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
+        }
+      })
+    })
+  }
+
+  /**
+   * All plan handle IDs located inside the bounding box.
+   * @returns {Promise<string[]>}
+   */
+  planHandleIdsByLocation(minLat, maxLat, minLon, maxLon) {
+    return new Promise((resolve, reject) => {
+      db.all(
+        "SELECT handleId FROM plan_claim WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?) AND handleId IS NOT NULL",
+        [minLat, maxLat, minLon, maxLon],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows.map(row => row.handleId))
+          }
+        }
+      )
+    })
+  }
+
+  /**
    See tableEntriesByParamsPaged
    Returns Promise of { data: [], hitLimit: true|false }
    **/
@@ -2583,6 +2826,40 @@ class EndorserDatabase {
           reject(err)
         } else {
           resolve({ data: data, hitLimit: data.length === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  /**
+   * Plans in bounding box, new or changed since claim (jwtId > afterId).
+   * @param {string} beforeId - optional; only return plans with jwtId < beforeId
+   * Returns Promise of { data: [], hitLimit: true|false }
+   */
+  plansByLocationAfterId(minLat, maxLat, minLon, maxLon, afterId, beforeId, seqWindow) {
+    return new Promise((resolve, reject) => {
+      const window = listWindow('', 'jwtId', afterId, beforeId, seqWindow)
+      const sql =
+        "SELECT * FROM plan_claim"
+        + " WHERE (locLat BETWEEN ? AND ?) AND (locLon BETWEEN ? AND ?)"
+        + window.clause
+        + " ORDER BY " + (seqWindow ? window.orderBy : "rowid DESC") + " LIMIT " + DEFAULT_LIMIT
+      const params = [minLat, maxLat, minLon, maxLon, ...window.params]
+      const data = []
+      db.each(sql, params, function (err, row) {
+        if (err) {
+          reject(err)
+        } else if (row) {
+          row.endTime = util.isoAndZonify(row.endTime)
+          row.startTime = util.isoAndZonify(row.startTime)
+          row.fulfillsLinkConfirmed = util.booleanify(row.fulfillsLinkConfirmed)
+          data.push(row)
+        }
+      }, function (err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data, hitLimit: data.length === DEFAULT_LIMIT })
         }
       })
     })
@@ -2802,9 +3079,10 @@ class EndorserDatabase {
    * @param planIds Array of plan handle IDs to check (resulting in [] if empty)
    * @param afterIdInput Optional pagination parameter
    * @param beforeIdInput Optional pagination parameter
+   * @param seqWindow Optional { after, upTo, descending } change-sequence window, which replaces the ID bounds
    * @returns Promise of { data: [], hitLimit: boolean }
    */
-  plansLastUpdatedBetween(planIds, afterIdInput, beforeIdInput) {
+  plansLastUpdatedBetween(planIds, afterIdInput, beforeIdInput, seqWindow) {
     return new Promise((resolve, reject) => {
       if (!planIds || planIds.length === 0) {
         resolve({ data: [], hitLimit: false })
@@ -2812,23 +3090,13 @@ class EndorserDatabase {
       }
 
       const inListStr = planIds.map(() => "?").join(',')
-      let whereClause = " handleId IN (" + inListStr + ")"
-      let allParams = [...planIds]
-
-      // Add pagination
-      if (afterIdInput) {
-        whereClause += " AND jwtId > ?"
-        allParams.push(afterIdInput)
-      }
-      if (beforeIdInput) {
-        whereClause += " AND jwtId < ?"
-        allParams.push(beforeIdInput)
-      }
+      const window = listWindow('', 'jwtId', afterIdInput, beforeIdInput, seqWindow)
+      const allParams = [...planIds, ...window.params]
 
       const sql =
-        "SELECT * FROM plan_claim WHERE"
-        + whereClause
-        + " ORDER BY jwtId DESC LIMIT " + DEFAULT_LIMIT
+        "SELECT * FROM plan_claim WHERE handleId IN (" + inListStr + ")"
+        + window.clause
+        + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
 
       db.all(sql, allParams, (err, rows) => {
         if (err) {

@@ -8,6 +8,16 @@ import {
 
 import ClaimService from '../services/claim.service'
 import { dbService } from '../services/endorser.db.service';
+import {
+  alertSearchParamsFromRequest,
+  CURSOR_RESET_MESSAGE,
+  cursorWindow,
+  fetchAlertSearchEndorserData,
+  ignoredWithCursorMessage,
+  parseEndorserCursor,
+  resolveAlertSearchAfterId,
+  resolveAlertSearchBeforeId,
+} from '../services/alert-search.service';
 import { planService } from '../services/project.service';
 import { globalId, latLonFromTile, latWidthToTileWidth } from "../services/util";
 
@@ -87,6 +97,96 @@ function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
     .then(results => hideDidsAndAddLinksToNetworkInDataKey(res.locals.authTokenIssuer, results, []))
     .then(results => { res.json(results).end() })
     .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+}
+
+async function alertSearchReportHandler(req, res) {
+  if (!res.locals.authTokenIssuer) {
+    return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+  }
+  const paramsResult = alertSearchParamsFromRequest(req)
+  let { afterCursor, beforeCursor, afterId, beforeId, location, planHandleIds, paramErrors } = paramsResult
+  const afterParsed = parseEndorserCursor(afterCursor, 'afterCursor')
+  const beforeParsed = parseEndorserCursor(beforeCursor, 'beforeCursor')
+  const cursorError = afterParsed.error || beforeParsed.error
+  if (cursorError) {
+    return res.status(400).json({ error: cursorError }).end()
+  }
+  const after = afterParsed.cursor
+  const before = beforeParsed.cursor
+  const usesCursors = after != null || before != null
+  let effectiveAfterId, effectiveBeforeId, resolvedParamErrors
+  if (!usesCursors) {
+    let afterParamErrors
+    ({ effectiveAfterId, paramErrors: afterParamErrors } = resolveAlertSearchAfterId(afterId, paramErrors));
+    ({ effectiveBeforeId, paramErrors: resolvedParamErrors } = resolveAlertSearchBeforeId(beforeId, afterParamErrors))
+  } else {
+    resolvedParamErrors = paramErrors
+    const ignoredMessage = ignoredWithCursorMessage(paramsResult)
+    if (ignoredMessage) {
+      resolvedParamErrors.push(ignoredMessage)
+    }
+  }
+
+  try {
+    const did = res.locals.authTokenIssuer
+    // read before the lists, so rows changed while they are read fall into the next window
+    const counter = await dbService.changeCounter()
+    const cursorIsAhead = after != null && after > counter
+    if (cursorIsAhead) {
+      resolvedParamErrors.push(CURSOR_RESET_MESSAGE)
+    }
+    const seqWindow = usesCursors && !cursorIsAhead ? cursorWindow(after, before, counter) : undefined
+    const endorserData = cursorIsAhead
+      ? { claims: [], personalPlanContributions: [], trackedPlanUpdates: [], trackedPlanClaims: [], plansNearby: [], hasMore: false }
+      : await fetchAlertSearchEndorserData(did, {
+          effectiveAfterId,
+          effectiveBeforeId,
+          seqWindow,
+          location,
+          planHandleIds,
+        })
+
+    // without cursors, either one starts from the latest change
+    let nextAfterCursor = counter
+    let nextBeforeCursor = counter
+    let hasMore = endorserData.hasMore
+    if (seqWindow && !seqWindow.descending) {
+      // a list that timed out came back empty, so the same window must be searched again
+      nextAfterCursor = endorserData.anyTruncated ? seqWindow.after : endorserData.next
+      nextBeforeCursor = seqWindow.after
+      hasMore = hasMore && !endorserData.anyTruncated
+    } else if (seqWindow) {
+      nextAfterCursor = seqWindow.upTo
+      nextBeforeCursor = endorserData.anyTruncated ? seqWindow.upTo : endorserData.next
+      hasMore = hasMore && !endorserData.anyTruncated
+    }
+    const response = {
+      data: {
+        claims: endorserData.claims,
+        personalPlanContributions: endorserData.personalPlanContributions,
+        trackedPlanUpdates: endorserData.trackedPlanUpdates,
+        trackedPlanClaims: endorserData.trackedPlanClaims,
+        plansNearby: endorserData.plansNearby,
+      },
+      nextAfterCursor: String(nextAfterCursor),
+      nextBeforeCursor: String(nextBeforeCursor),
+      hasMore,
+    }
+    const userMessages = []
+    if (resolvedParamErrors?.length) {
+      userMessages.push(resolvedParamErrors.join(' '))
+    }
+    if (endorserData.anyTruncated) {
+      userMessages.push('Some data was not available in this search. Check the detail screens for the full set of data.')
+    }
+    if (userMessages.length) {
+      response.userMessage = userMessages.join(' ')
+    }
+    res.status(200).json(response).end()
+  } catch (err) {
+    console.error('Error in report alertSearch for DID:', res.locals.authTokenIssuer, err)
+    res.status(500).json({ error: err.message }).end()
+  }
 }
 
 class DbController {
@@ -784,6 +884,42 @@ export default express
  */
 
 /**
+ * Alert search: claims, plan contributions, tracked plan updates/claims, plans by location.
+ * Does not include profiles, or plans matched to the user's profile by meaning (see partner /alertSearch for both).
+ *
+ * Cursors are opaque positions between changes; store them as text and send them back unchanged.
+ * With 'afterCursor' only, each list holds rows changed after it, oldest change first, at most 50;
+ * when 'hasMore' is true, call again with 'afterCursor' set to 'nextAfterCursor'.
+ * With 'beforeCursor', each list holds rows changed before it (and after 'afterCursor', if given),
+ * newest change first, at most 50; to scroll further back, call again with 'beforeCursor' set to
+ * 'nextBeforeCursor' while 'hasMore' is true. Without cursors, the lists hold the newest rows inside
+ * the afterId and beforeId bounds, and both returned cursors are at the latest change.
+ * See CHANGE/PLAN-accurate-cursors.md
+ *
+ * @group reports
+ * @route GET /api/v2/report/alertSearch
+ * @route POST /api/v2/report/alertSearch
+ * @param {string} afterCursor.query.optional - a cursor from an earlier response: return rows changed after it; afterId and beforeId are then ignored (GET, POST)
+ * @param {string} beforeCursor.query.optional - a cursor from an earlier response: return rows changed before it, newest first (GET, POST)
+ * @param {string} afterId.query.optional - JWT ULID to return items after (GET, POST)
+ * @param {string} beforeId.query.optional - JWT ULID to return items before (GET, POST)
+ * @param {object} location.body.optional - bounding box: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {number} minLocLat.query.optional - min latitude (GET)
+ * @param {number} maxLocLat.query.optional - max latitude (GET)
+ * @param {number} minLocLon.query.optional - min longitude (GET)
+ * @param {number} maxLocLon.query.optional - max longitude (GET)
+ * @param {string[]} planHandleIds.query.optional - plan handle IDs to track (GET, POST)
+ * @param {string[]} planIds.query.optional - plan IDs to track (GET, POST)
+ * @param {string[]} handleIds.query.optional - handle IDs to track (GET, POST)
+ * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby }, nextAfterCursor, nextBeforeCursor, hasMore }, where each row has 'changeSeq'
+ * @returns {Error} 400 - a cursor is not one from this endpoint
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/alertSearch', alertSearchReportHandler)
+  .post('/alertSearch', alertSearchReportHandler)
+
+
+/**
  * Get all claims for the query inputs, paginated, reverse-chronologically
  *
  * @group reports
@@ -950,7 +1086,7 @@ export default express
  * Get GiveSummary fulfillers for a particular OfferSummary
  *
  * @group reports
- * @route GET /api/v2/report/givefulfillersToOffer
+ * @route GET /api/v2/report/giveFulfillersToOffer
  * @param {string} handleId.query.required - the handleId of the give entry
  * @returns {GiveSummaryArrayMaybeMoreBody} 200 - 'data' property with each of the fulfillers, reverse chronologically;
  * 'hitLimit' boolean property if there may be more
@@ -1164,8 +1300,8 @@ export default express
   .get('/plansByBBox', dbController.getPlansByLocationAndContentsPaged)
 
 /**
- * @deprecated
- * @see /api/v2/report/plansByBBox
+ * @deprecated Use /api/v2/report/plansByBBox instead.
+ * @route GET /api/v2/report/plansByLocation
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansByLocation', dbController.getPlansByLocationAndContentsPaged)
@@ -1189,13 +1325,14 @@ export default express
  * For smaller lists of plan IDs, use query parameters
  *
  * @group reports
- * @route GET /api/v2/report/plansLastUpdateBetween
+ * @route GET /api/v2/report/plansLastUpdatedBetween
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
  * @param {string} afterId.query.required - the JWT ID of the entry after which to look (exclusive)
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
- .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
 
 /**
  * Retrieve plans that have their latest version before/after given claim IDs (POST version)
@@ -1208,5 +1345,5 @@ export default express
  * @param {string} body.beforeId.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
  */
- .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)
-
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)

@@ -8,8 +8,8 @@
 
 **/
 
-import DBService from '../server/api/services/endorser.db.service'
-import JwtService from '../server/api/services/jwt.service'
+import { dbService as DBService } from '../src/api/services/endorser.db.service'
+import ClaimService from '../src/api/services/claim.service'
 
 describe('Running Script', () => {
 
@@ -25,7 +25,7 @@ describe('Running Script', () => {
           for (let i = 0; i < results.data.length; i++) {
             const thisDatum = results.data[i]
             try {
-              await JwtService.createEmbeddedClaimRecords(thisDatum.id, thisDatum.issuer, JSON.parse(thisDatum.claim))
+              await ClaimService.createEmbeddedClaimRecords(thisDatum.id, thisDatum.issuer, JSON.parse(thisDatum.claim))
             } catch (err) {
               if (err.message.indexOf('Attempted to confirm') > -1 && err.message.indexOf('already confirmed') > -1) {
                 repeatConfirms++

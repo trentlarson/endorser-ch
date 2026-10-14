@@ -158,7 +158,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("registration permissions");
+        expect(r.body.error.userMessage).to.include("registration permissions");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -210,7 +210,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("already taken");
+        expect(r.body.error.userMessage).to.include("already taken");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -227,7 +227,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("already have an active group");
+        expect(r.body.error.userMessage).to.include("already have an active meeting");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -243,7 +243,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("24 hours");
+        expect(r.body.error.userMessage).to.include("24 hours");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -315,6 +315,21 @@ describe("P2 - Group Onboarding", () => {
       });
   });
 
+  it("cannot update a room with expiration > 24h", () => {
+    return request(Server)
+      .put(`/api/partner/groupOnboard`)
+      .set("Authorization", "Bearer " + pushTokens[0])
+      .send({
+        expiresAt: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+      })
+      .then((r) => {
+        expect(r.status).to.equal(400);
+        expect(r.body.error.userMessage).to.include("24 hours");
+      }).catch((err) => {
+        return Promise.reject(err)
+      });
+  });
+
   it("can see their own room with new values", () => {
     return request(Server)
       .get("/api/partner/groupOnboard")
@@ -341,7 +356,7 @@ describe("P2 - Group Onboarding", () => {
       })
       .then((r) => {
         expect(r.status).to.equal(400);
-        expect(r.body.error.message).to.include("valid URL");
+        expect(r.body.error.userMessage).to.include("valid URL");
       }).catch((err) => {
         return Promise.reject(err)
       });
@@ -610,5 +625,76 @@ describe("P2 - Group Onboarding", () => {
         return Promise.reject(err)
       });
   });
+
+  describe('P2 - Profile Embedding Metadata', () => {
+    // creds[0] is admin, creds[1] has a profile, creds[4] has none, creds[5] cannot see creds[1]
+    const adminDid = creds[0].did
+    const userWithProfileDid = creds[1].did
+    const userWithoutProfileDid = creds[4].did
+
+    before(() => {
+      process.env.ADMIN_DIDS = JSON.stringify([adminDid])
+    })
+
+    after(() => {
+      delete process.env.ADMIN_DIDS
+    })
+
+    it('should reject request without valid JWT', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+        .then(r => {
+          expect(r.status).to.equal(401)
+        })
+    })
+
+    it('shows the owner that their profile has a current embedding', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[1])
+        .then(r => {
+          expect(r.status).to.equal(200)
+          expect(r.body.data.hasCurrentEmbedding).to.equal(true)
+          expect(r.body.data.embeddingSpecId).to.be.a('string')
+        })
+    })
+
+    it('hides the metadata from a user who cannot see the profile owner', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[5])
+        .then(r => {
+          expect(r.status).to.equal(404)
+        })
+    })
+
+    it('shows the metadata to an admin', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(200)
+          expect(r.body.data.hasCurrentEmbedding).to.equal(true)
+        })
+    })
+
+    it('returns 404 for a user without a profile, even to an admin', () => {
+      return request(Server)
+        .get('/api/partner/userProfileEmbeddingMetadata/' + userWithoutProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(404)
+        })
+    })
+
+    it('no longer offers the admin flag endpoint', () => {
+      return request(Server)
+        .put('/api/partner/userProfileGenerateEmbedding/' + userWithProfileDid)
+        .set('Authorization', 'Bearer ' + pushTokens[0])
+        .then(r => {
+          expect(r.status).to.equal(404)
+        })
+    })
+  })
 
 });

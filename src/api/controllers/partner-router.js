@@ -4,12 +4,269 @@
 
 import * as R from 'ramda'
 import * as express from 'express'
+import * as http from 'http'
+
+// See notes on usage of these, since we need to beware permissions when using them
 import ClaimService from '../services/claim.service'
-import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as endorserDbService } from "../services/endorser.db.service";
+
+import {
+  alertSearchParamsFromRequest,
+  CURSOR_RESET_MESSAGE,
+  cursorWindow,
+  cutListsAtLimit,
+  ignoredWithCursorMessage,
+  parsePartnerCursor,
+  partnerCursor,
+  resolveAlertSearchDateBoundsForPartner,
+} from '../services/alert-search.service'
+import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
+import embeddingService from "../services/embedding.service";
+import { contentHash, subjectText } from "../services/embedding-engine";
+import { EMBEDDING_SPECS, activeEmbeddingSpec } from "../services/embedding-specs";
+import { rank } from "../services/matching-engine";
+import { matchParticipants } from "../services/matching.service";
 import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
-import {HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
+import { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInDataKey } from '../services/util-higher';
+import { globalId, HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
+
+const ALERT_SEARCH_TIMEOUT_MS = 2000
+
+/**
+ * Resolves with the promise result if it completes within ms, otherwise with fallback.
+ * Returns { result, timedOut }. The original promise continues in the background.
+ */
+async function withTimeout(promise, fallback, functionName) {
+  const timeout = new Promise((resolve) => {
+    setTimeout(() => {
+      console.error('SQL Timeout: data fetch for', functionName, 'exceeded timeout of', ALERT_SEARCH_TIMEOUT_MS, 'ms')
+      resolve({ result: fallback, timedOut: true })
+    }, ALERT_SEARCH_TIMEOUT_MS)
+  })
+  return Promise.race([
+    promise.then((r) => ({ result: r, timedOut: false })),
+    timeout,
+  ])
+}
+
+const ALERT_SIMILAR_LIMIT = 50
+
+/**
+ * Read the optional area for alertSearch's similarity matches.
+ * @param {object|string} similarLocation - minLocLat, maxLocLat, minLocLon, maxLocLon, as an object or its JSON
+ * @returns {{ bbox: {minLat, minLon, maxLat, maxLon}|null, error?: string }} bbox is null when no area is given
+ */
+function similarBBoxFromParam(similarLocation) {
+  if (similarLocation == null || similarLocation === '') {
+    return { bbox: null }
+  }
+  let box = similarLocation
+  if (typeof box === 'string') {
+    try {
+      box = JSON.parse(box)
+    } catch (e) {
+      box = null
+    }
+  }
+  if (box == null || typeof box !== 'object' || Array.isArray(box)) {
+    return { bbox: null, error: "Parameter 'similarLocation' must be an object with minLocLat, maxLocLat, minLocLon, maxLocLon." }
+  }
+  const result = bboxFromQuery(box)
+  return result.error ? { bbox: null, error: "Parameter 'similarLocation' is not valid: " + result.error } : result
+}
+
+/**
+ * Profiles and plans that are close to the requester's profile, among those
+ * whose vectors were stamped inside the change-sequence windows. Matches anywhere
+ * in the world unless given an area. Empty when the requester's profile has no vector.
+ *
+ * Leaves out the requester's own profile and plans.
+ *
+ * @param {string} did - requester DID
+ * @param {{profile: {afterSeq, upToSeq}, plan: {afterSeq, upToSeq}}} windows - for each subject type,
+ *   afterSeq < changeSeq <= upToSeq, from that type's DB
+ * @param {{minLat, minLon, maxLat, maxLon}|null} bbox - null to match everywhere
+ * @returns {Promise<{ profilesSimilar: Array, plansSimilar: Array }>} each best first, at most ALERT_SIMILAR_LIMIT,
+ *   of { similarity, profile } or { similarity, plan } with DIDs hidden
+ */
+async function alertSearchSimilar(did, windows, bbox) {
+  const result = { profilesSimilar: [], plansSimilar: [] }
+  const ownProfile = await partnerDbService.profileByIssuerDid(did)
+  if (!ownProfile) {
+    return result
+  }
+  const ownProfileId = String(ownProfile.rowid)
+  const sourceVectors =
+    (await embeddingService.vectorsBySubject(embeddingService.SUBJECT_PROFILE, [ownProfileId])).get(ownProfileId)
+  if (!sourceVectors) {
+    return result
+  }
+  const spec = activeEmbeddingSpec()
+
+  const rankStored = async (subjectType) => {
+    const { afterSeq, upToSeq } = windows[subjectType]
+    const stored = await embeddingService.vectorsBySubjectChangedBetween(subjectType, afterSeq, upToSeq)
+    if (stored.size === 0) {
+      return []
+    }
+    const idsInBBox = await subjectIdsInBBox(subjectType, bbox)
+    const inArea = idsInBBox && new Set(idsInBBox)
+    const candidates = []
+    for (const [subjectId, vectors] of stored) {
+      const isOwnProfile = subjectType === embeddingService.SUBJECT_PROFILE && subjectId === ownProfileId
+      if (!isOwnProfile && (!inArea || inArea.has(subjectId))) {
+        candidates.push({ id: subjectId, vectors })
+      }
+    }
+    return rank(sourceVectors, candidates, spec.matching, {
+      minSimilarity: spec.matching.alertMinimumSimilarity,
+      limit: ALERT_SIMILAR_LIMIT,
+    }).map((r) => ({ subjectId: r.id, similarity: r.score }))
+  }
+
+  const rankedProfiles = await rankStored(embeddingService.SUBJECT_PROFILE)
+  if (rankedProfiles.length > 0) {
+    const profiles = await hideDidsAndAddLinksToNetwork(
+      did, await partnerDbService.profilesByRowIds(rankedProfiles.map((r) => Number(r.subjectId))), []
+    )
+    const profileById = new Map(profiles.map((p) => [String(p.rowid), p]))
+    result.profilesSimilar = rankedProfiles
+      .map((r) => ({ similarity: r.similarity, profile: profileById.get(r.subjectId) }))
+      .filter((r) => r.profile) // a profile may have been deleted since its vector was read
+  }
+
+  const rankedPlans = await rankStored(embeddingService.SUBJECT_PLAN)
+  if (rankedPlans.length > 0) {
+    // When we separate this into another service, this will have to be an API call.
+    const plansFound = await endorserDbService.planInfoByHandleIds(rankedPlans.map((r) => r.subjectId))
+    const plans = await hideDidsAndAddLinksToNetwork(
+      did, plansFound.data.filter((p) => p.issuerDid !== did && p.agentDid !== did), []
+    )
+    const planById = new Map(plans.map((p) => [p.handleId, p]))
+    result.plansSimilar = rankedPlans
+      .map((r) => ({ similarity: r.similarity, plan: planById.get(r.subjectId) }))
+      .filter((r) => r.plan)
+  }
+  return result
+}
+
+async function alertSearchHandler(req, res) {
+  if (!res.locals.authTokenIssuer) {
+    return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+  }
+  const paramsResult = alertSearchParamsFromRequest(req)
+  let { afterCursor, beforeCursor, afterId, beforeId, afterDate, beforeDate, location, similarLocation, planHandleIds, paramErrors } = paramsResult
+  const afterParsed = parsePartnerCursor(afterCursor, 'afterCursor')
+  const beforeParsed = parsePartnerCursor(beforeCursor, 'beforeCursor')
+  const cursorError = afterParsed.error || beforeParsed.error
+  if (cursorError) {
+    return res.status(400).json({ error: cursorError }).end()
+  }
+  const after = afterParsed.cursor
+  const before = beforeParsed.cursor
+  const usesCursors = after != null || before != null
+  let afterDateIso, beforeDateIso, resolvedParamErrors
+  if (!usesCursors) {
+    ({ afterDateIso, beforeDateIso, paramErrors: resolvedParamErrors } = resolveAlertSearchDateBoundsForPartner(afterId, beforeId, afterDate, beforeDate, paramErrors))
+  } else {
+    resolvedParamErrors = paramErrors
+    const ignoredMessage = ignoredWithCursorMessage(paramsResult)
+    if (ignoredMessage) {
+      resolvedParamErrors.push(ignoredMessage)
+    }
+  }
+
+  try {
+    const did = res.locals.authTokenIssuer
+
+    // read before the lists, so rows changed while they are read fall into the next window
+    const counterPartner = await partnerDbService.changeCounter()
+    // plan vectors are in the main DB; when we separate this into another service, this will have to be an API call
+    const counterMain = await endorserDbService.changeCounter()
+    const cursorIsAhead = after != null && (after.partner > counterPartner || after.main > counterMain)
+    if (cursorIsAhead) {
+      resolvedParamErrors.push(CURSOR_RESET_MESSAGE)
+    }
+
+    // with an area that cannot be read, matching everywhere would return results from outside it
+    const { bbox: similarBBox, error: similarLocationError } = similarBBoxFromParam(similarLocation)
+    if (similarLocationError) {
+      resolvedParamErrors.push(similarLocationError)
+    }
+
+    let profilesNearbyRaw = { data: [], hitLimit: false }
+    let windows = null
+    // without cursors, either one starts from the latest changes
+    let nextAfterCursor = partnerCursor(counterPartner, counterMain)
+    let nextBeforeCursor = nextAfterCursor
+    let hasMore = false
+    if (!usesCursors) {
+      if (location) {
+        const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
+        profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(minLocLat, minLocLon, maxLocLat, maxLocLon, afterDateIso, beforeDateIso)
+      }
+      hasMore = profilesNearbyRaw.hitLimit
+      // without a cursor, the best matches overall
+      windows = {
+        profile: { afterSeq: 0, upToSeq: counterPartner },
+        plan: { afterSeq: 0, upToSeq: counterMain },
+      }
+    } else if (!cursorIsAhead) {
+      const partnerWindow = cursorWindow(after?.partner ?? null, before?.partner ?? null, counterPartner)
+      const mainWindow = cursorWindow(after?.main ?? null, before?.main ?? null, counterMain)
+      if (location) {
+        const { minLocLat, maxLocLat, minLocLon, maxLocLon } = location
+        profilesNearbyRaw = await partnerDbService.profilesByLocationAfterDate(
+          minLocLat, minLocLon, maxLocLat, maxLocLon, null, null, partnerWindow
+        )
+      }
+      const cutResult = cutListsAtLimit({ profilesNearby: profilesNearbyRaw }, partnerWindow)
+      profilesNearbyRaw = { data: cutResult.lists.profilesNearby }
+      hasMore = cutResult.hasMore
+      // plan matches aren't paged, so the whole main window is on this page
+      const planWindow = { afterSeq: mainWindow.after, upToSeq: mainWindow.upTo }
+      if (!partnerWindow.descending) {
+        windows = { profile: { afterSeq: partnerWindow.after, upToSeq: cutResult.next }, plan: planWindow }
+        nextAfterCursor = partnerCursor(cutResult.next, mainWindow.upTo)
+        nextBeforeCursor = partnerCursor(partnerWindow.after, mainWindow.after)
+      } else {
+        windows = { profile: { afterSeq: cutResult.next, upToSeq: partnerWindow.upTo }, plan: planWindow }
+        nextAfterCursor = partnerCursor(partnerWindow.upTo, mainWindow.upTo)
+        // the main part moves to its lower bound: this page held all of its plan matches
+        nextBeforeCursor = partnerCursor(cutResult.next, mainWindow.after)
+      }
+    }
+
+    const profilesData = await hideDidsAndAddLinksToNetwork(did, profilesNearbyRaw.data, [])
+    const similar = similarLocationError || !windows
+      ? { profilesSimilar: [], plansSimilar: [] }
+      : await alertSearchSimilar(did, windows, similarBBox)
+
+    const response = {
+      data: {
+        profilesNearby: profilesData,
+        profilesSimilar: similar.profilesSimilar,
+        plansSimilar: similar.plansSimilar,
+      },
+      nextAfterCursor,
+      nextBeforeCursor,
+      hasMore,
+    }
+
+    const userMessages = []
+    if (resolvedParamErrors?.length) {
+      userMessages.push(resolvedParamErrors.join(' '))
+    }
+    if (userMessages.length) {
+      response.userMessage = userMessages.join(' ')
+    }
+    res.status(200).json(response).end()
+  } catch (err) {
+    console.error('Error in alertSearch for DID:', res.locals.authTokenIssuer, err)
+    res.status(500).json({ error: err.message }).end()
+  }
+}
 
 /**
  * Update membership details for given member
@@ -32,12 +289,15 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   if (!group) {
     return res.status(404).json({ error: "Group not found" }).end()
   }
+  if (group.expiresAt && group.expiresAt < Date.now()) {
+    return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+  }
 
   const isMember = res.locals.authTokenIssuer === member.issuerDid
   const isOrganizer = res.locals.authTokenIssuer === group.issuerDid
 
   if (!isMember && !isOrganizer) {
-    return res.status(403).json({ error: "You are not authorized to update this member." }).end()
+    return res.status(403).json({ error: { userMessage: "You are not authorized to update this member." } }).end()
   }
 
   const result = {}
@@ -47,27 +307,266 @@ async function updateGroupMember(memberId, member, bodyData, res) {
       return res.status(404).json({ error: "That member ID could not be updated with content." }).end()
     }
     if (bodyData.admitted !== undefined) {
-      result.message = "Only the organizer can update member admission status."
+      result.userMessage = "Only the organizer can update member admission status."
     }
   }
 
   if (isOrganizer && bodyData.admitted !== undefined) {
     if (memberId === res.locals.authTokenIssuer) {
       // organizer cannot revoke their own admission
-      return res.status(403).json({ error: "As organizer, you cannot revoke your own admission." }).end()
+      return res.status(403).json({ error: { userMessage: "As organizer, you cannot revoke your own admission." } }).end()
     }
     const updated = await partnerDbService.groupOnboardMemberUpdateAdmitted(memberId, bodyData.admitted)
     if (updated === 0) {
-      return res.status(404).json({ error: "That member ID could not be updated with admission status." }).end()
+      return res.status(404).json({ error: { userMessage: "That member ID could not be updated with admission status." } }).end()
     }
     if (bodyData.content) {
-      result.message = "Only the member can update their content."
+      result.userMessage = "Only the member can update their content."
     }
   }
 
   result.success = true
   return res.status(200).json(result).end()
 }
+
+/**
+ * Hide the issuerDid of each profile the requester cannot see, adding the DIDs
+ * in the requester's network who can see it.
+ * This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
+ * (When we separate this into another service, this will have to be an API call.
+ * See the image-api server for an example of how to leverage JWTs to get
+ * permission to access data from the other service.)
+ * @param {string} requesterDid
+ * @param {Array} profiles - user_profile records
+ * @returns {Promise<Array>} the profiles, scrubbed
+ */
+async function hideProfileDids(requesterDid, profiles) {
+  const didsSeenByRequesterWhoSeeObject =
+    await getAllDidsBetweenRequesterAndObjects(requesterDid, profiles.map(profile => profile.issuerDid))
+  // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
+  const resultsScrubbed = []
+  for (let i = 0; i < profiles.length; i++) {
+    const profile = profiles[i]
+    const didOrDidsSeenByRequesterWhoSeeObject = didsSeenByRequesterWhoSeeObject[i]
+    if (didOrDidsSeenByRequesterWhoSeeObject === profile.issuerDid) {
+      // the issuerDid is visible to the requester
+      resultsScrubbed.push(profile)
+    } else {
+      // didOrDidsSeenByRequesterWhoSeeObject must be an array of DIDs who can see the target DID
+      const didsWhoSeeObject =
+        R.isEmpty(didOrDidsSeenByRequesterWhoSeeObject)
+          ? undefined
+          : didOrDidsSeenByRequesterWhoSeeObject
+      resultsScrubbed.push({
+        ...profile,
+        issuerDid: HIDDEN_TEXT,
+        issuerDidVisibleToDids: didsWhoSeeObject
+      })
+    }
+  }
+  return resultsScrubbed
+}
+
+const SIMILAR_TARGETS = ['profile', 'plan', 'both']
+const SIMILAR_DEFAULT_LIMIT = 25
+const SIMILAR_MAX_LIMIT = 50
+const EMBEDDINGS_PAGE_LIMIT = 500
+
+// issuerDid -> times (ms) of that issuer's recent text queries to /similar
+const recentTextQueries = new Map()
+
+/**
+ * Record a text query to /similar if the issuer is under
+ * EMBEDDING_QUERY_MAX_PER_MINUTE (default 20); embedding text costs CPU.
+ * @returns {boolean} whether the query is allowed
+ */
+function allowTextQuery(issuerDid) {
+  const maxPerMinute = Number(process.env.EMBEDDING_QUERY_MAX_PER_MINUTE || 20)
+  const now = Date.now()
+  const isRecent = (time) => now - time < 60 * 1000
+  if (recentTextQueries.size > 1000) {
+    for (const [did, times] of recentTextQueries) {
+      if (!times.some(isRecent)) {
+        recentTextQueries.delete(did)
+      }
+    }
+  }
+  const recent = (recentTextQueries.get(issuerDid) || []).filter(isRecent)
+  const allowed = recent.length < maxPerMinute
+  if (allowed) {
+    recent.push(now)
+  }
+  recentTextQueries.set(issuerDid, recent)
+  return allowed
+}
+
+/**
+ * Read an optional bounding box from query parameters.
+ * @returns {{ bbox: {minLat, minLon, maxLat, maxLon}|null, error?: string }}
+ */
+function bboxFromQuery(query) {
+  const keys = ['minLocLat', 'minLocLon', 'maxLocLat', 'maxLocLon']
+  const given = keys.filter((k) => query[k] != null && query[k] !== '')
+  if (given.length === 0) {
+    return { bbox: null }
+  }
+  if (given.length < keys.length) {
+    return { bbox: null, error: "Supply all of minLocLat, minLocLon, maxLocLat, maxLocLon, or none of them." }
+  }
+  const [minLat, minLon, maxLat, maxLon] = keys.map((k) => Number(query[k]))
+  if ([minLat, maxLat].some((v) => isNaN(v) || v < -90 || v > 90)) {
+    return { bbox: null, error: "Latitudes must be numbers between -90 and 90." }
+  }
+  if ([minLon, maxLon].some((v) => isNaN(v) || v < -180 || v > 180)) {
+    return { bbox: null, error: "Longitudes must be numbers between -180 and 180." }
+  }
+  return { bbox: { minLat, minLon, maxLat, maxLon } }
+}
+
+/**
+ * IDs (as stored in the embedding table) of subjects inside the bounding box.
+ * @returns {Promise<string[]|null>} null when there is no box, meaning all subjects
+ */
+async function subjectIdsInBBox(subjectType, bbox) {
+  if (!bbox) {
+    return null
+  }
+  const { minLat, minLon, maxLat, maxLon } = bbox
+  if (subjectType === 'profile') {
+    return (await partnerDbService.profileRowIdsByLocation(minLat, minLon, maxLat, maxLon)).map(String)
+  }
+  // When we separate this into another service, this will have to be an API call.
+  return endorserDbService.planHandleIdsByLocation(minLat, maxLat, minLon, maxLon)
+}
+
+/**
+ * Check if a DID is in the admin user array
+ * @param {string} issuerDid - the DID to check
+ * @returns {boolean} true if the DID is an admin
+ */
+function isAdminUser(issuerDid) {
+  const adminUsers = process.env.ADMIN_DIDS
+  if (!adminUsers) {
+    return false
+  }
+  // ADMIN_DIDS is a comma-separated list of DIDs
+  const adminList = JSON.parse(adminUsers)
+  return adminList.includes(issuerDid)
+}
+
+/**
+ * Make an API call to /api/claim/:jwtId
+ * @param {string} jwtId - the JWT ID to retrieve
+ * @param {string} authHeader - the Authorization header value to forward
+ * @returns {Promise<object>} - the JWT info
+ */
+function getClaimById(jwtId, authHeader) {
+  return new Promise((resolve, reject) => {
+    const port = process.env.PORT || 80
+    const host = 'localhost'
+    const path = `/api/claim/${jwtId}`
+    
+    const options = {
+      hostname: host,
+      port: port,
+      path: path,
+      method: 'GET',
+      headers: {}
+    }
+    
+    if (authHeader) {
+      options.headers['Authorization'] = authHeader
+    }
+    
+    const req = http.request(options, (res) => {
+      let data = ''
+      
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const result = JSON.parse(data)
+            resolve(result)
+          } catch (err) {
+            reject(new Error(`Failed to parse response: ${err.message}`))
+          }
+        } else if (res.statusCode === 404) {
+          reject(new Error('Claim not found'))
+        } else {
+          reject(new Error(`API call failed with status ${res.statusCode}: ${data}`))
+        }
+      })
+    })
+    
+    req.on('error', (err) => {
+      reject(new Error(`Request failed: ${err.message}`))
+    })
+    
+    req.end()
+  })
+}
+
+/**
+ * Make an API call to /api/report/rateLimits
+ * @param {string} authHeader - the Authorization header value to forward
+ * @returns {Promise<object>} - the rate limits info
+ */
+function getRateLimits(authHeader) {
+  return new Promise((resolve, reject) => {
+    const port = process.env.PORT || 80
+    const host = 'localhost'
+    const path = '/api/report/rateLimits'
+    
+    const options = {
+      hostname: host,
+      port: port,
+      path: path,
+      method: 'GET',
+      headers: {}
+    }
+    
+    if (authHeader) {
+      options.headers['Authorization'] = authHeader
+    }
+    
+    const req = http.request(options, (res) => {
+      let data = ''
+      
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const result = JSON.parse(data)
+            resolve(result)
+          } catch (err) {
+            reject(new Error(`Failed to parse response: ${err.message}`))
+          }
+        } else if (res.statusCode === 400) {
+          // Rate limits endpoint returns 400 if user doesn't have an account
+          const error = new Error('Must be registered')
+          error.clientError = true
+          reject(error)
+        } else {
+          reject(new Error(`API call failed with status ${res.statusCode}: ${data}`))
+        }
+      })
+    })
+    
+    req.on('error', (err) => {
+      reject(new Error(`Request failed: ${err.message}`))
+    })
+    
+    req.end()
+  })
+}
+
+
 
 export default express
 .Router()
@@ -114,7 +613,724 @@ export default express
  * @property {number} locLon2 - longitude coordinate
  * @property {string} rowId - the profile ID
  * @property {string} createdAt - date the profile was created
+ * (only set by admins, and might only be visible to admins)
  */
+
+/**
+ * @typedef MatchPairParticipant
+ * @property {string} issuerDid - the DID of the participant
+ * @property {string} content - the encrypted content of the participant
+ * @property {string} description - the description of the participant's profile
+ */
+
+/**
+ * @typedef MatchPairs
+ * @property {number} pairNumber - the number of the pair
+ * @property {number} similarity - the similarity score of the pair
+ * @property {MatchPairParticipant[]} participants - the participants in the pair
+ */
+
+/**
+ * @typedef SimilarProfile
+ * @property {number} similarity - similarity of this profile to the requester's profile, up to 1
+ * @property {UserProfile} profile
+ */
+
+/**
+ * @typedef SimilarPlan
+ * @property {number} similarity - similarity of this plan to the requester's profile, up to 1
+ * @property {object} plan - the plan summary
+ */
+
+/**
+ * Alert search: profiles updated in an area, and profiles and plans anywhere whose text is close to the requester's profile
+ *
+ * profilesSimilar and plansSimilar hold subjects whose text was embedded (first, or after it changed)
+ * inside the window, with a similarity to the requester's profile of at least the embedding spec's
+ * alertMinimumSimilarity, best first, at most 50 each. They are empty when the requester's profile has no text.
+ * Plans are embedded by a periodic sweep, so a plan appears after the sweep that follows its claim.
+ *
+ * Cursors are opaque positions between changes; store them as text and send them back unchanged.
+ * With 'afterCursor' only, profilesNearby holds profiles changed after it, oldest change first, at most 50;
+ * when 'hasMore' is true, call again with 'afterCursor' set to 'nextAfterCursor'.
+ * With 'beforeCursor', profilesNearby holds profiles changed before it (and after 'afterCursor', if given),
+ * newest change first, at most 50; to scroll further back, call again with 'beforeCursor' set to
+ * 'nextBeforeCursor' while 'hasMore' is true. The similar lists hold matches changed inside the page's
+ * window; plan matches come on the first page of a backward scroll.
+ * Without cursors, profilesNearby is bounded by the dates (or the times inside afterId and beforeId),
+ * the similar lists are the best matches overall, and both returned cursors are at the latest changes.
+ * See CHANGE/PLAN-accurate-cursors.md
+ *
+ * @group partner utils
+ * @route GET /api/partner/alertSearch
+ * @route POST /api/partner/alertSearch
+ * @param {string} afterCursor.body.optional - a cursor from an earlier response: return changes after it; the ID and date bounds are then ignored (GET, POST)
+ * @param {string} beforeCursor.body.optional - a cursor from an earlier response: return changes before it, newest first (GET, POST)
+ * @param {string} afterId.body.optional - JWT ULID to return items after (GET, POST)
+ * @param {string} beforeId.body.optional - JWT ULID to return items before (GET, POST)
+ * @param {string} afterDate.body.optional - ISO date to return items after; takes precedence over afterId (GET, POST)
+ * @param {string} beforeDate.body.optional - ISO date to return items before; takes precedence over beforeId (GET, POST)
+ * @param {object} location.body.optional - bounding box for profilesNearby: minLocLat, maxLocLat, minLocLon, maxLocLon (POST)
+ * @param {number} minLocLat.body.optional - min latitude (GET)
+ * @param {number} maxLocLat.body.optional - max latitude (GET)
+ * @param {number} minLocLon.body.optional - min longitude (GET)
+ * @param {number} maxLocLon.body.optional - max longitude (GET)
+ * @param {object} similarLocation.body.optional - bounding box for profilesSimilar and plansSimilar, which match everywhere without it: minLocLat, maxLocLat, minLocLon, maxLocLon (POST as an object, GET as JSON)
+ * @returns {object} 200 - { data: {
+ *   profilesNearby: UserProfile[],
+ *   profilesSimilar: SimilarProfile[],
+ *   plansSimilar: SimilarPlan[],
+ *  },
+ *  nextAfterCursor: string,
+ *  nextBeforeCursor: string,
+ *  hasMore: boolean,
+ * }
+ * where each profilesNearby row has 'changeSeq'
+ * @returns {Error} 400 - a cursor is not one from this endpoint
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/alertSearch', alertSearchHandler)
+  .post('/alertSearch', alertSearchHandler)
+
+
+
+
+
+
+
+
+/******************************************************
+ * Group Onboarding
+ ******************************************************/
+
+/**
+ * Create a new group onboarding room
+ * 
+ * @group partner utils
+ * @route POST /api/partner/groupOnboard
+ * @param {string} name.body.required - name of the room
+ * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
+ * @param {string} content.body.required - personal content for the room creator
+ * @param {string} projectLink.body.optional - URL to the project
+ * @returns {object} 201 - Created with room ID
+ * @returns {Error} 400 - client error
+ */
+.post(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      // (When we separate this into another service, this will have to be an API call.
+      // See the image-api server for an example of how to leverage JWTs to get
+      // permission to access data from the other service.)
+      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
+    } catch (e) {
+      return res.status(400).json({ error: { userMessage: "You must have registration permissions to create a meeting." } }).end()
+    }
+
+    const { name, expiresAt, content, projectLink } = req.body
+    
+    // Validate inputs
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: { userMessage: "The meeting name must be non-empty text." } }).end()
+    }
+
+    const expireDate = new Date(expiresAt)
+    if (isNaN(expireDate.getTime())) {
+      return res.status(400).json({ error: { userMessage: "The expiration date is invalid." } }).end()
+    }
+
+    const maxExpireTime = new Date()
+    maxExpireTime.setHours(maxExpireTime.getHours() + 24)
+    if (expireDate > maxExpireTime) {
+      return res.status(400).json({ error: { userMessage: "The expiration time cannot be more than 24 hours in the future." } }).end()
+    }
+
+    if (projectLink && typeof projectLink !== 'string') {
+      return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
+    }
+
+    try {
+      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt, projectLink)
+      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content, true)
+      res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        if (err.message.includes('issuerDid')) {
+          return res.status(400).json({ error: { userMessage: "You already have an active meeting." } }).end()
+        } else {
+          return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
+        }
+      }
+      console.error('Error creating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get any groups set up by this person
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboard
+ * @returns {object} 200 - the room they created with "groupId", "name", "expiresAt"
+ */
+.get(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      // maybe undefined
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (room && room.previousMatches) {
+        room.previousMatches = JSON.parse(room.previousMatches)
+      }
+      res.status(200).json({ data: room }).end()
+    } catch (err) {
+      console.error('Error getting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/** 
+ * Get non-sensitive information about a group onboarding room by ID
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboard/{groupId}
+ * @param {number} groupId.path.required - group ID
+ * @returns {object} 200 - the room with "groupId", "name", "expiresAt" (but not other potentially sensitive information)
+ */
+.get(
+  '/groupOnboard/:groupId',
+  async (req, res) => {
+    try {
+      const groupId = parseInt(req.params.groupId)
+      const room = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (room && room.expiresAt && room.expiresAt < Date.now()) {
+        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+      }
+      if (room) {
+        // remove potentially sensitive data
+        delete room.issuerDid
+        delete room.previousMatches
+      }
+      res.status(200).json({ data: room }).end()
+    } catch (err) {
+      console.error('Error getting meeting onboarding room by ID:', req.params.groupId, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update a group onboarding room
+ * 
+ * @group partner utils
+ * @route PUT /api/partner/groupOnboard
+ * @param {string} name.body.optional - new room name
+ * @param {string} expiresAt.body.optional - new room expiration date
+ * @param {string} projectLink.body.optional - new project URL
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      let { name, expiresAt, content, projectLink } = req.body
+
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!room) {
+        return res.status(404).json({ error: { userMessage: "That meeting was not found for you." } }).end()
+      }
+
+      if (projectLink && typeof projectLink !== 'string') {
+        return res.status(400).json({ error: { userMessage: "The project link must be a valid URL." } }).end()
+      }
+
+      if (expiresAt) {
+        const expireDate = new Date(expiresAt)
+        if (isNaN(expireDate.getTime())) {
+          return res.status(400).json({ error: { userMessage: "The expiration date is invalid." } }).end()
+        }
+        const maxExpireTime = new Date()
+        maxExpireTime.setHours(maxExpireTime.getHours() + 24)
+        if (expireDate > maxExpireTime) {
+          return res.status(400).json({ error: { userMessage: "The expiration time cannot be more than 24 hours in the future." } }).end()
+        }
+      }
+
+      const changes = await partnerDbService.groupOnboardUpdate(
+        room.groupId,
+        res.locals.authTokenIssuer,
+        name || room.name,
+        expiresAt || room.expiresAt,
+        projectLink || room.projectLink
+      )
+      if (changes === 0) {
+        return res.status(404).json({ error: { userMessage: "That meeting was not found to change." } }).end()
+      }
+      const result = { success: true }
+      // update the member content
+      if (content) {
+        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+        if (member) {
+          const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
+          if (memberChanges === 0) {
+            result.userMessage = "Could not update your member content."
+            console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
+          }
+        } else {
+          result.userMessage = "You were not found as a member of that group."
+          console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
+        }
+      } else {
+        result.userMessage = "Be sure to provide new 'content' if you change the meeting password."
+      }
+      res.status(200).json(result).end()
+    } catch (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: { userMessage: "That meeting name is already taken." } }).end()
+      }
+      console.error('Error updating meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Delete a group onboarding room
+ *
+ * @group partner utils
+ * @route DELETE /api/partner/groupOnboard
+ * @returns 204 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboard',
+  async (req, res) => {
+    try {
+      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!room) {
+        return res.status(404).json({ error: { userMessage: "No meeting was found for you." } }).end()
+      }
+      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.authTokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: { userMessage: "That meeting couldn't be deleted." } }).end()
+      }
+      await partnerDbService.groupOnboardMemberDeleteByGroupId(room.groupId)
+      res.status(204).json({ success: true }).end()
+    } catch (err) {
+      console.error('Error deleting meeting onboarding room for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get all group onboarding rooms
+ *
+ * @group partner utils
+ * @route GET /api/partner/groupsOnboarding
+ * @returns {array} 200 - List of rooms with "groupId", "name", "expiresAt"
+ */
+.get(
+  '/groupsOnboarding',
+  async (req, res) => {
+    try {
+      const rooms = await partnerDbService.groupOnboardGetAllActive()
+      res.status(200).json({ data: rooms }).end()
+    } catch (err) {
+      console.error('Error getting all meeting onboarding rooms:', err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Trigger semantic matching for a group (organizer only)
+ * Pairs admitted members who have embeddings based on profile similarity.
+ *
+ * @group partner utils
+ * @route POST /api/partner/groupOnboardMatch
+ * @param {string[]} excludedDids.body.optional - issuerDids to exclude from matching
+ * @param {Array<[string, string]>} excludedPairDids.body.optional - pairs of issuerDids to never match
+ * @param {Array<[string, string]>} previousPairDids.body.optional - pairs from previous rounds (don't repeat)
+ * @returns {object} 200 - pairs with participants and similarity scores
+ */
+.post(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Request must include a valid Authorization JWT." }).end()
+      }
+
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!group) {
+        return res.status(404).json({ error: { userMessage: "There is no meeting with you as the organizer." } }).end()
+      }
+
+      const { excludedDids = [], excludedPairDids = [], previousPairDids = [] } = req.body || {}
+
+      const rows = await partnerDbService.groupMembersWithProfiles(group.groupId)
+      if (rows.length < 2) {
+        return res.status(400).json({
+          error: { userMessage: "Need at least 2 admitted members to match." },
+        }).end()
+      }
+
+      // members without a vector (no profile or no text) are paired after everyone else
+      const profileRowIds = rows.filter((row) => row.rowId != null).map((row) => row.rowId)
+      const vectorsByRowId = await embeddingService.vectorsBySubject(embeddingService.SUBJECT_PROFILE, profileRowIds)
+      const participants = rows.map((row) => ({
+        issuerDid: row.issuerDid,
+        description: row.description,
+        vectors: (row.rowId != null && vectorsByRowId.get(String(row.rowId))) || [],
+      }))
+      const matchingSpec = activeEmbeddingSpec().matching
+      const result = matchParticipants(participants, matchingSpec, excludedDids, excludedPairDids, previousPairDids)
+
+      // create lookup from issuerDid to content from rows
+      const issuerDidToContent = new Map(rows.map((row) => [row.issuerDid, row.content]))
+
+      const pairsForResponse = result.pairs.map((pair) => ({
+        pairNumber: pair.pairNumber,
+        similarity: pair.similarity,
+        participants: pair.participants.map((p) => ({
+          issuerDid: p.issuerDid,
+          content: issuerDidToContent.get(p.issuerDid),
+          description: p.description,
+        })),
+      }))
+
+      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, JSON.stringify(pairsForResponse))
+
+      res.status(200).json({ data: { pairs: pairsForResponse } }).end()
+    } catch (err) {
+      console.error('Error matching meeting members for body params:', JSON.stringify(req.body), '... with potential client message:', err)
+      // the matchParticipants error messages are useful for the user
+      res.status(400).json({ error: { userMessage: err.message } }).end()
+    }
+  }
+)
+
+/**
+ * Get previous matching results for a group (anyone in the meeting)
+ *
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMatch
+ * @returns {object} 200 - previous pairs with participants and similarity scores, or null if none yet
+ */
+.get(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      // This is actually caught by the auth middleware, with 401 message "Missing Bearer JWT In Authorization header"
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Meeting-onboard-match check must include valid authorization." }).end()
+      }
+
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!member) {
+        return res.status(404).json({ error: "There is no meeting with you as a member." }).end()
+      }
+      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+      if (!group) {
+        return res.status(500).json({ error: "The server had a problem with this meeting. You'll need to start over. Report this to an admin with your details." }).end()
+      }
+
+      let pairs = null
+      if (group.previousMatches) {
+        try {
+          pairs = JSON.parse(group.previousMatches)
+        } catch (err) {
+          console.error('Error parsing previous matches for group:', req.params.groupId, err)
+          return res.status(500).json({ error: "The server had a problem with this meeting pairs. You'll need to start over. Report this to an admin with your details." }).end()
+        }
+      }
+      res.status(200).json({ data: { pairs } }).end()
+    } catch (err) {
+      console.error('Error getting meeting previous matches for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/** Delete previous matches for a group (organizer only) */
+.delete(
+  '/groupOnboardMatch',
+  async (req, res) => {
+    try {
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!group) {
+        return res.status(404).json({ error: "There is no meeting with you as the organizer." }).end()
+      }
+      await partnerDbService.groupOnboardUpdatePreviousMatches(group.groupId, null)
+      res.status(200).json({ success: true }).end()
+    } catch (err) {
+      console.error('Error deleting group previous matches for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/******************************************************
+ * Group Onboarding Members
+ ******************************************************/
+
+/**
+ * Join a group onboarding room
+ * 
+ * @group partner utils
+ * @route POST /api/partner/groupOnboardMember
+ * @param {number} groupId.body.required - group ID to join
+ * @param {string} content.body.required - member content
+ * @returns {object} 201 - Created
+ * @returns {Error} 400 - client error
+ */
+.post(
+  '/groupOnboardMember',
+  async (req, res) => {
+    const { groupId, content } = req.body
+    try {
+
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: { userMessage: "The content must be non-empty text." } }).end()
+      }
+
+      // Verify group exists
+      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
+      if (!group) {
+        return res.status(404).json({ error: { userMessage: "That group was not found." } }).end()
+      }
+      if (group.expiresAt && group.expiresAt < Date.now()) {
+        return res.status(404).json({ error: { userMessage: "That meeting has expired." } }).end()
+      }
+
+      try {
+        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content)
+        res.status(201).json({ success: { memberId: memberId } }).end()
+      } catch (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          // retrieve the member record and continue
+          // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
+          // (Then again, one wonders if this whole idempotent quality here is a good idea or not.)
+          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+          if (member) {
+            // check that the group is the same
+            if (member.groupId !== groupId) {
+              return res.status(400).json({ error: { userMessage: "You already exist in a different group." } }).end()
+            }
+            // update their content if they sent something new
+            const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
+            if (memberChanges === 0) {
+              return res.status(400).json({ error: { userMessage: "You already exist in this group but your content could not be updated." } }).end()
+            } else {
+              return res.status(200).json({ success: { memberId: member.memberId } }).end()
+            }
+          } else {
+            // may be a client error but I'm really not sure
+            return res.status(400).json({ error: err.message }).end()
+          }
+        }
+        throw err
+      }
+    } catch (err) {
+      console.error('Error joining group onboarding room for DID:', res.locals.authTokenIssuer, '... for group:', groupId, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get current user's group membership
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMember
+ * @returns {object} 200 - Member record with groupId, content, and admitted status, or undefined if not in a group
+ * @returns {Error} 500 - server error
+ */
+.get(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      res.status(200).json({ data: member }).end()
+    } catch (err) {
+      console.error('Error getting group membership for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Get group members for the group the member is in
+ * 
+ * @group partner utils
+ * @route GET /api/partner/groupOnboardMembers
+ * @returns {array} 200 - List of members with "issuerDid", "content", "admitted"
+ * @returns {Error} 403 - Unauthorized
+ */
+.get(
+  '/groupOnboardMembers',
+  async (req, res) => {
+    try {
+      // get group member is in
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      if (!member) {
+        return res.status(404).json({ error: { userMessage: "You are not found in any group." } }).end()
+      }
+
+      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
+      if (!group) {
+        return res.status(404).json({ error: { userMessage: "That is not a valid group." } }).end()
+      }
+
+      const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
+
+      const isOrganizer = group.issuerDid === res.locals.authTokenIssuer
+
+      if (isOrganizer) {
+        // Return everyone with acceptable properties
+        const allMembers = members
+          .map(m => ({
+            admitted: m.admitted,
+            memberId: m.memberId,
+            content: m.content,
+          }))
+        return res.status(200).json({ data: allMembers }).end()
+      }
+
+      // Find requesting user's membership
+      const requesterMember = members.find(m => m.issuerDid === res.locals.authTokenIssuer)
+      if (!requesterMember) {
+        return res.status(403).json({ error: { userMessage: "You have not joined this group." } }).end()
+      }
+      if (!requesterMember.admitted) {
+        const organizer = members[0]
+        const result = [
+          {
+            memberId: organizer.memberId,
+            content: organizer.content
+          }
+        ]
+        return res.status(200).json({ data: result }).end()
+      }
+
+      // Return only admitted members
+      const admittedMembers = members
+        .filter(m => m.admitted)
+        .map(m => ({
+          memberId: m.memberId,
+          content: m.content
+        }))
+
+      res.status(200).json({ data: admittedMembers }).end()
+    } catch (err) {
+      console.error('Error getting group members for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership for token issuer (self)
+ *
+ * @group partner utils
+ * @route PUT /api/partner/groupOnboardMember
+ * @param {string} content.body.optional - new content
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
+      await updateGroupMember(member.memberId, member, req.body, res)
+    } catch (err) {
+      console.error('Error updating group membership for token issuer:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Update group membership for given member (by the organizer)
+ * 
+ * @group partner utils
+ * @route PUT /api/partner/groupOnboardMember/{memberId}
+ * @param {number} memberId.path.required - member ID to update
+ * @param {string} content.body.optional - new content
+ * @param {boolean} admitted.body.optional - admission status (organizer only)
+ * @returns 200 - Success
+ * @returns {Error} 403 - Unauthorized
+ * @returns {Error} 404 - Not found
+ */
+.put(
+  '/groupOnboardMember/:memberId',
+  async (req, res) => {
+    try {
+      const memberId = parseInt(req.params.memberId)
+
+      // get member record
+      const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
+      await updateGroupMember(memberId, member, req.body, res)
+    } catch (err) {
+      console.error('Error updating group membership for given member:', req.params.memberId, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Leave a group
+ * 
+ * @group partner utils
+ * @route DELETE /api/partner/groupOnboardMember
+ * @returns 204 - Success
+ * @returns {Error} 404 - Not found
+ */
+.delete(
+  '/groupOnboardMember',
+  async (req, res) => {
+    try {
+      // first check that they are not the organizer of a meeting
+      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
+      if (group) {
+        return res.status(403).json({ error: { userMessage: "You are the organizer of a group. You can only leave the group by deleting it." } }).end()
+      }
+
+      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.authTokenIssuer)
+      if (deleted === 0) {
+        return res.status(404).json({ error: { userMessage: "That membership was not found." } }).end()
+      }
+      res.status(204).end()
+    } catch (err) {
+      console.error('Error leaving group for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Add a link to some partner service
@@ -136,6 +1352,9 @@ export default express
       // See the image-api server for an example of how to leverage JWTs to get
       // permission to access data from the other service.
       const jwtInfo = await endorserDbService.jwtById(req.body.jwtId)
+      // Here's the approach we'd like to use:
+      // const authHeader = req.headers['authorization'] || req.headers['Authorization']
+      // const jwtInfo = await getClaimById(req.body.jwtId, authHeader)
 
       const result =
         await sendAndStoreLink(
@@ -156,17 +1375,38 @@ export default express
         res.status(201).json({ success: { signedEvent: result.signedEvent } }).end()
       }
     } catch (err) {
-      console.error('Error adding partner link', err)
+      console.error('Error adding partner link for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/******************************************************
+ * User Profiles
+ ******************************************************/
+
 /**
  * Add a profile for a user
  *
  * @group partner utils
- * @route POST /api/partner/profile
+ * @route POST /api/partner/userProfile
  * @param {string} description.body.required - free-form description of interests
  * @param {number} latitude.body.optional - latitude coordinate
  * @param {number} longitude.body.optional - longitude coordinate
@@ -186,9 +1426,12 @@ export default express
     // permission to access data from the other service.
     try {
       await ClaimService.getRateLimits(res.locals.authTokenIssuer)
+      // Here's the approach we'd like to use:
+      // const authHeader = req.headers['authorization'] || req.headers['Authorization']
+      // await getRateLimits(authHeader)
     } catch (e) {
       // must not have an account
-      return res.status(400).json({ error: "Must be registered to submit a profile" }).end()
+      return res.status(400).json({ error: { userMessage: "Must be registered to submit a profile" } }).end()
     }
 
     // Validate inputs
@@ -196,7 +1439,7 @@ export default express
       return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
     }
     if (description && typeof description !== 'string') {
-      return res.status(400).json({ error: "Query parameter 'description' must be a non-empty string" }).end()
+      return res.status(400).json({ error: "Query parameter 'description' must be a string" }).end()
     }
     if (locLat && (typeof locLat !== 'number' || locLat < -90 || locLat > 90)) {
       return res.status(400).json({ error: "Query parameter 'locLat' must be a number between -90 and 90" }).end()
@@ -223,54 +1466,21 @@ export default express
 
       const userProfileId = await partnerDbService.profileInsertOrUpdate(entry)
 
-      res.status(201).json({ success: { userProfileId } }).end()
-    } catch (err) {
-      console.error('Error adding user profile', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-
-/**
- * Get a user's profile
- *
- * @group partner utils
- * @route GET /api/partner/userProfileForIssuer/{issuerDid}
- * @param {string} issuerDid.path.required - the issuer DID to get the profile for
- * @returns {UserProfile} 200 - success response with profile
- * @returns {Error} 403 - unauthorized
- * @returns {Error} 400 - client error
- */
-// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-.get(
-  '/userProfileForIssuer/:issuerDid',
-  async (req, res) => {
-    const { issuerDid } = req.params
-    try {
-      let result = await partnerDbService.profileByIssuerDid(issuerDid)
-
-      if (!result) {
-        return res.status(404).json({ error: "Profile not found" }).end()
+      // embed the new description; on failure the profile stays saved and the sweep retries
+      const savedProfile = await partnerDbService.profileByIssuerDid(res.locals.authTokenIssuer)
+      const hasVector = await embeddingService.refreshProfileEmbedding(savedProfile.rowid, savedProfile.description)
+      let responseMessage
+      if (!hasVector && subjectText(activeEmbeddingSpec(), embeddingService.SUBJECT_PROFILE, { description: savedProfile.description }) !== '') {
+        responseMessage = "Your profile was saved, but it is not yet available for matching. That will be retried automatically."
       }
-      if (issuerDid !== res.locals.authTokenIssuer) {
-        // check if they can see the profile, or if they're linked to someone who can
-        // (When we separate this into another service, this will have to be an API call.
-        // See the image-api server for an example of how to leverage JWTs to get
-        // permission to access data from the other service.)
-        const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
-        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
-          // the issuerDid is visible to the requester, so continue with full content
-        } else {
-          // someone the issuer can see can see the profile,
-          // but giving up all between would expose their full network
-          return res.status(403).json({ error: "Will not leak the issuer's profile" }).end()
-        }
+
+      const response = { success: { userProfileId } }
+      if (responseMessage) {
+        response.userMessage = responseMessage
       }
-      res.status(200).json({ data: result }).end()
+      res.status(201).json(response).end()
     } catch (err) {
-      console.error('Error getting user profile for issuer', err)
+      console.error('Error adding user profile for DID:', res.locals.authTokenIssuer, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -280,7 +1490,7 @@ export default express
  * Get a user's profile by ID
  *
  * @group partner utils
- * @route GET /api/partner/userProfile/{id}
+ * @route GET /api/partner/userProfile/{rowId}
  * @param {number} rowId.path.required - the profile ID to retrieve
  * @returns {UserProfile} 200 - success response with profile
  * @returns {Error} 403 - unauthorized
@@ -321,14 +1531,14 @@ export default express
       }
       res.status(200).json({ data: result }).end()
     } catch (err) {
-      console.error('Error getting user profile by ID', err)
+      console.error('Error getting user profile by ID:', rowId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
 /**
- * Get profiles by location or text search
+ * Search for profiles by location or text
  *
  * @group partner utils
  * @route GET /api/partner/userProfile
@@ -346,8 +1556,8 @@ export default express
 .get(
   '/userProfile',
   async (req, res, next) => {
+    const { minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId } = req.query
     try {
-      const { minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId } = req.query
 
       const numMinLat = minLocLat ? Number(minLocLat) : null
       const numMinLon = minLocLon ? Number(minLocLon) : null
@@ -384,43 +1594,15 @@ export default express
         afterId,
         claimContents
       )
-      const resultList = rawResult.data
       // Hide DIDs and add network links
-      // This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
-      // (When we separate this into another service, this will have to be an API call.
-      // See the image-api server for an example of how to leverage JWTs to get
-      // permission to access data from the other service.)
-      const didsSeenByRequesterWhoSeeObject =
-        await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, resultList.map(profile => profile.issuerDid))
-      // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
-      const resultsScrubbed = []
-      for (let i = 0; i < resultList.length; i++) {
-        const profile = resultList[i]
-        const didOrDidsSeenByRequesterWhoSeeObject = didsSeenByRequesterWhoSeeObject[i]
-        if (didOrDidsSeenByRequesterWhoSeeObject === profile.issuerDid) {
-          // the issuerDid is visible to the requester
-          resultsScrubbed.push(profile)
-        } else {
-          // the issuerDid is not visible to the requester
-          profile.issuerDid = HIDDEN_TEXT
-          // didOrDidsSeenByRequesterWhoSeeObject must be an array of DIDs who can see the target DID
-          const didsWhoSeeObject =
-            R.isEmpty(didOrDidsSeenByRequesterWhoSeeObject)
-              ? undefined
-              : didOrDidsSeenByRequesterWhoSeeObject
-          resultsScrubbed.push({
-            ...profile,
-            issuerDidVisibleToDids: didsWhoSeeObject
-          })
-        }
-      }
+      const resultsScrubbed = await hideProfileDids(res.locals.authTokenIssuer, rawResult.data)
       const fullResult = {
         data: resultsScrubbed,
         hitLimit: rawResult.hitLimit
       }
       res.status(200).json(fullResult).end()
     } catch (err) {
-      console.error('Error getting user profile', err)
+      console.error('Error getting user profiles from search:', err, '... for params:', JSON.stringify({ minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId }))
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -445,7 +1627,60 @@ export default express
       const result = await partnerDbService.profileDelete(res.locals.authTokenIssuer)
       res.status(204).json({ success: { numDeleted: result } }).end()
     } catch (err) {
-      console.error('Error deleting user profile', err)
+      console.error('Error deleting user profile for DID:', res.locals.authTokenIssuer, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
+)
+
+/**
+ * Report whether a user's profile has a current embedding under the active spec
+ *
+ * @group partner utils
+ * @route GET /api/partner/userProfileEmbeddingMetadata/{issuerDid}
+ * @param {string} issuerDid.path.required - the DID of the user whose profile embedding to check
+ * @returns {object} 200 - 'data' with embeddingSpecId and hasCurrentEmbedding (false when the profile text is empty or not yet embedded)
+ * @returns {Error} 401 - unauthenticated
+ * @returns {Error} 404 - no profile, or not visible to the requester
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfileEmbeddingMetadata/:issuerDid',
+  async (req, res) => {
+    const { issuerDid } = req.params
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(401).json({ error: "Authentication required" }).end()
+      }
+
+      // use a generic message so as to not leak whether a profile exists for this DID
+      const NOT_SEEN_MESSAGE = "There is no embedding for this issuer or it is not visible to you."
+
+      if (issuerDid !== res.locals.authTokenIssuer) {
+        const didsSeenByRequesterWhoSeeObject =
+          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
+        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
+          // the issuerDid is visible to the requester, so continue with full content
+        } else if (!isAdminUser(res.locals.authTokenIssuer)) {
+          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+        }
+      }
+
+      const profile = await partnerDbService.profileByIssuerDid(issuerDid)
+      if (!profile) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+      }
+
+      const spec = activeEmbeddingSpec()
+      const text = subjectText(spec, embeddingService.SUBJECT_PROFILE, { description: profile.description })
+      const stored = await partnerDbService.embeddings.bySubjects(
+        embeddingService.SUBJECT_PROFILE, spec.embeddingSpecId, [String(profile.rowid)]
+      )
+      const hasCurrentEmbedding = text !== '' && stored.length > 0 && stored[0].contentHash === contentHash(text)
+
+      res.status(200).json({ data: { embeddingSpecId: spec.embeddingSpecId, hasCurrentEmbedding } }).end()
+    } catch (err) {
+      console.error('Error getting user profile embedding for DID:', issuerDid, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
@@ -526,8 +1761,55 @@ export default express
       if ("" + err !== "[object Object]") {
         errorObj = "" + err // sometimes this gives more info
       }
-      console.error('Error getting user profile counts by bbox', err)
+      console.error('Error getting user profile counts by bbox:', err, '... for query params:', JSON.stringify(req.query))
       res.status(500).json({ error: errorObj }).end()
+    }
+  }
+)
+
+/**
+ * Get a user's profile
+ *
+ * @group partner utils
+ * @route GET /api/partner/userProfileForIssuer/{issuerDid}
+ * @param {string} issuerDid.path.required - the issuer DID to get the profile for
+ * @returns {UserProfile} 200 - success response with profile
+ * @returns {Error} 403 - unauthorized
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/userProfileForIssuer/:issuerDid',
+  async (req, res) => {
+    const { issuerDid } = req.params
+    try {
+      let result = await partnerDbService.profileByIssuerDid(issuerDid)
+
+      // use this message for not visible profiles as well so as to not leak information about this DID attached to any profile
+      const NOT_SEEN_MESSAGE = "There is no profile for this issuer or it is not visible to you."
+      if (!result) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+      }
+
+      if (issuerDid !== res.locals.authTokenIssuer) {
+        // check if they can see the profile, or if they're linked to someone who can
+        // (When we separate this into another service, this will have to be an API call.
+        // See the image-api server for an example of how to leverage JWTs to get
+        // permission to access data from the other service.)
+        const didsSeenByRequesterWhoSeeObject =
+          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
+        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
+          // the issuerDid is visible to the requester, so continue with full content
+        } else {
+          // someone the issuer can see can see the profile,
+          // but giving up all between would expose their full network
+          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
+        }
+      }
+      res.status(200).json({ data: result }).end()
+    } catch (err) {
+      console.error('Error getting user profile for issuer:', issuerDid, err)
+      res.status(500).json({ error: err.message }).end()
     }
   }
 )
@@ -543,15 +1825,15 @@ export default express
  * - "REGISTERED_BY_YOU" if the common ancestor is the source (target is in source's subtree)
  * - "REGISTERED_YOU" if the common ancestor is above the source (source needs to go up)
  * - "TARGET" if the source and target are the same
-* @returns {Error} 400 - client error
+ * @returns {Error} 400 - client error
  * @returns {Error} 404 - profile not found
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
   '/userProfileNearestNeighbors/:rowId',
   async (req, res) => {
+    const { rowId } = req.params
     try {
-      const { rowId } = req.params
       const rowIdInt = parseInt(rowId)
       
       if (!res.locals.authTokenIssuer) {
@@ -570,481 +1852,301 @@ export default express
       
       res.status(200).json({ data: neighbors }).end()
     } catch (err) {
-      console.error('Error getting nearest neighbors for user profile', err)
+      console.error('Error getting nearest neighbors for user profile:', rowId, err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
-
-
 /******************************************************
- * Group Onboarding
+ * Semantic Matching
  ******************************************************/
 
 /**
- * Create a new group onboarding room
- * 
- * @group partner utils
- * @route POST /api/partner/groupOnboard
- * @param {string} name.body.required - name of the room
- * @param {string} expiresAt.body.required - expiration time of the room (ISO string)
- * @param {string} content.body.required - personal content for the room creator
- * @param {string} projectLink.body.optional - URL to the project
- * @returns {object} 201 - Created with room ID
- * @returns {Error} 400 - client error
- */
-.post(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      // (When we separate this into another service, this will have to be an API call.
-      // See the image-api server for an example of how to leverage JWTs to get
-      // permission to access data from the other service.)
-      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
-    } catch (e) {
-      return res.status(400).json({ error: { message: "You must have registration permissions to create a group." } }).end()
-    }
-
-    const { name, expiresAt, content, projectLink } = req.body
-    
-    // Validate inputs
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: { message: "The group name must be non-empty text." } }).end()
-    }
-
-    const expireDate = new Date(expiresAt)
-    if (isNaN(expireDate.getTime())) {
-      return res.status(400).json({ error: { message: "The expiration date is invalid." } }).end()
-    }
-
-    const maxExpireTime = new Date()
-    maxExpireTime.setHours(maxExpireTime.getHours() + 24)
-    if (expireDate > maxExpireTime) {
-      return res.status(400).json({ error: { message: "The expiration time cannot be more than 24 hours in the future." } }).end()
-    }
-
-    if (projectLink && typeof projectLink !== 'string') {
-      return res.status(400).json({ error: { message: "The project link must be a valid URL." } }).end()
-    }
-
-    try {
-      const groupId = await partnerDbService.groupOnboardInsert(res.locals.authTokenIssuer, name, expiresAt, projectLink)
-      const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content, true)
-      res.status(201).json({ success: { groupId: groupId, memberId: memberId } }).end()
-    } catch (err) {
-      if (err.message.includes('UNIQUE constraint failed')) {
-        if (err.message.includes('issuerDid')) {
-          return res.status(400).json({ error: { message: "You already have an active group." } }).end()
-        } else {
-          return res.status(400).json({ error: { message: "That group name is already taken." } }).end()
-        }
-      }
-      console.error('Error creating group onboarding room', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get any groups set up by this person
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboard
- * @returns {object} 200 - the room they created with "groupId", "name", "expiresAt"
- */
-.get(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      // maybe undefined
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      res.status(200).json({ data: room }).end()
-    } catch (err) {
-      console.error('Error getting group onboarding room', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/** 
- * Get a group onboarding room by ID
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboard/{groupId}
- * @param {number} groupId.path.required - group ID
- * @returns {object} 200 - the room with "groupId", "name", "expiresAt"
- */
-.get(
-  '/groupOnboard/:groupId',
-  async (req, res) => {
-    try {
-      const groupId = parseInt(req.params.groupId)
-      const room = await partnerDbService.groupOnboardGetByRowId(groupId)
-      res.status(200).json({ data: room }).end()
-    } catch (err) {
-      console.error('Error getting group onboarding room by ID', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get all group onboarding rooms
+ * Find profiles and projects (plans) whose text is semantically close to a profile, a plan, or free text
  *
  * @group partner utils
- * @route GET /api/partner/groupsOnboarding
- * @returns {array} 200 - List of rooms with "groupId", "name", "expiresAt"
+ * @route GET /api/partner/similar
+ * @param {string} from.query.required - profile:<rowId> | plan:<handleId> | text:<query> (text requires registration and is rate limited)
+ * @param {string} to.query.optional - profile | plan | both (default both)
+ * @param {number} minLocLat.query.optional - bounding box (all four or none); profiles match on either location
+ * @param {number} minLocLon.query.optional
+ * @param {number} maxLocLat.query.optional
+ * @param {number} maxLocLon.query.optional
+ * @param {number} minSimilarity.query.optional - default from the embedding spec's matching config
+ * @param {number} limit.query.optional - default 25, max 50
+ * @returns {object} 200 - 'data' array of { subjectType, subjectId, similarity, record } best first, where record is the scrubbed profile or plan; plus embeddingSpecId
+ * @returns {Error} 400 - client error
+ * @returns {Error} 404 - the source subject has no embedding
+ * @returns {Error} 429 - too many text queries
  */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
-  '/groupsOnboarding',
+  '/similar',
   async (req, res) => {
+    const issuerDid = res.locals.authTokenIssuer
     try {
-      const rooms = await partnerDbService.groupOnboardGetAll()
-      res.status(200).json({ data: rooms }).end()
-    } catch (err) {
-      console.error('Error getting all group onboarding rooms', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update a group onboarding room
- * 
- * @group partner utils
- * @route PUT /api/partner/groupOnboard
- * @param {string} name.body.optional - new room name
- * @param {string} expiresAt.body.optional - new room expiration date
- * @param {string} projectLink.body.optional - new project URL
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
- */
-.put(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      let { name, expiresAt, content, projectLink } = req.body
-
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!room) {
-        return res.status(404).json({ error: { message: "That group was not found for you." } }).end()
+      if (!issuerDid) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
       }
-
-      if (projectLink && typeof projectLink !== 'string') {
-        return res.status(400).json({ error: { message: "The project link must be a valid URL." } }).end()
+      const { from, to = 'both' } = req.query
+      const fromMatch = typeof from === 'string' && from.match(/^(profile|plan|text):([\s\S]+)$/)
+      if (!fromMatch) {
+        return res.status(400).json({ error: "Query parameter 'from' must be profile:<rowId>, plan:<handleId>, or text:<query>" }).end()
       }
-
-      const changes = await partnerDbService.groupOnboardUpdate(
-        room.groupId,
-        res.locals.authTokenIssuer,
-        name || room.name,
-        expiresAt || room.expiresAt,
-        projectLink || room.projectLink
-      )
-      if (changes === 0) {
-        return res.status(404).json({ error: { message: "That group was not found to change." } }).end()
+      if (!SIMILAR_TARGETS.includes(to)) {
+        return res.status(400).json({ error: "Query parameter 'to' must be one of: " + SIMILAR_TARGETS.join(', ') }).end()
       }
-      const result = { success: true }
-      // update the member content
-      if (content) {
-        const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-        if (member) {
-          const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
-          if (memberChanges === 0) {
-            result.message = "Could not update your member content."
-            console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow could not update their member record ' + member.memberId + ' with content.')
-          }
-        } else {
-          result.message = "You were not found as a member of that group."
-          console.error('User ' + res.locals.authTokenIssuer + ' has room ' + room.groupId + ' but somehow has no member record.')
+      const { bbox, error: bboxError } = bboxFromQuery(req.query)
+      if (bboxError) {
+        return res.status(400).json({ error: bboxError }).end()
+      }
+      let minSimilarity
+      if (req.query.minSimilarity != null && req.query.minSimilarity !== '') {
+        minSimilarity = Number(req.query.minSimilarity)
+        if (isNaN(minSimilarity) || minSimilarity < -1 || minSimilarity > 1) {
+          return res.status(400).json({ error: "Query parameter 'minSimilarity' must be a number between -1 and 1" }).end()
         }
+      }
+      let limit = SIMILAR_DEFAULT_LIMIT
+      if (req.query.limit != null && req.query.limit !== '') {
+        limit = parseInt(req.query.limit)
+        if (!(limit >= 1)) {
+          return res.status(400).json({ error: "Query parameter 'limit' must be a positive integer" }).end()
+        }
+        limit = Math.min(limit, SIMILAR_MAX_LIMIT)
+      }
+
+      const [, sourceType, sourceRef] = fromMatch
+      let sourceVectors
+      let sourceId = null
+      if (sourceType === 'text') {
+        try {
+          // When we separate this into another service, this will have to be an API call.
+          await ClaimService.getRateLimits(issuerDid)
+        } catch (e) {
+          return res.status(400).json({ error: { userMessage: "Must be registered to search by text" } }).end()
+        }
+        if (!allowTextQuery(issuerDid)) {
+          return res.status(429).json({ error: { userMessage: "Too many text searches. Try again in a minute." } }).end()
+        }
+        const vector = await embeddingService.embedQuery(sourceRef)
+        if (!vector) {
+          return res.status(400).json({ error: "The query text is empty." }).end()
+        }
+        sourceVectors = [vector]
       } else {
-        result.message = "Be sure to provide new 'content' if you change the group password."
+        if (sourceType === 'profile') {
+          if (!/^\d+$/.test(sourceRef)) {
+            return res.status(400).json({ error: "A profile source must be profile:<rowId>" }).end()
+          }
+          sourceId = String(parseInt(sourceRef))
+        } else {
+          sourceId = globalId(sourceRef)
+        }
+        sourceVectors = (await embeddingService.vectorsBySubject(sourceType, [sourceId])).get(sourceId)
+        if (!sourceVectors) {
+          return res.status(404).json({ error: "That " + sourceType + " has no embedding: it may not exist, may have no text, or may not be processed yet." }).end()
+        }
+      }
+
+      const candidates = []
+      for (const targetType of (to === 'both' ? ['profile', 'plan'] : [to])) {
+        const ids = await subjectIdsInBBox(targetType, bbox)
+        const vectorsById = await embeddingService.vectorsBySubject(targetType, ids)
+        for (const [subjectId, vectors] of vectorsById) {
+          if (!(targetType === sourceType && subjectId === sourceId)) {
+            candidates.push({ id: { subjectType: targetType, subjectId }, vectors })
+          }
+        }
+      }
+      const spec = activeEmbeddingSpec()
+      const ranked = rank(sourceVectors, candidates, spec.matching, { minSimilarity, limit })
+
+      // load the records and hide DIDs the same way the profile and plan searches do
+      const profileRowIds = ranked.filter((r) => r.id.subjectType === 'profile').map((r) => Number(r.id.subjectId))
+      const planHandleIds = ranked.filter((r) => r.id.subjectType === 'plan').map((r) => r.id.subjectId)
+      const profiles = profileRowIds.length === 0
+        ? []
+        : await hideProfileDids(issuerDid, await partnerDbService.profilesByRowIds(profileRowIds))
+      // When we separate this into another service, this will have to be an API call.
+      const planResult = planHandleIds.length === 0
+        ? { data: [] }
+        : await hideDidsAndAddLinksToNetworkInDataKey(issuerDid, await endorserDbService.planInfoByHandleIds(planHandleIds), [])
+      const records = new Map([
+        ...profiles.map((p) => ['profile:' + p.rowid, p]),
+        ...planResult.data.map((p) => ['plan:' + p.handleId, p]),
+      ])
+
+      const data = ranked
+        .map((r) => ({
+          subjectType: r.id.subjectType,
+          subjectId: r.id.subjectId,
+          similarity: r.score,
+          record: records.get(r.id.subjectType + ':' + r.id.subjectId),
+        }))
+        .filter((d) => d.record) // a subject may have been deleted since its vector was read
+      const result = { data, embeddingSpecId: spec.embeddingSpecId }
+      if (planResult.publicUrls) {
+        result.publicUrls = planResult.publicUrls
       }
       res.status(200).json(result).end()
     } catch (err) {
-      if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(400).json({ error: { message: "That group name is already taken." } }).end()
-      }
-      console.error('Error updating group onboarding room', err)
+      console.error('Error finding similar subjects for params:', JSON.stringify(req.query), err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
 /**
- * Delete a group onboarding room
+ * The active embedding spec, for clients that compare or produce vectors
  *
  * @group partner utils
- * @route DELETE /api/partner/groupOnboard/{groupId}
- * @returns 204 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
+ * @route GET /api/partner/embeddingSpecs
+ * @returns {object} 200 - 'data' array of specs, each with 'artifact' (baseUrl and fileSha256 of the model files), plus activeEmbeddingSpecId
  */
-.delete(
-  '/groupOnboard',
-  async (req, res) => {
-    try {
-      const room = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!room) {
-        return res.status(404).json({ error: { message: "No group was found for you." } }).end()
-      }
-      const deleted = await partnerDbService.groupOnboardDeleteByRowAndIssuer(room.groupId, res.locals.authTokenIssuer)
-      if (deleted === 0) {
-        return res.status(404).json({ error: { message: "That group couldn't be deleted." } }).end()
-      }
-      await partnerDbService.groupOnboardMemberDeleteByGroupId(room.groupId)
-      res.status(204).json({ success: true }).end()
-    } catch (err) {
-      console.error('Error deleting group onboarding room', err)
-      res.status(500).json({ error: err.message }).end()
-    }
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/embeddingSpecs',
+  (req, res) => {
+    const spec = activeEmbeddingSpec()
+    const artifactBase = process.env.EMBEDDING_ARTIFACT_BASE_URL
+    const baseUrl = artifactBase
+      ? `${artifactBase.replace(/\/+$/, '')}/${spec.modelRepo}/${spec.modelRevision}/`
+      : `https://huggingface.co/${spec.modelRepo}/resolve/${spec.modelRevision}/`
+    res.status(200).json({
+      data: [{ ...spec, artifact: { baseUrl, fileSha256: spec.fileSha256 } }],
+      activeEmbeddingSpecId: spec.embeddingSpecId,
+    }).end()
   }
 )
 
-
-
-
-
-
-/******************************************************
- * Group Onboarding Members
- ******************************************************/
-
 /**
- * Join a group onboarding room
- * 
+ * Stored vectors for profiles or plans, so clients can match locally. Carries
+ * no DIDs: join on subjectId with records from /userProfile or the plan endpoints.
+ *
  * @group partner utils
- * @route POST /api/partner/groupOnboardMember
- * @param {number} groupId.body.required - group ID to join
- * @param {string} content.body.required - member content
- * @returns {object} 201 - Created
+ * @route GET /api/partner/embeddings
+ * @param {string} subjectType.query.required - profile | plan
+ * @param {string} embeddingSpecId.query.optional - default is the active spec
+ * @param {number} minLocLat.query.optional - bounding box (all four or none); profiles match on either location
+ * @param {number} minLocLon.query.optional
+ * @param {number} maxLocLat.query.optional
+ * @param {number} maxLocLon.query.optional
+ * @param {string} afterId.query.optional - return subjects whose subjectId sorts (as text) after this one
+ * @param {number} limit.query.optional - default and max 500
+ * @returns {object} 200 - 'data' array of { subjectId, chunkIndex, contentHash, vector (base64 float32 little-endian) } ordered by subjectId as text, plus embeddingSpecId and hitLimit
  * @returns {Error} 400 - client error
  */
-.post(
-  '/groupOnboardMember',
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/embeddings',
   async (req, res) => {
     try {
-      const { groupId, content } = req.body
-
-      if (!content || typeof content !== 'string') {
-        return res.status(400).json({ error: { message: "The content must be non-empty text." } }).end()
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
       }
-
-      // Verify group exists
-      const group = await partnerDbService.groupOnboardGetByRowId(groupId)
-      if (!group) {
-        return res.status(404).json({ error: { message: "That group was not found." } }).end()
+      const { subjectType, afterId } = req.query
+      if (!['profile', 'plan'].includes(subjectType)) {
+        return res.status(400).json({ error: "Query parameter 'subjectType' must be profile or plan" }).end()
       }
-
-      try {
-        const memberId = await partnerDbService.groupOnboardMemberInsert(res.locals.authTokenIssuer, groupId, content)
-        res.status(201).json({ success: { memberId: memberId } }).end()
-      } catch (err) {
-        if (err.message.includes('UNIQUE constraint failed')) {
-          // retrieve the member record and continue
-          // (This makes the POST idempotent. We could probably combine this with PUT funcationality.)
-          // (Then again, one wonders if this whole idempotent quality here is a good idea or not.)
-          const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-          if (member) {
-            // check that the group is the same
-            if (member.groupId !== groupId) {
-              return res.status(400).json({ error: { message: "You already exist in a different group." } }).end()
-            }
-            // update their content if they sent something new
-            const memberChanges = await partnerDbService.groupOnboardMemberUpdateContent(member.memberId, content)
-            if (memberChanges === 0) {
-              return res.status(400).json({ error: { message: "You already exist in this group but your content could not be updated." } }).end()
-            } else {
-              return res.status(200).json({ success: { memberId: member.memberId } }).end()
-            }
-          } else {
-            // may be a client error but I'm really not sure
-            return res.status(400).json({ error: err.message }).end()
-          }
+      const embeddingSpecId = req.query.embeddingSpecId || activeEmbeddingSpec().embeddingSpecId
+      if (!EMBEDDING_SPECS[embeddingSpecId]) {
+        return res.status(400).json({ error: "Unknown embeddingSpecId: " + embeddingSpecId }).end()
+      }
+      const { bbox, error: bboxError } = bboxFromQuery(req.query)
+      if (bboxError) {
+        return res.status(400).json({ error: bboxError }).end()
+      }
+      let limit = EMBEDDINGS_PAGE_LIMIT
+      if (req.query.limit != null && req.query.limit !== '') {
+        limit = parseInt(req.query.limit)
+        if (!(limit >= 1)) {
+          return res.status(400).json({ error: "Query parameter 'limit' must be a positive integer" }).end()
         }
-        throw err
+        limit = Math.min(limit, EMBEDDINGS_PAGE_LIMIT)
       }
+
+      const ids = await subjectIdsInBBox(subjectType, bbox)
+      const page = await embeddingService.storeFor(subjectType).paged(subjectType, embeddingSpecId, ids, afterId, limit)
+      res.status(200).json({
+        data: page.data.map((row) => ({
+          subjectId: row.subjectId,
+          chunkIndex: row.chunkIndex,
+          contentHash: row.contentHash,
+          vector: Buffer.from(row.vector).toString('base64'),
+        })),
+        embeddingSpecId,
+        hitLimit: page.hitLimit,
+      }).end()
     } catch (err) {
-      console.error('Error joining group onboarding room', err)
+      console.error('Error getting embeddings for params:', JSON.stringify(req.query), err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
 /**
- * Get current user's group membership
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboardMember
- * @returns {object} 200 - Member record with groupId, content, and admitted status, or undefined if not in a group
- * @returns {Error} 500 - server error
- */
-.get(
-  '/groupOnboardMember',
-  async (req, res) => {
-    try {
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      res.status(200).json({ data: member }).end()
-    } catch (err) {
-      console.error('Error getting group membership', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Get group members for the group the member is in
- * 
- * @group partner utils
- * @route GET /api/partner/groupOnboardMembers/{groupId}
- * @returns {array} 200 - List of members with "issuerDid", "content", "admitted"
- * @returns {Error} 403 - Unauthorized
- */
-.get(
-  '/groupOnboardMembers',
-  async (req, res) => {
-    try {
-      // get group member is in
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      if (!member) {
-        return res.status(404).json({ error: { message: "You are not found in any group." } }).end()
-      }
-
-      const group = await partnerDbService.groupOnboardGetByRowId(member.groupId)
-      if (!group) {
-        return res.status(404).json({ error: { message: "That is not a valid group." } }).end()
-      }
-
-      const members = await partnerDbService.groupOnboardMembersGetByGroup(member.groupId)
-
-      const isOrganizer = group.issuerDid === res.locals.authTokenIssuer
-
-      if (isOrganizer) {
-        // Return everyone with acceptable properties
-        const allMembers = members
-          .map(m => ({
-            admitted: m.admitted,
-            memberId: m.memberId,
-            content: m.content,
-          }))
-        return res.status(200).json({ data: allMembers }).end()
-      }
-
-      // Find requesting user's membership
-      const requesterMember = members.find(m => m.issuerDid === res.locals.authTokenIssuer)
-      if (!requesterMember) {
-        return res.status(403).json({ error: { message: "You have not joined this group." } }).end()
-      }
-      if (!requesterMember.admitted) {
-        const organizer = members[0]
-        const result = [
-          {
-            memberId: organizer.memberId,
-            content: organizer.content
-          }
-        ]
-        return res.status(200).json({ data: result }).end()
-      }
-
-      // Return only admitted members
-      const admittedMembers = members
-        .filter(m => m.admitted)
-        .map(m => ({
-          memberId: m.memberId,
-          content: m.content
-        }))
-
-      res.status(200).json({ data: admittedMembers }).end()
-    } catch (err) {
-      console.error('Error getting group members', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)
-
-/**
- * Update group membership for token issuer
+ * Status of the embedding sweep, and vector counts for the active spec (admins only)
  *
  * @group partner utils
- * @route PUT /api/partner/groupOnboardMember/{groupId}
- * @param {number} memberId.path.required - group ID
- * @param {string} content.body.optional - new content
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
+ * @route GET /api/partner/embeddingSweep
+ * @returns {object} 200 - 'data' with running, lastStartedAt, lastFinishedAt, lastResult, lastError, counts
+ * @returns {Error} 403 - not an admin
  */
-.put(
-  '/groupOnboardMember',
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.get(
+  '/embeddingSweep',
   async (req, res) => {
     try {
-      // get member record
-      const member = await partnerDbService.groupOnboardMemberGetByIssuerDid(res.locals.authTokenIssuer)
-      await updateGroupMember(member.memberId, member, req.body, res)
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      if (!isAdminUser(res.locals.authTokenIssuer)) {
+        return res.status(403).json({ error: "Only permissioned users can see the embedding sweep." }).end()
+      }
+      const embeddingSpecId = activeEmbeddingSpec().embeddingSpecId
+      const counts = await embeddingService.embeddingCounts(embeddingSpecId)
+      res.status(200).json({ data: { ...embeddingService.getSweepStatus(), embeddingSpecId, counts } }).end()
     } catch (err) {
-      console.error('Error updating group membership for token issuer', err)
+      console.error('Error getting embedding sweep status:', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
 /**
- * Update group membership for given member (by the organizer)
- * 
+ * Start an embedding sweep now (admins only); joins one already running
+ *
  * @group partner utils
- * @route PUT /api/partner/groupOnboardMember/{groupId}
- * @param {number} memberId.path.required - group ID
- * @param {string} content.body.optional - new content
- * @param {boolean} admitted.body.optional - admission status (organizer only)
- * @returns 200 - Success
- * @returns {Error} 403 - Unauthorized
- * @returns {Error} 404 - Not found
+ * @route POST /api/partner/embeddingSweep
+ * @param {string} wait.query.optional - 'true' to respond when the sweep finishes
+ * @returns {object} 200 - 'data' with the sweep status, when wait=true
+ * @returns {object} 202 - 'data' with the sweep status, while it runs
+ * @returns {Error} 403 - not an admin
  */
-.put(
-  '/groupOnboardMember/:memberId',
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+.post(
+  '/embeddingSweep',
   async (req, res) => {
     try {
-      const memberId = parseInt(req.params.memberId)
-
-      // get member record
-      const member = await partnerDbService.groupOnboardMemberGetByRowId(memberId)
-      await updateGroupMember(memberId, member, req.body, res)
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+      if (!isAdminUser(res.locals.authTokenIssuer)) {
+        return res.status(403).json({ error: "Only permissioned users can start an embedding sweep." }).end()
+      }
+      const finished = embeddingService.sweep()
+      if (req.query.wait === 'true') {
+        res.status(200).json({ data: await finished }).end()
+      } else {
+        res.status(202).json({ data: embeddingService.getSweepStatus() }).end()
+      }
     } catch (err) {
-      console.error('Error updating group membership for given member', err)
+      console.error('Error starting embedding sweep:', err)
       res.status(500).json({ error: err.message }).end()
     }
   }
 )
 
-/**
- * Leave a group
- * 
- * @group partner utils
- * @route DELETE /api/partner/groupOnboardMember/{groupId}
- * @param {number} groupId.path.required - group ID to leave
- * @returns 204 - Success
- * @returns {Error} 404 - Not found
- */
-.delete(
-  '/groupOnboardMember',
-  async (req, res) => {
-    try {
-      // first check that they are not the organizer of a meeting
-      const group = await partnerDbService.groupOnboardGetByIssuerDid(res.locals.authTokenIssuer)
-      if (group) {
-        return res.status(403).json({ error: { message: "You are the organizer of a group. You can only leave the group by deleting it." } }).end()
-      }
 
-      const deleted = await partnerDbService.groupOnboardMemberDelete(res.locals.authTokenIssuer)
-      if (deleted === 0) {
-        return res.status(404).json({ error: "That membership was not found." }).end()
-      }
-      res.status(204).end()
-    } catch (err) {
-      console.error('Error leaving group', err)
-      res.status(500).json({ error: err.message }).end()
-    }
-  }
-)

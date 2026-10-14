@@ -15,20 +15,21 @@ CREATE TABLE group_onboard (
   issuerDid TEXT UNIQUE NOT NULL,
   name TEXT UNIQUE NOT NULL,
   projectLink TEXT,
+  previousMatches TEXT, -- JSON of most recent matching results, null if none yet
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   expiresAt DATETIME NOT NULL
 ); 
 CREATE INDEX group_onboard_issuerDid ON group_onboard(issuerDid);
 
-CREATE TABLE group_onboard_members (
+CREATE TABLE group_onboard_member (
   issuerDid TEXT NOT NULL,
   groupId INTEGER NOT NULL,
   admitted BOOLEAN DEFAULT FALSE,
-  content TEXT NOT NULL,
+  content TEXT NOT NULL, -- encrypted data about the person
   FOREIGN KEY (groupId) REFERENCES group_onboard(rowid)
 ); 
-CREATE INDEX group_onboard_members_issuerDid ON group_onboard_members(issuerDid);
-CREATE INDEX group_onboard_members_groupId ON group_onboard_members(groupId);
+CREATE INDEX group_onboard_member_issuerDid ON group_onboard_member(issuerDid);
+CREATE INDEX group_onboard_member_groupId ON group_onboard_member(groupId);
 
 -- partners are other systems with whom this system collaborates
 CREATE TABLE partner_link (
@@ -39,7 +40,7 @@ CREATE TABLE partner_link (
     data TEXT -- JSON data, where format depends on linkCode
     pubKeyHex TEXT, -- public key, eg. used in relayed nostr event
     pubKeyImage TEXT, -- content that is signed
-    pubKeySigHex TEXT, -- signature of pubKeyPayload
+    pubKeySigHex TEXT -- signature of pubKeyPayload
 );
 
 -- a profile is a user's free-form description of their interests
@@ -47,13 +48,42 @@ CREATE TABLE user_profile (
     rowid INTEGER PRIMARY KEY AUTOINCREMENT,
     issuerDid TEXT UNIQUE NOT NULL,
     updatedAt DATETIME NOT NULL,
+
+    -- may be ''
     description TEXT NOT NULL,
-    locLat DOUBLE NOT NULL,
-    locLon DOUBLE NOT NULL,
-    locLat2 DOUBLE NOT NULL,
-    locLon2 DOUBLE NOT NULL
+
+    locLat DOUBLE,
+    locLon DOUBLE,
+    locLat2 DOUBLE,
+    locLon2 DOUBLE
 );
-CREATE INDEX profile_issuerDid ON profile(issuerDid);
-CREATE INDEX profile_lat_lon ON profile(locLat, locLon);
-CREATE INDEX profile_lat2_lon2 ON profile(locLat2, locLon2);
+CREATE INDEX profile_issuerDid ON user_profile(issuerDid);
+CREATE INDEX profile_lat_lon ON user_profile(locLat, locLon);
+CREATE INDEX profile_lat2_lon2 ON user_profile(locLat2, locLon2);
+
+-- change sequence for alert-search cursors (see CHANGE/PLAN-accurate-cursors.md):
+-- one row, the number of the last change to a table that alert searches read
+CREATE TABLE change_counter (seq INTEGER NOT NULL);
+-- user_profile and embedding each have a changeSeq INTEGER column (indexed), set by triggers
+-- from this counter when a row is inserted or changes as an alert reports it: a
+-- user_profile row when its description or a location changes; an embedding
+-- row when its contentHash changes
+
+-- vector embeddings of profiles, for semantic matching; plan vectors are in the
+-- main DB's table of the same schema (see sql/README.md)
+-- (see CHANGE/PLAN-interest-matching-architecture.md and src/api/services/embedding-specs.js)
+CREATE TABLE embedding (
+    subjectType TEXT NOT NULL,      -- 'profile'
+    subjectId TEXT NOT NULL,        -- user_profile.rowid
+    embeddingSpecId TEXT NOT NULL,  -- vectors are comparable only within one spec
+    chunkIndex INTEGER NOT NULL DEFAULT 0, -- always 0 until subjects have multiple chunks
+    contentHash TEXT NOT NULL,      -- sha256 hex of the preprocessed input text; the vector is current iff it matches the source
+    vector BLOB NOT NULL,           -- float32 little-endian, L2-normalized
+    updatedAt DATETIME NOT NULL,
+    PRIMARY KEY (subjectType, subjectId, embeddingSpecId, chunkIndex)
+);
+CREATE INDEX embedding_spec_type_updated ON embedding(embeddingSpecId, subjectType, updatedAt);
+-- A subject with empty text has no row.
+-- V6 created user_profile_embedding (OpenAI vectors); V7 dropped it.
+-- V7 held plan vectors here too; V8 deleted them, for the main DB (V21) to hold.
 ```

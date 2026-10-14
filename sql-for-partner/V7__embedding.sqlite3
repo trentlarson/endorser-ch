@@ -1,0 +1,17 @@
+-- see README.md in this directory for explanations
+
+CREATE TABLE embedding (
+  subjectType TEXT NOT NULL,
+  subjectId TEXT NOT NULL,
+  embeddingSpecId TEXT NOT NULL,
+  chunkIndex INTEGER NOT NULL DEFAULT 0,
+  contentHash TEXT NOT NULL,
+  vector BLOB NOT NULL,
+  updatedAt DATETIME NOT NULL,
+  PRIMARY KEY (subjectType, subjectId, embeddingSpecId, chunkIndex)
+);
+CREATE INDEX embedding_spec_type_updated ON embedding(embeddingSpecId, subjectType, updatedAt);
+
+DROP TABLE IF EXISTS user_profile_embedding;
+DROP TABLE IF EXISTS empty_embedding_vector;
+UPDATE group_onboard SET previousMatches = NULL;

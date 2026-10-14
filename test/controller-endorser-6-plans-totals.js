@@ -13,6 +13,7 @@ import {
   globalId,
   localFromGlobalEndorserIdentifier,
 } from '../src/api/services/util';
+import { cutListsAtLimit } from '../dist/api/services/alert-search.service'
 import testUtil from './util'
 
 const expect = chai.expect
@@ -314,6 +315,10 @@ describe('6 - Plans', () => {
       .then(r => {
         expect(r.headers['content-type'], /json/)
         expect(r.body.issuer).that.equals(creds[1].did)
+        // A client reaches this endpoint holding whichever form of the ID a
+        // link handed it, and takes this handleId as the one to put in later
+        // claims and report queries, so it has to be the full handle.
+        expect(r.body.handleId).that.equals(firstPlanIdExternal)
         expect(r.body.claim.agent.identifier).that.equals(creds[1].did)
         expect(r.body.claim.name).that.equals(planWithoutIdBy1JwtObj.claim.name)
         expect(r.body.claim.description).that.equals(testUtil.claimPlanAction.description)
@@ -562,6 +567,7 @@ describe('6 - Plans', () => {
       .send({jwtEncoded: planJwtEnc})
       .then(r => {
         expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('cannot change the type of an existing PlanAction')
       }).catch((err) => {
         return Promise.reject(err)
       })
@@ -3312,6 +3318,182 @@ describe('6 - Check plans as providers to gives', () => {
 
 
 
+describe('6 - Check short, system-local IDs in references', () => {
+
+  // A client that reached a project through a shortened link, eg.
+  // .../deep-link/project/01ABC..., holds only the part of the handle after the
+  // entity prefix. When it sends that short form back inside an "identifier",
+  // the reference has to land on the same entity as the full handle: every
+  // report endpoint expands a short ID before querying, so a short ID stored
+  // raw would be a link nothing could follow.
+  //
+  // This plan is created here rather than reused from above so that the gives
+  // below cannot disturb any totals that other tests assert.
+
+  let shortPlanHandleId, shortPlanIdExternal
+  let providerGiveHandleId, fulfillsGiveHandleId
+
+  it('insert a plan to refer to', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimPlanAction)
+    credObj.claim.agent.identifier = creds[4].did
+    credObj.claim.name = credObj.claim.name + " - reachable by short ID"
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.error('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).to.be.a('string')
+        shortPlanIdExternal = r.body.success.handleId
+        shortPlanHandleId = localFromGlobalEndorserIdentifier(shortPlanIdExternal)
+        expect(globalId(shortPlanHandleId)).to.equal(shortPlanIdExternal)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('can add a plan as a provider by its short ID', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Lent the good saw, tracked by short ID"
+    credObj.claim.provider = {
+      "@type": "PlanAction", identifier: shortPlanHandleId
+    }
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.error('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        // before short IDs were expanded, the provider lookup found a cache
+        // entry with no JWT and threw, which surfaced here
+        expect(r.body.success.embeddedRecordError).to.be.undefined
+        expect(r.body.success.embeddedRecordWarning).to.be.undefined
+        expect(r.body.success.handleId).to.be.a('string')
+        providerGiveHandleId = r.body.success.handleId
+        expect(r.status).that.equals(201)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('stores that provider under the full handle ID', () => {
+    return request(Server)
+      .get('/api/v2/report/providersToGive?giveHandleId=' + encodeURIComponent(providerGiveHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        // The identifier says the short ID was stored expanded. linkConfirmed
+        // says more than that: it is only true when the provider plan's own
+        // JWT was read and found to carry this give's issuer, which cannot
+        // happen unless the short ID resolved to that plan.
+        expect(r.body.data).to.deep.equal([
+          { identifier: shortPlanIdExternal, linkConfirmed: true }
+        ])
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('finds that give from the provider, by either form of the ID', async () => {
+    for (const providerId of [shortPlanIdExternal, shortPlanHandleId]) {
+      await request(Server)
+        .get('/api/v2/report/givesProvidedBy?providerId=' + encodeURIComponent(providerId))
+        .set('Authorization', 'Bearer ' + pushTokens[4])
+        .then(r => {
+          expect(r.status).that.equals(200)
+          expect(r.body.data).to.be.an('array').of.length(1)
+          expect(r.body.data[0].handleId).to.equal(providerGiveHandleId)
+          expect(r.body.data[0].providerId).to.equal(shortPlanIdExternal)
+        })
+    }
+  }).timeout(5000)
+
+  it('can fulfill a plan by its short ID', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Hauled the gravel, tracked by short ID"
+    credObj.claim.fulfills = [
+      { "@type": "PlanAction", identifier: shortPlanHandleId },
+      { "@type": "DonateAction" },
+    ]
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        if (r.body.error) {
+          console.error('Something went wrong. Here is the response body: ', r.body)
+          return Promise.reject(r.body.error)
+        }
+        expect(r.body.success.embeddedRecordError).to.be.undefined
+        expect(r.status).that.equals(201)
+        fulfillsGiveHandleId = r.body.success.handleId
+        // the give is recorded against the expanded handle, not the short ID
+        expect(r.body.success.fulfillsPlanHandleId).to.equal(shortPlanIdExternal)
+        expect(r.body.success.fulfillsLinkConfirmed).to.be.true
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+  it('finds that give when reporting on the plan', () => {
+    return request(Server)
+      .get(
+        '/api/v2/report/givesToPlans?planIds='
+          + encodeURIComponent(JSON.stringify([shortPlanIdExternal]))
+      )
+      .set('Authorization', 'Bearer ' + pushTokens[4])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.data).to.be.an('array').of.length(1)
+        expect(r.body.data[0].handleId).to.equal(fulfillsGiveHandleId)
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(3000)
+
+  it('rejects a short ID that names nothing on this system', async () => {
+    const credObj = R.clone(testUtil.jwtTemplate)
+    credObj.claim = R.clone(testUtil.claimGive)
+    credObj.claim.description = "Gave to a project that was never recorded"
+    credObj.claim.provider = {
+      "@type": "PlanAction", identifier: "01ZZZZZZZZZZZZZZZZZZZZZZZZ"
+    }
+    credObj.claim.recipient = { identifier: creds[5].did }
+    credObj.iss = creds[4].did
+    const claimJwtEnc = await credentials[4].createVerification(credObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: claimJwtEnc})
+      .then(r => {
+        // a short ID that resolves to nothing is a client mistake, not a give
+        // to be recorded with a dangling reference
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).to.include('01ZZZZZZZZZZZZZZZZZZZZZZZZ')
+      }).catch((err) => {
+        return Promise.reject(err)
+      })
+  }).timeout(5000)
+
+})
+
+
+
+
 describe('6 - claimId & handleId guards', () => {
 
   // I put this here anticipating that I'd run checks on the claim service with DB data from above.
@@ -3646,5 +3828,548 @@ describe('6 - Plans Last Updated Between', () => {
         return Promise.reject(err)
       })
   })
+
+})
+
+describe('6 - Alert Search report', () => {
+
+  it('report alertSearch requires auth', () => {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .send({})
+      .then(r => {
+        expect(r.status).to.equal(400)
+        expect(r.body.error).to.include('Authorization')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch returns 200 with expected structure (optional afterId)', () => {
+    return request(Server)
+      .get('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('data')
+        expect(r.body.data).to.have.property('claims').that.is.an('array')
+        expect(r.body.data).to.have.property('personalPlanContributions').that.is.an('array')
+        expect(r.body.data).to.have.property('trackedPlanUpdates').that.is.an('array')
+        expect(r.body.data).to.have.property('trackedPlanClaims').that.is.an('array')
+        expect(r.body.data).to.have.property('plansNearby').that.is.an('array')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with afterId filters by id', () => {
+    const afterId = firstPlanIdInternal || firstPlanIdExternal || '01H0000000000000000000000'
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ afterId })
+      .then((r) => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.claims).to.be.an('array')
+        expect(r.body.data.personalPlanContributions).to.be.an('array')
+        const allIds = [
+          ...r.body.data.claims.map(c => c.id),
+          ...r.body.data.personalPlanContributions.map(c => c.id),
+        ]
+        if (firstPlanIdInternal || firstPlanIdExternal) {
+          allIds.forEach((id) => {
+            expect(id > afterId, `id ${id} should be > afterId ${afterId}`).to.be.true
+          })
+        }
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with beforeId bounds results', () => {
+    const afterId = firstPlanIdInternal || firstPlanIdExternal || '01H0000000000000000000000'
+    const beforeId = firstPlanClaim2IdInternal || '01ZZZZZZZZZZZZZZZZZZZZZZZZ'
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ afterId, beforeId })
+      .then((r) => {
+        expect(r.status).to.equal(200)
+        const allIds = [
+          ...r.body.data.claims.map(c => c.id),
+          ...r.body.data.personalPlanContributions.map(c => c.id),
+        ]
+        if (firstPlanIdInternal && firstPlanClaim2IdInternal) {
+          allIds.forEach((id) => {
+            expect(id > firstPlanIdInternal).to.be.true
+            expect(id < firstPlanClaim2IdInternal).to.be.true
+          })
+        }
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch GET query beforeId is exclusive even with JSON Content-Type', async () => {
+    const authHeader = 'Bearer ' + pushTokens[1]
+    const first = await request(Server)
+      .get('/api/v2/report/alertSearch')
+      .set('Authorization', authHeader)
+    expect(first.status).to.equal(200)
+
+    const firstClaimIds = [
+      ...first.body.data.claims.map(c => c.id),
+      ...first.body.data.personalPlanContributions.map(c => c.id),
+    ]
+    expect(firstClaimIds.length, 'prior fixtures should yield claims or plan contributions').to.be.at.least(1)
+    const beforeId = firstClaimIds.reduce((a, b) => (a > b ? a : b))
+
+    const second = await request(Server)
+      .get('/api/v2/report/alertSearch')
+      .query({ beforeId })
+      .set('Authorization', authHeader)
+      .set('Content-Type', 'application/json')
+    expect(second.status).to.equal(200)
+    if (second.body.userMessage) {
+      expect(second.body.userMessage).to.not.include('ULID')
+    }
+
+    const secondClaimIds = [
+      ...second.body.data.claims.map(c => c.id),
+      ...second.body.data.personalPlanContributions.map(c => c.id),
+    ]
+    secondClaimIds.forEach((id) => {
+      expect(id < beforeId, `id ${id} should be < beforeId ${beforeId}`).to.be.true
+    })
+    second.body.data.trackedPlanClaims.forEach((c) => {
+      expect(c.id < beforeId, `trackedPlanClaims id ${c.id} should be < beforeId ${beforeId}`).to.be.true
+    })
+    second.body.data.trackedPlanUpdates.forEach((c) => {
+      expect(c.jwtId < beforeId, `trackedPlanUpdates jwtId ${c.jwtId} should be < beforeId ${beforeId}`).to.be.true
+    })
+    second.body.data.plansNearby.forEach((c) => {
+      expect(c.jwtId < beforeId, `plansNearby jwtId ${c.jwtId} should be < beforeId ${beforeId}`).to.be.true
+    })
+    expect(secondClaimIds).to.not.deep.equal(firstClaimIds)
+    expect(secondClaimIds).to.not.include(beforeId)
+  })
+
+  it('report alertSearch with planHandleIds returns tracked plan updates and claims', () => {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({
+        afterId: firstPlanIdInternal,
+        planHandleIds: [firstPlanIdExternal],
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.trackedPlanUpdates).to.be.an('array')
+        expect(r.body.data.trackedPlanClaims).to.be.an('array')
+        // trackedPlanClaims should include offers/gives that reference the plan
+        expect(r.body.data.trackedPlanClaims.length).to.be.at.least(0)
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch with location returns plansNearby', () => {
+    const lat = testUtil.claimPlanAction.location.geo.latitude
+    const lon = testUtil.claimPlanAction.location.geo.longitude
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({
+        afterId: '',
+        location: {
+          minLocLat: lat - 1,
+          maxLocLat: lat + 1,
+          minLocLon: lon - 1,
+          maxLocLon: lon + 1,
+        },
+      })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body.data.plansNearby).to.be.an('array')
+        expect(r.body.data.plansNearby.length).to.be.at.least(1)
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch invalid afterId adds userMessage but continues', () => {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ afterId: 'invalid-ulid' })
+      .then(r => {
+        expect(r.status).to.equal(200)
+        expect(r.body).to.have.property('userMessage')
+        expect(r.body.userMessage).to.include('ULID')
+      })
+      .catch((err) => Promise.reject(err))
+  })
+
+  //// Change-sequence cursors (see CHANGE/PLAN-accurate-cursors.md)
+
+  const WORLD = { minLocLat: -90, maxLocLat: 90, minLocLon: -180, maxLocLon: 180 }
+  const CURSOR_LISTS = ['claims', 'personalPlanContributions', 'trackedPlanUpdates', 'trackedPlanClaims', 'plansNearby']
+
+  function alertSearchAfter(body) {
+    return request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send(body)
+  }
+
+  it('cutListsAtLimit trims every list to the list at its limit that reaches least far', () => {
+    const rows = (...seqs) => seqs.map((changeSeq) => ({ changeSeq }))
+    const seqs = (list) => list.map((r) => r.changeSeq)
+    const forward = { after: 0, upTo: 20, descending: false }
+    let result = cutListsAtLimit({ a: { data: rows(3, 9), hitLimit: true }, b: { data: rows(1, 5, 12), hitLimit: false } }, forward)
+    expect(result.next).to.equal(9)
+    expect(result.hasMore).to.be.true
+    expect(seqs(result.lists.a)).to.deep.equal([3, 9])
+    expect(seqs(result.lists.b)).to.deep.equal([1, 5])
+    result = cutListsAtLimit({ a: { data: rows(3, 9), hitLimit: true }, b: { data: rows(1, 6), hitLimit: true } }, forward)
+    expect(result.next).to.equal(6)
+    expect(seqs(result.lists.a)).to.deep.equal([3])
+    result = cutListsAtLimit({ a: { data: rows(3), hitLimit: false }, b: { data: [], hitLimit: false } }, forward)
+    expect(result).to.deep.equal({ lists: { a: rows(3), b: [] }, next: 20, hasMore: false })
+
+    // backward: newest first; the next beforeCursor sits just below the lowest change kept
+    const backward = { after: 2, upTo: 20, descending: true }
+    result = cutListsAtLimit({ a: { data: rows(18, 11), hitLimit: true }, b: { data: rows(19, 14, 4), hitLimit: false } }, backward)
+    expect(result.next).to.equal(10)
+    expect(result.hasMore).to.be.true
+    expect(seqs(result.lists.a)).to.deep.equal([18, 11])
+    expect(seqs(result.lists.b)).to.deep.equal([19, 14])
+    result = cutListsAtLimit({ a: { data: rows(18, 11), hitLimit: true }, b: { data: rows(19, 15), hitLimit: true } }, backward)
+    expect(result.next).to.equal(14)
+    expect(seqs(result.lists.a)).to.deep.equal([18])
+    result = cutListsAtLimit({ a: { data: rows(7), hitLimit: false } }, backward)
+    expect(result).to.deep.equal({ lists: { a: rows(7) }, next: 2, hasMore: false })
+  })
+
+  it('report alertSearch returns cursors without one sent, and nothing new after them', async () => {
+    const first = await alertSearchAfter({ location: WORLD })
+    expect(first.status).to.equal(200)
+    expect(first.body.nextAfterCursor).to.match(/^\d+$/)
+    expect(first.body.hasMore).to.be.a('boolean')
+    first.body.data.claims.forEach((c) => expect(c.changeSeq).to.be.a('number'))
+    first.body.data.plansNearby.forEach((p) => expect(p.changeSeq).to.be.a('number'))
+
+    const second = await alertSearchAfter({ afterCursor: first.body.nextAfterCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })
+    expect(second.status).to.equal(200)
+    expect(second.body.nextAfterCursor).to.equal(first.body.nextAfterCursor)
+    expect(second.body.hasMore).to.be.false
+    CURSOR_LISTS.forEach((list) => expect(second.body.data[list], list).to.deep.equal([]))
+    expect(second.body.userMessage).to.be.undefined
+  })
+
+  it('report alertSearch pages every list by change sequence, with no repeats', async () => {
+    const latest = (await alertSearchAfter({})).body.nextAfterCursor
+    const seen = Object.fromEntries(CURSOR_LISTS.map((list) => [list, new Set()]))
+    let after = '0'
+    let pages = 0
+    let anyPageHadMore = false
+    let body
+    do {
+      const r = await alertSearchAfter({ afterCursor: after, location: WORLD, planHandleIds: [firstPlanIdExternal] })
+      expect(r.status).to.equal(200)
+      body = r.body
+      pages++
+      for (const list of CURSOR_LISTS) {
+        const seqs = body.data[list].map((row) => row.changeSeq)
+        expect([...seqs].sort((a, b) => a - b), list + ' ascending').to.deep.equal(seqs)
+        for (const row of body.data[list]) {
+          expect(row.changeSeq, list).to.be.above(Number(after)).and.at.most(Number(body.nextAfterCursor))
+          const key = row.id || row.jwtId
+          expect(seen[list].has(key), list + ' repeats ' + key).to.be.false
+          seen[list].add(key)
+        }
+      }
+      anyPageHadMore = anyPageHadMore || body.hasMore
+      expect(Number(body.nextAfterCursor)).to.be.above(Number(after))
+      after = body.nextAfterCursor
+    } while (body.hasMore && pages < 100)
+    expect(body.hasMore).to.be.false
+    expect(body.nextAfterCursor).to.equal(latest)
+    // earlier tests create more than 50 rows for some list, so at least one page was cut
+    expect(anyPageHadMore).to.be.true
+    expect(Math.max(...CURSOR_LISTS.map((list) => seen[list].size))).to.be.above(50)
+
+    // the newest rows found without a cursor are among those paged
+    const newest = await alertSearchAfter({ location: WORLD })
+    newest.body.data.claims.forEach((c) => expect(seen.claims.has(c.id)).to.be.true)
+    newest.body.data.plansNearby.forEach((p) => expect(seen.plansNearby.has(p.jwtId)).to.be.true)
+  }).timeout(20000)
+
+  it('report alertSearch scrolls back by change sequence, newest first, to the same rows', async () => {
+    const latest = (await alertSearchAfter({})).body.nextBeforeCursor
+    const seen = Object.fromEntries(CURSOR_LISTS.map((list) => [list, []]))
+    let beforeCursor = latest
+    let pages = 0
+    let body
+    do {
+      const r = await alertSearchAfter({ beforeCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })
+      expect(r.status).to.equal(200)
+      body = r.body
+      pages++
+      // a backward page covers changes up to its beforeCursor
+      expect(body.nextAfterCursor).to.equal(beforeCursor)
+      for (const list of CURSOR_LISTS) {
+        const pageSeqs = body.data[list].map((row) => row.changeSeq)
+        expect([...pageSeqs].sort((a, b) => b - a), list + ' descending').to.deep.equal(pageSeqs)
+        for (const row of body.data[list]) {
+          expect(row.changeSeq, list).to.be.at.most(Number(beforeCursor)).and.above(Number(body.nextBeforeCursor))
+          seen[list].push(row.id || row.jwtId)
+        }
+      }
+      beforeCursor = body.nextBeforeCursor
+    } while (body.hasMore && pages < 100)
+    expect(body.hasMore).to.be.false
+    expect(pages).to.be.above(1)
+
+    // the same rows as paging forward from the start, in reverse, with no repeats
+    let afterCursor = '0'
+    const forward = Object.fromEntries(CURSOR_LISTS.map((list) => [list, []]))
+    do {
+      body = (await alertSearchAfter({ afterCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })).body
+      for (const list of CURSOR_LISTS) {
+        forward[list].push(...body.data[list].map((row) => row.id || row.jwtId))
+      }
+      afterCursor = body.nextAfterCursor
+    } while (body.hasMore)
+    for (const list of CURSOR_LISTS) {
+      expect(seen[list], list).to.deep.equal([...forward[list]].reverse())
+    }
+  }).timeout(20000)
+
+  it('report alertSearch scrolls back only as far as afterCursor, and starts back from a forward page', async () => {
+    const latest = Number((await alertSearchAfter({})).body.nextBeforeCursor)
+    const after = String(latest - 30)
+    let r = await alertSearchAfter({ afterCursor: after, beforeCursor: String(latest), location: WORLD })
+    expect(r.status).to.equal(200)
+    CURSOR_LISTS.forEach((list) => r.body.data[list].forEach((row) => {
+      expect(row.changeSeq).to.be.above(Number(after)).and.at.most(latest)
+    }))
+    expect(r.body.hasMore).to.be.false
+    expect(r.body.nextBeforeCursor).to.equal(after)
+
+    // a forward page's nextBeforeCursor scrolls back from where that page began
+    r = await alertSearchAfter({ afterCursor: after, location: WORLD })
+    expect(r.body.nextBeforeCursor).to.equal(after)
+    r = await alertSearchAfter({ beforeCursor: after, location: WORLD })
+    CURSOR_LISTS.forEach((list) => r.body.data[list].forEach((row) => expect(row.changeSeq).to.be.at.most(Number(after))))
+  })
+
+  it('report alertSearch rejects a malformed cursor', async () => {
+    for (const after of ['abc', '12-34', '-1', '1.5']) {
+      let r = await alertSearchAfter({ afterCursor: after })
+      expect(r.status, after).to.equal(400)
+      expect(r.body.error).to.include('afterCursor')
+      r = await alertSearchAfter({ beforeCursor: after })
+      expect(r.status, after).to.equal(400)
+      expect(r.body.error).to.include('beforeCursor')
+    }
+  })
+
+  it('report alertSearch ignores ID bounds with a cursor, and resets a cursor that is ahead', async () => {
+    const latest = (await alertSearchAfter({})).body.nextAfterCursor
+    let r = await alertSearchAfter({ afterCursor: latest, afterId: firstPlanIdInternal, beforeId: firstPlanClaim2IdInternal })
+    expect(r.status).to.equal(200)
+    expect(r.body.userMessage).to.include('afterId, beforeId')
+    r = await alertSearchAfter({ afterCursor: String(Number(latest) + 1000) })
+    expect(r.status).to.equal(200)
+    expect(r.body.nextAfterCursor).to.equal(latest)
+    expect(r.body.userMessage).to.include('reset')
+    CURSOR_LISTS.forEach((list) => expect(r.body.data[list]).to.deep.equal([]))
+  })
+
+
+  //// Type & context changes on a handle chain for a cached type (PlanAction)
+
+  const TYPE_CHANGE_PLAN_ID = 'scheme://from-somewhere/type-change-plan'
+  let typeChangePlanClaimId, typeChangePlanHandleId
+
+  it('type-change: 1 creates a fresh plan with an external identifier', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = TYPE_CHANGE_PLAN_ID
+    planObj.claim.name = 'Type-change plan'
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(TYPE_CHANGE_PLAN_ID)
+        typeChangePlanClaimId = r.body.success.claimId
+        typeChangePlanHandleId = r.body.success.handleId
+      })
+  }).timeout(5000)
+
+  it('type-change: 1 edits the plan via lastClaimId with only the context flipped to http', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim['@context'] = 'http://schema.org'
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = TYPE_CHANGE_PLAN_ID
+    planObj.claim.name = 'Type-change plan'
+    planObj.claim.description = ENTITY_NEW_DESC
+    planObj.claim.lastClaimId = typeChangePlanClaimId
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(typeChangePlanHandleId)
+        expect(r.body.success.embeddedRecordWarning).that.contains('https://schema.org')
+        typeChangePlanClaimId = r.body.success.claimId
+      })
+  }).timeout(5000)
+
+  it('type-change: the plan cache row carries the edit', () =>
+    request(Server)
+      .get('/api/plan/' + encodeURIComponent(typeChangePlanHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.handleId).that.equals(typeChangePlanHandleId)
+        expect(r.body.description).that.equals(ENTITY_NEW_DESC)
+      })
+  ).timeout(3000)
+
+  it('type-change: 1 cannot turn the plan into an Offer via a bare identifier', async () => {
+    const offerObj = R.clone(testUtil.jwtTemplate)
+    offerObj.claim = R.clone(testUtil.claimOffer)
+    offerObj.claim.identifier = typeChangePlanHandleId
+    offerObj.claim.offeredBy = { identifier: creds[1].did }
+    offerObj.iss = creds[1].did
+    const offerJwtEnc = await credentials[1].createVerification(offerObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: offerJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('cannot change the type of an existing PlanAction')
+      })
+  }).timeout(5000)
+
+  //// External handles may only be introduced by entity types
+
+  it('external-handle: 1 cannot create an Offer with a new external identifier', async () => {
+    const offerObj = R.clone(testUtil.jwtTemplate)
+    offerObj.claim = R.clone(testUtil.claimOffer)
+    offerObj.claim.identifier = 'scheme://from-somewhere/some-offer'
+    offerObj.claim.offeredBy = { identifier: creds[1].did }
+    offerObj.iss = creds[1].did
+    const offerJwtEnc = await credentials[1].createVerification(offerObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: offerJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('external identifier can only introduce')
+      })
+  }).timeout(5000)
+
+  //// Editing an Endorser-created handle via a bare identifier (no lastClaimId)
+
+  let bareIdPlanHandleId
+
+  it('bare-identifier: 1 creates a plan with no identifier', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.name = 'Bare-identifier plan'
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        bareIdPlanHandleId = r.body.success.handleId
+        expect(bareIdPlanHandleId).that.startsWith('http')
+      })
+  }).timeout(5000)
+
+  it('bare-identifier: 1 edits that plan by sending only its handle as the identifier', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = bareIdPlanHandleId
+    planObj.claim.name = 'Bare-identifier plan'
+    planObj.claim.description = ENTITY_NEW_DESC
+    planObj.iss = creds[1].did
+    const planJwtEnc = await credentials[1].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals(bareIdPlanHandleId)
+      })
+  }).timeout(5000)
+
+  it('bare-identifier: the plan cache row carries that edit', () =>
+    request(Server)
+      .get('/api/plan/' + encodeURIComponent(bareIdPlanHandleId))
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.description).that.equals(ENTITY_NEW_DESC)
+      })
+  ).timeout(3000)
+
+  it('bare-identifier: 2 cannot edit that plan', async () => {
+    const planObj = R.clone(testUtil.jwtTemplate)
+    planObj.claim = R.clone(testUtil.claimPlanAction)
+    planObj.claim.agent.identifier = creds[1].did
+    planObj.claim.identifier = bareIdPlanHandleId
+    planObj.claim.name = 'Bare-identifier plan by 2'
+    planObj.iss = creds[2].did
+    const planJwtEnc = await credentials[2].createVerification(planObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: planJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('did not create the original')
+      })
+  }).timeout(5000)
+
+  it('bare-identifier: 1 cannot turn that plan into an Offer', async () => {
+    const offerObj = R.clone(testUtil.jwtTemplate)
+    offerObj.claim = R.clone(testUtil.claimOffer)
+    offerObj.claim.identifier = bareIdPlanHandleId
+    offerObj.claim.offeredBy = { identifier: creds[1].did }
+    offerObj.iss = creds[1].did
+    const offerJwtEnc = await credentials[1].createVerification(offerObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: offerJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(400)
+        expect(r.body.error.message).that.contains('cannot change the type of an existing PlanAction')
+      })
+  }).timeout(5000)
+
+  it('external-handle: 1 can create an Organization with a new external identifier', async () => {
+    const orgObj = R.clone(testUtil.jwtTemplate)
+    orgObj.claim = {
+      "@context": "https://schema.org", "@type": "Organization",
+      identifier: 'scheme://from-somewhere/some-org', name: 'Some Org',
+    }
+    orgObj.iss = creds[1].did
+    const orgJwtEnc = await credentials[1].createVerification(orgObj)
+    return request(Server)
+      .post('/api/v2/claim')
+      .send({jwtEncoded: orgJwtEnc})
+      .then(r => {
+        expect(r.status).that.equals(201)
+        expect(r.body.success.handleId).that.equals('scheme://from-somewhere/some-org')
+      })
+  }).timeout(5000)
 
 })

@@ -75,7 +75,8 @@ function requesterInfo(req, res, next) {
       next()
     }
   } else {
-    decodeAndVerifyJwt(authorizationJwt)
+    // the credential path: audience-bound when this deployment configures one
+    decodeAndVerifyJwt(authorizationJwt, { checkAudience: true })
       .then((result) => {
         // potentially available: {didResolutionResult w/ didDocument, issuer, payload, policies, signer, verified}
         //console.log("Elements of the decoded JWT", result)

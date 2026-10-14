@@ -9,8 +9,9 @@
 
 import base64url from 'base64url'
 import canonicalize from 'canonicalize'
-import DBService from '../server/api/services/endorser.db.service'
-import JwtService from '../server/api/services/jwt.service'
+import { dbService as DBService } from '../src/api/services/endorser.db.service'
+import ClaimService from '../src/api/services/claim.service'
+import { decodeAndVerifyJwt } from '../src/api/services/vc/index'
 
 describe('Running Script', () => {
 
@@ -23,11 +24,11 @@ describe('Running Script', () => {
           const promises = []
           for (let i = 0; i < results.data.length; i++) {
             const thisDatum = results.data[i]
-            // This part is pulled from JwtService.createWithClaimEntry
+            // This part is pulled from ClaimService.createWithClaimEntry
             promises.push(
-              JwtService.decodeAndVerifyJwt(thisDatum.jwtEncoded).then(result => {
+              decodeAndVerifyJwt(thisDatum.jwtEncoded).then(result => {
                 const {payload, header, signature, data, doc, authenticators, issuer} = result
-                const payloadClaim = JwtService.extractClaim(payload)
+                const payloadClaim = ClaimService.extractClaim(payload)
                 thisDatum.claimContext = payloadClaim['@context']
                 thisDatum.claimType = payloadClaim['@type']
                 const payloadClaimStr = canonicalize(payloadClaim)

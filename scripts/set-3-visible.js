@@ -8,7 +8,7 @@ import R from 'ramda'
 import request from 'supertest'
 const { Credentials } = require('uport-credentials')
 
-var { UPORT_PUSH_TOKEN_HEADER } = require('../server/api/services/util')
+var { UPORT_PUSH_TOKEN_HEADER } = require('../src/api/services/util')
 var testUtil = require('../test/util')
 
 var creds = testUtil.ethrCredData

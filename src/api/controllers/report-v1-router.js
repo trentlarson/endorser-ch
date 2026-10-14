@@ -302,7 +302,7 @@ export default express
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
-//  .get('/voteCounts', dbController.getVoteCounts)
+ .get('/voteCounts', dbController.getVoteCounts)
 
 /**
  * @typedef RateLimits

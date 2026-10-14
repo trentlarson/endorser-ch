@@ -1,0 +1,14 @@
+-- see README.md in this directory for explanations
+
+-- Same schema as the partner DB's embedding table, which holds profile vectors.
+CREATE TABLE embedding (
+  subjectType TEXT NOT NULL,
+  subjectId TEXT NOT NULL,
+  embeddingSpecId TEXT NOT NULL,
+  chunkIndex INTEGER NOT NULL DEFAULT 0,
+  contentHash TEXT NOT NULL,
+  vector BLOB NOT NULL,
+  updatedAt DATETIME NOT NULL,
+  PRIMARY KEY (subjectType, subjectId, embeddingSpecId, chunkIndex)
+);
+CREATE INDEX embedding_spec_type_updated ON embedding(embeddingSpecId, subjectType, updatedAt);

@@ -1,6 +1,8 @@
 # Test Documentation
 
-This folder contains comprehensive tests for the Endorser API, with detailed scenarios for plan management, JWT claims, and change detection functionality.
+This folder contains comprehensive tests for the Endorser API, with detailed scenarios for plan management, JWT claims, change detection functionality, and AI-powered profile matching.
+
+---
 
 ## Registration Tree
 
@@ -133,6 +135,7 @@ graph LR
    - Creates transitive visibility paths through the network
 
 
+---
 
 ## Controller Endorser 6 Tests
 
@@ -207,3 +210,22 @@ graph TD
     C2 -.->|fulfills| A2
     D2 -.->|references| D1
 ```
+
+---
+
+## Profile Matching Tests
+
+- `controller-partner-3-group-matching-funs.js` checks the vector math and the meeting pairing algorithm against stored vectors of 28 test profiles in `embedding-eval/test-vectors.json`, so it needs no model.
+- `controller-partner-8-embedding-engine.js` checks the embedding engine against golden vectors.
+- `controller-partner-9-similar.js` checks the embedding sweep, `/api/partner/similar`, and the vector export endpoints.
+
+The last two (and the profile saves in the other partner tests) load the embedding model, which downloads on first use (see the main README).
+
+After changing the test profiles or the default embedding spec, regenerate the stored vectors, and optionally view them:
+
+```bash
+npm run embedding:test-vectors
+npm run embedding:visualize   # writes embedding-eval/similarities.html
+```
+
+See `embedding-eval/README.md` for the evaluation corpus and tools.

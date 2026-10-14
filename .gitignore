@@ -1,7 +1,10 @@
 .env
 .DS_Store
+.idea
+AGENT_PERMS.log
 dist
 flyway-report*
 lib
 node_modules
-.idea
+test/embedding-eval/corpus-similarities.html
+test/embedding-eval/review-answers.json

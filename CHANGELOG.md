@@ -5,7 +5,108 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [4.3.0]
+## [Unreleased]
+### Added
+- `profilesSimilar` and `plansSimilar` in `/api/partner/alertSearch`: profiles and plans anywhere in the world whose text is close to the requester's profile (similarity of 0.85 or more, the embedding spec's `alertMinimumSimilarity`), among those embedded inside the time window; each entry has `similarity`, `embeddingUpdatedAt`, and the `profile` or `plan`
+- Optional `similarLocation` bounding box in `/api/partner/alertSearch` to restrict those matches to an area
+- Cursors for both `alertSearch` endpoints that miss and repeat nothing: every response has `nextAfterCursor`, `nextBeforeCursor`, and `hasMore`. Send `afterCursor` to get what changed since, oldest change first, or `beforeCursor` to scroll back, newest first; page while `hasMore`. Rows have `changeSeq`. A malformed cursor is a 400. See CHANGE/PLAN-accurate-cursors.md
+### Changed
+- Plan vectors are stored in the main DB, with the plans; profile vectors stay in the partner DB
+### Changed in DB or environment
+- Run Flyway migrations for both DBs: main V21 creates `embedding`; partner V8 deletes the plan vectors from its `embedding`; main V22 and partner V9 add `change_counter`, `changeSeq` columns (numbering existing rows), and the triggers that stamp them. The first sweep after startup embeds every plan again (about 12 ms each). Rolling back needs no restore: the previous version's sweep embeds the plans into the partner DB again.
+
+
+## [4.4.6] - 2026.10.04
+### Fixed
+- GLIBC version error on startup
+
+
+## [4.4.5] - 2026.10.04
+### Added
+- Semantic matching of profiles and projects with an open-weight embedding model run on this server (Granite-Embedding-311M-Multilingual-R2, Apache-2.0), so clients can reproduce the vectors and no profile text goes to a third party
+- Every profile is embedded when saved; a periodic sweep embeds plans, and retries anything that failed
+- `GET /api/partner/similar` to find profiles and projects close to a profile, a project, or free text, optionally within a bounding box
+- `GET /api/partner/embeddingSpecs` and `GET /api/partner/embeddings` so clients can fetch vectors and match on the device
+- `GET` and `POST /api/partner/embeddingSweep` for admins to see and start the sweep
+### Changed
+- Meeting matching (`groupOnboardMatch`) uses the new vectors; members without profile text are paired after everyone else, with a null similarity (they used to share one "empty" vector and score 1.0 against each other)
+- `GET /api/partner/userProfileEmbeddingMetadata/:issuerDid` returns `embeddingSpecId` and `hasCurrentEmbedding`
+- `GET /api/partner/userProfileForIssuer/:issuerDid` no longer has `generateEmbedding`, and gives admins a 404 for a profile they cannot see, like everyone else
+- The Docker image is Debian 13 based (`node:22.23-trixie-slim`, glibc 2.41): onnxruntime has no Alpine (musl) build, and the sqlite3 prebuilt binary needs glibc 2.38 or later.
+### Removed
+- `PUT /api/partner/userProfileGenerateEmbedding/:issuerDid` and the OpenAI embeddings
+- `OPENAI_API_KEY`
+### Changed in DB or environment
+- Back up the partner DB, then run its Flyway migration as well as the main one (see README). V7 creates `embedding`, drops `user_profile_embedding` and the hand-made `empty_embedding_vector`, and clears `group_onboard.previousMatches`. Rolling back to an earlier version requires restoring that backup, since earlier versions read `user_profile_embedding`.
+- The server needs about 1 GB more memory on Linux (about 1.5 GB on macOS), for the embedding model (mostly its multilingual tokenizer and the ONNX session).
+- Manual step on each host, before starting the new image: fill the model directory (about 320 MB; it only verifies when the files are already there; add `-- --skip-test` to skip loading the model, which needs that memory):
+  `sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=/mnt/models endorser-ch:amd-$ENDORSER_VERSION npm run embedding:fetch-model`
+- Run the container with `-v ~/endorser-ch-models:/mnt/models:ro -e EMBEDDING_MODEL_DIR=/mnt/models -e EMBEDDING_ALLOW_REMOTE_MODELS=false` (see README).
+- The first startup embeds every profile and plan; watch `GET /api/partner/embeddingSweep` (as an admin) until `lastFinishedAt` is set and `lastError` is null.
+- Optional: `EMBEDDING_SWEEP_INTERVAL_MINUTES` (default 60), `EMBEDDING_QUERY_MAX_PER_MINUTE` (default 20), `EMBEDDING_ARTIFACT_BASE_URL`, `EMBEDDING_SPEC_ID`
+- Remove `OPENAI_API_KEY` from .env
+
+
+## [4.4.3] - 2026.09.21
+### Fixed
+- Incorrect project ID accepted & saved when recording a recipient from a project
+### Changed in DB or environment
+- See `sql-by-hand/V20.2__expand_short_handle_id_references.sql` and follow instructions.
+
+
+## [4.4.2] - 2026.09.08
+### Added
+- `POST /api/service/membership` endpoint for other services to ask whether a user is a registered member; the calling service authenticates as itself and sends the user's own credential to it as `subjectToken`, which must name that service in `aud`, so the user's authorization is proven without the service holding a credential usable here
+- Optional `aud` (audience) binding on Authorization credentials, enforced only when `SERVICE_AUDIENCE_ID` is set, and required only when `SERVICE_AUDIENCE_REQUIRED` is set
+- Periodic summary at warn level of credentials that arrive without an `aud`, to show when `SERVICE_AUDIENCE_REQUIRED` can be turned on
+### Fixed
+- `/api/report/rateLimits` reported the default limits when `maxClaims` or `maxRegs` was 0, so a user disabled by setting `maxClaims` to 0 still looked like a member in good standing to other services
+- A credential carrying an `aud` was rejected outright, so a client could not adopt the field before a deployment enforced it
+### Changed
+- `decodeAndVerifyJwt` takes an options argument; the audience is checked only on the credential path, so claims stay portable and need no `aud`
+- The `aud` check also covers `did:peer` JWANT credentials, which bypass did-jwt
+### Changed in DB or environment
+- No Flyway migration
+- `MEMBERSHIP_SERVICE_DIDS` & `MEMBERSHIP_CACHE_SECONDS` & `MEMBERSHIP_SUBJECT_TOKEN_MAX_SECONDS` for the membership endpoint; an empty allowlist means no service may ask
+- `SERVICE_AUDIENCE_ID` & `SERVICE_AUDIENCE_REQUIRED` & `UNAUDIENCED_LOG_INTERVAL_MS` for audience binding
+- `LOG_LEVEL=warn` (the default is `error`) to see the summary of credentials arriving without an `aud`
+
+
+## [4.4.1] - 2026.08.22
+### Added
+- Warning in the claim response when `@context` is `http://schema.org` (deprecated; use `https://schema.org`)
+### Changed
+- A handle chain may change `@context` or `@type` unless the previous entry is a GiveAction, Offer, PlanAction, or Project; `http://schema.org` and `https://schema.org` count as the same context
+- An external identifier (global URI or DID not created by this server) is accepted only on a PlanAction, Project, Person, or Organization, both when introduced and when the chain changes type
+- GiveAction and Offer cache rows are inserted or updated based on whether the row exists, not on whether the handle is new
+### Fixed
+- A Person or Organization record stored with `http://schema.org` (or a misspelled type) can be corrected by its issuer
+- Editing an entry by sending only its Endorser `identifier` (no `lastClaimId`) works again; it had always been rejected with "must have been sent earlier"
+- Clearer message when someone other than the creator or agent tries to edit an entry by identifier
+
+
+## [4.4.0] - 2026.03.15
+### Added
+- /alertSearch for endorser & partner servers 
+- fromEntity and toEntity columns on jwt table for GiveAction and Offer claims (derived from claim content)
+### Fixed
+- Authentication for viewing embedding metadata
+### Changed in DB or environment
+- Run Flyway migration (V20 adds fromEntity & toEntity columns & indexes): `NODE_ENV=dev npm run flyway migrate`
+- See `sql-by-hand/V20.1__backfill_from_entity_to_entity.js` and follow instructions.
+
+
+## [4.3.1] - 2026.02.18
+### Added
+- Generation of vector embeddings for user profiles, with generateEmbedding flag to mark profiles that should generate them
+- Generate 1-on-1 matches of people during meetings
+### Changed in DB or environment
+- Automated endorser partner SQL script 6
+- ADMIN_DIDS & OPENAI_API_KEY
+- Create an empty_embedding_vector with a single entry, useful for manual reporting queries
+
+
+## [4.3.0] - 2025.11.02
 ### Added
 - `/api/partner/userProfileNearestNeighbors/:rowId` endpoint to find nearest connection in registration tree to a user profile
 - `nearestNeighborsTo` method in network-cache service to calculate nearest common ancestor in registration tree

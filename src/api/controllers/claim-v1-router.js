@@ -3,13 +3,14 @@ import R from 'ramda'
 
 import ClaimService from '../services/claim.service'
 import {
+  allDidsInside,
   allEmbeddedRecordErrorsInside,
   AUTHORIZATION_HEADER,
   BEARER_PREFIX,
   GLOBAL_ENTITY_ID_IRI_PREFIX,
   isGlobalUri
 } from '../services/util'
-import { addCanSee, removeCanSee } from '../services/network-cache.service'
+import { addCanSee, nearestNeighborsTo, removeCanSee } from '../services/network-cache.service'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 class ClaimController {
 
@@ -159,6 +160,48 @@ class DbController {
       .then((result) => res.status(200).json({success:result}).end())
       .catch(err => { console.log(err); res.status(500).json(""+err).end(); })
   }
+  async claimNearestNeighbors(req, res) {
+    try {
+      if (!res.locals.authTokenIssuer) {
+        return res.status(400).json({ error: "Request must include a valid Authorization JWT" }).end()
+      }
+
+      const jwtRec = await dbService.jwtById(req.params.id)
+      if (!jwtRec) {
+        return res.status(404).json({ error: "Claim not found" }).end()
+      }
+
+      // Collect all DIDs from the jwt record and the claim contents
+      const dids = new Set()
+      if (jwtRec.issuer) dids.add(jwtRec.issuer)
+      if (jwtRec.subject) dids.add(jwtRec.subject)
+      try {
+        const claim = JSON.parse(jwtRec.claim)
+        for (const did of allDidsInside(claim)) {
+          dids.add(did)
+        }
+      } catch (e) {
+        // claim may not be valid JSON; continue with what we have
+      }
+
+      // Look up nearest neighbors for each DID in parallel
+      const result = {}
+      await Promise.all(
+        Array.from(dids).map(async (did) => {
+          try {
+            result[did] = await nearestNeighborsTo(res.locals.authTokenIssuer, did)
+          } catch (e) {
+            result[did] = { error: e.message }
+          }
+        })
+      )
+
+      res.status(200).json({ data: result }).end()
+    } catch (err) {
+      console.error('Error getting nearest neighbors for claim:', req.params.id, err)
+      res.status(500).json({ error: err.message }).end()
+    }
+  }
   makeMeGloballyVisible(req, res) {
     if (!req.headers[AUTHORIZATION_HEADER]
         || !req.headers[AUTHORIZATION_HEADER].startsWith(BEARER_PREFIX)) {
@@ -203,6 +246,18 @@ export default express
  * @typedef UrlBody
  * @property {string} url
  */
+
+/**
+ * Get nearest neighbors in the registration tree for all DIDs in a claim
+ * @group claim retrieval
+ * @route GET /api/claim/claimNearestNeighbors/{id}
+ * @param {string} id.path.required - the ID of the Claim JWT entry
+ * @returns {object} 200 - object keyed by DID, each value an array of neighbors with "did" and "relation" properties
+ * @returns {Error} 400 - client error
+ * @returns {Error} 404 - claim not found
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/claimNearestNeighbors/:id', dbController.claimNearestNeighbors)
 
 /**
  * Get a Claim JWT

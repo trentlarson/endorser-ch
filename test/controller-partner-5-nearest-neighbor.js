@@ -26,7 +26,7 @@ before(async () => {
 });
 
 let profile0RowId, profile1RowId, profile2RowId, profile3RowId, profile16RowId, profile18RowId;
-describe("P3 - Nearest Neighbor for Current, Flat Tree", () => {
+describe("P5 - Nearest Neighbor for Current, Flat Tree", () => {
   /**
    * Test setup:
    * We'll create a registration tree and user profiles to test various scenarios
@@ -157,16 +157,16 @@ describe("P3 - Nearest Neighbor for Current, Flat Tree", () => {
   });
 
   // Test 4: Same user looking at their own profile
-  // Should return empty array or handle gracefully
-  it("should return empty array when user looks at their own profile", () => {
+  // Should return TARGET relation
+  it("should return TARGET when user looks at their own profile", () => {
     return request(Server)
       .get("/api/partner/userProfileNearestNeighbors/" + profile1RowId)
       .set("Authorization", "Bearer " + pushTokens[1])
       .then((r) => {
         expect(r.status).to.equal(200);
-        expect(r.body.data).to.be.an("array");
-        // When looking at own profile, there's no path to traverse
-        // The implementation should handle this gracefully
+        expect(r.body.data).to.be.an("array").with.lengthOf(1);
+        expect(r.body.data[0]).to.have.property("did", creds[1].did);
+        expect(r.body.data[0]).to.have.property("relation", "TARGET");
       });
   });
 
@@ -274,7 +274,7 @@ describe("P3 - Nearest Neighbor for Current, Flat Tree", () => {
   });
 });
 
-describe("P3 - Nearest Neighbor for Deeper Tree", () => {
+describe("P5 - Nearest Neighbor for Deeper Tree", () => {
   it("should register users 16, 17, and 18 and create at least one profile", async () => {
     const yesterdayEpoch = DateTime.utc().minus({day: 1}).toSeconds();
     await dbService.registrationUpdateIssueDateForTests(testUtil.ethrCredData[1].did, yesterdayEpoch);

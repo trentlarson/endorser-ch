@@ -3,10 +3,39 @@ const sqlite3 = require('sqlite3').verbose()
 const partnerDbInfo = require('../../conf/flyway-partner.js')
 const partnerDb = new sqlite3.Database(partnerDbInfo.fileLoc)
 const util = require('./util')
+const { EmbeddingStore } = require('./embedding-store')
 
 const DEFAULT_LIMIT = 50
 
+// stays under SQLite's limit on bound parameters
+const IN_CHUNK_SIZE = 500
+
+/**
+ * Run a SELECT ... IN (...) over many IDs, in chunks.
+ * @param {Array} ids
+ * @param {function(string): string} sqlForPlaceholders - builds the SQL given the '?,?,...' list
+ * @param {Array} leadingParams - parameters that precede the IDs
+ * @returns {Promise<Array>} all rows
+ */
+async function allInChunks(ids, sqlForPlaceholders, leadingParams = []) {
+  const rows = []
+  for (let i = 0; i < ids.length; i += IN_CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + IN_CHUNK_SIZE)
+    const sql = sqlForPlaceholders(chunk.map(() => '?').join(','))
+    const chunkRows = await new Promise((resolve, reject) => {
+      partnerDb.all(sql, [...leadingParams, ...chunk], (err, result) => (err ? reject(err) : resolve(result)))
+    })
+    rows.push(...chunkRows)
+  }
+  return rows
+}
+
 class PartnerDatabase {
+
+  constructor() {
+    // vectors of profiles (subjectType 'profile', subjectId = user_profile.rowid as text)
+    this.embeddings = new EmbeddingStore(partnerDb)
+  }
 
   /****************************************************************
    * Partner System
@@ -97,8 +126,8 @@ class PartnerDatabase {
           reject(err)
         } else {
           if (row) {
-            row.createdAt = util.isoAndZonify(row.createdAt)
-            row.expiresAt = util.isoAndZonify(row.expiresAt)
+            row.createdAt = row.createdAt ? util.isoAndZonify(row.createdAt) : null
+            row.expiresAt = row.expiresAt ? util.isoAndZonify(row.expiresAt) : null
           }
           resolve(row)
         }
@@ -106,9 +135,9 @@ class PartnerDatabase {
     })
   }
 
-  groupOnboardGetAll() {
+  groupOnboardGetAllActive() {
     return new Promise((resolve, reject) => {
-      partnerDb.all("SELECT rowid as groupId, name, expiresAt FROM group_onboard", function(err, rows) {
+      partnerDb.all("SELECT rowid as groupId, name, expiresAt FROM group_onboard WHERE expiresAt > datetime('now')", function(err, rows) {
         if (err) {
           reject(err)
         } else {
@@ -138,6 +167,19 @@ class PartnerDatabase {
     return new Promise((resolve, reject) => {
       const stmt = "UPDATE group_onboard SET name = ?, expiresAt = datetime(?), projectLink = ? WHERE issuerDid = ? AND rowid = ?"
       partnerDb.run(stmt, [name, expiresAt, projectLink, issuerDid, id], function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(this.changes)
+        }
+      })
+    })
+  }
+
+  groupOnboardUpdatePreviousMatches(groupId, previousMatchesJson) {
+    return new Promise((resolve, reject) => {
+      const stmt = "UPDATE group_onboard SET previousMatches = ? WHERE rowid = ?"
+      partnerDb.run(stmt, [previousMatchesJson, groupId], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -326,7 +368,9 @@ class PartnerDatabase {
   profileById(rowid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT * FROM user_profile WHERE rowid = ?",
+        `SELECT rowid, issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2
+         FROM user_profile
+         WHERE rowid = ?`,
         [rowid],
         function(err, row) {
           if (err) {
@@ -345,7 +389,9 @@ class PartnerDatabase {
   profileByIssuerDid(issuerDid) {
     return new Promise((resolve, reject) => {
       partnerDb.get(
-        "SELECT rowid, * FROM user_profile WHERE issuerDid = ?",
+        `SELECT rowid, issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2
+         FROM user_profile
+         WHERE issuerDid = ?`,
         [issuerDid],
         function(err, row) {
           if (err) {
@@ -362,6 +408,54 @@ class PartnerDatabase {
     })
   }
 
+  /**
+   * Profiles in bounding box updated after the given ISO date (newest first),
+   * or changed inside a change-sequence window (oldest change first).
+   * user_profile has no JWT; caller decodes afterId to ISO and passes here.
+   * @param {string} beforeDateIso - optional; only return profiles with updatedAt < beforeDateIso
+   * @param {{after: number, upTo: number, descending?: boolean}} [seqWindow] - only profiles with after < changeSeq <= upTo,
+   *   newest change first when descending; replaces the dates
+   * Returns Promise of { data: [], hitLimit: boolean }
+   */
+  profilesByLocationAfterDate(minLat, minLon, maxLat, maxLon, afterDateIso, beforeDateIso, seqWindow) {
+    return new Promise((resolve, reject) => {
+      if (minLat == null || minLon == null || maxLat == null || maxLon == null) {
+        resolve({ data: [], hitLimit: false })
+        return
+      }
+      let whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?))"
+      const params = [minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon]
+      let orderBy = "updatedAt DESC"
+      if (seqWindow) {
+        whereClause += " AND changeSeq > ? AND changeSeq <= ?"
+        params.push(seqWindow.after, seqWindow.upTo)
+        orderBy = seqWindow.descending ? "changeSeq DESC" : "changeSeq ASC"
+      } else {
+        whereClause += " AND updatedAt > datetime(?)"
+        params.push(afterDateIso)
+        if (beforeDateIso) {
+          whereClause += " AND updatedAt < datetime(?)"
+          params.push(beforeDateIso)
+        }
+      }
+      const sql = `SELECT rowid as rowid, * FROM user_profile WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${DEFAULT_LIMIT}`
+
+      partnerDb.all(sql, params, function (err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          const hitLimit = rows.length === DEFAULT_LIMIT
+          rows = rows.map(row => {
+            row.rowId = row.rowid
+            row.updatedAt = util.isoAndZonify(row.updatedAt)
+            return row
+          })
+          resolve({ data: rows, hitLimit })
+        }
+      })
+    })
+  }
+
   profilesByLocationAndContentsPaged(minLat, minLon, maxLat, maxLon, beforeRowId, afterRowId, claimContents) {
     return new Promise((resolve, reject) => {
       let whereClause = ""
@@ -371,15 +465,6 @@ class PartnerDatabase {
       if (minLat != null && minLon != null && maxLat != null && maxLon != null) {
         whereClause = "((locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?) OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?))"
         params.push(minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon)
-      }
-
-      if (beforeRowId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
-        params.push(beforeRowId)
-      }
-      if (afterRowId) {
-        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
-        params.push(afterRowId)
       }
 
       // Add text search if claimContents is provided
@@ -393,6 +478,19 @@ class PartnerDatabase {
             params.push(trimmed)
           }
         }
+      } else if (whereClause === "") {
+        // there's no claim string search, and no location search,
+        // so don't pick up any that don't have a description
+        whereClause = "description != ''"
+      }
+
+      if (beforeRowId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid < ?"
+        params.push(beforeRowId)
+      }
+      if (afterRowId) {
+        whereClause = (whereClause ? `${whereClause} AND ` : "") + "rowid > ?"
+        params.push(afterRowId)
       }
 
       // If no conditions were added, return all profiles
@@ -507,10 +605,28 @@ class PartnerDatabase {
     )
   }
 
-  profileDelete(issuerDid) {
+  /**
+   * The change sequence of the last change to a table that alert searches read.
+   * See CHANGE/PLAN-accurate-cursors.md
+   * @returns {Promise<number>}
+   */
+  changeCounter() {
     return new Promise((resolve, reject) => {
-      const stmt = "DELETE FROM user_profile WHERE issuerDid = ?"
-      partnerDb.run(stmt, [issuerDid], function(err) {
+      partnerDb.get("SELECT seq FROM change_counter", [], (err, row) => (err ? reject(err) : resolve(row.seq)))
+    })
+  }
+
+  /**
+   * Delete a profile and its embeddings.
+   * @returns {Promise<number>} number of profiles deleted
+   */
+  async profileDelete(issuerDid) {
+    const profile = await this.profileByIssuerDid(issuerDid)
+    if (profile) {
+      await this.embeddings.deleteBySubject('profile', String(profile.rowid))
+    }
+    return new Promise((resolve, reject) => {
+      partnerDb.run("DELETE FROM user_profile WHERE issuerDid = ?", [issuerDid], function(err) {
         if (err) {
           reject(err)
         } else {
@@ -519,6 +635,87 @@ class PartnerDatabase {
       })
     })
   }
+
+  /**
+   * Text of every profile, for computing embeddings.
+   * @returns {Promise<Array<{rowid: number, description: string}>>}
+   */
+  profilesAllDescriptions() {
+    return new Promise((resolve, reject) => {
+      partnerDb.all("SELECT rowid, description FROM user_profile", [], function(err, rows) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(rows)
+        }
+      })
+    })
+  }
+
+  /**
+   * All profile IDs with either location inside the bounding box.
+   * @returns {Promise<number[]>}
+   */
+  profileRowIdsByLocation(minLat, minLon, maxLat, maxLon) {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        `SELECT rowid FROM user_profile
+         WHERE (locLat >= ? AND locLat <= ? AND locLon >= ? AND locLon <= ?)
+            OR (locLat2 >= ? AND locLat2 <= ? AND locLon2 >= ? AND locLon2 <= ?)`,
+        [minLat, maxLat, minLon, maxLon, minLat, maxLat, minLon, maxLon],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows.map(row => row.rowid))
+          }
+        }
+      )
+    })
+  }
+
+  /**
+   * @param {number[]} rowIds
+   * @returns {Promise<Array>} profiles, in no particular order
+   */
+  async profilesByRowIds(rowIds) {
+    const rows = await allInChunks(
+      rowIds,
+      (placeholders) => `SELECT rowid, issuerDid, updatedAt, description, locLat, locLon, locLat2, locLon2
+                         FROM user_profile WHERE rowid IN (${placeholders})`
+    )
+    return rows.map(row => {
+      row.rowId = row.rowid
+      row.updatedAt = util.isoAndZonify(row.updatedAt)
+      return row
+    })
+  }
+
+  /**
+   * Admitted group members with their profiles, for matching. Members without a
+   * profile have null rowId and description.
+   * @param {number} groupId - group_onboard.rowid
+   * @returns {Promise<Array<{rowId: number|null, issuerDid: string, content: string, description: string|null}>>}
+   */
+  groupMembersWithProfiles(groupId) {
+    return new Promise((resolve, reject) => {
+      partnerDb.all(
+        `SELECT p.rowid as rowId, m.issuerDid, m.content, p.description
+         FROM group_onboard_member m
+         LEFT JOIN user_profile p ON m.issuerDid = p.issuerDid
+         WHERE m.groupId = ? AND m.admitted = 1`,
+        [groupId],
+        function(err, rows) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows || [])
+          }
+        }
+      )
+    })
+  }
+
 }
 
 module.exports = { dbService: new PartnerDatabase() }

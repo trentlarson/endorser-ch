@@ -148,7 +148,8 @@ module.exports = {
   nextDayEpoch: NEXT_DAY_EPOCH,
 
   jwtTemplate: {
-    "iat": NOW_EPOCH,
+    // "iat" is stamped by the signer: Credentials.createVerification ignores any supplied value.
+    // For a controlled iat, call did-jwt createJWT directly (see the replay tests in controller-endorser-3-skills.js).
     "exp": NEXT_MINUTE_EPOCH,
     // supply "sub"
     // supply "claim", usually including same DID of "sub"

@@ -59,8 +59,6 @@ describe('9 - Emoji Functionality', () => {
       .catch(err => Promise.reject(err));
   })
 
-
-
   describe('Emoji Claim Submission', () => {
 
     it('should successfully submit a valid emoji claim', async () => {

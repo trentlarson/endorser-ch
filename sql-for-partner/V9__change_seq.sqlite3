@@ -1,0 +1,47 @@
+-- see README.md in this directory for explanations, and CHANGE/PLAN-accurate-cursors.md
+
+CREATE TABLE change_counter (seq INTEGER NOT NULL);
+
+ALTER TABLE user_profile ADD COLUMN changeSeq INTEGER;
+ALTER TABLE embedding ADD COLUMN changeSeq INTEGER;
+
+-- number existing rows, one table after another, each in the order it was written
+UPDATE user_profile SET changeSeq = s.n
+  FROM (SELECT rowid AS rid, ROW_NUMBER() OVER (ORDER BY updatedAt, rowid) AS n FROM user_profile) AS s
+  WHERE user_profile.rowid = s.rid;
+UPDATE embedding SET changeSeq = s.n + (SELECT COUNT(*) FROM user_profile)
+  FROM (SELECT rowid AS rid, ROW_NUMBER() OVER (ORDER BY updatedAt, subjectId) AS n FROM embedding) AS s
+  WHERE embedding.rowid = s.rid;
+INSERT INTO change_counter (seq)
+  VALUES ((SELECT COUNT(*) FROM user_profile) + (SELECT COUNT(*) FROM embedding));
+
+CREATE INDEX profile_changeSeq ON user_profile(changeSeq);
+CREATE INDEX embedding_spec_type_changeSeq ON embedding(embeddingSpecId, subjectType, changeSeq);
+
+CREATE TRIGGER user_profile_change_seq_insert AFTER INSERT ON user_profile
+BEGIN
+  UPDATE change_counter SET seq = seq + 1;
+  UPDATE user_profile SET changeSeq = (SELECT seq FROM change_counter) WHERE rowid = NEW.rowid;
+END;
+-- saving the same description and locations again is not a change
+CREATE TRIGGER user_profile_change_seq_update AFTER UPDATE OF description, locLat, locLon, locLat2, locLon2 ON user_profile
+  WHEN OLD.description IS NOT NEW.description
+    OR OLD.locLat IS NOT NEW.locLat OR OLD.locLon IS NOT NEW.locLon
+    OR OLD.locLat2 IS NOT NEW.locLat2 OR OLD.locLon2 IS NOT NEW.locLon2
+BEGIN
+  UPDATE change_counter SET seq = seq + 1;
+  UPDATE user_profile SET changeSeq = (SELECT seq FROM change_counter) WHERE rowid = NEW.rowid;
+END;
+
+-- an unchanged text stored again is not a change
+CREATE TRIGGER embedding_change_seq_insert AFTER INSERT ON embedding
+BEGIN
+  UPDATE change_counter SET seq = seq + 1;
+  UPDATE embedding SET changeSeq = (SELECT seq FROM change_counter) WHERE rowid = NEW.rowid;
+END;
+CREATE TRIGGER embedding_change_seq_update AFTER UPDATE OF contentHash ON embedding
+  WHEN OLD.contentHash IS NOT NEW.contentHash
+BEGIN
+  UPDATE change_counter SET seq = seq + 1;
+  UPDATE embedding SET changeSeq = (SELECT seq FROM change_counter) WHERE rowid = NEW.rowid;
+END;
