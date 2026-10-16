@@ -4051,6 +4051,8 @@ describe('6 - Alert Search report', () => {
     expect(first.body.nextAfterCursor).to.match(/^\d+$/)
     expect(first.body.hasMore).to.be.a('boolean')
     first.body.data.claims.forEach((c) => expect(c.changeSeq).to.be.a('number'))
+    // the claim text, so a client can say what was offered or given
+    first.body.data.claims.forEach((c) => expect(c.claim).to.be.a('string'))
     first.body.data.plansNearby.forEach((p) => expect(p.changeSeq).to.be.a('number'))
 
     const second = await alertSearchAfter({ afterCursor: first.body.nextAfterCursor, location: WORLD, planHandleIds: [firstPlanIdExternal] })

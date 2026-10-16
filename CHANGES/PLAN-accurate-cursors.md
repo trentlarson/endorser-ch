@@ -158,8 +158,13 @@ client pages with `beforeId`/`beforeDate`, and takes
   - Its `alertSearch` types carry `afterCursor`, `beforeCursor`,
     `nextAfterCursor`, `nextBeforeCursor`, `hasMore`, and `changeSeq`, all
     optional.
-  - Its client for `alertSearch`, when built, stores one cursor per server in
-    two nullable TEXT columns of `settings` (one migration adding them).
+  - Its New Activity screens, Home tiles, and notification uploads call
+    `alertSearch` with cursors only. The read state is one JSON column of
+    `settings`, `newActivityCursors`: a visit window (one cursor per server),
+    a window per list, and the cursors last uploaded to each notification
+    channel. The first load ever sends a request with no cursor or ID, stores
+    the returned cursors as its starting point, and shows nothing as new.
+    Details: `doc/CHANGES/PLAN-new-activity-alert-search.md` in that repo.
   - `lastAckedOfferToUserJwtId`, `lastAckedOfferToUserProjectsJwtId`, and
     `lastAckedStarredPlanChangesJwtId` are per-item bookmarks ("mark unread
     from here") for `/report/offers`, `/offersToPlansOwnedByMe`, and
@@ -169,29 +174,27 @@ client pages with `beforeId`/`beforeDate`, and takes
 
 ## 3. Rollout
 
-- [ ] **1. endorser-ch**: main migration V22 and partner migration V9 (counter,
+- [x] **1. endorser-ch**: main migration V22 and partner migration V9 (counter,
   columns, backfill in `jwtId` / `updatedAt` order, triggers, indexes); the
   cursor path (both directions) and the returned cursors on both endpoints.
-  All additive: deployed clients keep working.
-  - [x] Committed; ships in the release after 4.4.6.
-  - [ ] In production (production runs 4.4.4).
-- [ ] **2. notification-wakeup-service**: the cursor-path loop and the first
+  All additive: deployed clients keep working. In production as 4.4.7.
+- [x] **2. notification-wakeup-service**: the cursor-path loop and the first
   run above. On startup it drops cursor tables that have the columns
   `endorser_after_id` / `partner_after_at` (0.2.3 and earlier) and creates
-  them with the cursor columns, so each user's next run is a first run.
-  - [x] Committed; ships in the release after 0.2.3.
-  - [ ] In production (production runs 0.2.2).
+  them with the cursor columns, so each user's next run is a first run. In
+  production as 0.2.4.
 - [ ] **3. crowd-funder-for-time-pwa**: types only.
   - [x] Committed; ships in the release after 1.4.9.
   - [ ] Released.
-- [ ] **4. crowd-funder-for-time-pwa**, with its `alertSearch` client: the two
-  `settings` columns. Not started; waits on the app feature that uses it.
+- [ ] **4. crowd-funder-for-time-pwa**, with its `alertSearch` client: the
+  `newActivityCursors` settings column (migration
+  `012_add_newActivityCursors_to_settings`), New Activity and Home on
+  `alertSearch`. — next: commit and release with the app's New Activity work
+  (Trent)
 
-Step 2 deploys after step 1 is in production, since it fails against a
-server without cursors; until then, the deployed notification-wakeup-service
-keeps using the ID path, which step 1 leaves in place. Steps 1 and 3 need no
-coordination with any other release; step 4 ships with the app feature that
-uses it.
+Step 2 deployed after step 1 was in production, since it fails against a
+server without cursors. Steps 1 and 3 need no coordination with any other
+release; step 4 ships with the app feature that uses it.
 
 V21 and V22 together took 7 seconds on a copy of a database inflated to 543,000
 `jwt` rows (1 GB), numbering every row.
@@ -206,36 +209,40 @@ on a condition in production first; the status line of each names it.
   returns, which keeps the ULID race and drops changes past its 50-row limit.
   Sending `afterCursor` with `planHandleIds` to `alertSearch` and reading
   `trackedPlanUpdates` removes both. Ships with an app release.
-  *Status:* the fetchers call `plansLastUpdatedBetween`. The app release that
-  carries this waits until rollout step 1 is in production.
+  *Status:* the fetchers call `plansLastUpdatedBetween`; rollout step 1 is in
+  production, so this can ship with any app release. It touches only the
+  fetchers, not the New Activity work.
 - [ ] **Similar lists past 50**: page by similarity within a fixed window. Worth
   doing only when 50 per window proves too few.
   *Status:* waits for evidence that 50 is too few.
 - [ ] **Retire the ID path** on `alertSearch` (`afterId`, `beforeId`,
   `afterDate`, `beforeDate`). notification-wakeup-service 0.2.3 and earlier
-  page with them, and no app calls `alertSearch` (1.4.9 carries only its
-  types). A request with no cursor stays: it returns the most recent rows and
-  the cursors, which is how a client starts.
-  *Status:* waits until rollout step 2 is in production.
+  paged with them. The app (rollout step 4) sends only cursors, or no cursor
+  on a first load. A request with no cursor stays: it returns the most recent
+  rows and the cursors, which is how a client starts.
+  *Status:* rollout step 2 is in production, so no known client sends these
+  fields; ready to remove.
 - [ ] **Offers and starred-plan changes on the cursor path**: move the app's
   "New Activity" screen to `alertSearch` with `changeSeq` bookmarks, then
   retire the ID-path endpoints and the `lastAcked*JwtId` settings. The largest
   of these: it spans the server, the app's screens and settings, and an app
   release; the endpoints and settings can go only once no app version in use
-  calls them. Decide first which shape the screen reads:
-  - **Offer summaries** (amounts, fulfilment), as `/report/offers` and
-    `/offersToPlansOwnedByMe` return: `alertSearch` gains lists for them, and
-    `offer_claim` is stamped with `changeSeq`.
-  - **Claim rows**, as `claims` and `personalPlanContributions` already return
-    offers and gives: no server change, and the screen derives what it shows
-    from the claims.
+  calls them. The screen reads **claim rows**, as `claims` and
+  `personalPlanContributions` return offers and gives; `claims` rows carry
+  `claim` so the screen can say what was offered.
 
-  Starred-plan changes need the claim before each change (`wrappedClaimBefore`
-  in `/plansLastUpdatedBetween`) for the screen's comparison; `alertSearch`'s
-  `trackedPlanUpdates` holds only the current plan.
+  On the ID-path endpoints after rollout step 4:
+  - The Recent Offers pages (`/report/offers`, `/offersToPlansOwnedByMe`),
+    which mark the last-read offer with the `lastAcked*JwtId` settings; the
+    New Activity detail pages move those markers.
+  - The starred-project comparison, which needs the claim before each change
+    (`wrappedClaimBefore` in `/plansLastUpdatedBetween`); `alertSearch`'s
+    `trackedPlanUpdates` holds only the current plan.
+  - The native fetchers (see above).
 
-  *Status:* the shape is undecided. Server work for offer summaries is
-  additive and needs no release first; the app work comes with rollout step 4.
+  *Status:* the app work is rollout step 4. Moving the remaining callers needs
+  `alertSearch` to return the previous plan claim on `trackedPlanUpdates` and
+  the Recent Offers pages to page by cursor.
 
 ## 5. Future Improvements
 
@@ -275,3 +282,9 @@ on a condition in production first; the status line of each names it.
 - 2026-10-13: notification-wakeup-service labels a 400 as an authorization
   failure only when its error says so; the native fetchers store the newest
   `jwtId` of a response instead of the last item, which was the oldest.
+- 2026-10-16: endorser-ch 4.4.7 and notification-wakeup-service 0.2.4 in
+  production (rollout steps 1 and 2). The app's New Activity screen chose claim
+  rows over offer summaries, keeps its read state in one JSON settings column
+  instead of two cursor columns, and seeds its cursors on a first load instead
+  of handing off from `lastAcked*JwtId` with `afterId`, so it never uses the
+  ID path.

@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Changed
+- `claims` rows in `/api/v2/report/alertSearch` include `claim`, the claim text, like the other claim lists
+
+
 ## [4.4.7] - 2026.10.13
 ### Added
 - `profilesSimilar` and `plansSimilar` in `/api/partner/alertSearch`: profiles and plans anywhere in the world whose text is close to the requester's profile (similarity of 0.85 or more, the embedding spec's `alertMinimumSimilarity`), among those embedded inside the time window; each entry has `similarity`, `embeddingUpdatedAt`, and the `profile` or `plan`

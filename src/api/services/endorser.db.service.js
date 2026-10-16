@@ -1715,10 +1715,10 @@ class EndorserDatabase {
     return new Promise((resolve, reject) => {
       const window = listWindow('', 'id', afterId, beforeId, seqWindow)
       const sql =
-        "SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity, changeSeq"
+        "SELECT id, issuedAt, issuer, subject, claimType, handleId, claim, fromEntity, toEntity, changeSeq"
         + " FROM jwt WHERE toEntity = ? AND issuer != ?" + window.clause
         + " UNION"
-        + " SELECT id, issuedAt, issuer, subject, claimType, handleId, fromEntity, toEntity, changeSeq"
+        + " SELECT id, issuedAt, issuer, subject, claimType, handleId, claim, fromEntity, toEntity, changeSeq"
         + " FROM jwt WHERE fromEntity = ? AND issuer != ?" + window.clause
         + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
       const params = [did, did, ...window.params, did, did, ...window.params]
