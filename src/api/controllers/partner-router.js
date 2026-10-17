@@ -38,16 +38,17 @@ const ALERT_SEARCH_TIMEOUT_MS = 2000
  * Returns { result, timedOut }. The original promise continues in the background.
  */
 async function withTimeout(promise, fallback, functionName) {
+  let timer
   const timeout = new Promise((resolve) => {
-    setTimeout(() => {
-      console.error('SQL Timeout: data fetch for', functionName, 'exceeded timeout of', ALERT_SEARCH_TIMEOUT_MS, 'ms')
+    timer = setTimeout(() => {
+      console.error('Timeout: data fetch for', functionName, 'exceeded timeout of', ALERT_SEARCH_TIMEOUT_MS, 'ms')
       resolve({ result: fallback, timedOut: true })
     }, ALERT_SEARCH_TIMEOUT_MS)
   })
   return Promise.race([
     promise.then((r) => ({ result: r, timedOut: false })),
     timeout,
-  ])
+  ]).finally(() => clearTimeout(timer))
 }
 
 const ALERT_SIMILAR_LIMIT = 50
