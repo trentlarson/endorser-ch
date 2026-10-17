@@ -70,7 +70,7 @@ Run
 
 ```shell
 # run in development mode
-NODE_ENV=dev npm run dev
+npm run dev
 ```
 
 Profile & project matching uses an embedding model (about 320 MB). It downloads into
@@ -83,7 +83,7 @@ visualization tools.
 
 ### Other Ways To Run
 
-Debug: `NODE_ENV=dev npm run dev:debug`
+Debug: `npm run dev:debug`
 
 Deploy / Release:
 
@@ -237,7 +237,7 @@ NODE_ENV=test-local npm run test test/controller0
 
 #### Manual tests
 
-`NODE_ENV=dev npm run dev` and then check that this works: http://localhost:3000/api-explorer/
+`npm run dev` and then check that this works: http://localhost:3000/api-explorer/
 
 
 #### Test server
@@ -425,7 +425,7 @@ User stories:
 
 - in endorser-ch
   - run test/test.sh
-  - run: NODE_ENV=test-local npm run dev
+  - run: ODE_ENV=test-local npm run dev
 
 - in mobile app
   - change to TEST_USER_NUM = 11 (Annabelle's Friend) in src/utilities/claimsTest.js
