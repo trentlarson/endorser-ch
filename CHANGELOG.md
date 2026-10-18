@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `claims` rows in `/api/v2/report/alertSearch` include `claim`, the claim text, like the other claim lists
 ### Fixed
+- `/api/claim/claimNearestNeighbors/{id}` no longer reveals DIDs the requester cannot see: each one is keyed as `did:none:HIDDEN_` plus an index, like other DID keys in results
 - An Offer that names its plan in `itemOffered.isPartOf` (as Time Safari sends) shows in the plan owner's `personalPlanContributions` and in `trackedPlanClaims`
 ### Changed in DB or environment
 - Run Flyway migrations for the main DB: V23 sets `toEntity` on existing Offers that name their plan in `itemOffered.isPartOf`, without changing their `changeSeq`

@@ -4,6 +4,7 @@ import { Credentials } from "uport-credentials";
 import R from "ramda";
 
 import Server from "../dist";
+import { HIDDEN_TEXT } from "../dist/api/services/util";
 import testUtil from "./util";
 
 const expect = chai.expect;
@@ -35,6 +36,15 @@ before(async () => {
  */
 
 let selfClaimId, directChildClaimId, deepClaimId, multiDidClaimId;
+
+// expect at least one hidden entry, and every hidden one to have these neighbors
+function expectHiddenEntries(data, expectedNeighbors) {
+  const hiddenKeys = Object.keys(data).filter((key) => key.startsWith(HIDDEN_TEXT + "_"));
+  expect(hiddenKeys).to.not.be.empty;
+  for (const key of hiddenKeys) {
+    expect(data[key]).to.deep.equal(expectedNeighbors);
+  }
+}
 
 describe("P7 - Claim Nearest Neighbors", () => {
 
@@ -190,10 +200,9 @@ describe("P7 - Claim Nearest Neighbors", () => {
         expect(r.status).to.equal(200);
         // user 16 is registered by user 1 who is registered by user 0
         // so nearest neighbor from 0 toward 16 is user 1
-        const deepEntry = r.body.data[creds[16].did];
-        expect(deepEntry).to.be.an("array").with.lengthOf(1);
-        expect(deepEntry[0]).to.have.property("did", creds[1].did);
-        expect(deepEntry[0]).to.have.property("relation", "REGISTERED_BY_YOU");
+        // ... but user 16 is hidden from user 0, so that entry has a hidden key
+        expect(r.body.data).to.not.have.property(creds[16].did);
+        expectHiddenEntries(r.body.data, [{ did: creds[1].did, relation: "REGISTERED_BY_YOU" }]);
       });
   });
 
@@ -205,10 +214,9 @@ describe("P7 - Claim Nearest Neighbors", () => {
       .then((r) => {
         expect(r.status).to.equal(200);
         // user 18 was registered by user 2, so nearest neighbor going up is user 2
-        const deepEntry = r.body.data[creds[16].did];
-        expect(deepEntry).to.be.an("array").with.lengthOf(1);
-        expect(deepEntry[0]).to.have.property("did", creds[2].did);
-        expect(deepEntry[0]).to.have.property("relation", "REGISTERED_YOU");
+        // ... but user 16 is hidden from user 18, so that entry has a hidden key
+        expect(r.body.data).to.not.have.property(creds[16].did);
+        expectHiddenEntries(r.body.data, [{ did: creds[2].did, relation: "REGISTERED_YOU" }]);
       });
   });
 
@@ -221,8 +229,12 @@ describe("P7 - Claim Nearest Neighbors", () => {
         expect(r.status).to.equal(200);
         const data = r.body.data;
 
+        // users 0 and 18 are hidden from user 16, keyed in the order of the claim
+        expect(data).to.not.have.property(creds[0].did);
+        expect(data).to.not.have.property(creds[18].did);
+
         // user 0 (issuer): user 16's path goes 16->1->0, so nearest is user 1
-        const entry0 = data[creds[0].did];
+        const entry0 = data[HIDDEN_TEXT + "_0"];
         expect(entry0).to.be.an("array").with.lengthOf(1);
         expect(entry0[0]).to.have.property("did", creds[1].did);
         expect(entry0[0]).to.have.property("relation", "REGISTERED_YOU");
@@ -234,12 +246,50 @@ describe("P7 - Claim Nearest Neighbors", () => {
         expect(entry1[0]).to.have.property("relation", "REGISTERED_YOU");
 
         // user 18 (recipient): user 16's path goes 16->1->0->2->18, nearest is user 1
-        const entry18 = data[creds[18].did];
+        const entry18 = data[HIDDEN_TEXT + "_1"];
         expect(entry18).to.be.an("array").with.lengthOf(1);
         expect(entry18[0]).to.have.property("did", creds[1].did);
         expect(entry18[0]).to.have.property("relation", "REGISTERED_YOU");
       });
   });
+
+  // -- Hidden DIDs: each key is visible in the claim, or else hidden --
+  it("should hide the DIDs in keys that the requester cannot see in the claim", async () => {
+    const views = [
+      [deepClaimId, 17], [deepClaimId, 18], [multiDidClaimId, 17], [directChildClaimId, 18],
+    ]
+    let numHidden = 0
+    for (const [claimId, userIndex] of views) {
+      const claimResp = await request(Server)
+        .get("/api/claim/" + claimId)
+        .set("Authorization", "Bearer " + pushTokens[userIndex])
+      expect(claimResp.status).to.equal(200)
+      const visibleClaimText = JSON.stringify(claimResp.body)
+
+      const r = await request(Server)
+        .get("/api/claim/claimNearestNeighbors/" + claimId)
+        .set("Authorization", "Bearer " + pushTokens[userIndex])
+      expect(r.status).to.equal(200)
+      const keys = Object.keys(r.body.data)
+      for (const key of keys) {
+        if (key.startsWith(HIDDEN_TEXT + "_")) {
+          numHidden++
+          expect(visibleClaimText).to.include(HIDDEN_TEXT)
+          expect(r.body.data[key]).to.be.an("array")
+        } else {
+          expect(visibleClaimText).to.include(key)
+        }
+      }
+      // no key is a DID that the claim hides from this requester
+      for (const cred of creds) {
+        if (!visibleClaimText.includes(cred.did)) {
+          expect(keys).to.not.include(cred.did)
+        }
+      }
+    }
+    // make sure this test exercises the hiding
+    expect(numHidden).to.be.greaterThan(0)
+  })
 
   // -- Error cases --
   it("should return 404 for non-existent claim", () => {

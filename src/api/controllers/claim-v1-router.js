@@ -8,9 +8,10 @@ import {
   AUTHORIZATION_HEADER,
   BEARER_PREFIX,
   GLOBAL_ENTITY_ID_IRI_PREFIX,
+  HIDDEN_TEXT,
   isGlobalUri
 } from '../services/util'
-import { addCanSee, nearestNeighborsTo, removeCanSee } from '../services/network-cache.service'
+import { addCanSee, getAllDidsRequesterCanSee, nearestNeighborsTo, removeCanSee } from '../services/network-cache.service'
 import { hideDidsAndAddLinksToNetwork, makeGloballyVisible } from '../services/util-higher'
 class ClaimController {
 
@@ -184,14 +185,31 @@ class DbController {
         // claim may not be valid JSON; continue with what we have
       }
 
+      // Hide DIDs the requester cannot see, as hideDidsAndAddLinksToNetwork does:
+      // someone in the claim sees everyone, and otherwise each hidden DID's key
+      // becomes HIDDEN_TEXT + "_" + index.
+      // The neighbors stay: each is the requester's own registrar or one of their
+      // direct registrees, and a direct registree is returned whether the target
+      // is that person or anyone they registered (directly or indirectly), so it
+      // doesn't identify a hidden target.
+      const requesterDid = res.locals.authTokenIssuer
+      const allDids = Array.from(dids)
+      const allowedDids = allDids.includes(requesterDid)
+        ? allDids
+        : await getAllDidsRequesterCanSee(requesterDid)
+      const hiddenDids = allDids.filter(did => !allowedDids.includes(did))
+
       // Look up nearest neighbors for each DID in parallel
       const result = {}
       await Promise.all(
-        Array.from(dids).map(async (did) => {
+        allDids.map(async (did) => {
+          const isHidden = hiddenDids.includes(did)
+          const key = isHidden ? HIDDEN_TEXT + '_' + hiddenDids.indexOf(did) : did
           try {
-            result[did] = await nearestNeighborsTo(res.locals.authTokenIssuer, did)
+            result[key] = await nearestNeighborsTo(requesterDid, did)
           } catch (e) {
-            result[did] = { error: e.message }
+            // the message may contain the DID
+            result[key] = { error: isHidden ? "Error finding neighbors for a hidden DID" : e.message }
           }
         })
       )
@@ -253,6 +271,7 @@ export default express
  * @route GET /api/claim/claimNearestNeighbors/{id}
  * @param {string} id.path.required - the ID of the Claim JWT entry
  * @returns {object} 200 - object keyed by DID, each value an array of neighbors with "did" and "relation" properties
+ * ... where a DID the requester cannot see is keyed as "did:none:HIDDEN_" plus an index
  * @returns {Error} 400 - client error
  * @returns {Error} 404 - claim not found
  */
