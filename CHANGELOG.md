@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [4.4.8] - 2026.10.18
 ### Added
 - `/api/v2/report/confirmationsForClaim?claimId=` lists one claim's confirmations, newest first, 50 at a time (`hitLimit`, then `beforeId`): each has `jwtId` (the confirmation's own claim), `issuer`, and `issuedAt`, and a hidden `issuer` comes with `issuerVisibleToDids`. The response also has `totalCount` across all pages and `requesterConfirmed`. Confirmations by the claim's own issuer are left out.
 ### Changed
