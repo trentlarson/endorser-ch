@@ -1585,6 +1585,67 @@ describe('1 - Event', () => {
        expect(r.status).that.equals(200)
      }))
 
+  let firstClaimNewestConfirmationId
+
+  it('should get two confirmations with their dates for this claim ID, newest first', () =>
+     request(Server)
+     .get('/api/v2/report/confirmationsForClaim?claimId=' + firstId)
+     .set('Authorization', 'Bearer ' + pushTokens[1])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body.data)
+         .to.be.an('array')
+         .of.length(2)
+       for (const conf of r.body.data) {
+         expect(conf.jwtId).to.be.a('string')
+         expect(conf.issuer).to.be.a('string')
+         expect(conf.issuedAt).to.be.a('string')
+       }
+       expect(r.body.data[0].jwtId > r.body.data[1].jwtId).to.be.true
+       expect(r.body.totalCount).that.equals(2)
+       expect(r.body.hitLimit).to.be.false
+       // user 1 confirmed it
+       expect(r.body.requesterConfirmed).to.be.true
+       firstClaimNewestConfirmationId = r.body.data[0].jwtId
+     }))
+
+  it('should get the confirmations before a given one, with the same total', () =>
+     request(Server)
+     .get('/api/v2/report/confirmationsForClaim?claimId=' + firstId + '&beforeId=' + firstClaimNewestConfirmationId)
+     .set('Authorization', 'Bearer ' + pushTokens[2])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body.data)
+         .to.be.an('array')
+         .of.length(1)
+       expect(r.body.totalCount).that.equals(2)
+       // user 2 did not confirm it
+       expect(r.body.requesterConfirmed).to.be.false
+     }))
+
+  it('should get no confirmations for an unknown claim', () =>
+     request(Server)
+     .get('/api/v2/report/confirmationsForClaim?claimId=NOTHING')
+     .set('Authorization', 'Bearer ' + pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body.data)
+         .to.be.an('array')
+         .of.length(0)
+     }))
+
+  it('should reject a confirmations request without a claim ID', () =>
+     request(Server)
+     .get('/api/v2/report/confirmationsForClaim')
+     .set('Authorization', 'Bearer ' + pushTokens[0])
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(400)
+     }))
+
 })
 
 describe('1 - Tenure', () => {

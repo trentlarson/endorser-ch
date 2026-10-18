@@ -670,6 +670,29 @@ class ServiceController {
         .catch(err => { console.error(err); res.status(500).json(""+err).end() })
   }
 
+  // get the confirmations of one claim, with when and in which JWT each was made
+  getConfirmationsForClaim(req, res) {
+    const claimId = req.query.claimId
+    if (!claimId) {
+      res.status(400).json({ error: "claimId parameter is required" }).end()
+      return
+    }
+    const requesterDid = res.locals.authTokenIssuer
+    Promise.all([
+      dbService.confirmationsForClaim(claimId, req.query.beforeId),
+      dbService.confirmationCountForClaim(claimId),
+      requesterDid ? dbService.confirmationByIssuerAndJwtId(requesterDid, claimId) : null,
+    ])
+        .then(([page, totalCount, requesterConfirmation]) =>
+          hideDidsAndAddLinksToNetworkInDataKey(
+            requesterDid,
+            { data: page.data, hitLimit: page.hitLimit, totalCount, requesterConfirmed: !!requesterConfirmation },
+            []
+          ))
+        .then(resultData => { res.json(resultData).end() })
+        .catch(err => { console.error(err); res.status(500).json(""+err).end() })
+  }
+
   // get emoji claims for a specific parent item
   getEmojisForParent(req, res) {
     const parentHandleId = req.query.parentHandleId
@@ -986,6 +1009,25 @@ export default express
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/confirmers', serviceController.getConfirmerIds)
+
+/**
+ * Retrieve the confirmations of one claim, newest first, excluding any by the claim's own issuer.
+ *
+ * Confirmations attach to one JWT, so confirmations of an earlier version of an edited claim are not included.
+ *
+ * @group reports
+ * @route GET /api/v2/report/confirmationsForClaim
+ * @param {string} claimId.query.required - the JWT ID of the confirmed claim
+ * @param {string} beforeId.query.optional - the confirmation JWT ID before which to get results (exclusive), for the next page
+ * @returns {object} 200 - 'data' array of { jwtId, issuer, issuedAt } where jwtId is the confirmation's own JWT;
+ *   a hidden issuer comes with an "issuerVisibleToDids" array of people in the requester's network who can see them;
+ *   'hitLimit' true means there may be more, so request again with the last jwtId as beforeId;
+ *   'totalCount' is the number of confirmations across all pages;
+ *   'requesterConfirmed' tells whether the requester has confirmed it, even if that is on a later page
+ * @returns {Error} 400 - client error
+ */
+// This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
+  .get('/confirmationsForClaim', serviceController.getConfirmationsForClaim)
 
 /**
  * Get all emoji claims for a specific parent item

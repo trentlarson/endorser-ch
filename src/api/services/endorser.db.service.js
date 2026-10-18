@@ -28,6 +28,12 @@ const { EmbeddingStore } = require('./embedding-store')
 
 const DEFAULT_LIMIT = 50
 
+// Confirmations of a claim, excluding any by the claim's own issuer (who already counts as confirming it).
+// Use with the claim JWT ID twice.
+const CONFIRMATIONS_FOR_CLAIM_WHERE =
+  " WHERE c.origClaimJwtId = ?"
+  + " AND c.issuer IS NOT (SELECT issuer FROM jwt WHERE id = ?)"
+
 /**
  * SQL for the rows a list returns: a change-sequence window when one is given
  * (oldest change first), or else bounds on a JWT ID column (newest first).
@@ -684,6 +690,53 @@ class EndorserDatabase {
           resolve(data)
         }
       })
+    })
+  }
+
+  // take a claim JWT ID and return { data, hitLimit } where data has { jwtId, issuer, issuedAt }
+  // for each confirmation of it, newest first, before the beforeId confirmation JWT ID if given
+  confirmationsForClaim(claimJwtId, beforeIdInput) {
+    return new Promise((resolve, reject) => {
+      var data = []
+      const params = [claimJwtId, claimJwtId]
+      let sql =
+        "SELECT c.jwtId, c.issuer, j.issuedAt FROM confirmation c"
+        + " LEFT JOIN jwt j ON j.id = c.jwtId"
+        + CONFIRMATIONS_FOR_CLAIM_WHERE
+      if (beforeIdInput) {
+        params.push(beforeIdInput)
+        sql += " AND c.jwtId < ?"
+      }
+      sql += " ORDER BY c.jwtId DESC LIMIT " + DEFAULT_LIMIT
+      db.each(sql, params, function(err, row) {
+        data.push({
+          jwtId: row.jwtId,
+          issuer: row.issuer,
+          issuedAt: row.issuedAt && util.isoAndZonify(row.issuedAt),
+        })
+      }, function(err, num) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ data: data, hitLimit: num === DEFAULT_LIMIT })
+        }
+      })
+    })
+  }
+
+  // the number of confirmations that confirmationsForClaim would page through
+  confirmationCountForClaim(claimJwtId) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT COUNT(*) AS count FROM confirmation c" + CONFIRMATIONS_FOR_CLAIM_WHERE,
+        [claimJwtId, claimJwtId],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(row.count)
+          }
+        })
     })
   }
 

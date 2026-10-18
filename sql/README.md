@@ -224,7 +224,7 @@ CREATE TABLE jwt (
 
     -- For GiveAction and Offer claims only: derived from claim content at ingestion
     fromEntity TEXT, -- giver/offerer DID (GiveAction: agent; Offer: offeredBy or issuer)
-    toEntity TEXT    -- recipient or fulfills target (recipient identifier or fulfills[0].identifier)
+    toEntity TEXT    -- recipient or plan contributed to (recipient identifier, else the PlanAction in fulfills or in an Offer's itemOffered.isPartOf)
 );
 CREATE INDEX jwt_entityId ON jwt(handleId);
 CREATE INDEX jwt_claimHash on jwt (claimCanonHashBase64);

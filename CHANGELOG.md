@@ -6,8 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Added
+- `/api/v2/report/confirmationsForClaim?claimId=` lists one claim's confirmations, newest first, 50 at a time (`hitLimit`, then `beforeId`): each has `jwtId` (the confirmation's own claim), `issuer`, and `issuedAt`, and a hidden `issuer` comes with `issuerVisibleToDids`. The response also has `totalCount` across all pages and `requesterConfirmed`. Confirmations by the claim's own issuer are left out.
 ### Changed
 - `claims` rows in `/api/v2/report/alertSearch` include `claim`, the claim text, like the other claim lists
+### Fixed
+- An Offer that names its plan in `itemOffered.isPartOf` (as Time Safari sends) shows in the plan owner's `personalPlanContributions` and in `trackedPlanClaims`
+### Changed in DB or environment
+- Run Flyway migrations for the main DB: V23 sets `toEntity` on existing Offers that name their plan in `itemOffered.isPartOf`, without changing their `changeSeq`
 
 
 ## [4.4.7] - 2026.10.13
