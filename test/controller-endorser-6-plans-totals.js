@@ -4063,6 +4063,31 @@ describe('6 - Alert Search report', () => {
     expect(second.body.userMessage).to.be.undefined
   })
 
+  it('report alertSearch lists an offer to the plan owner when it names the plan in itemOffered.isPartOf', async () => {
+    const latest = (await alertSearchAfter({})).body.nextAfterCursor
+    const offerIds = []
+    // by identifier, and by lastClaimId of the plan
+    for (const isPartOf of [
+      { '@type': 'PlanAction', identifier: firstPlanIdExternal },
+      { '@type': 'PlanAction', lastClaimId: firstPlanClaim2IdInternal },
+    ]) {
+      const offerObj = R.clone(testUtil.jwtTemplate)
+      offerObj.claim = R.clone(testUtil.claimOffer)
+      offerObj.claim.offeredBy = { identifier: creds[2].did }
+      offerObj.claim.itemOffered = { description: 'Offered through isPartOf', isPartOf }
+      offerObj.iss = creds[2].did
+      const offerJwtEnc = await credentials[2].createVerification(offerObj)
+      const r = await request(Server).post('/api/v2/claim').send({ jwtEncoded: offerJwtEnc })
+      expect(r.status).that.equals(201)
+      offerIds.push(r.body.success.claimId)
+    }
+    const after = await alertSearchAfter({ afterCursor: latest })
+    expect(after.status).to.equal(200)
+    const contributions = after.body.data.personalPlanContributions
+    expect(contributions.map((c) => c.id)).to.deep.equal(offerIds)
+    contributions.forEach((c) => expect(c.toEntity).to.equal(firstPlanIdExternal))
+  }).timeout(5000)
+
   it('report alertSearch pages every list by change sequence, with no repeats', async () => {
     const latest = (await alertSearchAfter({})).body.nextAfterCursor
     const seen = Object.fromEntries(CURSOR_LISTS.map((list) => [list, new Set()]))

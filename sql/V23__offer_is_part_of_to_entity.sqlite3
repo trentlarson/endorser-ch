@@ -1,0 +1,14 @@
+
+-- An Offer that names its plan in the deprecated itemOffered.isPartOf was
+-- stored without a toEntity, so the plan's owner never saw it in alertSearch.
+-- offer_claim already resolved that plan; copy it to every version of the offer.
+-- (Only inserts on jwt advance changeSeq, so these rows do not appear as new.)
+UPDATE jwt SET toEntity = (
+  SELECT o.fulfillsPlanHandleId FROM offer_claim o WHERE o.handleId = jwt.handleId
+)
+WHERE claimType = 'Offer' AND toEntity IS NULL
+  AND json_extract(claim, '$.recipient.identifier') IS NULL
+  AND EXISTS (
+    SELECT 1 FROM offer_claim o
+    WHERE o.handleId = jwt.handleId AND o.fulfillsPlanHandleId IS NOT NULL
+  );

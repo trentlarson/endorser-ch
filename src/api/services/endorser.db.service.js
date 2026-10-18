@@ -68,14 +68,24 @@ const LESS_THAN = "_lessThan"
 const LESS_THAN_OR_EQUAL_TO = "_lessThanOrEqualTo"
 
 /**
- * Extract toEntity from claim: recipient identifier, or first fulfills element of type PlanAction with an identifier.
- * The fulfills array may have Offer/PlanAction in any position; only PlanAction entries contribute to toEntity.
+ * The PlanAction a GiveAction or Offer contributes to: the first fulfills element
+ * of type PlanAction, or an Offer's deprecated itemOffered.isPartOf.
+ * The fulfills array may have Offer/PlanAction in any position.
+ */
+function planActionFulfilledBy(claim) {
+  const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
+  const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction')
+  if (planActionFulfills) return planActionFulfills
+  const isPartOf = claim['@type'] === 'Offer' ? claim.itemOffered?.isPartOf : undefined
+  return isPartOf?.['@type'] === 'PlanAction' ? isPartOf : undefined
+}
+
+/**
+ * Extract toEntity from claim: recipient identifier, or the identifier of the PlanAction it contributes to.
  */
 function toEntityFromClaim(claim) {
   if (claim.recipient?.identifier) return claim.recipient.identifier
-  const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
-  const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction' && f?.identifier)
-  return planActionFulfills?.identifier
+  return planActionFulfilledBy(claim)?.identifier
 }
 
 function constructWhereConditions(params, allowedColumns, claimContents, contentColumns, booleanColumns = [], excludeConfirmations) {
@@ -3789,4 +3799,4 @@ class EndorserDatabase {
 
 }
 
-module.exports = { dbService: new EndorserDatabase() }
+module.exports = { dbService: new EndorserDatabase(), planActionFulfilledBy }

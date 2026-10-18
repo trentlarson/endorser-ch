@@ -5,7 +5,7 @@ import R from 'ramda'
 import util from 'util'
 
 import l from '../../common/logger'
-import {dbService} from './endorser.db.service'
+import {dbService, planActionFulfilledBy} from './endorser.db.service'
 import {
   allDidsInside,
   calcBbox,
@@ -1941,13 +1941,13 @@ class ClaimService {
   }
 
   /**
-   * Extract toEntity from claim: recipient identifier, or PlanAction fulfills (identifier or lastClaimId resolved to handleId).
+   * Extract toEntity from claim: recipient identifier, or the PlanAction it contributes to (fulfills, or an
+   * Offer's deprecated itemOffered.isPartOf), by identifier or by lastClaimId resolved to handleId.
    * Uses claimIdDataList to resolve lastClaimId to handleId when fulfills references a PlanAction by lastClaimId.
    */
   async toEntityFromClaimWithLookup(claim, claimIdDataList) {
     if (claim.recipient?.identifier) return claim.recipient.identifier
-    const fulfillsArr = Array.isArray(claim.fulfills) ? claim.fulfills : (claim.fulfills ? [claim.fulfills] : [])
-    const planActionFulfills = fulfillsArr.find(f => f?.['@type'] === 'PlanAction')
+    const planActionFulfills = planActionFulfilledBy(claim)
     if (!planActionFulfills) return undefined
     // expand a short, system-local identifier; see expandLocalHandleIdReferences
     if (planActionFulfills.identifier) return globalId(planActionFulfills.identifier)
