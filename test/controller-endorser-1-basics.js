@@ -1625,6 +1625,23 @@ describe('1 - Event', () => {
        expect(r.body.requesterConfirmed).to.be.false
      }))
 
+  it('should get the confirmations and count with hidden DIDs for someone without a token', () =>
+     request(Server)
+     .get('/api/v2/report/confirmationsForClaim?claimId=' + firstId)
+     .expect('Content-Type', /json/)
+     .then(r => {
+       expect(r.status).that.equals(200)
+       expect(r.body.data)
+         .to.be.an('array')
+         .of.length(2)
+       for (const conf of r.body.data) {
+         expect(conf.jwtId).to.be.a('string')
+         expect(conf.issuer).that.equals(HIDDEN_TEXT)
+       }
+       expect(r.body.totalCount).that.equals(2)
+       expect(r.body.requesterConfirmed).to.be.false
+     }))
+
   it('should get no confirmations for an unknown claim', () =>
      request(Server)
      .get('/api/v2/report/confirmationsForClaim?claimId=NOTHING')
