@@ -416,6 +416,24 @@ class ClaimService {
     }
   }
 
+  // A clause with only an identifier resolves to the latest claim with that
+  // handle, but a handle can hold different claims (eg. every Person claim
+  // about one DID), so pin the clause to the claim with exactly its content.
+  // @return the clause with the lastClaimId of that claim, or unchanged if none matches
+  async addLastClaimIdMatchingContent(clause) {
+    if (clause.lastClaimId || !clause.identifier) {
+      return clause
+    }
+    // clients drop the context inside an AgreeAction when it is schema.org
+    const content = clause['@context'] == null
+      ? R.assoc('@context', 'https://schema.org', clause)
+      : clause
+    const claimCanonHash =
+      crypto.createHash('sha256').update(canonicalize(content)).digest('base64url')
+    const jwt = await dbService.jwtLastByHandleIdAndCanonHash(globalId(clause.identifier), claimCanonHash)
+    return jwt ? R.assoc('lastClaimId', jwt.id, clause) : clause
+  }
+
   issuerSameAsPersonInLinkedJwt(issuerDid, linkedClaim, linkedJwtIssuerDid) {
     return (
         issuerDid === linkedJwtIssuerDid
@@ -449,7 +467,9 @@ class ClaimService {
 
     // if an Endorser.ch ID is supplied
     // then load that and its internal JWT ID and ignore the other confirmedClaim contents
-    const claimInfo = await this.retrieveClauseClaimAndIssuer(confirmedClaim, claimIdDataList)
+    const claimInfo = await this.retrieveClauseClaimAndIssuer(
+      await this.addLastClaimIdMatchingContent(confirmedClaim), claimIdDataList
+    )
     const origClaim = claimInfo?.clauseClaim || confirmedClaim
     const origClaimJwtId = claimInfo?.clauseLastClaimId
     const origClaimHandleId = claimInfo?.clauseHandleId

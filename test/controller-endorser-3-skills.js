@@ -549,4 +549,86 @@ describe('3 - Skills', () => {
       })
   }).timeout(5000)
 
+  //// Confirming one of several claims under the same DID handle
+
+  const fiveOver21Claim = {
+    "@context": "https://schema.org", "@type": "Person",
+    additionalType: "https://endorser.ch/schema/PersonOver21", identifier: creds[5].did,
+  }
+  let fiveOver21ClaimId, fiveHomeClaimId
+
+  it('5 claims to be over 21', () =>
+    postClaimV2(5, fiveOver21Claim).then(r => {
+      expect(r.status).that.equals(201)
+      fiveOver21ClaimId = r.body.success.claimId
+    })
+  ).timeout(5000)
+
+  it('5 then claims a home location, which is the latest claim under their handle', () =>
+    postClaimV2(5, {
+      "@context": "https://schema.org", "@type": "Person", identifier: creds[5].did,
+      homeLocation: { addressCountry: "US", addressRegion: "UT" },
+    }).then(r => {
+      expect(r.status).that.equals(201)
+      fiveHomeClaimId = r.body.success.claimId
+    })
+  ).timeout(5000)
+
+  // the way clients send it: no context and no lastClaimId, because it has an identifier
+  const agreeWithContent = (claim) => ({
+    "@context": "https://schema.org", "@type": "AgreeAction", object: R.omit(['@context'], claim),
+  })
+
+  it('6 confirms the over-21 claim by its content alone', () =>
+    postClaimV2(6, agreeWithContent(fiveOver21Claim)).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.confirmations[0]).to.not.have.property('embeddedRecordError')
+    })
+  ).timeout(5000)
+
+  it('that confirmation is recorded on the over-21 claim', () =>
+    request(Server)
+    .get('/api/v2/report/confirmationsForClaim?claimId=' + fiveOver21ClaimId)
+    .set('Authorization', 'Bearer ' + pushTokens[6])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(200)
+      expect(r.body.totalCount).that.equals(1)
+      expect(r.body.requesterConfirmed).to.be.true
+    })
+  ).timeout(3000)
+
+  it('that confirmation is not recorded on the latest claim', () =>
+    request(Server)
+    .get('/api/v2/report/confirmationsForClaim?claimId=' + fiveHomeClaimId)
+    .set('Authorization', 'Bearer ' + pushTokens[6])
+    .expect('Content-Type', /json/)
+    .then(r => {
+      expect(r.status).that.equals(200)
+      expect(r.body.totalCount).that.equals(0)
+    })
+  ).timeout(3000)
+
+  // (by its ID, since identical content signed in the same second is a replayed JWT)
+  it('6 confirming the over-21 claim again is a duplicate', () =>
+    postClaimV2(6, agreeWithContent(R.assoc('lastClaimId', fiveOver21ClaimId, fiveOver21Claim))).then(r => {
+      expect(r.status).that.equals(201)
+      expect(r.body.success.confirmations[0].embeddedRecordError).that.contains('already confirmed')
+    })
+  ).timeout(5000)
+
+  it('6 confirming content that matches no claim confirms the latest one under the handle', () =>
+    postClaimV2(6, agreeWithContent({ "@type": "Person", identifier: creds[5].did, name: "Unclaimed" }))
+    .then(r => {
+      expect(r.status).that.equals(201)
+      return request(Server)
+        .get('/api/v2/report/confirmationsForClaim?claimId=' + fiveHomeClaimId)
+        .set('Authorization', 'Bearer ' + pushTokens[6])
+    })
+    .then(r => {
+      expect(r.status).that.equals(200)
+      expect(r.body.totalCount).that.equals(1)
+    })
+  ).timeout(5000)
+
 })

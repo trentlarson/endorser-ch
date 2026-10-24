@@ -2081,6 +2081,24 @@ class EndorserDatabase {
   }
 
   /**
+   * Retrieve the most recent JWT under this handle with exactly this claim content.
+   */
+  jwtLastByHandleIdAndCanonHash(identifier, claimCanonHash) {
+    return new Promise((resolve, reject) => {
+      db.get(
+        "SELECT id FROM jwt WHERE handleId = ? AND claimCanonHash = ? ORDER BY id DESC LIMIT 1",
+        [identifier, claimCanonHash],
+        function(err, row) {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(row)
+          }
+        })
+    })
+  }
+
+  /**
    * Find the most recent JWT for each plan before the given ID..
    *
    * @param {string[]} planIds any plan IDs
