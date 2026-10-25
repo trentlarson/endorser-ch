@@ -1856,7 +1856,8 @@ class EndorserDatabase {
   }
 
   /**
-   * JWTs for GiveAction and Offer claims associated with plans owned by user (issuer or agent).
+   * JWTs for GiveAction and Offer claims associated with plans owned by user (issuer or agent),
+   * leaving out the user's own claims.
    * Joins jwt to plan_claim on toEntity or fromEntity via UNION for index-friendly queries.
    * @param {string} beforeId - optional; only return claims with id < beforeId
    * @return Promise of { data: [], hitLimit: true|false }
@@ -1869,14 +1870,14 @@ class EndorserDatabase {
         "SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
         + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.toEntity"
         + " WHERE j.claimType IN ('GiveAction', 'Offer')"
-        + " AND ? in (p.issuerDid, p.agentDid)" + window.clause
+        + " AND ? in (p.issuerDid, p.agentDid) AND j.issuer != ?" + window.clause
         + " UNION"
         + " SELECT j.id, j.issuedAt, j.issuer, j.subject, j.claimType, j.handleId, j.claim, j.fromEntity, j.toEntity, j.changeSeq AS changeSeq"
         + " FROM jwt j INNER JOIN plan_claim p ON p.handleId = j.fromEntity"
         + " WHERE j.claimType IN ('GiveAction', 'Offer')"
-        + " AND ? in (p.issuerDid, p.agentDid)" + window.clause
+        + " AND ? in (p.issuerDid, p.agentDid) AND j.issuer != ?" + window.clause
         + " ORDER BY " + window.orderBy + " LIMIT " + DEFAULT_LIMIT
-      const params = [did, ...window.params, did, ...window.params]
+      const params = [did, did, ...window.params, did, did, ...window.params]
       const data = []
       let rowErr
       db.each(sql, params, function (err, row) {
