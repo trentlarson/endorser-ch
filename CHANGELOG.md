@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+### Fixed
+- AgreeAction confirmations were not matching to previous instances of the target claim
 ### Changed
 - `personalPlanContributions` in `/api/v2/report/alertSearch` leaves out the requester's own gives and offers to or from their projects
 
