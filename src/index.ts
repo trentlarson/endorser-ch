@@ -1,7 +1,7 @@
 import './common/env'
 import Server from './common/server'
 import routes from './common/routes'
-import { startSweepSchedule } from './api/services/embedding.service'
+import { startSweepSchedule } from './api/services/partner-embedding.service'
 
 const app = new Server()
   .router(routes)

@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.4.10] - 2026.10.25
+### Added
+- `publicUrls` at the top level of `/api/v2/report/alertSearch` and `/api/partner/alertSearch` when any list has a public DID, mapping each to its URL (`''` when it has none)
+- `publicUrls` on `/api/partner/userProfile`, `/api/partner/userProfile/{rowId}`, and `/api/partner/similar` for public DIDs in their profiles
+### Changed
+- `/api/partner/userProfile`, `/api/partner/userProfile/{rowId}`, and the profiles in `/api/partner/similar` hide DIDs the way other endpoints do: any value that starts with `did:` is hidden, not only `issuerDid`
+- `/api/partner/userProfile/{rowId}` leaves out `issuerDidVisibleToDids` when nobody in the requester's network can see the issuer, as `/api/partner/userProfile` does, instead of sending `[]`
+### Fixed
+- The registration checks for creating a meeting (`POST /api/partner/groupOnboard`), saving a profile (`POST /api/partner/userProfile`), and text queries in `/api/partner/similar` turn away revoked members (a zero claim allowance), as the membership answer for other services does; when registration can't be checked, they answer 500 instead of "must be registered"
+- `POST /api/util/updateHashChain` could fail with "Expected non-null noncedHashIssuerChain" when an issuer had more than one claim waiting, because it read each issuer's previous link before saving it
+
+
 ## [4.4.9] - 2026.10.24
 ### Fixed
 - AgreeAction confirmations were not matching to previous instances of the target claim

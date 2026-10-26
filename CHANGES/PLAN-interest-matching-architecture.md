@@ -72,7 +72,7 @@ CREATE TABLE user_profile_embedding (
   failure the profile saves and the response carries a `userMessage`.
 - `POST /api/partner/groupOnboardMatch` loads admitted members' vectors,
   substitutes the empty-string vector for missing ones, and greedily pairs by
-  cosine similarity (`matching.service.js`).
+  cosine similarity (`partner-matching.service.js`).
 - `test/embeddings-generator.js` produces `test/embeddings.json` (26 profiles,
   OpenAI vectors) used by the group-matching tests;
   `test/profile-similarity-visualizer.js` renders pairwise similarities.
@@ -242,7 +242,7 @@ An `embedding` table with one schema in each DB: the partner DB's
 DB's (`sql/V21__embedding.sqlite3`) holds plan vectors. Both are documented in
 their directory's `README.md`. `EmbeddingStore` in
 `src/api/services/embedding-store.js` reads and writes either, and
-`embedding.service.js` picks the store by subject type.
+`partner-embedding.service.js` picks the store by subject type.
 
 ```sql
 CREATE TABLE embedding (
@@ -305,7 +305,7 @@ scales over the whole input tensor, so padding and batch neighbors change each
 vector (measured: similarity 0.98 between a text embedded alone and the same
 text in a padded batch, which would break server/client reproducibility). The
 ONNX session runs off the JS thread;
-tokenization is on it. `embedding.service.js` queues inferences so only one runs
+tokenization is on it. `partner-embedding.service.js` queues inferences so only one runs
 at a time. Measure event-loop delay under a backfill; move the engine into a
 `worker_threads` worker if p99 API latency degrades.
 
@@ -369,12 +369,12 @@ GET /api/partner/similar
    milliseconds in JS. If the SQLite read becomes the cost, an in-process cache
    of `Float32Array`s keyed by `(type, id)`, invalidated on write, removes it.
 4. Exclude the source itself; sort; cut at `minSimilarity` and `limit`.
-5. Scrub DIDs exactly as the existing search endpoints do: profiles via
-   `getAllDidsBetweenRequesterAndObjects` as in `GET /userProfile`; plans via
-   the same hiding used by the plan search endpoints in `report-router.js`.
+5. Scrub DIDs exactly as the existing search endpoints do, profiles and plans
+   alike: `hideDidsAndAddLinksToNetwork` with the main service's visibility
+   (`partner-main.service.js`).
 6. Return `{ data: [{ subjectType, subjectId, similarity, record }], embeddingSpecId, publicUrls? }`,
-   where `record` is the scrubbed profile or plan and `publicUrls` comes from
-   the plan DID hiding.
+   where `record` is the scrubbed profile or plan and `publicUrls` links the
+   public DIDs in the records.
 
 ### Matching algorithm
 
@@ -585,7 +585,7 @@ reference and the 0.9999 drift check runs where the vectors are made.
 - [x] `partner.db.service.js`: upsert, get-by-ids, delete-by-subject, list-hashes, paged export, counts; `endorser.db.service.js`: plan texts and plan IDs in a box (read-only).
 
 ### Phase 3 — Generation
-- [x] Inline embed on every profile save; delete stale row on failure; delete on profile delete (`embedding.service.js`).
+- [x] Inline embed on every profile save; delete stale row on failure; delete on profile delete (`partner-embedding.service.js`).
 - [x] Sweep job for profiles and plans (backfill + retry), started from `src/index.ts`.
 - [x] Log counts per sweep; expose sweep status to admins (`GET`/`POST /api/partner/embeddingSweep`).
 

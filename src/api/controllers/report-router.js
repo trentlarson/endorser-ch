@@ -12,12 +12,12 @@ import {
   alertSearchParamsFromRequest,
   CURSOR_RESET_MESSAGE,
   cursorWindow,
-  fetchAlertSearchEndorserData,
   ignoredWithCursorMessage,
   parseEndorserCursor,
   resolveAlertSearchAfterId,
   resolveAlertSearchBeforeId,
-} from '../services/alert-search.service';
+} from '../services/alert-search-params';
+import { fetchAlertSearchEndorserData } from '../services/alert-search.service';
 import { planService } from '../services/project.service';
 import { globalId, latLonFromTile, latWidthToTileWidth } from "../services/util";
 
@@ -171,6 +171,9 @@ async function alertSearchReportHandler(req, res) {
       nextAfterCursor: String(nextAfterCursor),
       nextBeforeCursor: String(nextBeforeCursor),
       hasMore,
+    }
+    if (!R.isEmpty(endorserData.publicUrls ?? {})) {
+      response.publicUrls = endorserData.publicUrls
     }
     const userMessages = []
     if (resolvedParamErrors?.length) {
@@ -934,7 +937,7 @@ export default express
  * @param {string[]} planHandleIds.query.optional - plan handle IDs to track (GET, POST)
  * @param {string[]} planIds.query.optional - plan IDs to track (GET, POST)
  * @param {string[]} handleIds.query.optional - handle IDs to track (GET, POST)
- * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby }, nextAfterCursor, nextBeforeCursor, hasMore }, where each row has 'changeSeq'
+ * @returns {object} 200 - { data: { claims, personalPlanContributions, trackedPlanUpdates, trackedPlanClaims, plansNearby }, nextAfterCursor, nextBeforeCursor, hasMore, publicUrls? }, where each row has 'changeSeq', and publicUrls (present when any list has a public DID) maps those DIDs to their URLs
  * @returns {Error} 400 - a cursor is not one from this endpoint
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start

@@ -224,7 +224,7 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
-  it('registered user #0 can retrieve all their invite records (randomly fails... why?)', () => {
+  it('registered user #0 can retrieve all their invite records', () => {
     return request(Server)
       .get('/api/userUtil/invite')
       .set('Authorization', 'Bearer ' + pushTokens[0])
@@ -233,12 +233,10 @@ describe('8 - Asynchronous Invitations', () => {
           throw new Error(JSON.stringify(r.body.error))
         }
         expect(r.body.data).to.be.an('array').of.length(EXPECTED_LIMIT)
-        // console.log("inviteIdentifier1", inviteIdentifier1)
-        // console.log("r.body.data ids", r.body.data.map(d => d.inviteIdentifier))
-        // Why does this next line intermittently fail?
-        expect(r.body.data[0]).to.have.property("inviteIdentifier", inviteIdentifier1)
-        expect(r.body.data[0]).to.have.property("notes")
-        expect(r.body.data[0]).to.have.property("expiresAt")
+        // newest first, by createdAt in whole seconds, so the first invite's place depends on timing
+        const invite1 = r.body.data.find(d => d.inviteIdentifier === inviteIdentifier1)
+        expect(invite1).to.have.property("notes")
+        expect(invite1).to.have.property("expiresAt")
         expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(200)
       })

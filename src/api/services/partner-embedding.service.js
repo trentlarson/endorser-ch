@@ -15,7 +15,7 @@
 const engine = require('./embedding-engine')
 const { activeEmbeddingSpec } = require('./embedding-specs')
 const { dbService: partnerDbService } = require('./partner.db.service')
-const { dbService: endorserDbService } = require('./endorser.db.service')
+const { mainService } = require('./partner-main.service')
 const l = require('../../common/logger')
 
 const SUBJECT_PROFILE = 'profile'
@@ -30,8 +30,7 @@ function storeFor(subjectType) {
     return partnerDbService.embeddings
   }
   if (subjectType === SUBJECT_PLAN) {
-    // When we separate the partner service, this will have to be an API call.
-    return endorserDbService.embeddings
+    return mainService.planEmbeddings()
   }
   throw new Error('No embedding store for subject type: ' + subjectType)
 }
@@ -208,13 +207,13 @@ async function sweepOnce() {
     }
   )
 
-  const plans = await endorserDbService.plansAllNamesDescriptions()
+  const plans = await mainService.plansAllNamesDescriptions()
   const planCounts = await sweepSubjects(
     spec,
     SUBJECT_PLAN,
     plans.map((p) => ({ id: p.handleId, text: planText(spec, p) })),
     async (id) => {
-      const plan = await endorserDbService.planInfoByHandleId(id)
+      const plan = await mainService.planInfoByHandleId(id)
       return plan ? planText(spec, plan) : null
     }
   )

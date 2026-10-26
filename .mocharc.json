@@ -1,5 +1,6 @@
 {
   "require": [
-    "./test/.esm-guard.cjs"
+    "./test/.esm-guard.cjs",
+    "./test/.one-server.cjs"
   ]
 }

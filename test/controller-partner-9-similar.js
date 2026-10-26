@@ -10,6 +10,7 @@ import Server from "../dist";
 import { dbService as endorserDbService } from "../dist/api/services/endorser.db.service";
 import { dbService as partnerDbService } from "../dist/api/services/partner.db.service";
 import { activeEmbeddingSpec } from "../dist/api/services/embedding-specs";
+import { getAllDidsRequesterCanSee } from "../dist/api/services/network-cache.service";
 import { base64ToVector, contentHash, dot, subjectText } from "../dist/api/services/embedding-engine";
 import { HIDDEN_TEXT } from "../src/api/services/util";
 import testUtil from "./util";
@@ -443,6 +444,18 @@ describe('P9 - Semantic Matching', () => {
       r = await alertSearch(pushTokens[8], { afterCursor: after8 })
       expect(profileIds(r)).to.not.include(gardener2RowId)
     }).timeout(10000)
+
+    it('shows no DID the requester cannot see in either similar list', async () => {
+      for (const index of [7, 9]) {
+        const r = await alertSearch(pushTokens[index], {})
+        expect(r.body.data.profilesSimilar.length + r.body.data.plansSimilar.length).to.be.at.least(1)
+        const dids = JSON.stringify(r.body.data).match(/did:[a-z]+:[A-Za-z0-9._:-]+/g) || []
+        // some match has a DID this requester cannot see, so the check below isn't empty
+        expect(dids).to.include(HIDDEN_TEXT)
+        const visible = await getAllDidsRequesterCanSee(creds[index].did)
+        dids.filter((d) => d !== HIDDEN_TEXT).forEach((d) => expect(visible).to.include(d))
+      }
+    })
 
     it('returns the best matches overall without a cursor, whatever the dates', async () => {
       const tomorrow = new Date(Date.now() + 86400000).toISOString()

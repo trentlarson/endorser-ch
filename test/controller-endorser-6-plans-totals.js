@@ -13,7 +13,7 @@ import {
   globalId,
   localFromGlobalEndorserIdentifier,
 } from '../src/api/services/util';
-import { cutListsAtLimit } from '../dist/api/services/alert-search.service'
+import { cutListsAtLimit } from '../dist/api/services/alert-search-params'
 import testUtil from './util'
 
 const expect = chai.expect
@@ -3989,6 +3989,17 @@ describe('6 - Alert Search report', () => {
         expect(r.body.data.plansNearby.length).to.be.at.least(1)
       })
       .catch((err) => Promise.reject(err))
+  })
+
+  it('report alertSearch gives links to public DIDs at the top level', async () => {
+    // user 2 is visible to everyone (see controller-endorser-2-basics-2)
+    const r = await request(Server)
+      .post('/api/v2/report/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ location: { minLocLat: -90, maxLocLat: 90, minLocLon: -180, maxLocLon: 180 } })
+    expect(r.status).to.equal(200)
+    expect(JSON.stringify(r.body.data)).to.include(creds[2].did)
+    expect(r.body.publicUrls).to.deep.equal({ [creds[2].did]: 'https://ignitecommunity.org' })
   })
 
   it('report alertSearch invalid afterId adds userMessage but continues', () => {

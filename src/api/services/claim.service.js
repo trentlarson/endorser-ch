@@ -222,7 +222,7 @@ class ClaimService {
             if (hashHexArray?.length > 0) {
               seed = hashHexArray[0].noncedHashAllChain
             }
-            const updates = []
+            const saved = []
             let latestHashChain = seed
             // note that this has to run sequentially due to the issuer chains
             for (let hashAndClaimStr of hashAndClaimStrArray) {
@@ -241,11 +241,12 @@ class ClaimService {
               const latestHashChainForIssuer = latestHashChainForIssuerRecord?.noncedHashIssuerChain || ""
               const newHashChainForIssuer = nonceHashChain(latestHashChainForIssuer, [nonceAndClaimStrEtc])
 
-              updates.push(dbService.jwtSetMerkleHash(hashAndClaimStr.id, newGlobalHashChain, newHashChainForIssuer))
+              // saved before the next row, which may read this one as its issuer's previous link
+              saved.push(await dbService.jwtSetMerkleHash(hashAndClaimStr.id, newGlobalHashChain, newHashChainForIssuer))
 
               latestHashChain = newGlobalHashChain
             }
-            return Promise.all(updates)
+            return saved
           })
           .catch(e => {
             l.error(e, "Got error while saving hashes: " + e)

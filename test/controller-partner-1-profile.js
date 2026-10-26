@@ -4,6 +4,7 @@ import request from "supertest";
 import { Credentials } from "uport-credentials";
 
 import Server from "../dist";
+import { dbService as endorserDbService } from "../dist/api/services/endorser.db.service";
 import { dbService as partnerDbService } from "../dist/api/services/partner.db.service";
 import { activeEmbeddingSpec } from "../dist/api/services/embedding-specs";
 import { HIDDEN_TEXT, mergeTileCounts } from '../src/api/services/util';
@@ -102,6 +103,22 @@ describe('P1 - User Profiles', () => {
         expect(r.status).that.equals(400)
       })
       .catch(err => Promise.reject(err))
+  })
+
+  it('cannot create a profile if registration is revoked', async () => {
+    // a zero claim allowance revokes, as in membership.service
+    const previous = (await endorserDbService.registrationByDid(creds[6].did)).maxClaims
+    await endorserDbService.registrationUpdateMaxClaimsForTests(creds[6].did, 0)
+    try {
+      const r = await request(Server)
+        .post('/api/partner/userProfile')
+        .set('Authorization', 'Bearer ' + pushTokens[6])
+        .send(profile0)
+      expect(r.status).that.equals(400)
+      expect(r.body.error.userMessage).to.include('registered')
+    } finally {
+      await endorserDbService.registrationUpdateMaxClaimsForTests(creds[6].did, previous)
+    }
   })
 
   it('can create a profile with only description', () => {
@@ -351,6 +368,8 @@ describe('P1 - User Profiles', () => {
         expect(hiddenProfile).to.have.property('issuerDidVisibleToDids')
         expect(hiddenProfile.issuerDidVisibleToDids).to.be.an('array')
         expect(hiddenProfile.issuerDidVisibleToDids[0]).to.equal(creds[2].did)
+        // creds[2] is visible to everyone (see controller-endorser-2-basics-2)
+        expect(r.body.publicUrls).to.deep.equal({ [creds[2].did]: 'https://ignitecommunity.org' })
         expect(r.status).that.equals(200)
       })
   })
@@ -594,7 +613,8 @@ describe('P1 - User Profiles', () => {
           .then(r => {
             expect(r.body.data.description).to.equal(profile3.description)
             expect(r.body.data.issuerDid).to.equal(HIDDEN_TEXT)
-            expect(r.body.data.issuerDidVisibleToDids).to.be.an('array').that.is.empty
+            // nobody links them, as in the list (see 'issuerDidVisibleToDids array in profile response')
+            expect(r.body.data).to.not.have.property('issuerDidVisibleToDids')
             expect(r.status).that.equals(200)
           })
       })

@@ -69,19 +69,6 @@ async function getAllDidsRequesterCanSee(requesterDid) {
   return R.uniq(result2)
 }
 
-// for each did, return that DID if it's visible to requester, otherwise return the list of DIDs who can see that DID (maybe empty)
-// [ didOrList: string | string[], ... ]
-async function getAllDidsBetweenRequesterAndObjects(requesterDid, dids) {
-  const didsRequesterCanSee = await getAllDidsRequesterCanSee(requesterDid)
-  const didsWhoCanSeeObjects = await Promise.all(dids.map(object =>
-    didsRequesterCanSee.includes(object)
-    ? object
-    : whoDoesRequesterSeeWhoCanSeeObject(requesterDid, object)
-  ))
-  return didsWhoCanSeeObjects
-}
-
-
 /**
    For each object, what are the subject DIDs who can see them?
 **/
@@ -332,4 +319,4 @@ async function nearestNeighborsTo(sourceDid, targetDid) {
   }]
 }
 
-module.exports = { addCanSee, canSeeExplicitly, getAllDidsBetweenRequesterAndObjects, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, nearestNeighborsTo, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }
+module.exports = { addCanSee, canSeeExplicitly, getAllDidsRequesterCanSee, getPublicDidUrl, getDidsSeenByAll, nearestNeighborsTo, removeCanSee, whoDoesRequesterSeeWhoCanSeeObject }

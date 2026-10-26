@@ -11,7 +11,7 @@ import R from 'ramda'
 
 import Server from '../dist'
 import util, { allDidsInside, calcBbox, claimHashChain, HIDDEN_TEXT, inputContainsDid, latWidthToTileWidth, nonceHashChain } from '../dist/api/services/util';
-import { hideDidsAndAddLinksToNetworkSub } from '../dist/api/services/util-higher';
+import { hideDidsWithVisibility } from '../dist/api/services/util-higher';
 import testUtil from './util'
 import canonicalize from "canonicalize";
 import base64url from "base64url";
@@ -466,29 +466,38 @@ describe('1 - Util', () => {
     someObj2[addr0] = 9
     const repObj21 = {a: 1, b: 2, 'did:none:HIDDEN_2': 9}
 
-    const allowedDids0 = []
-    const allowedDids1 = [addrd]
-    const allowedDids3 = [addr0, addrd, addru]
-    return Promise.all([
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, null)).to.eventually.deep.equal(null),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, 9)).to.eventually.equal(9),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, false)).to.eventually.equal(false),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, "Some random randomness")).to.eventually.equal("Some random randomness"),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, addru)).to.eventually.equal(HIDDEN_TEXT),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, {})).to.eventually.deep.equal({}),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, someObj1)).to.eventually.deep.equal(repObj11),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, [])).to.eventually.deep.equal([]),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, [someObj1])).to.eventually.deep.equal([repObj11]),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids0, addr0, someObj2)).to.eventually.deep.equal(repObj21),
+    const seeing = (visibleDids) => ({ visibleDids, visibleToDids: {}, publicUrls: {} })
+    const allowedDids0 = seeing([])
+    const allowedDids1 = seeing([addrd])
+    const allowedDids3 = seeing([addr0, addrd, addru])
+    expect(hideDidsWithVisibility(allowedDids0, null)).to.deep.equal(null)
+    expect(hideDidsWithVisibility(allowedDids0, 9)).to.equal(9)
+    expect(hideDidsWithVisibility(allowedDids0, false)).to.equal(false)
+    expect(hideDidsWithVisibility(allowedDids0, "Some random randomness")).to.equal("Some random randomness")
+    expect(hideDidsWithVisibility(allowedDids0, addru)).to.equal(HIDDEN_TEXT)
+    expect(hideDidsWithVisibility(allowedDids0, {})).to.deep.equal({})
+    expect(hideDidsWithVisibility(allowedDids0, someObj1)).to.deep.equal(repObj11)
+    expect(hideDidsWithVisibility(allowedDids0, [])).to.deep.equal([])
+    expect(hideDidsWithVisibility(allowedDids0, [someObj1])).to.deep.equal([repObj11])
+    expect(hideDidsWithVisibility(allowedDids0, someObj2)).to.deep.equal(repObj21)
 
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids1, addr0, addrd)).to.eventually.deep.equal(addrd),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids1, addr0, addru)).to.eventually.deep.equal(HIDDEN_TEXT),
+    expect(hideDidsWithVisibility(allowedDids1, addrd)).to.deep.equal(addrd)
+    expect(hideDidsWithVisibility(allowedDids1, addru)).to.deep.equal(HIDDEN_TEXT)
 
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, addr0)).to.eventually.deep.equal(addr0),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, addra)).to.eventually.deep.equal(HIDDEN_TEXT),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, someObj1)).to.eventually.deep.equal(repObj12),
-      expect(hideDidsAndAddLinksToNetworkSub(allowedDids3, addr0, someObj2)).to.eventually.deep.equal(repObj21),
-    ])
+    expect(hideDidsWithVisibility(allowedDids3, addr0)).to.deep.equal(addr0)
+    expect(hideDidsWithVisibility(allowedDids3, addra)).to.deep.equal(HIDDEN_TEXT)
+    expect(hideDidsWithVisibility(allowedDids3, someObj1)).to.deep.equal(repObj12)
+    expect(hideDidsWithVisibility(allowedDids3, someObj2)).to.deep.equal(repObj21)
+
+    // links to hidden DIDs come from the lookup, for single values and arrays
+    const linked = { visibleDids: [addrd], visibleToDids: { [addra]: [addrd], [addru]: [addrd, addr6] }, publicUrls: {} }
+    expect(hideDidsWithVisibility(linked, { a: addra, b: [addra, addru], c: addr0 })).to.deep.equal({
+      a: HIDDEN_TEXT, b: [HIDDEN_TEXT, HIDDEN_TEXT], c: HIDDEN_TEXT,
+      aVisibleToDids: [addrd], bVisibleToDids: [addrd, addr6],
+    })
+    // a DID inside other text is left as it is
+    const described = { description: 'Ask ' + addra + ' about seeds' }
+    expect(hideDidsWithVisibility(allowedDids0, described)).to.deep.equal(described)
   })
 
 

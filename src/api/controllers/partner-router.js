@@ -1,14 +1,10 @@
 /**
  * See partner-link.service.js for an explanation why these endpoints are kept separate.
+ * Everything read from the main service goes through partner-main.service.js.
  */
 
 import * as R from 'ramda'
 import * as express from 'express'
-import * as http from 'http'
-
-// See notes on usage of these, since we need to beware permissions when using them
-import ClaimService from '../services/claim.service'
-import { dbService as endorserDbService } from "../services/endorser.db.service";
 
 import {
   alertSearchParamsFromRequest,
@@ -19,17 +15,17 @@ import {
   parsePartnerCursor,
   partnerCursor,
   resolveAlertSearchDateBoundsForPartner,
-} from '../services/alert-search.service'
+} from '../services/alert-search-params'
 import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
-import embeddingService from "../services/embedding.service";
+import embeddingService from "../services/partner-embedding.service";
 import { contentHash, subjectText } from "../services/embedding-engine";
 import { EMBEDDING_SPECS, activeEmbeddingSpec } from "../services/embedding-specs";
 import { rank } from "../services/matching-engine";
-import { matchParticipants } from "../services/matching.service";
-import { getAllDidsBetweenRequesterAndObjects, nearestNeighborsTo } from "../services/network-cache.service";
-import { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInDataKey } from '../services/util-higher';
-import { globalId, HIDDEN_TEXT, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
+import { matchParticipants } from "../services/partner-matching.service";
+import { mainService } from '../services/partner-main.service';
+import { hideDidsAndAddLinksToNetwork, hideDidsAndAddLinksToNetworkInDataKey, takePublicUrls } from '../services/util-higher';
+import { globalId, latLonFromTile, latWidthToTileWidth, mergeTileCounts} from '../services/util';
 
 const ALERT_SEARCH_TIMEOUT_MS = 2000
 
@@ -88,8 +84,9 @@ function similarBBoxFromParam(similarLocation) {
  * @param {{profile: {afterSeq, upToSeq}, plan: {afterSeq, upToSeq}}} windows - for each subject type,
  *   afterSeq < changeSeq <= upToSeq, from that type's DB
  * @param {{minLat, minLon, maxLat, maxLon}|null} bbox - null to match everywhere
- * @returns {Promise<{ profilesSimilar: Array, plansSimilar: Array }>} each best first, at most ALERT_SIMILAR_LIMIT,
- *   of { similarity, profile } or { similarity, plan } with DIDs hidden
+ * @returns {Promise<{ profilesSimilar: Array, plansSimilar: Array, publicUrls?: object }>} each list best first,
+ *   at most ALERT_SIMILAR_LIMIT, of { similarity, profile } or { similarity, plan } with DIDs hidden;
+ *   publicUrls for the public DIDs in either list
  */
 async function alertSearchSimilar(did, windows, bbox) {
   const result = { profilesSimilar: [], plansSimilar: [] }
@@ -128,9 +125,10 @@ async function alertSearchSimilar(did, windows, bbox) {
 
   const rankedProfiles = await rankStored(embeddingService.SUBJECT_PROFILE)
   if (rankedProfiles.length > 0) {
-    const profiles = await hideDidsAndAddLinksToNetwork(
+    const profiles = await hideDids(
       did, await partnerDbService.profilesByRowIds(rankedProfiles.map((r) => Number(r.subjectId))), []
     )
+    result.publicUrls = takePublicUrls([profiles])
     const profileById = new Map(profiles.map((p) => [String(p.rowid), p]))
     result.profilesSimilar = rankedProfiles
       .map((r) => ({ similarity: r.similarity, profile: profileById.get(r.subjectId) }))
@@ -139,11 +137,11 @@ async function alertSearchSimilar(did, windows, bbox) {
 
   const rankedPlans = await rankStored(embeddingService.SUBJECT_PLAN)
   if (rankedPlans.length > 0) {
-    // When we separate this into another service, this will have to be an API call.
-    const plansFound = await endorserDbService.planInfoByHandleIds(rankedPlans.map((r) => r.subjectId))
-    const plans = await hideDidsAndAddLinksToNetwork(
+    const plansFound = await mainService.planInfoByHandleIds(rankedPlans.map((r) => r.subjectId))
+    const plans = await hideDids(
       did, plansFound.data.filter((p) => p.issuerDid !== did && p.agentDid !== did), []
     )
+    result.publicUrls = { ...result.publicUrls, ...takePublicUrls([plans]) }
     const planById = new Map(plans.map((p) => [p.handleId, p]))
     result.plansSimilar = rankedPlans
       .map((r) => ({ similarity: r.similarity, plan: planById.get(r.subjectId) }))
@@ -183,8 +181,8 @@ async function alertSearchHandler(req, res) {
 
     // read before the lists, so rows changed while they are read fall into the next window
     const counterPartner = await partnerDbService.changeCounter()
-    // plan vectors are in the main DB; when we separate this into another service, this will have to be an API call
-    const counterMain = await endorserDbService.changeCounter()
+    // plan vectors are in the main DB
+    const counterMain = await mainService.changeCounter()
     const cursorIsAhead = after != null && (after.partner > counterPartner || after.main > counterMain)
     if (cursorIsAhead) {
       resolvedParamErrors.push(CURSOR_RESET_MESSAGE)
@@ -239,7 +237,7 @@ async function alertSearchHandler(req, res) {
       }
     }
 
-    const profilesData = await hideDidsAndAddLinksToNetwork(did, profilesNearbyRaw.data, [])
+    const profilesData = await hideDids(did, profilesNearbyRaw.data, [])
     const similar = similarLocationError || !windows
       ? { profilesSimilar: [], plansSimilar: [] }
       : await alertSearchSimilar(did, windows, similarBBox)
@@ -253,6 +251,10 @@ async function alertSearchHandler(req, res) {
       nextAfterCursor,
       nextBeforeCursor,
       hasMore,
+    }
+    const publicUrls = { ...takePublicUrls([profilesData]), ...similar.publicUrls }
+    if (!R.isEmpty(publicUrls)) {
+      response.publicUrls = publicUrls
     }
 
     const userMessages = []
@@ -330,42 +332,48 @@ async function updateGroupMember(memberId, member, bodyData, res) {
   return res.status(200).json(result).end()
 }
 
+// hideDidsAndAddLinksToNetwork with what the main service says the requester can see
+function hideDids(requesterDid, input, searchTerms) {
+  return hideDidsAndAddLinksToNetwork(requesterDid, input, searchTerms, mainService.visibility)
+}
+
+// hideDidsAndAddLinksToNetworkInDataKey with what the main service says the requester can see
+function hideDidsInDataKey(requesterDid, input, searchTerms) {
+  return hideDidsAndAddLinksToNetworkInDataKey(requesterDid, input, searchTerms, mainService.visibility)
+}
+
 /**
- * Hide the issuerDid of each profile the requester cannot see, adding the DIDs
- * in the requester's network who can see it.
- * This doesn't use the same "hide" functions built into other services because we expect to split this out someday.
- * (When we separate this into another service, this will have to be an API call.
- * See the image-api server for an example of how to leverage JWTs to get
- * permission to access data from the other service.)
+ * Whether the requester can see a DID, from the same lookup that hides DIDs in results.
  * @param {string} requesterDid
- * @param {Array} profiles - user_profile records
- * @returns {Promise<Array>} the profiles, scrubbed
+ * @param {string} did
+ * @returns {Promise<boolean>}
  */
-async function hideProfileDids(requesterDid, profiles) {
-  const didsSeenByRequesterWhoSeeObject =
-    await getAllDidsBetweenRequesterAndObjects(requesterDid, profiles.map(profile => profile.issuerDid))
-  // for each profile, if the issuerDid is not visible to the requester, add the list of DIDs who can see that DID
-  const resultsScrubbed = []
-  for (let i = 0; i < profiles.length; i++) {
-    const profile = profiles[i]
-    const didOrDidsSeenByRequesterWhoSeeObject = didsSeenByRequesterWhoSeeObject[i]
-    if (didOrDidsSeenByRequesterWhoSeeObject === profile.issuerDid) {
-      // the issuerDid is visible to the requester
-      resultsScrubbed.push(profile)
-    } else {
-      // didOrDidsSeenByRequesterWhoSeeObject must be an array of DIDs who can see the target DID
-      const didsWhoSeeObject =
-        R.isEmpty(didOrDidsSeenByRequesterWhoSeeObject)
-          ? undefined
-          : didOrDidsSeenByRequesterWhoSeeObject
-      resultsScrubbed.push({
-        ...profile,
-        issuerDid: HIDDEN_TEXT,
-        issuerDidVisibleToDids: didsWhoSeeObject
-      })
-    }
+async function requesterCanSee(requesterDid, did) {
+  const { visibleDids } = await mainService.visibility(requesterDid, [did])
+  return visibleDids.includes(did)
+}
+
+/**
+ * Respond with a 400 and this message unless the requester is a member,
+ * or with a 500 when that can't be determined.
+ * @param {object} res
+ * @param {string} userMessage
+ * @returns {Promise<boolean>} whether the request may go on
+ */
+async function requireMember(res, userMessage) {
+  let isMember
+  try {
+    isMember = await mainService.isMember(res.locals.authTokenIssuer)
+  } catch (err) {
+    console.error('Error checking membership for DID:', res.locals.authTokenIssuer, err)
+    res.status(500).json({ error: { userMessage: "Could not check your registration. Try again later." } }).end()
+    return false
   }
-  return resultsScrubbed
+  if (!isMember) {
+    res.status(400).json({ error: { userMessage } }).end()
+    return false
+  }
+  return true
 }
 
 const SIMILAR_TARGETS = ['profile', 'plan', 'both']
@@ -436,8 +444,7 @@ async function subjectIdsInBBox(subjectType, bbox) {
   if (subjectType === 'profile') {
     return (await partnerDbService.profileRowIdsByLocation(minLat, minLon, maxLat, maxLon)).map(String)
   }
-  // When we separate this into another service, this will have to be an API call.
-  return endorserDbService.planHandleIdsByLocation(minLat, maxLat, minLon, maxLon)
+  return mainService.planHandleIdsByLocation(minLat, maxLat, minLon, maxLon)
 }
 
 /**
@@ -454,120 +461,6 @@ function isAdminUser(issuerDid) {
   const adminList = JSON.parse(adminUsers)
   return adminList.includes(issuerDid)
 }
-
-/**
- * Make an API call to /api/claim/:jwtId
- * @param {string} jwtId - the JWT ID to retrieve
- * @param {string} authHeader - the Authorization header value to forward
- * @returns {Promise<object>} - the JWT info
- */
-function getClaimById(jwtId, authHeader) {
-  return new Promise((resolve, reject) => {
-    const port = process.env.PORT || 80
-    const host = 'localhost'
-    const path = `/api/claim/${jwtId}`
-    
-    const options = {
-      hostname: host,
-      port: port,
-      path: path,
-      method: 'GET',
-      headers: {}
-    }
-    
-    if (authHeader) {
-      options.headers['Authorization'] = authHeader
-    }
-    
-    const req = http.request(options, (res) => {
-      let data = ''
-      
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          try {
-            const result = JSON.parse(data)
-            resolve(result)
-          } catch (err) {
-            reject(new Error(`Failed to parse response: ${err.message}`))
-          }
-        } else if (res.statusCode === 404) {
-          reject(new Error('Claim not found'))
-        } else {
-          reject(new Error(`API call failed with status ${res.statusCode}: ${data}`))
-        }
-      })
-    })
-    
-    req.on('error', (err) => {
-      reject(new Error(`Request failed: ${err.message}`))
-    })
-    
-    req.end()
-  })
-}
-
-/**
- * Make an API call to /api/report/rateLimits
- * @param {string} authHeader - the Authorization header value to forward
- * @returns {Promise<object>} - the rate limits info
- */
-function getRateLimits(authHeader) {
-  return new Promise((resolve, reject) => {
-    const port = process.env.PORT || 80
-    const host = 'localhost'
-    const path = '/api/report/rateLimits'
-    
-    const options = {
-      hostname: host,
-      port: port,
-      path: path,
-      method: 'GET',
-      headers: {}
-    }
-    
-    if (authHeader) {
-      options.headers['Authorization'] = authHeader
-    }
-    
-    const req = http.request(options, (res) => {
-      let data = ''
-      
-      res.on('data', (chunk) => {
-        data += chunk
-      })
-      
-      res.on('end', () => {
-        if (res.statusCode === 200) {
-          try {
-            const result = JSON.parse(data)
-            resolve(result)
-          } catch (err) {
-            reject(new Error(`Failed to parse response: ${err.message}`))
-          }
-        } else if (res.statusCode === 400) {
-          // Rate limits endpoint returns 400 if user doesn't have an account
-          const error = new Error('Must be registered')
-          error.clientError = true
-          reject(error)
-        } else {
-          reject(new Error(`API call failed with status ${res.statusCode}: ${data}`))
-        }
-      })
-    })
-    
-    req.on('error', (err) => {
-      reject(new Error(`Request failed: ${err.message}`))
-    })
-    
-    req.end()
-  })
-}
-
-
 
 export default express
 .Router()
@@ -685,8 +578,9 @@ export default express
  *  nextAfterCursor: string,
  *  nextBeforeCursor: string,
  *  hasMore: boolean,
+ *  publicUrls?: { [did]: url },
  * }
- * where each profilesNearby row has 'changeSeq'
+ * where each profilesNearby row has 'changeSeq', and publicUrls (present when any list has a public DID) links those DIDs
  * @returns {Error} 400 - a cursor is not one from this endpoint
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -719,13 +613,8 @@ export default express
 .post(
   '/groupOnboard',
   async (req, res) => {
-    try {
-      // (When we separate this into another service, this will have to be an API call.
-      // See the image-api server for an example of how to leverage JWTs to get
-      // permission to access data from the other service.)
-      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
-    } catch (e) {
-      return res.status(400).json({ error: { userMessage: "You must have registration permissions to create a meeting." } }).end()
+    if (!(await requireMember(res, "You must have registration permissions to create a meeting."))) {
+      return
     }
 
     const { name, expiresAt, content, projectLink } = req.body
@@ -1349,13 +1238,7 @@ export default express
   async (req, res) => {
 
     try {
-      // When we separate this into another service, this will have to be an API call.
-      // See the image-api server for an example of how to leverage JWTs to get
-      // permission to access data from the other service.
-      const jwtInfo = await endorserDbService.jwtById(req.body.jwtId)
-      // Here's the approach we'd like to use:
-      // const authHeader = req.headers['authorization'] || req.headers['Authorization']
-      // const jwtInfo = await getClaimById(req.body.jwtId, authHeader)
+      const jwtInfo = await mainService.jwtById(req.body.jwtId)
 
       const result =
         await sendAndStoreLink(
@@ -1422,17 +1305,8 @@ export default express
   async (req, res) => {
     const { description, locLat, locLon, locLat2, locLon2 } = req.body
 
-    // When we separate this into another service, this will have to be an API call.
-    // See the image-api server for an example of how to leverage JWTs to get
-    // permission to access data from the other service.
-    try {
-      await ClaimService.getRateLimits(res.locals.authTokenIssuer)
-      // Here's the approach we'd like to use:
-      // const authHeader = req.headers['authorization'] || req.headers['Authorization']
-      // await getRateLimits(authHeader)
-    } catch (e) {
-      // must not have an account
-      return res.status(400).json({ error: { userMessage: "Must be registered to submit a profile" } }).end()
+    if (!(await requireMember(res, "Must be registered to submit a profile"))) {
+      return
     }
 
     // Validate inputs
@@ -1493,7 +1367,7 @@ export default express
  * @group partner utils
  * @route GET /api/partner/userProfile/{rowId}
  * @param {number} rowId.path.required - the profile ID to retrieve
- * @returns {UserProfile} 200 - success response with profile
+ * @returns {UserProfile} 200 - success response with profile in 'data', plus 'publicUrls' when its issuer or anyone in issuerDidVisibleToDids is public
  * @returns {Error} 403 - unauthorized
  * @returns {Error} 404 - not found
  * @returns {Error} 400 - client error
@@ -1505,32 +1379,16 @@ export default express
     const { rowId } = req.params
     const rowIdInt = parseInt(rowId)
     try {
-      let result = await partnerDbService.profileById(rowIdInt)
+      const result = await partnerDbService.profileById(rowIdInt)
 
       if (!result) {
         return res.status(404).json({ error: "Profile not found" }).end()
       }
 
-      if (result.issuerDid !== res.locals.authTokenIssuer) {
-        // check if they can see the profile, or if they're linked to someone who can
-        // (When we separate this into another service, this will have to be an API call.
-        // See the image-api server for an example of how to leverage JWTs to get
-        // permission to access data from the other service.)
-        const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [result.issuerDid])
-        if (didsSeenByRequesterWhoSeeObject[0] === result.issuerDid) {
-          // the issuerDid is visible to the requester, so continue with full content
-        } else {
-          // maybe someone the issuer can see can see the profile,
-          // and the profile ID doesn't give up any ID info so share
-          result = {
-            ...result,
-            issuerDid: HIDDEN_TEXT,
-            issuerDidVisibleToDids: didsSeenByRequesterWhoSeeObject[0],
-          }
-        }
-      }
-      res.status(200).json({ data: result }).end()
+      // the profile ID doesn't give up any ID info, so share the profile with the
+      // issuer hidden if need be, along with anyone in the requester's network who can see them
+      const response = await hideDidsInDataKey(res.locals.authTokenIssuer, { data: result }, [])
+      res.status(200).json(response).end()
     } catch (err) {
       console.error('Error getting user profile by ID:', rowId, err)
       res.status(500).json({ error: err.message }).end()
@@ -1550,7 +1408,7 @@ export default express
  * @param {string} claimContents.query.optional - text to search in description
  * @param {string} beforeId.query.optional - return profiles with rowId less than this
  * @param {string} afterId.query.optional - return profiles with rowId greater than this
- * @returns {array.UserProfile} 200 - success response with profiles
+ * @returns {array.UserProfile} 200 - success response with profiles in 'data', 'hitLimit', plus 'publicUrls' for any public DIDs among them
  * @returns {Error} 400 - client error
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
@@ -1596,11 +1454,7 @@ export default express
         claimContents
       )
       // Hide DIDs and add network links
-      const resultsScrubbed = await hideProfileDids(res.locals.authTokenIssuer, rawResult.data)
-      const fullResult = {
-        data: resultsScrubbed,
-        hitLimit: rawResult.hitLimit
-      }
+      const fullResult = await hideDidsInDataKey(res.locals.authTokenIssuer, rawResult, [])
       res.status(200).json(fullResult).end()
     } catch (err) {
       console.error('Error getting user profiles from search:', err, '... for params:', JSON.stringify({ minLocLat, minLocLon, maxLocLat, maxLocLon, claimContents, beforeId, afterId }))
@@ -1657,14 +1511,10 @@ export default express
       // use a generic message so as to not leak whether a profile exists for this DID
       const NOT_SEEN_MESSAGE = "There is no embedding for this issuer or it is not visible to you."
 
-      if (issuerDid !== res.locals.authTokenIssuer) {
-        const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
-        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
-          // the issuerDid is visible to the requester, so continue with full content
-        } else if (!isAdminUser(res.locals.authTokenIssuer)) {
-          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
-        }
+      if (issuerDid !== res.locals.authTokenIssuer
+          && !(await requesterCanSee(res.locals.authTokenIssuer, issuerDid))
+          && !isAdminUser(res.locals.authTokenIssuer)) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
       }
 
       const profile = await partnerDbService.profileByIssuerDid(issuerDid)
@@ -1792,20 +1642,10 @@ export default express
         return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
       }
 
-      if (issuerDid !== res.locals.authTokenIssuer) {
-        // check if they can see the profile, or if they're linked to someone who can
-        // (When we separate this into another service, this will have to be an API call.
-        // See the image-api server for an example of how to leverage JWTs to get
-        // permission to access data from the other service.)
-        const didsSeenByRequesterWhoSeeObject =
-          await getAllDidsBetweenRequesterAndObjects(res.locals.authTokenIssuer, [issuerDid])
-        if (didsSeenByRequesterWhoSeeObject[0] === issuerDid) {
-          // the issuerDid is visible to the requester, so continue with full content
-        } else {
-          // someone the issuer can see can see the profile,
-          // but giving up all between would expose their full network
-          return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
-        }
+      // unlike lookup by profile ID, someone who can only see someone who sees the issuer gets nothing:
+      // giving up all between would expose their full network
+      if (issuerDid !== res.locals.authTokenIssuer && !(await requesterCanSee(res.locals.authTokenIssuer, issuerDid))) {
+        return res.status(404).json({ error: NOT_SEEN_MESSAGE }).end()
       }
       res.status(200).json({ data: result }).end()
     } catch (err) {
@@ -1849,7 +1689,7 @@ export default express
       }
       
       // Find nearest neighbors from requester to profile owner
-      const neighbors = await nearestNeighborsTo(res.locals.authTokenIssuer, profile.issuerDid)
+      const neighbors = await mainService.nearestNeighborsTo(res.locals.authTokenIssuer, profile.issuerDid)
       
       res.status(200).json({ data: neighbors }).end()
     } catch (err) {
@@ -1876,7 +1716,7 @@ export default express
  * @param {number} maxLocLon.query.optional
  * @param {number} minSimilarity.query.optional - default from the embedding spec's matching config
  * @param {number} limit.query.optional - default 25, max 50
- * @returns {object} 200 - 'data' array of { subjectType, subjectId, similarity, record } best first, where record is the scrubbed profile or plan; plus embeddingSpecId
+ * @returns {object} 200 - 'data' array of { subjectType, subjectId, similarity, record } best first, where record is the scrubbed profile or plan; plus embeddingSpecId, and 'publicUrls' for any public DIDs in the records
  * @returns {Error} 400 - client error
  * @returns {Error} 404 - the source subject has no embedding
  * @returns {Error} 429 - too many text queries
@@ -1922,11 +1762,8 @@ export default express
       let sourceVectors
       let sourceId = null
       if (sourceType === 'text') {
-        try {
-          // When we separate this into another service, this will have to be an API call.
-          await ClaimService.getRateLimits(issuerDid)
-        } catch (e) {
-          return res.status(400).json({ error: { userMessage: "Must be registered to search by text" } }).end()
+        if (!(await requireMember(res, "Must be registered to search by text"))) {
+          return
         }
         if (!allowTextQuery(issuerDid)) {
           return res.status(429).json({ error: { userMessage: "Too many text searches. Try again in a minute." } }).end()
@@ -1969,11 +1806,10 @@ export default express
       const planHandleIds = ranked.filter((r) => r.id.subjectType === 'plan').map((r) => r.id.subjectId)
       const profiles = profileRowIds.length === 0
         ? []
-        : await hideProfileDids(issuerDid, await partnerDbService.profilesByRowIds(profileRowIds))
-      // When we separate this into another service, this will have to be an API call.
+        : await hideDids(issuerDid, await partnerDbService.profilesByRowIds(profileRowIds), [])
       const planResult = planHandleIds.length === 0
         ? { data: [] }
-        : await hideDidsAndAddLinksToNetworkInDataKey(issuerDid, await endorserDbService.planInfoByHandleIds(planHandleIds), [])
+        : await hideDidsInDataKey(issuerDid, await mainService.planInfoByHandleIds(planHandleIds), [])
       const records = new Map([
         ...profiles.map((p) => ['profile:' + p.rowid, p]),
         ...planResult.data.map((p) => ['plan:' + p.handleId, p]),
@@ -1988,8 +1824,9 @@ export default express
         }))
         .filter((d) => d.record) // a subject may have been deleted since its vector was read
       const result = { data, embeddingSpecId: spec.embeddingSpecId }
-      if (planResult.publicUrls) {
-        result.publicUrls = planResult.publicUrls
+      const publicUrls = { ...takePublicUrls([profiles]), ...planResult.publicUrls }
+      if (!R.isEmpty(publicUrls)) {
+        result.publicUrls = publicUrls
       }
       res.status(200).json(result).end()
     } catch (err) {

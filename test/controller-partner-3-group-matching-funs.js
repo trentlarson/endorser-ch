@@ -5,7 +5,7 @@ const {
   magnitude,
   cosineSimilarity,
   matchParticipants,
-} = require("../src/api/services/matching.service.js");
+} = require("../src/api/services/partner-matching.service.js");
 
 const expect = chai.expect;
 
@@ -14,7 +14,7 @@ const expect = chai.expect;
  *
  * This test suite validates the core vector math functions and matching algorithms
  * that will be used for AI-powered profile matching at events.
- * Uses matching.service.js for dotProduct, magnitude, cosineSimilarity, matchParticipants.
+ * Uses partner-matching.service.js for dotProduct, magnitude, cosineSimilarity, matchParticipants.
  */
 
 // ============================================================================

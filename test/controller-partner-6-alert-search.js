@@ -8,6 +8,7 @@ import request from 'supertest'
 import { ulid } from 'ulidx'
 
 import Server from '../dist'
+import { HIDDEN_TEXT } from '../src/api/services/util'
 import testUtil from './util'
 
 const expect = chai.expect
@@ -233,5 +234,33 @@ describe('P6 - Alert Search partner', () => {
       })
       .catch((err) => Promise.reject(err))
   }).timeout(5000)
+
+  it('partner alertSearch hides profile DIDs the requester cannot see', () => {
+    // creds[5] cannot see creds[1], who owns profile1 (see controller-partner-1)
+    return request(Server)
+      .post('/api/partner/alertSearch')
+      .set('Authorization', 'Bearer ' + pushTokens[5])
+      .send({
+        location: {
+          minLocLat: 40.7120,
+          maxLocLat: 40.7150,
+          minLocLon: -74.0080,
+          maxLocLon: -74.0050,
+        },
+      })
+      .then((r) => {
+        expect(r.status).to.equal(200)
+        const hidden = r.body.data.profilesNearby.filter((p) => p.issuerDid === HIDDEN_TEXT)
+        expect(hidden.length).to.be.at.least(1)
+        expect(JSON.stringify(r.body)).to.not.include(creds[1].did)
+        // the requester's own profile (from the count test above) keeps its DID
+        const own = r.body.data.profilesNearby.find((p) => p.issuerDid === creds[5].did)
+        expect(own).to.exist
+        // creds[2], who owns profile2, is visible to everyone (see controller-endorser-2-basics-2)
+        expect(r.body.data.profilesNearby.map((p) => p.issuerDid)).to.include(creds[2].did)
+        expect(r.body.publicUrls).to.deep.equal({ [creds[2].did]: 'https://ignitecommunity.org' })
+      })
+      .catch((err) => Promise.reject(err))
+  })
 
 })
