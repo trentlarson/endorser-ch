@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The registration checks for creating a meeting (`POST /api/partner/groupOnboard`) and saving a profile (`POST /api/partner/userProfile`) turn away revoked members (a zero claim allowance), as the membership answer for other services does; when registration can't be checked, they answer 500 instead of "must be registered"
 - `POST /api/util/updateHashChain` could fail with "Expected non-null noncedHashIssuerChain" when an issuer had more than one claim waiting, because it read each issuer's previous link before saving it
 ### Changed in DB or environment
-- Set `TRUST_PROXY` wherever a reverse proxy fronts the API, to the proxy's address or subnet as the server sees it (eg. the Docker bridge gateway) or its hop count; otherwise every client shares the proxy's per-address limit. `true` is ignored. See README and .env.example.
+- Set `TRUST_PROXY` wherever a reverse proxy fronts the API, to the proxy's address or subnet as the server sees it (eg. the Docker bridge gateway: 'docker network inspect bridge') or its hop count; otherwise every client shares the proxy's per-address limit. `true` is ignored. See README and .env.example.
 - Optional settings: `EMBEDDING_QUERY_MAX_PER_MINUTE_UNREGISTERED` (default 5), `EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP` (60), `EMBEDDING_QUERY_MAX_QUEUED` (10), `EMBEDDING_QUERY_CACHE_SIZE` (1000)
 
 
