@@ -13,6 +13,7 @@
  */
 
 const engine = require('./embedding-engine')
+const { createInferenceQueue, createLruCache } = require('./inference-queue')
 const { activeEmbeddingSpec } = require('./embedding-specs')
 const { dbService: partnerDbService } = require('./partner.db.service')
 const { mainService } = require('./partner-main.service')
@@ -36,12 +37,8 @@ function storeFor(subjectType) {
 }
 
 // One inference at a time keeps CPU use bounded and the API responsive.
-let inferenceQueue = Promise.resolve()
-function enqueue(fn) {
-  const result = inferenceQueue.then(fn)
-  inferenceQueue = result.catch(() => {})
-  return result
-}
+// Profile saves and the sweep go ahead of text queries, which wait in their own capped queue.
+const inferenceQueue = createInferenceQueue()
 
 /**
  * @param {object} spec
@@ -49,8 +46,12 @@ function enqueue(fn) {
  * @returns {Promise<Float32Array>}
  */
 function embedOne(spec, text) {
-  return enqueue(() => engine.embedTexts(spec, [text])).then((vectors) => vectors[0])
+  return inferenceQueue.run(() => engine.embedTexts(spec, [text])).then((vectors) => vectors[0])
 }
+
+// spec ID + sha256 of the preprocessed query text -> vector
+const queryVectorCache = createLruCache()
+const queryStats = { inferences: 0, cacheHits: 0, turnedAway: 0 }
 
 function profileText(spec, description) {
   return engine.subjectText(spec, SUBJECT_PROFILE, { description })
@@ -91,13 +92,50 @@ async function refreshProfileEmbedding(rowId, description) {
 }
 
 /**
- * Embed free text (eg. a search query) without storing it.
- * @returns {Promise<Float32Array|null>} null when the text is empty
+ * Embed free text (eg. a search query) without storing it. Recent vectors are
+ * kept in memory (EMBEDDING_QUERY_CACHE_SIZE entries, default 1000; 0 disables),
+ * keyed by the hash of the preprocessed text, so repeated text costs no inference.
+ * Otherwise the query waits behind profile and sweep work, with at most
+ * EMBEDDING_QUERY_MAX_QUEUED (default 10) queries waiting.
+ *
+ * @returns {Promise<Float32Array|null>} null when the text is empty;
+ *   rejects with code QUERY_QUEUE_FULL when too many queries are waiting
  */
 async function embedQuery(text) {
   const spec = activeEmbeddingSpec()
   const input = engine.subjectText(spec, 'query', { text })
-  return input === '' ? null : embedOne(spec, input)
+  if (input === '') {
+    return null
+  }
+  const key = spec.embeddingSpecId + ':' + engine.contentHash(input)
+  const cached = queryVectorCache.get(key)
+  if (cached) {
+    queryStats.cacheHits++
+    return cached
+  }
+  const maxQueued = Number(process.env.EMBEDDING_QUERY_MAX_QUEUED ?? 10)
+  let vectors
+  try {
+    vectors = await inferenceQueue.runQuery(() => {
+      queryStats.inferences++
+      return engine.embedTexts(spec, [input])
+    }, maxQueued)
+  } catch (err) {
+    if (err.code === 'QUERY_QUEUE_FULL') {
+      queryStats.turnedAway++
+    }
+    throw err
+  }
+  queryVectorCache.set(key, vectors[0], Number(process.env.EMBEDDING_QUERY_CACHE_SIZE ?? 1000))
+  return vectors[0]
+}
+
+/**
+ * Counts since startup of query inferences, cache hits, and queries turned away
+ * because the queue was full; plus the queue's current state.
+ */
+function getQueryStatus() {
+  return { ...queryStats, cacheSize: queryVectorCache.size(), queue: inferenceQueue.status() }
 }
 
 /**
@@ -291,6 +329,7 @@ module.exports = {
   embeddingCounts,
   refreshProfileEmbedding,
   embedQuery,
+  getQueryStatus,
   vectorsBySubject,
   vectorsBySubjectChangedBetween,
   sweep,

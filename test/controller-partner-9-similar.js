@@ -1,4 +1,4 @@
-// Tests for semantic matching: the embedding sweep, /similar, the vector export endpoints, and alertSearch's similar matches.
+// Tests for semantic matching: the embedding sweep, /similar (with its text-query limits, cache, and queue), the vector export endpoints, and alertSearch's similar matches.
 // Depends on the endorser tests for registrations, and on controller-partner-1 for creds[1]'s profile.
 
 import chai from "chai";
@@ -12,6 +12,9 @@ import { dbService as partnerDbService } from "../dist/api/services/partner.db.s
 import { activeEmbeddingSpec } from "../dist/api/services/embedding-specs";
 import { getAllDidsRequesterCanSee } from "../dist/api/services/network-cache.service";
 import { base64ToVector, contentHash, dot, subjectText } from "../dist/api/services/embedding-engine";
+import { getQueryStatus } from "../dist/api/services/partner-embedding.service";
+import { ipRateKey, trustProxySetting } from "../dist/api/services/client-address";
+import { createInferenceQueue, createLruCache } from "../dist/api/services/inference-queue";
 import { HIDDEN_TEXT } from "../src/api/services/util";
 import testUtil from "./util";
 
@@ -22,10 +25,12 @@ const credentials = R.map((c) => new Credentials(c), creds)
 const pushTokenProms = R.map((c) => c.createVerification({ exp: testUtil.nextMinuteEpoch }), credentials)
 let pushTokens
 let unregisteredToken
+function newUnregisteredToken() {
+  return new Credentials(Credentials.createIdentity()).createVerification({ exp: testUtil.nextMinuteEpoch })
+}
 before(async () => {
   pushTokens = await Promise.all(pushTokenProms)
-  const stranger = Credentials.createIdentity()
-  unregisteredToken = await new Credentials(stranger).createVerification({ exp: testUtil.nextMinuteEpoch })
+  unregisteredToken = await newUnregisteredToken()
 })
 
 // an area no other test uses
@@ -87,6 +92,9 @@ describe('P9 - Semantic Matching', () => {
   after(() => {
     delete process.env.ADMIN_DIDS
     delete process.env.EMBEDDING_QUERY_MAX_PER_MINUTE
+    delete process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP
+    delete process.env.EMBEDDING_QUERY_MAX_QUEUED
+    Server.set('trust proxy', false)
   })
 
   describe('Setup and sweep', () => {
@@ -242,11 +250,23 @@ describe('P9 - Semantic Matching', () => {
       expect(JSON.stringify(r.body)).to.not.include(creds[1].did)
     })
 
-    it('requires registration for text queries', async () => {
-      const r = await similar(unregisteredToken, { from: 'text:gardening' })
-      expect(r.status).to.equal(400)
-      expect(r.body.error.userMessage).to.include('registered')
-    })
+    it('lets an unregistered DID search by text', async () => {
+      const r = await similar(unregisteredToken, { from: 'text:vegetable gardening', minSimilarity: -1, ...BBOX })
+      expect(r.status).to.equal(200)
+      const ids = r.body.data.map((d) => d.subjectType + ':' + d.subjectId)
+      expect(ids.slice(0, 2)).to.have.members(['plan:' + gardenHandleId, 'profile:' + gardenerRowId])
+      expect(JSON.stringify(r.body)).to.not.include(creds[1].did)
+    }).timeout(10000)
+
+    it('limits an unregistered DID to 5 text queries a minute', async () => {
+      const token = await newUnregisteredToken()
+      for (let i = 0; i < 5; i++) {
+        expect((await similar(token, { from: 'text:gardening', ...BBOX })).status).to.equal(200)
+      }
+      const r = await similar(token, { from: 'text:gardening', ...BBOX })
+      expect(r.status).to.equal(429)
+      expect(r.body.error.userMessage).to.include('Too many text searches')
+    }).timeout(10000)
 
     it('rate limits text queries', async () => {
       process.env.EMBEDDING_QUERY_MAX_PER_MINUTE = '2'
@@ -257,6 +277,123 @@ describe('P9 - Semantic Matching', () => {
       expect((await similar(pushTokens[2], { from: 'plan:' + gardenHandleId, ...BBOX })).status).to.equal(200)
       delete process.env.EMBEDDING_QUERY_MAX_PER_MINUTE
     }).timeout(10000)
+
+    it('limits text queries per client address, ignoring X-Forwarded-For when no proxy is trusted', async () => {
+      // this records at least one recent query from the test client's address
+      await similar(pushTokens[3], { from: 'text:gardening', ...BBOX })
+      process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP = '1'
+      const r = await similar(pushTokens[4], { from: 'text:gardening', ...BBOX }).set('X-Forwarded-For', '203.0.113.7')
+      expect(r.status).to.equal(429)
+      expect(r.body.error.userMessage).to.include('network')
+      // stored-vector queries are not limited
+      expect((await similar(pushTokens[4], { from: 'plan:' + gardenHandleId, ...BBOX })).status).to.equal(200)
+      delete process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP
+      expect((await similar(pushTokens[4], { from: 'text:gardening', ...BBOX })).status).to.equal(200)
+    }).timeout(10000)
+
+    it('keys the client address on X-Forwarded-For from a trusted proxy, IPv6 by /64', async () => {
+      Server.set('trust proxy', trustProxySetting('loopback'))
+      process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP = '1'
+      const from = (token, address) => similar(token, { from: 'text:gardening', ...BBOX }).set('X-Forwarded-For', address)
+      expect((await from(pushTokens[6], '203.0.113.8')).status).to.equal(200)
+      expect((await from(pushTokens[6], '203.0.113.8')).status).to.equal(429)
+      expect((await from(pushTokens[7], '::ffff:203.0.113.8')).status).to.equal(429)
+      expect((await from(pushTokens[7], '203.0.113.9')).status).to.equal(200)
+      expect((await from(pushTokens[8], '2001:db8:1:2::1')).status).to.equal(200)
+      expect((await from(pushTokens[8], '2001:db8:1:2:ffff::99')).status).to.equal(429)
+      expect((await from(pushTokens[9], '2001:db8:1:3::1')).status).to.equal(200)
+      Server.set('trust proxy', false)
+      delete process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP
+    }).timeout(10000)
+
+    it('answers repeated text from the cache, without inference', async () => {
+      const before = getQueryStatus()
+      expect((await similar(pushTokens[10], { from: 'text:beekeeping and honey', ...BBOX })).status).to.equal(200)
+      const afterFirst = getQueryStatus()
+      expect(afterFirst.inferences).to.equal(before.inferences + 1)
+      // the same text once preprocessed
+      expect((await similar(pushTokens[10], { from: 'text:  beekeeping \n and honey ', ...BBOX })).status).to.equal(200)
+      const afterSecond = getQueryStatus()
+      expect(afterSecond.inferences).to.equal(afterFirst.inferences)
+      expect(afterSecond.cacheHits).to.equal(afterFirst.cacheHits + 1)
+    }).timeout(10000)
+
+    it('returns 503 at once when the text-query queue is full, but still answers from the cache', async () => {
+      process.env.EMBEDDING_QUERY_MAX_QUEUED = '0'
+      const before = getQueryStatus()
+      const r = await similar(pushTokens[11], { from: 'text:restoring antique furniture', ...BBOX })
+      expect(r.status).to.equal(503)
+      expect(r.body.error.userMessage).to.include('busy')
+      expect(getQueryStatus().turnedAway).to.equal(before.turnedAway + 1)
+      expect(getQueryStatus().inferences).to.equal(before.inferences)
+      expect((await similar(pushTokens[11], { from: 'text:beekeeping and honey', ...BBOX })).status).to.equal(200)
+      delete process.env.EMBEDDING_QUERY_MAX_QUEUED
+    }).timeout(10000)
+  })
+
+  describe('Text-query helpers', () => {
+
+    it('keys addresses by IPv4 address or IPv6 /64', () => {
+      expect(ipRateKey('203.0.113.5')).to.equal('203.0.113.5')
+      expect(ipRateKey('::ffff:203.0.113.5')).to.equal('203.0.113.5')
+      expect(ipRateKey('::FFFF:203.0.113.5')).to.equal('203.0.113.5')
+      expect(ipRateKey('2001:db8:1:2:3:4:5:6')).to.equal('2001:db8:1:2::/64')
+      expect(ipRateKey('2001:0db8:0001:0002::9')).to.equal('2001:db8:1:2::/64')
+      expect(ipRateKey('2001:db8::1')).to.equal('2001:db8:0:0::/64')
+      expect(ipRateKey('::1')).to.equal('0:0:0:0::/64')
+      expect(ipRateKey('fe80::1%eth0')).to.equal('fe80:0:0:0::/64')
+      expect(ipRateKey('64:ff9b::203.0.113.5')).to.equal('64:ff9b:0:0::/64')
+      expect(ipRateKey(undefined)).to.equal('unknown')
+    })
+
+    it('reads TRUST_PROXY as hops or addresses, never as true', () => {
+      expect(trustProxySetting(undefined)).to.equal(null)
+      expect(trustProxySetting('')).to.equal(null)
+      expect(trustProxySetting('true')).to.equal(null)
+      expect(trustProxySetting('TRUE')).to.equal(null)
+      expect(trustProxySetting('false')).to.equal(null)
+      expect(trustProxySetting('1')).to.equal(1)
+      expect(trustProxySetting(' 2 ')).to.equal(2)
+      expect(trustProxySetting('172.17.0.1')).to.deep.equal(['172.17.0.1'])
+      expect(trustProxySetting('loopback, 10.0.0.0/8,')).to.deep.equal(['loopback', '10.0.0.0/8'])
+    })
+
+    it('runs profile and sweep work ahead of waiting text queries, and caps those', async () => {
+      const queue = createInferenceQueue()
+      const order = []
+      let release
+      const blocker = queue.run(() => new Promise((resolve) => { release = resolve }))
+      await new Promise((resolve) => setImmediate(resolve))
+      const q1 = queue.runQuery(() => order.push('q1'), 2)
+      const q2 = queue.runQuery(() => order.push('q2'), 2)
+      let fullError
+      await queue.runQuery(() => order.push('q3'), 2).catch((err) => { fullError = err })
+      expect(fullError.code).to.equal('QUERY_QUEUE_FULL')
+      const m1 = queue.run(() => order.push('m1'))
+      expect(queue.status()).to.deep.equal({ running: true, mainQueued: 1, queryQueued: 2 })
+      release()
+      await Promise.all([blocker, q1, q2, m1])
+      expect(order).to.deep.equal(['m1', 'q1', 'q2'])
+      expect(queue.status()).to.deep.equal({ running: false, mainQueued: 0, queryQueued: 0 })
+      // a failed job doesn't stop the queue
+      let failure
+      await queue.runQuery(() => { throw new Error('boom') }, 2).catch((err) => { failure = err })
+      expect(failure.message).to.equal('boom')
+      expect(await queue.run(() => 'still running')).to.equal('still running')
+    })
+
+    it('evicts the least recently used vector', () => {
+      const cache = createLruCache()
+      cache.set('a', 1, 2)
+      cache.set('b', 2, 2)
+      expect(cache.get('a')).to.equal(1) // now 'b' is the oldest
+      cache.set('c', 3, 2)
+      expect(cache.get('b')).to.equal(undefined)
+      expect(cache.get('a')).to.equal(1)
+      expect(cache.get('c')).to.equal(3)
+      cache.set('d', 4, 0)
+      expect(cache.size()).to.equal(0)
+    })
   })
 
   describe('Profiles without text', () => {

@@ -357,9 +357,15 @@ GET /api/partner/similar
 ```
 
 1. Resolve the source vector: the stored row (404 when there is none), or embed
-   `text:` on the fly, which costs CPU, so it requires registration
-   (`ClaimService.getRateLimits`) and is limited to
-   `EMBEDDING_QUERY_MAX_PER_MINUTE` (default 20) per user.
+   `text:` on the fly, which costs CPU. Any JWT may query by text, limited
+   per client address (IPv4 or IPv6 /64; `EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP`,
+   default 60, with the address from Express `trust proxy` set by `TRUST_PROXY`)
+   and then per DID (`EMBEDDING_QUERY_MAX_PER_MINUTE`, default 20, for members;
+   `EMBEDDING_QUERY_MAX_PER_MINUTE_UNREGISTERED`, default 5, for others). Query
+   vectors are cached by preprocessed-text hash (`EMBEDDING_QUERY_CACHE_SIZE`,
+   default 1,000), and uncached queries wait behind profile and sweep
+   inferences in their own queue (`EMBEDDING_QUERY_MAX_QUEUED`, default 10;
+   503 when full).
 2. Select candidate IDs: bounding box via the indexed location queries
    (`profilesByLocation...` in the partner DB; plan location queries in
    `endorser.db.service.js`), or all subjects of the type when no box is given.

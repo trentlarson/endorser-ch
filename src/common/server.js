@@ -9,8 +9,18 @@ import cors from 'cors';
 
 import { AUTHORIZATION_HEADER, BEARER_PREFIX, ERROR_CODES, UPORT_PUSH_TOKEN_HEADER } from '../api/services/util.js';
 import { decodeAndVerifyJwt } from "../api/services/vc";
+import { trustProxySetting } from '../api/services/client-address';
 import l from './logger';
 const app = new Express();
+
+// Which proxies may set the client address (req.ip) through X-Forwarded-For; see TRUST_PROXY in .env.example
+const trustProxy = trustProxySetting(process.env.TRUST_PROXY)
+if (trustProxy != null) {
+  app.set('trust proxy', trustProxy)
+  l.info('Trusting proxies for the client address: ' + JSON.stringify(trustProxy))
+} else if (/^true$/i.test((process.env.TRUST_PROXY || '').trim())) {
+  l.warn('Ignoring TRUST_PROXY=true, which would let any client choose its address; set the proxy address or hop count.')
+}
 
 app.use(helmet())
 

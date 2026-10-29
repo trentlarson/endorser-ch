@@ -9,12 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `publicUrls` at the top level of `/api/v2/report/alertSearch` and `/api/partner/alertSearch` when any list has a public DID, mapping each to its URL (`''` when it has none)
 - `publicUrls` on `/api/partner/userProfile`, `/api/partner/userProfile/{rowId}`, and `/api/partner/similar` for public DIDs in their profiles
+- Text queries in `/api/partner/similar` are limited per client address (an IPv4 address or an IPv6 /64, 60 a minute) before the per-DID limit, and get a 429 past it
+- Recent query vectors are cached in memory (1,000 by default), so repeated text in `/api/partner/similar` costs no inference
 ### Changed
+- Text queries in `/api/partner/similar` are open to any JWT, registered or not. The per-DID limit is 20 a minute for registered DIDs and 5 for others (including revoked members)
+- Text queries wait in their own queue, behind profile saves and the embedding sweep; when 10 are waiting, `/api/partner/similar` answers 503 at once
 - `/api/partner/userProfile`, `/api/partner/userProfile/{rowId}`, and the profiles in `/api/partner/similar` hide DIDs the way other endpoints do: any value that starts with `did:` is hidden, not only `issuerDid`
 - `/api/partner/userProfile/{rowId}` leaves out `issuerDidVisibleToDids` when nobody in the requester's network can see the issuer, as `/api/partner/userProfile` does, instead of sending `[]`
 ### Fixed
-- The registration checks for creating a meeting (`POST /api/partner/groupOnboard`), saving a profile (`POST /api/partner/userProfile`), and text queries in `/api/partner/similar` turn away revoked members (a zero claim allowance), as the membership answer for other services does; when registration can't be checked, they answer 500 instead of "must be registered"
+- The registration checks for creating a meeting (`POST /api/partner/groupOnboard`) and saving a profile (`POST /api/partner/userProfile`) turn away revoked members (a zero claim allowance), as the membership answer for other services does; when registration can't be checked, they answer 500 instead of "must be registered"
 - `POST /api/util/updateHashChain` could fail with "Expected non-null noncedHashIssuerChain" when an issuer had more than one claim waiting, because it read each issuer's previous link before saving it
+### Changed in DB or environment
+- Set `TRUST_PROXY` wherever a reverse proxy fronts the API, to the proxy's address or subnet as the server sees it (eg. the Docker bridge gateway) or its hop count; otherwise every client shares the proxy's per-address limit. `true` is ignored. See README and .env.example.
+- Optional settings: `EMBEDDING_QUERY_MAX_PER_MINUTE_UNREGISTERED` (default 5), `EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP` (60), `EMBEDDING_QUERY_MAX_QUEUED` (10), `EMBEDDING_QUERY_CACHE_SIZE` (1000)
 
 
 ## [4.4.9] - 2026.10.24

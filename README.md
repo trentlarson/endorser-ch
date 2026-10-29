@@ -126,6 +126,8 @@ sudo docker run --rm -v ~/endorser-ch-models:/mnt/models -e EMBEDDING_MODEL_DIR=
 
 * See .env.example for other environment variables, eg NOSTR_PRIVATE_KEY_NSEC
 
+* Set `TRUST_PROXY` in the .env when a reverse proxy (eg. nginx) fronts the API, so the per-address limits on text searches see each client's address and not the proxy's. Use the address the proxy connects from, as the container sees it (for a proxy on the host reaching a Docker port, usually the Docker bridge gateway, eg. `172.17.0.1`; check with `docker network inspect bridge`), or the number of proxy hops (eg. `1`). Leave it unset only when clients connect to the container directly. A value of `true` is ignored, since it would let any client pick its own address through `X-Forwarded-For`.
+
 * Run it:
 
 ```

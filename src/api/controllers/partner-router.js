@@ -20,6 +20,7 @@ import { sendAndStoreLink } from "../services/partner-link.service";
 import { dbService as partnerDbService } from "../services/partner.db.service";
 import embeddingService from "../services/partner-embedding.service";
 import { contentHash, subjectText } from "../services/embedding-engine";
+import { ipRateKey } from "../services/client-address";
 import { EMBEDDING_SPECS, activeEmbeddingSpec } from "../services/embedding-specs";
 import { rank } from "../services/matching-engine";
 import { matchParticipants } from "../services/partner-matching.service";
@@ -381,32 +382,50 @@ const SIMILAR_DEFAULT_LIMIT = 25
 const SIMILAR_MAX_LIMIT = 50
 const EMBEDDINGS_PAGE_LIMIT = 500
 
-// issuerDid -> times (ms) of that issuer's recent text queries to /similar
-const recentTextQueries = new Map()
-
 /**
- * Record a text query to /similar if the issuer is under
- * EMBEDDING_QUERY_MAX_PER_MINUTE (default 20); embedding text costs CPU.
- * @returns {boolean} whether the query is allowed
+ * A per-key limit on events in the last minute, held in memory.
  */
-function allowTextQuery(issuerDid) {
-  const maxPerMinute = Number(process.env.EMBEDDING_QUERY_MAX_PER_MINUTE || 20)
-  const now = Date.now()
-  const isRecent = (time) => now - time < 60 * 1000
-  if (recentTextQueries.size > 1000) {
-    for (const [did, times] of recentTextQueries) {
-      if (!times.some(isRecent)) {
-        recentTextQueries.delete(did)
+function createPerMinuteLimit() {
+  // key -> times (ms) of that key's recent allowed events
+  const recentTimes = new Map()
+  /**
+   * Record an event for the key if it is under the maximum.
+   * @returns {boolean} whether the event is allowed
+   */
+  return function allow(key, maxPerMinute) {
+    const now = Date.now()
+    const isRecent = (time) => now - time < 60 * 1000
+    if (recentTimes.size > 1000) {
+      for (const [k, times] of recentTimes) {
+        if (!times.some(isRecent)) {
+          recentTimes.delete(k)
+        }
       }
     }
+    const recent = (recentTimes.get(key) || []).filter(isRecent)
+    const allowed = recent.length < maxPerMinute
+    if (allowed) {
+      recent.push(now)
+    }
+    recentTimes.set(key, recent)
+    return allowed
   }
-  const recent = (recentTextQueries.get(issuerDid) || []).filter(isRecent)
-  const allowed = recent.length < maxPerMinute
-  if (allowed) {
-    recent.push(now)
-  }
-  recentTextQueries.set(issuerDid, recent)
-  return allowed
+}
+
+// Text queries to /similar cost an inference, so they are limited per client address
+// (IPv4 or IPv6 /64) and per issuer. Many phones share one carrier IPv4 address, so the
+// address limit is a burst ceiling; an unregistered DID costs nothing to make, so its limit is low.
+const allowTextQueryFromIp = createPerMinuteLimit()
+const allowTextQueryFromDid = createPerMinuteLimit()
+
+function textQueryMaxPerIp() {
+  return Number(process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_PER_IP || 60)
+}
+
+function textQueryMaxPerDid(isMember) {
+  return isMember
+    ? Number(process.env.EMBEDDING_QUERY_MAX_PER_MINUTE || 20)
+    : Number(process.env.EMBEDDING_QUERY_MAX_PER_MINUTE_UNREGISTERED || 5)
 }
 
 /**
@@ -1708,7 +1727,7 @@ export default express
  *
  * @group partner utils
  * @route GET /api/partner/similar
- * @param {string} from.query.required - profile:<rowId> | plan:<handleId> | text:<query> (text requires registration and is rate limited)
+ * @param {string} from.query.required - profile:<rowId> | plan:<handleId> | text:<query> (text is open to any requester and is rate limited per client address and per DID, lower for unregistered DIDs; the text is not stored)
  * @param {string} to.query.optional - profile | plan | both (default both)
  * @param {number} minLocLat.query.optional - bounding box (all four or none); profiles match on either location
  * @param {number} minLocLon.query.optional
@@ -1719,7 +1738,8 @@ export default express
  * @returns {object} 200 - 'data' array of { subjectType, subjectId, similarity, record } best first, where record is the scrubbed profile or plan; plus embeddingSpecId, and 'publicUrls' for any public DIDs in the records
  * @returns {Error} 400 - client error
  * @returns {Error} 404 - the source subject has no embedding
- * @returns {Error} 429 - too many text queries
+ * @returns {Error} 429 - too many text queries from this client address or this DID
+ * @returns {Error} 503 - too many text queries are waiting for inference; retry shortly
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
 .get(
@@ -1762,13 +1782,29 @@ export default express
       let sourceVectors
       let sourceId = null
       if (sourceType === 'text') {
-        if (!(await requireMember(res, "Must be registered to search by text"))) {
-          return
+        if (!allowTextQueryFromIp(ipRateKey(req.ip), textQueryMaxPerIp())) {
+          return res.status(429).json({ error: { userMessage: "Too many searches from your network right now. Try again in a minute." } }).end()
         }
-        if (!allowTextQuery(issuerDid)) {
+        let isMember
+        try {
+          isMember = await mainService.isMember(issuerDid)
+        } catch (err) {
+          // a read-only search can go on under the stricter limit
+          console.error('Error checking membership for DID (applying the unregistered limit):', issuerDid, err)
+          isMember = false
+        }
+        if (!allowTextQueryFromDid(issuerDid, textQueryMaxPerDid(isMember))) {
           return res.status(429).json({ error: { userMessage: "Too many text searches. Try again in a minute." } }).end()
         }
-        const vector = await embeddingService.embedQuery(sourceRef)
+        let vector
+        try {
+          vector = await embeddingService.embedQuery(sourceRef)
+        } catch (err) {
+          if (err.code === 'QUERY_QUEUE_FULL') {
+            return res.status(503).json({ error: { userMessage: "Matching is busy. Try again shortly." } }).end()
+          }
+          throw err
+        }
         if (!vector) {
           return res.status(400).json({ error: "The query text is empty." }).end()
         }
