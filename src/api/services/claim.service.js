@@ -1884,6 +1884,22 @@ class ClaimService {
           // this invite is being redeemed, so there's no need to check limits
           // because they were checked when the invite was created
 
+          if (!authIssuerDid) {
+            return {
+              clientError: {
+                message: 'Send an Authorization JWT for the identifier to register with this invite.'
+              }
+            }
+          }
+          // an invite is for an unregistered user; redeeming it would use it up without registering anyone
+          if (await dbService.registrationByDid(authIssuerDid)) {
+            return {
+              clientError: {
+                message: `${authIssuerDid} is already registered, so it cannot use an invite.`,
+                code: ERROR_CODES.ALREADY_REGISTERED
+              }
+            }
+          }
           return null
         }
       }

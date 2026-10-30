@@ -9,6 +9,7 @@ const HIDDEN_TEXT = 'did:none:HIDDEN' // if you change this, edit uport-demo/src
 const UPORT_PUSH_TOKEN_HEADER = 'Uport-Push-Token' // deprecated: use Authorization instead
 
 const ERROR_CODES = {
+  ALREADY_REGISTERED: 'ALREADY_REGISTERED',
   CANNOT_REGISTER_TOO_SOON: 'CANNOT_REGISTER_TOO_SOON',
   INVALID_AUDIENCE: 'INVALID_AUDIENCE', // copied from ./vc/index.js, not 'import'ed because we've been running this in raw JS sql-by-hand scripts
   JWT_VERIFY_FAILED: 'JWT_VERIFY_FAILED', // copied from ./vc/index.js, not 'import'ed because we've been running this in raw JS sql-by-hand scripts

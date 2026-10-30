@@ -3,6 +3,7 @@ import * as express from 'express'
 import ClaimService from '../services/claim.service'
 import { cacheContactList, clearContactCaches, getContactMatch } from "../services/contact-correlation.service";
 import { dbService } from '../services/endorser.db.service'
+import { ERROR_CODES } from '../services/util'
 import { decodeAndVerifyJwt } from "../services/vc";
 
 export default express
@@ -165,10 +166,35 @@ export default express
 
           // This is temporary: we should never custody the actual RegisterAction JWT.
           // Remove when no invite_one records have any jwt values (and the new Time Safari is deployed).
-          const verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
+          let verifiedInvite
+          try {
+            verifiedInvite = await decodeAndVerifyJwt(req.body.inviteJwt)
+          } catch (e) {
+            const error = e.clientError
+                  || { message: 'The invite JWT failed verification.', code: ERROR_CODES.JWT_VERIFY_FAILED }
+            res.status(400).json({ error }).end()
+            return
+          }
+          // a did:peer JWT with a bad signature resolves with verified: false rather than rejecting
+          if (!verifiedInvite.verified) {
+            res.status(400).json({ error: { message: 'The invite JWT signature failed verification.', code: ERROR_CODES.JWT_VERIFY_FAILED } }).end()
+            return
+          }
+          // the invite is recorded as this requester's, so they must be the one who signed it
+          if (verifiedInvite.issuer !== res.locals.authTokenIssuer) {
+            res.status(400).json({ error: { message: 'The invite JWT must be issued by the requester.', code: ERROR_CODES.JWT_VERIFY_FAILED } }).end()
+            return
+          }
           const payloadClaim = ClaimService.extractClaim(verifiedInvite.payload)
           if (payloadClaim["@type"] !== 'RegisterAction') {
             res.status(400).json({ error: { message: 'The JWT for an invite must be a RegisterAction claim.' } }).end()
+            return
+          }
+          // redemption rejects this too, but the invitee would be the one to find out
+          // (agent.did is for legacy data, as in redemption)
+          const agentDid = payloadClaim.agent?.identifier || payloadClaim.agent?.did
+          if (agentDid != null && agentDid !== verifiedInvite.issuer) {
+            res.status(400).json({ error: { message: 'The invite claim cannot name an agent other than its issuer.' } }).end()
             return
           }
           const identifier = payloadClaim.identifier

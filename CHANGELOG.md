@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+### Fixed
+- `POST /api/userUtil/invite` with an `inviteJwt` rejects a JWT signed by anyone but the requester (code `JWT_VERIFY_FAILED`), or a claim naming an agent other than its signer, so nobody can be recorded as the issuer of someone else's invite
+- Redeeming an invite as a user who is already registered answers 400 with code `ALREADY_REGISTERED`, leaving the invite open, instead of using it up; redeeming without an Authorization JWT is refused before the invite is touched
+- `POST /api/userUtil/invite` answers 400 with the verification error for an invalid `inviteJwt`, instead of 500
+- `POST /api/userUtil/invite` with an `inviteJwt` rejects a did:peer JWT whose signature fails, instead of recording the invite
+
+
 ## [4.4.10] - 2026.10.25
 ### Added
 - `publicUrls` at the top level of `/api/v2/report/alertSearch` and `/api/partner/alertSearch` when any list has a public DID, mapping each to its URL (`''` when it has none)

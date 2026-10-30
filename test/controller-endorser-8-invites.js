@@ -99,8 +99,44 @@ describe('8 - Asynchronous Invitations', () => {
       .set('Authorization', 'Bearer ' + pushTokens[4])
       .send({ inviteJwt: registerUnknownBy0Enc1, notes: inviteNotes })
       .then(r => {
-        expect(r.body).to.have.property("error")
+        // the issuer check, not the same-day rule that user #4 would also hit
+        expect(r.body).to.have.nested.property("error.code", "JWT_VERIFY_FAILED")
         expect(r.headers['content-type'], /json/)
+        expect(r.status).that.equals(400)
+      })
+      .catch(err => Promise.reject(err));
+  })
+
+  it('registered user #0 cannot record an invite signed by someone else', async () => {
+    // user #0 is the only one registered before today, so the same-day rule can't be what rejects this
+    const registerUnknownBy4Obj = R.clone(registerUnknownBy0Obj)
+    registerUnknownBy4Obj.claim.agent.identifier = creds[4].did
+    registerUnknownBy4Obj.claim.identifier = inviteIdentifier1 + "by4"
+    const registerUnknownBy4Enc = await credentials[4].createVerification(registerUnknownBy4Obj)
+    return request(Server)
+      .post('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send({ inviteJwt: registerUnknownBy4Enc, notes: inviteNotes })
+      .then(r => {
+        expect(r.body).to.have.nested.property("error.code", "JWT_VERIFY_FAILED")
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(400)
+      })
+      .catch(err => Promise.reject(err));
+  })
+
+  it('registered user #0 cannot record an invite naming another agent', async () => {
+    const registerUnknownAgent4Obj = R.clone(registerUnknownBy0Obj)
+    registerUnknownAgent4Obj.claim.agent.identifier = creds[4].did
+    registerUnknownAgent4Obj.claim.identifier = inviteIdentifier1 + "agent4"
+    const registerUnknownAgent4Enc = await credentials[0].createVerification(registerUnknownAgent4Obj)
+    return request(Server)
+      .post('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send({ inviteJwt: registerUnknownAgent4Enc, notes: inviteNotes })
+      .then(r => {
+        expect(r.body).to.have.nested.property("error.message").that.matches(/agent/)
+        expect(r.headers['content-type']).to.match(/json/)
         expect(r.status).that.equals(400)
       })
       .catch(err => Promise.reject(err));
@@ -123,6 +159,26 @@ describe('8 - Asynchronous Invitations', () => {
       .catch(err => Promise.reject(err))
   });
 
+  it('registered user #1 cannot use up an invite', async () => {
+    await request(Server)
+      .post('/api/v2/claim')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
+      .send({ jwtEncoded: registerUnknownBy0Enc1 })
+      .then(r => {
+        expect(r.body).to.have.nested.property("error.code", "ALREADY_REGISTERED")
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(400)
+      })
+    // still open for the unregistered user it's meant for, who redeems it below
+    return request(Server)
+      .get('/api/userUtil/invite/' + inviteIdentifier1)
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .then(r => {
+        expect(r.status).that.equals(200)
+        expect(r.body.data.redeemedBy).to.not.be.ok
+      })
+  });
+
   it('registered user #0 cannot send the same invite record', async () => {
     return request(Server)
       .post('/api/userUtil/invite')
@@ -131,6 +187,56 @@ describe('8 - Asynchronous Invitations', () => {
       .then(r => {
         expect(r.body).to.have.property("error")
         expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(400)
+      })
+      .catch(err => Promise.reject(err))
+  });
+
+  it('registered user #0 cannot create an invite with a forged peer DID JWT', async () => {
+    // a passkey-style JWANT whose signature is well-formed DER but signs nothing
+    const peerDid = testUtil.peerCredData[0].did
+    const exp = testUtil.nextMinuteEpoch
+    const forgedObj = R.clone(registerUnknownBy0Obj)
+    forgedObj.claim.identifier = inviteIdentifier1 + "forged"
+    const challenge = { ...forgedObj, exp, iss: peerDid }
+    const clientData = {
+      type: "webauthn.get",
+      challenge: Buffer.from(JSON.stringify(challenge)).toString("base64url"),
+      origin: "https://forged.example",
+    }
+    const payload = {
+      AuthenticationDataB64URL: Buffer.alloc(37, 1).toString("base64url"),
+      ClientDataJSONB64URL: Buffer.from(JSON.stringify(clientData)).toString("base64url"),
+      exp,
+      iss: peerDid,
+    }
+    const derSignature = Buffer.concat([
+      Buffer.from([0x30, 0x44, 0x02, 0x20]), Buffer.alloc(32, 0x11),
+      Buffer.from([0x02, 0x20]), Buffer.alloc(32, 0x22),
+    ])
+    const forgedJwt =
+      Buffer.from(JSON.stringify({ typ: "JWANT", alg: "ES256" })).toString("base64url")
+      + "." + Buffer.from(JSON.stringify(payload)).toString("base64url")
+      + "." + derSignature.toString("base64url")
+    return request(Server)
+      .post('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send({ inviteJwt: forgedJwt, notes: "Forged" })
+      .then(r => {
+        expect(r.body).to.have.nested.property("error.code", "JWT_VERIFY_FAILED")
+        expect(r.headers['content-type']).to.match(/json/)
+        expect(r.status).that.equals(400)
+      })
+      .catch(err => Promise.reject(err))
+  });
+
+  it('registered user #0 cannot create an invite with an unparseable JWT', async () => {
+    return request(Server)
+      .post('/api/userUtil/invite')
+      .set('Authorization', 'Bearer ' + pushTokens[0])
+      .send({ inviteJwt: "not.a.jwt", notes: "Garbage" })
+      .then(r => {
+        expect(r.body).to.have.nested.property("error.code", "JWT_VERIFY_FAILED")
         expect(r.status).that.equals(400)
       })
       .catch(err => Promise.reject(err))
