@@ -59,6 +59,10 @@ function getGiveTotalsMaybeGifted(req, res, next, onlyGifted) {
 }
 
 function retrievePlansLastUpdateBetween(planIds, afterId, beforeId, req, res) {
+  // any signed, valid JWT is enough (the auth middleware verifies it); registration is not required
+  if (!res.locals.authTokenIssuer) {
+    return res.status(401).json({ error: "Request must include a valid Authorization JWT" }).end()
+  }
   if (!planIds || !Array.isArray(planIds)) {
     return res.status(400).json({ error: 'planIds array parameter is required' })
   }
@@ -590,6 +594,9 @@ class DbController {
 
   getPlansLastUpdatedBetweenFromGet(req, res, next) {
     const { planIds, afterId, beforeId } = req.query
+    if (!res.locals.authTokenIssuer) {
+      return res.status(401).json({ error: "Request must include a valid Authorization JWT" }).end()
+    }
     if (!planIds) {
       return res.status(400).json({ error: 'planIds JSONified array parameter is required' })
     }
@@ -1371,10 +1378,12 @@ export default express
  *
  * @group reports
  * @route GET /api/v2/report/plansLastUpdatedBetween
+ * @param {string} Authorization.header.required - Bearer JWT signed by any DID (registration not required)
  * @param {string[]} planIds.query.required - JSON stringified array of plan handle IDs
  * @param {string} afterId.query.required - the JWT ID of the entry after which to look (exclusive)
  * @param {string} beforeId.query.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
+ * @returns {Error} 401 - missing Authorization JWT
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .get('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromGet)
@@ -1385,10 +1394,12 @@ export default express
  *
  * @group reports
  * @route POST /api/v2/report/plansLastUpdatedBetween
+ * @param {string} Authorization.header.required - Bearer JWT signed by any DID (registration not required)
  * @param {string[]} body.planIds.required - Array of plan handle IDs
  * @param {string} body.afterId.required - the JWT ID of the entry after which to look (exclusive)
  * @param {string} body.beforeId.optional - the JWT ID of the entry before which to look (exclusive); by default, the last one is included
  * @returns {PlanSummaryAndPreviousClaimArrayMaybeMore} Object with data array and hitLimit boolean
+ * @returns {Error} 401 - missing Authorization JWT
  */
 // This comment makes doctrine-file work with babel. See API docs after: npm run compile; npm start
   .post('/plansLastUpdatedBetween', dbController.getPlansLastUpdatedBetweenFromPost)

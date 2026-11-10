@@ -3530,9 +3530,53 @@ describe('6 - Plans Last Updated Between', () => {
   let testPlanIdExternal, testPlanIdInternal, testPlanSecondClaimId
   let firstPlanClaim3IdInternal
 
+  it('GET plansLastUpdatedBetween returns 401 without a JWT', () => {
+    return request(Server)
+      .get('/api/v2/report/plansLastUpdatedBetween')
+      .query({ planIds: JSON.stringify([firstPlanIdExternal]), afterId: firstPlanIdInternal })
+      .then(r => {
+        expect(r.status).to.equal(401)
+        expect(r.body.error).to.include('valid Authorization JWT')
+      })
+  })
+
+  it('POST plansLastUpdatedBetween returns 401 without a JWT', () => {
+    return request(Server)
+      .post('/api/v2/report/plansLastUpdatedBetween')
+      .send({ planIds: [firstPlanIdExternal], afterId: firstPlanIdInternal })
+      .then(r => {
+        expect(r.status).to.equal(401)
+        expect(r.body.error).to.include('valid Authorization JWT')
+      })
+  })
+
+  it('plansLastUpdatedBetween rejects a JWT with a bad signature', () => {
+    const parts = pushTokens[1].split('.')
+    const otherSig = pushTokens[2].split('.')[2]
+    return request(Server)
+      .post('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + parts[0] + '.' + parts[1] + '.' + otherSig)
+      .send({ planIds: [firstPlanIdExternal], afterId: firstPlanIdInternal })
+      .then(r => {
+        expect(r.status).to.equal(400)
+        expect(r.body.error.code).to.equal('JWT_VERIFY_FAILED')
+      })
+  })
+
+  it('plansLastUpdatedBetween allows a JWT from an unregistered DID', async () => {
+    const unregisteredToken = await new Credentials(Credentials.createIdentity()).createVerification({ exp: testUtil.nextMinuteEpoch })
+    const r = await request(Server)
+      .post('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + unregisteredToken)
+      .send({ planIds: [firstPlanIdExternal], afterId: firstPlanIdInternal })
+    expect(r.status).to.equal(200)
+    expect(r.body.data).to.be.an('array')
+  })
+
   it('GET plansLastUpdatedBetween returns 400 for missing planIds', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .then(r => {
         expect(r.status).to.equal(400)
         expect(r.body.error).to.include('array parameter is required')
@@ -3545,6 +3589,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('POST plansLastUpdatedBetween returns 400 for missing planIds', () => {
     return request(Server)
       .post('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({})
       .then(r => {
         expect(r.status).to.equal(400)
@@ -3558,6 +3603,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('POST plansLastUpdatedBetween returns empty array for empty planIds array', () => {
     return request(Server)
       .post('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({ planIds: [], afterId: firstPlanIdInternal })
       .then(r => {
         expect(r.status).to.equal(200)
@@ -3572,6 +3618,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('GET plansLastUpdatedBetween returns empty array for non-existent plans', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .query({
         planIds: JSON.stringify(['non-existent-plan-1', 'non-existent-plan-2']),
         afterId: firstPlanIdInternal
@@ -3592,6 +3639,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('plansLastUpdatedBetween works from a starting point', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .query({
         planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
         afterId: firstPlanIdInternal,
@@ -3615,6 +3663,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('plansLastUpdatedBetween works from a starting point to an end point', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .query({
         planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
         afterId: firstPlanIdInternal,
@@ -3654,6 +3703,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('GET plansLastUpdatedBetween works with previous plan IDs', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .query({
         planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
         afterId: firstPlanClaim2IdInternal,
@@ -3683,6 +3733,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('GET plansLastUpdatedBetween works with pagination', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .query({
         planIds: JSON.stringify([firstPlanIdExternal, secondPlanIdExternal]),
         afterId: firstPlanIdInternal,
@@ -3731,6 +3782,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('POST plansLastUpdatedBetween works with different boundaries', () => {
     return request(Server)
       .post('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({
         planIds: [firstPlanIdExternal, secondPlanIdExternal, planBy2FulfillsBy1Claim1IdExternal],
         afterId: secondPlanIdInternal,
@@ -3783,6 +3835,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('GET plansLastUpdatedBetween works with new plan', () => {
     return request(Server)
       .post('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .send({
         planIds: [testPlanIdExternal],
         afterId: testPlanIdInternal,
@@ -3808,6 +3861,7 @@ describe('6 - Plans Last Updated Between', () => {
   it('GET plansLastUpdatedBetween finds changes after initial claim', () => {
     return request(Server)
       .get('/api/v2/report/plansLastUpdatedBetween')
+      .set('Authorization', 'Bearer ' + pushTokens[1])
       .query({
         planIds: JSON.stringify([testPlanIdExternal]),
         afterId: testPlanIdInternal
